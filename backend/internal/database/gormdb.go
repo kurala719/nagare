@@ -45,7 +45,7 @@ func InitDBFromConfig() error {
 	password := viper.GetString("database.password")
 	host := viper.GetString("database.host")
 	port := viper.GetInt("database.port")
-	dbname := viper.GetString("database.DB_name")
+	dbname := viper.GetString("database.database_name")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local", user, password, host, port, dbname)
 	if err := InitDB(dsn); err != nil {
 		return err

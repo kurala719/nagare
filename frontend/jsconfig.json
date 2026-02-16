@@ -4,5 +4,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "src/views/Notification.vue", "src/views/Scripts.vue"]
+  "exclude": ["node_modules", "dist", "src/views/Notification.vue", "src/views/Scripts.vue", "src/views/Dashboard.vue"]
 }

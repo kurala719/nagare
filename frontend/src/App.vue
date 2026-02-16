@@ -1,632 +1,107 @@
 <template>
   <el-config-provider :locale="elementLocale">
     <router-view v-if="isAuthLayout" />
-    <el-container v-else class="layout-container-demo">
-      <el-header>
-        <div class="header-content">
-          <div class="header-left">
-            <div class="toolbar-link menu-toggle" @click="toggleSidebar" :title="isSidebarCollapsed ? t('common.expand') : t('common.collapse')">
-              <el-icon :size="20">
-                <Expand v-if="isSidebarCollapsed" />
-                <Fold v-else />
-              </el-icon>
-            </div>
-            <div class="app-title">
-              <el-icon :size="24" style="margin-right: 8px"><Monitor /></el-icon>
-              <span>Nagare</span>
-            </div>
-            <div class="global-search-container" v-if="!isAuthLayout">
-              <GlobalSearch />
-            </div>
-          </div>
-          <div class="toolbar">
-            <el-dropdown @command="setLanguage">
-              <span class="toolbar-link">
-                <el-icon style="margin-right: 8px; margin-top: 1px">
-                  <setting />
-                </el-icon>
-                {{ t('common.language') }}
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="en">English</el-dropdown-item>
-                  <el-dropdown-item command="zh-CN">中文</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-divider direction="vertical" />
-            <div class="toolbar-link" @click="toggleTheme">
-              <el-icon style="margin-right: 6px; margin-top: 1px">
-                <moon v-if="isDarkMode" />
-                <sunny v-else />
-              </el-icon>
-              {{ isDarkMode ? t('common.night') : t('common.day') }}
-            </div>
-            <el-divider direction="vertical" />
-            <el-dropdown trigger="click" @command="handleUserCommand">
-              <span class="toolbar-link">
-                <el-avatar :size="28" />
-                <span class="toolbar-username">{{ currentUserLabel }}</span>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item v-if="!isAuthenticated" command="login">{{ t('auth.login') }}</el-dropdown-item>
-                  <el-dropdown-item v-if="!isAuthenticated" command="register">{{ t('auth.register') }}</el-dropdown-item>
-                  <el-dropdown-item v-if="isAuthenticated" command="reset">{{ t('auth.reset') }}</el-dropdown-item>
-                  <el-dropdown-item v-if="isAuthenticated" command="profile">{{ t('menu.profile') }}</el-dropdown-item>
-                  <el-dropdown-item v-if="isAuthenticated" command="logout">{{ t('auth.logout') }}</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </div>
-      </el-header>
-      
-      <el-container class="main-layout">
-        <div
-          v-if="isSidebarCollapsed"
-          class="sidebar-edge-toggle"
-          @click="toggleSidebar"
-          :title="t('common.expand')"
-        >
-          <el-icon :size="18">
-            <DArrowRight />
-          </el-icon>
-        </div>
-        <el-aside
-          :width="isSidebarCollapsed ? '0px' : '200px'"
-          :class="['sidebar-transition', { 'is-collapsed': isSidebarCollapsed }]"
-        >
-          <el-scrollbar>
-            <el-menu :default-active="$route.path" :collapse="isSidebarCollapsed" router @open="handleOpen" @close="handleClose">
-              <template v-for="item in visibleMenuItems" :key="item.key">
-                <el-sub-menu v-if="item.children" :index="item.key">
-                  <template #title>{{ t(item.label) }}</template>
-                  <el-menu-item v-for="child in item.children" :key="child.path" :index="child.path">
-                    {{ t(child.label) }}
-                  </el-menu-item>
-                </el-sub-menu>
-                <el-menu-item v-else :index="item.path">{{ t(item.label) }}</el-menu-item>
-              </template>
-            </el-menu>
-          </el-scrollbar>
-        </el-aside>
-
-        <el-main>
-          <div class="main-container">
-            <div class="content-area">
-              <el-scrollbar>
-                <router-view />
-              </el-scrollbar>
-            </div>
-            <div
-              v-if="isChatBarCollapsed"
-              class="chat-edge-toggle"
-              @click="toggleChatBar"
-              :title="t('common.showChat')"
-            >
-              <el-icon :size="18">
-                <DArrowLeft />
-              </el-icon>
-            </div>
-            <div :class="['chat-bar-container', { 'is-collapsed': isChatBarCollapsed }]">
-              <div
-                v-if="!isChatBarCollapsed"
-                class="chat-bar-toggle"
-                @click="toggleChatBar"
-                :title="t('common.hideChat')"
-              >
-                <el-icon :size="18">
-                  <DArrowRight />
-                </el-icon>
-              </div>
-              <div class="chat-bar-content">
-                <el-scrollbar>
-                  <SideBarChat />
-                </el-scrollbar>
-              </div>
-            </div>
-          </div>
-        </el-main>
-      </el-container>
-    </el-container>
+    <MainLayout v-else />
   </el-config-provider>
 </template>
 
-
 <script>
-import { defineComponent, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { defineComponent, computed, ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElConfigProvider } from 'element-plus'
-import { Expand, Fold, DArrowLeft, DArrowRight, Monitor } from '@element-plus/icons-vue'
 import en from 'element-plus/dist/locale/en.mjs'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import SideBarChat from './components/Customed/SideBarChat.vue';
-import GlobalSearch from './components/GlobalSearch.vue';
-import { getUserPrivileges, getToken, clearToken, getUserClaims } from './utils/auth'
+import MainLayout from '@/layout/MainLayout.vue'
 
 export default defineComponent({
+  name: 'App',
   components: {
     ElConfigProvider,
-    GlobalSearch,
-    SideBarChat,
-    Expand,
-    Fold,
-    DArrowLeft,
-    DArrowRight,
-    Monitor,
+    MainLayout
   },
   setup() {
-    const talkInput = ref('')
     const route = useRoute()
-    const router = useRouter()
-    const { t, locale } = useI18n()
+    const { locale } = useI18n()
     const elementLocale = computed(() => (locale.value === 'zh-CN' ? zhCn : en))
     const isAuthLayout = computed(() => route.meta?.layout === 'auth')
-    const userPrivilege = ref(getUserPrivileges())
-    const authState = ref(!!getToken())
-    const isAuthenticated = computed(() => authState.value)
-    const isDarkMode = ref(false)
-    const isSidebarCollapsed = ref(false)
-    const isChatBarCollapsed = ref(false)
-    const currentUserLabel = computed(() => {
-      if (!authState.value) return t('auth.guest')
-      const claims = getUserClaims()
-      return claims?.username || t('auth.guest')
-    })
 
-    const menuItems = computed(() => [
-      { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1 },
-      { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
-      { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
-      { key: 'site', path: '/site', label: 'menu.site', minPrivilege: 1 },
-      { key: 'item', path: '/item', label: 'menu.item', minPrivilege: 1 },
-      { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
-      { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
-      { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
-      { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
-      { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
-      { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
-      { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
-      { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
-      { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
-      { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1 },
-      { key: 'system', path: '/system', label: 'menu.system', minPrivilege: 3 },
-    ])
-
-    const visibleMenuItems = computed(() => {
-      const privilege = userPrivilege.value
-      return menuItems.value
-        .filter((item) => privilege >= item.minPrivilege)
-        .map((item) => {
-          if (!item.children) return item
-          return {
-            ...item,
-            children: item.children.filter((child) => privilege >= child.minPrivilege),
-          }
-        })
-        .filter((item) => !item.children || item.children.length > 0)
-    })
-    const setLanguage = (lang) => {
-      locale.value = lang
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('nagare_locale', lang)
-      }
-    }
-    const applyTheme = (dark) => {
-      isDarkMode.value = dark
+    onMounted(() => {
+      // Initialize theme from local storage
+      const storedTheme = localStorage.getItem('nagare_theme')
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      const useDark = storedTheme ? storedTheme === 'dark' : prefersDark
+      
       const html = document.documentElement
       const body = document.body
-      
-      // Remove old theme classes
-      html.classList.remove('dark', 'light')
-      body.classList.remove('theme-dark', 'theme-light')
-      
-      // Add new theme classes
-      if (dark) {
+      if (useDark) {
         html.classList.add('dark')
         body.classList.add('theme-dark')
       } else {
         html.classList.add('light')
         body.classList.add('theme-light')
       }
-      
-      localStorage.setItem('nagare_theme', dark ? 'dark' : 'light')
-    }
-    const toggleTheme = () => {
-      applyTheme(!isDarkMode.value)
-    }
-    const toggleSidebar = () => {
-      isSidebarCollapsed.value = !isSidebarCollapsed.value
-      localStorage.setItem('nagare_sidebar_collapsed', isSidebarCollapsed.value ? 'true' : 'false')
-    }
-    const toggleChatBar = () => {
-      isChatBarCollapsed.value = !isChatBarCollapsed.value
-      localStorage.setItem('nagare_chatbar_collapsed', isChatBarCollapsed.value ? 'true' : 'false')
-    }
-    const goProfile = () => router.push('/profile')
-    const goLogin = () => router.push('/login')
-    const goRegister = () => router.push('/register')
-    const goReset = () => router.push('/reset-password')
-    const logout = () => {
-      clearToken()
-      authState.value = false
-      router.replace('/login')
-    }
-    const handleUserCommand = (command) => {
-      switch (command) {
-        case 'profile':
-          return goProfile()
-        case 'login':
-          return goLogin()
-        case 'register':
-          return goRegister()
-        case 'reset':
-          return goReset()
-        case 'logout':
-          return logout()
-        default:
-          return
-      }
-    }
 
-    watch(
-      () => route.fullPath,
-      () => {
-        authState.value = !!getToken()
-        userPrivilege.value = getUserPrivileges()
+      // Initialize locale
+      const storedLocale = localStorage.getItem('nagare_locale')
+      if (storedLocale) {
+        locale.value = storedLocale
       }
-    )
-    onMounted(() => {
-      const stored = localStorage.getItem('nagare_theme')
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      const useDark = stored ? stored === 'dark' : prefersDark
-      applyTheme(useDark)
-
-      const sidebarCollapsed = localStorage.getItem('nagare_sidebar_collapsed')
-      if (sidebarCollapsed) {
-        isSidebarCollapsed.value = sidebarCollapsed === 'true'
-      }
-
-      const chatBarCollapsed = localStorage.getItem('nagare_chatbar_collapsed')
-      if (chatBarCollapsed) {
-        isChatBarCollapsed.value = chatBarCollapsed === 'true'
-      }
-
-      const updateAuth = () => {
-        authState.value = !!getToken()
-        userPrivilege.value = getUserPrivileges()
-      }
-      window.addEventListener('auth-changed', updateAuth)
-      onBeforeUnmount(() => {
-        window.removeEventListener('auth-changed', updateAuth)
-      })
     })
-    const handleOpen = (key, keyPath) => {
-      console.log(key, keyPath)
-    }
-    const handleClose = (key, keyPath) => {
-      console.log(key, keyPath)
-    }
+
     return {
-      talkInput,
-      t,
       elementLocale,
-      isAuthLayout,
-      visibleMenuItems,
-      authState,
-      isAuthenticated,
-      isDarkMode,
-      isSidebarCollapsed,
-      isChatBarCollapsed,
-      currentUserLabel,
-      setLanguage,
-      toggleTheme,
-      toggleSidebar,
-      toggleChatBar,
-      handleUserCommand,
-      handleOpen,
-      handleClose,
+      isAuthLayout
     }
-  },
-  
+  }
 })
 </script>
 
-<style scoped>
-.layout-container-demo {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+<style>
+/* Global Styles */
+:root {
+  --text-strong: #1e293b;
+  --border-1: #e2e8f0;
+  --surface-3: #f1f5f9;
 }
 
-.layout-container-demo > .el-container {
-  height: calc(100% - 60px);
-  overflow: hidden;
+html.dark {
+  --text-strong: #f8fafc;
+  --border-1: #334155;
+  --surface-3: #1e293b;
 }
 
-.main-layout {
-  position: relative;
-}
-
-.layout-container-demo .el-header {
-  position: relative;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--text-strong);
-  height: 60px;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border-1);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(12px);
-  z-index: 100;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  padding: 0 20px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex: 1;
-}
-
-.global-search-container {
-  flex: 1;
-  max-width: 400px;
-  margin-left: 20px;
-}
-
-.app-title {
-  display: flex;
-  align-items: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-strong);
-  letter-spacing: 0.5px;
-}
-
-.menu-toggle {
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-}
-
-.menu-toggle:hover {
-  background: var(--surface-3);
-  border-color: var(--border-1);
-  transform: scale(1.1);
-}
-
-.layout-container-demo .el-aside {
-  color: var(--el-text-color-primary);
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  border-right: 1px solid var(--border-1);
-  height: 100%;
-  flex-shrink: 0;
-  min-width: 0;
-  overflow: hidden;
-  box-shadow: 2px 0 14px rgba(15, 23, 42, 0.06);
-}
-
-.layout-container-demo .el-aside :deep(.el-menu) {
-  background: transparent;
-}
-
-.layout-container-demo .el-aside :deep(.el-menu-item) {
-  transition: all 0.3s ease;
-  margin: 4px 8px;
-  border-radius: 8px;
-}
-
-.layout-container-demo .el-aside :deep(.el-menu-item:hover) {
-  background: rgba(37, 99, 235, 0.08);
-  transform: translateX(4px);
-}
-
-.layout-container-demo .el-aside :deep(.el-menu-item.is-active) {
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.sidebar-transition {
-  transition: width 0.3s ease;
-}
-
-.sidebar-transition.is-collapsed {
-  border-right: none;
-  box-shadow: none;
-}
-
-.sidebar-transition.is-collapsed :deep(.el-scrollbar) {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sidebar-edge-toggle {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 56px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 0 10px 10px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  z-index: 20;
-  transition: all 0.3s ease;
-  box-shadow: 2px 6px 16px rgba(37, 99, 235, 0.3);
-}
-
-.sidebar-edge-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: 2px 6px 18px rgba(30, 64, 175, 0.35);
-}
-
-.layout-container-demo .el-menu {
-  border-right: none;
-}
-
-.layout-container-demo .el-main {
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.main-container {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: visible;
-}
-
-.content-area {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  background: transparent;
-}
-
-.content-area :deep(.el-scrollbar__view) {
-  padding: 20px;
-}
-
-.chat-bar-container {
-  position: relative;
-  width: 320px;
-  height: 100%;
-  border-left: 1px solid var(--border-1);
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  transition: width 0.3s ease;
-  overflow: visible;
-  box-shadow: -2px 0 14px rgba(15, 23, 42, 0.06);
-}
-
-.chat-bar-container.is-collapsed {
-  width: 0;
-  border-left: none;
-  box-shadow: none;
-}
-
-.chat-edge-toggle {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 64px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 12px 0 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  z-index: 20;
-  transition: all 0.3s ease;
-  box-shadow: -2px 6px 16px rgba(37, 99, 235, 0.3);
-}
-
-.chat-edge-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: -2px 6px 18px rgba(30, 64, 175, 0.35);
-}
-
-.chat-bar-toggle {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 64px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 0 12px 12px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  z-index: 10;
-  transition: all 0.3s ease;
-  box-shadow: 2px 6px 16px rgba(37, 99, 235, 0.3);
-}
-
-.chat-bar-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: 2px 6px 18px rgba(30, 64, 175, 0.35);
-}
-
-.chat-bar-content {
-  width: 320px;
-  height: 100%;
-  overflow: hidden;
-  padding-left: 48px;
-  opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.chat-bar-container.is-collapsed .chat-bar-content {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(100%);
-}
-
-.layout-container-demo .toolbar {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
-}
-
-.layout-container-demo .toolbar-link {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  color: var(--text-strong);
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid transparent;
-}
-
-.layout-container-demo .toolbar-link:hover {
-  background: var(--surface-3);
-  border-color: var(--border-1);
-  transform: translateY(-2px);
-}
-
-.layout-container-demo .toolbar-username {
-  margin-left: 8px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.layout-container-demo :deep(.el-divider--vertical) {
-  background: rgba(15, 23, 42, 0.12);
-  height: 20px;
+body {
   margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 </style>
