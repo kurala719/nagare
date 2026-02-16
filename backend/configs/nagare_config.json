@@ -1,0 +1,50 @@
+{
+  "ai": {
+    "analysis_enabled": true,
+    "analysis_min_severity": 2,
+    "analysis_timeout_seconds": 60,
+    "model": "",
+    "provider_id": 1
+  },
+  "database": {
+    "database_name": "nagare",
+    "host": "127.0.0.1",
+    "password": "Huawei@123",
+    "port": 3306,
+    "username": "nagare",
+    "version": "MYSQL 8.0.44"
+  },
+  "jwt": {
+    "jwt_ttl": 7200,
+    "secret_key": "knt;e@KLDsjhBjq!T@dvjpSpRa+%r?(7YM^hZ*Q(te[!b9Cg~7LD7,@J!^u8QF`F"
+  },
+  "mcp": {
+    "api_key": "change-me",
+    "enabled": true,
+    "max_concurrency": 4
+  },
+  "media_rate_limit": {
+    "global_interval_seconds": 30,
+    "media_type_interval_seconds": 30,
+    "media_interval_seconds": 30
+  },
+  "redis": {
+    "addr": "localhost:6379"
+  },
+  "sync": {
+    "concurrency": 2,
+    "enabled": true,
+    "interval_seconds": 60
+  },
+  "status_check": {
+    "concurrency": 4,
+    "enabled": true,
+    "interval_seconds": 60
+  },
+  "system": {
+    "availability": true,
+    "ip_address": "192.168.31.1",
+    "port": 8080,
+    "system_name": "Nagare System"
+  }
+}
