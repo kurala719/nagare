@@ -10,7 +10,7 @@ The push functions sync data from the local Nagare database to remote monitoring
 #### 1. `PushHostToMonitorServ(mid uint, id uint) error`
 **Purpose**: Push a single host from local database to a remote monitor
 
-**Location**: [application/host.go](../nagare-v0.21/internal/web_server/application/host.go)
+**Location**: [service/host.go](../backend/internal/service/host.go)
 
 **Flow**:
 1. Retrieve host from local database by ID
@@ -30,7 +30,7 @@ curl -H "Authorization: Bearer <token>" \
 #### 2. `PushHostsFromMonitorServ(mid uint) (SyncResult, error)`
 **Purpose**: Push all hosts for a monitor from local database to remote
 
-**Location**: [application/host.go](../nagare-v0.21/internal/web_server/application/host.go)
+**Location**: [service/host.go](../backend/internal/service/host.go)
 
 **Flow**:
 1. Get all hosts for the specified monitor
@@ -67,7 +67,7 @@ curl -H "Authorization: Bearer <token>" \
 #### 1. `PushItemToMonitorServ(mid, hid, id uint) error`
 **Purpose**: Push a single item from local database to a remote monitor
 
-**Location**: [application/item.go](../nagare-v0.21/internal/web_server/application/item.go)
+**Location**: [service/item.go](../backend/internal/service/item.go)
 
 **Flow**:
 1. Retrieve item, host, and monitor from local database
@@ -87,7 +87,7 @@ curl -H "Authorization: Bearer <token>" \
 #### 2. `PushItemsFromHostServ(mid, hid uint) (SyncResult, error)`
 **Purpose**: Push all items for a specific host to remote monitor
 
-**Location**: [application/item.go](../nagare-v0.21/internal/web_server/application/item.go)
+**Location**: [service/item.go](../backend/internal/service/item.go)
 
 **Flow**:
 1. Get all items for the specified host
@@ -107,7 +107,7 @@ curl -H "Authorization: Bearer <token>" \
 #### 3. `PushItemsFromMonitorServ(mid uint) (SyncResult, error)`
 **Purpose**: Push all items from all hosts for a monitor to remote
 
-**Location**: [application/item.go](../nagare-v0.21/internal/web_server/application/item.go)
+**Location**: [service/item.go](../backend/internal/service/item.go)
 
 **Flow**:
 1. Get all hosts for the specified monitor

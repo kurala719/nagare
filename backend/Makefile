@@ -3,10 +3,10 @@
 APP_NAME := nagare-web-server
 
 build:
-	go build -o bin/$(APP_NAME) ./cmd/web_server
+	go build -o bin/$(APP_NAME) ./cmd/server
 
 run:
-	go run ./cmd/web_server
+	go run ./cmd/server
 
 test:
 	go test ./... -v

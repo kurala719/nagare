@@ -8,7 +8,7 @@
 
 ### 1. Redis 任务队列 (Queue System)
 
-**位置**: `internal/web_server/pkg/queue/queue.go`
+**位置**: `backend/pkg/queue/queue.go`
 
 **核心功能**:
 - 任务入队/出队操作(Enqueue/Dequeue)
@@ -51,7 +51,7 @@ GET /api/v1/queue/stats
 
 ### 3. 任务工作者 (Task Workers)
 
-**位置**: `internal/web_server/application/worker.go`
+**位置**: `backend/internal/service/worker.go`
 
 **特点**:
 - 4 个并发工作协程(可配置)
@@ -71,7 +71,7 @@ Worker Loop:
 
 ### 4. 模拟告警生成器 (Alert Generator)
 
-**位置**: `internal/web_server/application/alert.go`
+**位置**: `backend/internal/service/alert.go`
 
 **新增函数**:
 
@@ -128,26 +128,26 @@ GET /api/v1/alerts/score
 ## 文件清单
 
 ### 新建文件
-- `internal/web_server/pkg/queue/queue.go` - 队列核心实现
-- `internal/web_server/application/queue.go` - 应用层队列服务  
-- `internal/web_server/application/worker.go` - 任务工作者
-- `internal/web_server/presentation/queue.go` - API 控制器
+- `backend/pkg/queue/queue.go` - 队列核心实现
+- `backend/internal/service/queue.go` - 应用层队列服务  
+- `backend/internal/service/worker.go` - 任务工作者
+- `backend/internal/api/queue.go` - API 控制器
 - `REDIS_QUEUE_GUIDE.md` - 详细使用指南
 - `test_queue.ps1` - 测试脚本
 
 ### 修改文件
 - `go.mod` - 添加 redis/go-redis 依赖
-- `cmd/web_server/main.go` - 初始化队列和启动工作者
-- `internal/web_server/application/alert.go` - 添加告警生成函数
-- `internal/web_server/cmd/web_server/router/router.go` - 新增路由
-- `nagare-v0.21/configs/nagare_config.json` - Redis 配置
+- `backend/cmd/server/main.go` - 初始化队列和启动工作者
+- `backend/internal/service/alert.go` - 添加告警生成函数
+- `backend/cmd/server/router/router.go` - 新增路由
+- `backend/configs/nagare_config.json` - Redis 配置
 
 ## 使用流程
 
 ### 1. 启动应用
 ```bash
-cd nagare-v0.21
-go run cmd/web_server/main.go
+cd backend
+go run cmd/server/main.go
 ```
 
 日志确认:

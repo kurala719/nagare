@@ -128,7 +128,7 @@ Response (200 OK):
 
 ## Worker Configuration
 
-Workers are started automatically during application startup. To adjust worker count, edit `internal/web_server/application/worker.go`:
+Workers are started automatically during application startup. To adjust worker count, edit `backend/internal/service/worker.go`:
 
 ```go
 func StartTaskWorkers() {
@@ -141,8 +141,8 @@ func StartTaskWorkers() {
 
 1. **Start Application**:
 ```bash
-cd nagare-v0.21
-go run cmd/web_server/main.go
+cd backend
+go run cmd/server/main.go
 ```
 
 2. **Queue Async Tasks**:

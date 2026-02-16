@@ -156,7 +156,7 @@ The database has 2GB free space, and network latency is within normal ranges.
 
 ## Code Changes Summary
 
-### 1. im_command.go
+### 1. `backend/internal/service/im_command.go`
 ```go
 // Enhanced HandleIMCommand to support:
 // - /status (existing)
@@ -169,7 +169,7 @@ The database has 2GB free space, and network latency is within normal ranges.
 // - HandleIMCommandWithContext()
 ```
 
-### 2. media.go (presentation)
+### 2. `backend/internal/api/media.go`
 ```go
 // New controller:
 // - HandleQQMessageCtrl()
@@ -181,10 +181,10 @@ The database has 2GB free space, and network latency is within normal ranges.
 // - OneBotMessageResponseData
 ```
 
-### 3. router.go
+### 3. `backend/cmd/server/router/router.go`
 ```go
 // New route added to setupMediaRoutes():
-// media.POST("/qq/message", presentation.HandleQQMessageCtrl)
+// media.POST("/qq/message", api.HandleQQMessageCtrl)
 ```
 
 ## Key Features

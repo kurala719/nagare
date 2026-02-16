@@ -1,10 +1,10 @@
-# Code Structure Reference (Updated)
+# Code Structure Reference
 
 ## Command Processing Pipeline
 
 ```go
 // 1. HandleQQMessageCtrl() receives OneBot 11 event
-// Location: internal/api/media.go
+// Location: backend/internal/api/media.go
 
 type OneBotMessageEvent struct {
     PostType    string  // "message"
@@ -18,7 +18,7 @@ type OneBotMessageEvent struct {
 result, err := service.HandleIMCommand(message)
 
 // 3. HandleIMCommand() processes the command
-// Location: internal/service/im_command.go
+// Location: backend/internal/service/im_command.go
 
 func HandleIMCommand(message string) (IMCommandResult, error) {
     trimmed := strings.TrimSpace(message)
@@ -80,7 +80,7 @@ func handleChatCommand(content string) IMCommandResult {
 
 // 5. Send response back to user
 err = service.SendIMReply("qq", replyTarget, result.Reply)
-// Location: internal/repository/media/media.go (or similar in infrastructure)
+// Location: backend/internal/repository/media/media.go (or similar in infrastructure)
 // Uses media.Service to send through QQ provider
 
 // 6. Return success to OneBot 11
@@ -151,28 +151,28 @@ c.JSON(http.StatusOK, resp)
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## File Locations (Updated)
+## Backend File Structure
 
 ```
-nagare-v0.21/ (Backend)
+backend/
 ├── cmd/
 │   └── server/
 │       └── router/
-│           └── router.go                    [MODIFIED]
+│           └── router.go                    [Route Definitions]
 │               └── setupMediaRoutes()
 │                   └── media.POST("/qq/message")
 │
 └── internal/
-    ├── api/ (was presentation)
-    │   └── media.go                       [MODIFIED]
+    ├── api/ (Presentation Layer)
+    │   └── media.go                       [Controllers]
     │       ├── HandleQQMessageCtrl()
     │       ├── OneBotMessageEvent
     │       ├── OneBotSender
     │       ├── OneBotMessageResponse
     │       └── (existing controllers)
     │
-    ├── service/ (was application)
-    │   ├── im_command.go                  [MODIFIED]
+    ├── service/ (Business Logic Layer)
+    │   ├── im_command.go                  [IM Logic]
     │   │   ├── HandleIMCommand()
     │   │   ├── handleGetAlerts()
     │   │   ├── handleChatCommand()
@@ -184,49 +184,24 @@ nagare-v0.21/ (Backend)
     │       ├── SendChatServ()
     │       └── GetAllProvidersServ()
     │
-    ├── repository/ (was infrastructure)
+    ├── repository/ (Data Access Layer)
     │   └── (DAOs and external adapters)
     │
-    └── model/ (was domain)
+    └── model/ (Domain Model)
         └── (Entities)
 ```
 
-## Command Handler Pattern
+## Frontend File Structure
 
-```go
-// All command handlers follow this pattern:
-
-// 1. Check for command
-if strings.HasPrefix(lower, "/command_name") {
-    return handleCommandName(trimmed)
-}
-
-// 2. Implement handler
-func handleCommandName(input string) (IMCommandResult, error) {
-    // Parse input parameters if needed
-    // Call service layer functions
-    // Format response
-    // Return result
-    return IMCommandResult{Reply: formattedResponse}, nil
-}
 ```
-
-## Route Configuration
-
-```go
-// In cmd/server/router/router.go setupMediaRoutes()
-
-func setupMediaRoutes(rg RouteGroup) {
-    media := rg.Group("/media")
-    
-    // Existing routes
-    media.GET("/", api.SearchMediaCtrl).Use(api.PrivilegesMiddleware(1))
-    media.GET("/:id", api.GetMediaByIDCtrl).Use(api.PrivilegesMiddleware(1))
-    media.POST("/", api.AddMediaCtrl).Use(api.PrivilegesMiddleware(2))
-    media.PUT("/:id", api.UpdateMediaCtrl).Use(api.PrivilegesMiddleware(2))
-    media.DELETE("/:id", api.DeleteMediaByIDCtrl).Use(api.PrivilegesMiddleware(2))
-    
-    // New webhook route (NO AUTHENTICATION)
-    media.POST("/qq/message", api.HandleQQMessageCtrl)
-}
+frontend/
+├── src/
+│   ├── api/          [API Client Modules]
+│   ├── components/   [Reusable Vue Components]
+│   ├── views/        [Page Components (mapped to routes)]
+│   ├── router/       [Vue Router Configuration]
+│   ├── utils/        [Helper Functions]
+│   └── App.vue       [Root Component]
+├── package.json      [Dependencies and Scripts]
+└── vite.config.js    [Vite Configuration]
 ```

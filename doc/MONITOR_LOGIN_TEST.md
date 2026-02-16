@@ -7,24 +7,24 @@ This document describes how to test the monitor login functionality that has bee
 
 ### Backend Changes
 
-1. **Application Layer** ([monitor.go](nagare-v0.21/internal/web_server/application/monitor.go))
+1. **Service Layer** ([monitor.go](backend/internal/service/monitor.go))
    - Modified `LoginMonitorServ()` to return `MonitorResp` with auth_token instead of just error
    - Modified `AddMonitorServ()` to return `MonitorResp` with auth_token and auto-login if credentials provided
    - Added context-based authentication flow
 
-2. **Presentation Layer** ([monitor.go](nagare-v0.21/internal/web_server/presentation/monitor.go))
+2. **API Layer** ([monitor.go](backend/internal/api/monitor.go))
    - Updated `LoginMonitorCtrl()` to return monitor data with auth_token in response
    - Updated `AddMonitorCtrl()` to return created monitor data with auth_token
 
-3. **Router** ([router.go](nagare-v0.21/cmd/web_server/router/router.go))
+3. **Router** ([router.go](backend/cmd/server/router/router.go))
    - Changed `/monitor/:id/login` from GET to POST (more appropriate for authentication)
 
 ### Frontend Changes
 
-1. **API Layer** ([monitors.js](nagare_web/src/api/monitors.js))
+1. **API Layer** ([monitors.js](frontend/src/api/monitors.js))
    - Added `loginMonitor(id)` function to call POST `/monitor/:id/login`
 
-2. **Monitor View** ([Monitor.vue](nagare_web/src/views/Monitor.vue))
+2. **Monitor View** ([Monitor.vue](frontend/src/views/Monitor.vue))
    - Added login button for each monitor card
    - Button shows "Login" if no auth_token, "Re-login" if auth_token exists
    - Added loading state for login operations
@@ -33,7 +33,7 @@ This document describes how to test the monitor login functionality that has bee
    - Status indicator now shows green (authenticated) or red (not authenticated) based on auth_token
    - Auto-login when creating new monitor with credentials
 
-3. **Internationalization** ([index.js](nagare_web/src/i18n/index.js))
+3. **Internationalization** ([index.js](frontend/src/i18n/index.js))
    - Added translations for "login" and "reLogin" in English and Chinese
 
 ## Testing Steps

@@ -7,7 +7,7 @@ This document describes the new Media Message API that allows message platforms 
 
 ### Components Updated
 
-#### 1. **Application Layer** (`internal/web_server/application/im_command.go`)
+#### 1. **Service Layer** (`backend/internal/service/im_command.go`)
 - Enhanced `HandleIMCommand()` to process command messages
 - Added support for three command types:
   - `/status` - Get system health status
@@ -18,7 +18,7 @@ This document describes the new Media Message API that allows message platforms 
   - `handleGetAlerts()` - Retrieves active alerts and formats them
   - `handleChatCommand()` - Sends chat messages to configured LLM providers
 
-#### 2. **Presentation Layer** (`internal/web_server/presentation/media.go`)
+#### 2. **API Layer** (`backend/internal/api/media.go`)
 - Added `HandleQQMessageCtrl()` - Main handler for incoming QQ messages from OneBot 11
 - Added data structures for OneBot 11 message event format:
   - `OneBotMessageEvent` - Represents incoming message from QQ
@@ -26,7 +26,7 @@ This document describes the new Media Message API that allows message platforms 
   - `OneBotMessageResponse` - Response format for OneBot 11 compliance
   - `OneBotMessageResponseData` - Response data structure
 
-#### 3. **Router Configuration** (`cmd/web_server/router/router.go`)
+#### 3. **Router Configuration** (`backend/cmd/server/router/router.go`)
 - Added new route: `POST /api/v1/media/qq/message`
 - Route accepts OneBot 11 HTTP event pushes without authentication
 - Automatically processes commands and sends responses back through QQ media provider
@@ -216,9 +216,9 @@ Potential commands to add:
 
 ## Files Modified
 
-1. [internal/web_server/application/im_command.go](internal/web_server/application/im_command.go) - Enhanced command handling
-2. [internal/web_server/presentation/media.go](internal/web_server/presentation/media.go) - New controller for QQ messages
-3. [cmd/web_server/router/router.go](cmd/web_server/router/router.go) - New route configuration
+1. [backend/internal/service/im_command.go](backend/internal/service/im_command.go) - Enhanced command handling
+2. [backend/internal/api/media.go](backend/internal/api/media.go) - New controller for QQ messages
+3. [backend/cmd/server/router/router.go](backend/cmd/server/router/router.go) - New route configuration
 
 ## References
 
