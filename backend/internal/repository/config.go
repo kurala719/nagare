@@ -47,6 +47,7 @@ type SyncConfig struct {
 // StatusCheckConfig holds status check settings
 type StatusCheckConfig struct {
 	Enabled         bool `yaml:"enabled" json:"enabled"`
+	ProviderEnabled bool `yaml:"provider_enabled" json:"provider_enabled"`
 	IntervalSeconds int  `yaml:"interval_seconds" json:"interval_seconds"`
 	Concurrency     int  `yaml:"concurrency" json:"concurrency"`
 }
@@ -113,6 +114,7 @@ func InitConfig(path string) error {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
+	viper.SetDefault("status_check.provider_enabled", true)
 	return viper.ReadInConfig()
 }
 

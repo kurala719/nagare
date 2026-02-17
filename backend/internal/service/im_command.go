@@ -43,7 +43,7 @@ func HandleIMCommand(message string) (IMCommandResult, error) {
 
 	// Get alerts command
 	if strings.HasPrefix(lower, "/get_alert") {
-		return handleGetAlerts(trimmed)
+		return handleGetAlerts()
 	}
 
 	// Chat command
@@ -59,7 +59,7 @@ func HandleIMCommand(message string) (IMCommandResult, error) {
 }
 
 // handleGetAlerts retrieves active alerts
-func handleGetAlerts(command string) (IMCommandResult, error) {
+func handleGetAlerts() (IMCommandResult, error) {
 	status := 0 // 0 = active
 	limit := 10
 	filter := model.AlertFilter{

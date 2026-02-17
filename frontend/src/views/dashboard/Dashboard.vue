@@ -16,19 +16,22 @@
     </div>
 
     <div v-else class="dashboard-content">
-      <!-- Top Row: Summary Cards -->
-      <SummaryCards :summary="summary" />
-
       <!-- Health Overview Section -->
       <div class="section-container">
-        <HealthStats :score="healthScore" :loading="healthLoading" />
+        <HealthStats 
+          :score="healthScore" 
+          :alerts="summary.alerts"
+          :providers="summary.providers"
+          :monitors="summary.monitors"
+          :loading="healthLoading || loading" 
+        />
         
         <el-row :gutter="20">
-          <el-col :xs="24" :lg="14">
+          <el-col :xs="24" :lg="16">
             <HealthTrendChart ref="trendChart" />
           </el-col>
-          <el-col :xs="24" :lg="10">
-            <MetricsTable ref="metricsTable" />
+          <el-col :xs="24" :lg="8">
+            <VoiceControl class="voice-control-card" />
           </el-col>
         </el-row>
       </div>
@@ -41,7 +44,7 @@
       <!-- Experimental Features Row -->
       <el-row :gutter="20" class="section-container">
         <el-col :xs="24" :md="12">
-          <VoiceControl />
+          <MetricsTable ref="metricsTable" />
         </el-col>
         <el-col :xs="24" :md="12">
           <MatrixStream />
@@ -50,13 +53,18 @@
 
       <!-- Recent Data Section -->
       <el-row :gutter="20" class="section-container">
-        <el-col :xs="24" :lg="8">
+        <el-col :xs="24" :lg="12">
           <RecentAlerts :alerts="recentAlerts" :loading="loading" />
         </el-col>
-        <el-col :xs="24" :lg="8">
+        <el-col :xs="24" :lg="12">
           <RecentHosts :hosts="recentHosts" :loading="loading" />
         </el-col>
-        <el-col :xs="24" :lg="8">
+      </el-row>
+      <el-row :gutter="20" class="section-container">
+        <el-col :xs="24" :lg="12">
+          <RecentMonitors :monitors="recentMonitors" :loading="loading" />
+        </el-col>
+        <el-col :xs="24" :lg="12">
           <RecentProviders :providers="recentProviders" :loading="loading" />
         </el-col>
       </el-row>
@@ -74,7 +82,6 @@ import { fetchMonitorData } from '@/api/monitors'
 import { authFetch } from '@/utils/authFetch'
 import { useI18n } from 'vue-i18n'
 
-import SummaryCards from './components/SummaryCards.vue'
 import HealthStats from './components/HealthStats.vue'
 import HealthTrendChart from './components/HealthTrendChart.vue'
 import MetricsTable from './components/MetricsTable.vue'
@@ -84,12 +91,12 @@ import MatrixStream from './components/MatrixStream.vue'
 import RecentAlerts from './components/RecentAlerts.vue'
 import RecentHosts from './components/RecentHosts.vue'
 import RecentProviders from './components/RecentProviders.vue'
+import RecentMonitors from './components/RecentMonitors.vue'
 
 export default defineComponent({
   name: 'Dashboard',
   components: {
     Loading,
-    SummaryCards,
     HealthStats,
     HealthTrendChart,
     MetricsTable,
@@ -98,7 +105,8 @@ export default defineComponent({
     MatrixStream,
     RecentAlerts,
     RecentHosts,
-    RecentProviders
+    RecentProviders,
+    RecentMonitors
   },
   setup() {
     const { t } = useI18n()
@@ -115,6 +123,7 @@ export default defineComponent({
     
     const recentAlerts = ref([])
     const recentHosts = ref([])
+    const recentMonitors = ref([])
     const recentProviders = ref([])
     
     const healthLoading = ref(false)
@@ -166,6 +175,7 @@ export default defineComponent({
       const data = Array.isArray(res?.data || res) ? (res?.data || res) : []
       summary.value.monitors.total = data.length
       summary.value.monitors.active = data.filter(m => m.status === 1).length
+      recentMonitors.value = data.slice(0, 5)
     }
 
     const loadProviders = async () => {
@@ -208,6 +218,7 @@ export default defineComponent({
       summary,
       recentAlerts,
       recentHosts,
+      recentMonitors,
       recentProviders,
       healthLoading,
       healthScore,
@@ -243,5 +254,8 @@ export default defineComponent({
 }
 .section-container {
   margin-bottom: 20px;
+}
+.voice-control-card {
+  height: 360px;
 }
 </style>

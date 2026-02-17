@@ -10,9 +10,11 @@ import (
 
 // GroupReq represents a group request
 type GroupReq struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description"`
-	Enabled     int    `json:"enabled"`
+	Name        string  `json:"name" binding:"required"`
+	Description string  `json:"description"`
+	Enabled     int     `json:"enabled"`
+	MonitorID   *uint   `json:"monitor_id,omitempty"`
+	ExternalID  *string `json:"external_id,omitempty"`
 }
 
 // GroupResp represents a group response
@@ -22,6 +24,8 @@ type GroupResp struct {
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
+	MonitorID   uint   `json:"monitor_id"`
+	ExternalID  string `json:"external_id"`
 }
 
 // GroupSummary represents aggregated group data
@@ -99,6 +103,12 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 		Description: req.Description,
 		Enabled:     req.Enabled,
 	}
+	if req.MonitorID != nil {
+		group.MonitorID = *req.MonitorID
+	}
+	if req.ExternalID != nil {
+		group.ExternalID = *req.ExternalID
+	}
 	group.Status = determineGroupStatus(group, nil)
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
@@ -108,15 +118,34 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 
 // UpdateGroupServ updates a group by ID
 func UpdateGroupServ(id uint, req GroupReq) error {
+	// Get existing group first
+	existing, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
 	if err != nil {
 		return err
 	}
+
+	// Update fields from request
 	updated := model.Group{
 		Name:        req.Name,
 		Description: req.Description,
 		Enabled:     req.Enabled,
+		MonitorID:   existing.MonitorID,  // Preserve existing value
+		ExternalID:  existing.ExternalID, // Preserve existing value
 	}
+
+	// Only update if provided in request
+	if req.MonitorID != nil {
+		updated.MonitorID = *req.MonitorID
+	}
+	if req.ExternalID != nil {
+		updated.ExternalID = *req.ExternalID
+	}
+
 	updated.Status = determineGroupStatus(updated, hosts)
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
@@ -269,6 +298,40 @@ func PushGroupToMonitorsServ(id uint) (SyncResult, error) {
 	return result, nil
 }
 
+// PullGroupConfigServ pulls group configuration from monitor
+func PullGroupConfigServ(id uint) error {
+	group, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		return err
+	}
+	if group.MonitorID == 0 {
+		return fmt.Errorf("group is not associated with a monitor")
+	}
+	return PullGroupFromMonitorServ(group.MonitorID, id)
+}
+
+// PushGroupConfigServ pushes group configuration to monitor
+func PushGroupConfigServ(id uint) error {
+	group, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		return err
+	}
+	if group.MonitorID == 0 {
+		return fmt.Errorf("group is not associated with a monitor")
+	}
+	return PushGroupToMonitorServ(group.MonitorID, id)
+}
+
+// PullGroupHostsServ pulls hosts for a group from monitors
+func PullGroupHostsServ(id uint) (SyncResult, error) {
+	return PullGroupFromMonitorsServ(id)
+}
+
+// PushGroupHostsServ pushes hosts for a group to monitors
+func PushGroupHostsServ(id uint) (SyncResult, error) {
+	return PushGroupToMonitorsServ(id)
+}
+
 func groupToResp(group model.Group) GroupResp {
 	return GroupResp{
 		ID:          int(group.ID),
@@ -276,5 +339,7 @@ func groupToResp(group model.Group) GroupResp {
 		Description: group.Description,
 		Enabled:     group.Enabled,
 		Status:      group.Status,
+		MonitorID:   group.MonitorID,
+		ExternalID:  group.ExternalID,
 	}
 }

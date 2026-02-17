@@ -60,11 +60,11 @@ func startWorker(id int) {
 		var processErr error
 		switch task.Type {
 		case queue.TaskTypePullHostsFromMonitor:
-			processErr = processPullHostsTask(ctx, task)
+			processErr = processPullHostsTask(task)
 		case queue.TaskTypePullItemsFromMonitor:
-			processErr = processPullItemsTask(ctx, task)
+			processErr = processPullItemsTask(task)
 		case queue.TaskTypeGenerateAlerts:
-			processErr = processGenerateAlertsTask(ctx, task)
+			processErr = processGenerateAlertsTask(task)
 		default:
 			processErr = fmt.Errorf("unknown task type: %s", task.Type)
 		}
@@ -76,7 +76,7 @@ func startWorker(id int) {
 	}
 }
 
-func processPullHostsTask(ctx context.Context, task *queue.Task) error {
+func processPullHostsTask(task *queue.Task) error {
 	monitorID, ok := task.Params["monitor_id"].(float64)
 	if !ok {
 		return fmt.Errorf("invalid monitor_id")
@@ -86,7 +86,7 @@ func processPullHostsTask(ctx context.Context, task *queue.Task) error {
 	return err
 }
 
-func processPullItemsTask(ctx context.Context, task *queue.Task) error {
+func processPullItemsTask(task *queue.Task) error {
 	monitorID, ok := task.Params["monitor_id"].(float64)
 	if !ok {
 		return fmt.Errorf("invalid monitor_id")
@@ -96,7 +96,7 @@ func processPullItemsTask(ctx context.Context, task *queue.Task) error {
 	return err
 }
 
-func processGenerateAlertsTask(ctx context.Context, task *queue.Task) error {
+func processGenerateAlertsTask(task *queue.Task) error {
 	count, ok := task.Params["count"].(float64)
 	if !ok {
 		count = 5

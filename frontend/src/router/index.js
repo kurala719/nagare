@@ -47,15 +47,15 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/group',
-    name: 'Group',
-    component: () => import('@/views/Group.vue'),
+    path: '/host',
+    name: 'Host',
+    component: () => import('@/views/Host.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/group/:id/detail',
-    name: 'GroupDetail',
-    component: () => import('@/views/GroupDetail.vue'),
+    path: '/host/:id/detail',
+    name: 'HostDetail',
+    component: () => import('@/views/HostDetail.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {

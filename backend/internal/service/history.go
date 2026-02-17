@@ -31,6 +31,9 @@ type NetworkStatusHistoryResp struct {
 	Score         int       `json:"score"`
 	MonitorTotal  int       `json:"monitor_total"`
 	MonitorActive int       `json:"monitor_active"`
+	GroupTotal    int       `json:"group_total"`
+	GroupActive   int       `json:"group_active"`
+	GroupImpacted int       `json:"group_impacted"`
 	HostTotal     int       `json:"host_total"`
 	HostActive    int       `json:"host_active"`
 	ItemTotal     int       `json:"item_total"`
@@ -89,6 +92,9 @@ func GetNetworkStatusHistoryServ(from, to *time.Time, limit int) ([]NetworkStatu
 			Score:         row.Score,
 			MonitorTotal:  row.MonitorTotal,
 			MonitorActive: row.MonitorActive,
+			GroupTotal:    row.GroupTotal,
+			GroupActive:   row.GroupActive,
+			GroupImpacted: row.GroupImpacted,
 			HostTotal:     row.HostTotal,
 			HostActive:    row.HostActive,
 			ItemTotal:     row.ItemTotal,
@@ -138,6 +144,9 @@ func recordNetworkStatusSnapshot(sampledAt time.Time) {
 		Score:         score.Score,
 		MonitorTotal:  score.MonitorTotal,
 		MonitorActive: score.MonitorActive,
+		GroupTotal:    score.GroupTotal,
+		GroupActive:   score.GroupActive,
+		GroupImpacted: score.GroupImpacted,
 		HostTotal:     score.HostTotal,
 		HostActive:    score.HostActive,
 		ItemTotal:     score.ItemTotal,

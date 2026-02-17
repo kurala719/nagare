@@ -12,6 +12,9 @@ type HealthScore struct {
 	Score         int `json:"score"`
 	MonitorTotal  int `json:"monitor_total"`
 	MonitorActive int `json:"monitor_active"`
+	GroupTotal    int `json:"group_total"`
+	GroupActive   int `json:"group_active"`
+	GroupImpacted int `json:"group_impacted"`
 	HostTotal     int `json:"host_total"`
 	HostActive    int `json:"host_active"`
 	ItemTotal     int `json:"item_total"`
@@ -20,17 +23,22 @@ type HealthScore struct {
 
 func GetHealthScoreServ() (HealthScore, error) {
 	var (
-		monitors         []model.Monitor
-		hosts            []model.Host
-		items            []model.Item
-		errM, errH, errI error
-		wg               sync.WaitGroup
+		monitors               []model.Monitor
+		groups                 []model.Group
+		hosts                  []model.Host
+		items                  []model.Item
+		errM, errG, errH, errI error
+		wg                     sync.WaitGroup
 	)
 
-	wg.Add(3)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		monitors, errM = repository.GetAllMonitorsDAO()
+	}()
+	go func() {
+		defer wg.Done()
+		groups, errG = repository.GetAllGroupsDAO()
 	}()
 	go func() {
 		defer wg.Done()
@@ -45,6 +53,9 @@ func GetHealthScoreServ() (HealthScore, error) {
 	if errM != nil {
 		return HealthScore{}, fmt.Errorf("failed to load monitors: %w", errM)
 	}
+	if errG != nil {
+		return HealthScore{}, fmt.Errorf("failed to load groups: %w", errG)
+	}
 	if errH != nil {
 		return HealthScore{}, fmt.Errorf("failed to load hosts: %w", errH)
 	}
@@ -55,23 +66,52 @@ func GetHealthScoreServ() (HealthScore, error) {
 	monitorScore, monitorActive, monitorTotal := statusScore(len(monitors), func(i int) (enabled bool, status int) {
 		return monitors[i].Enabled != 0, monitors[i].Status
 	})
+	groupScore, groupActive, groupTotal := statusScore(len(groups), func(i int) (enabled bool, status int) {
+		return groups[i].Enabled != 0, groups[i].Status
+	})
 	hostScore, hostActive, hostTotal := statusScore(len(hosts), func(i int) (enabled bool, status int) {
 		return hosts[i].Enabled != 0, hosts[i].Status
 	})
 	itemScore, itemActive, itemTotal := statusScore(len(items), func(i int) (enabled bool, status int) {
 		return items[i].Enabled != 0, items[i].Status
 	})
+	groupImpacted := countImpactedGroups(groups, hosts)
 
-	weighted := int(0.4*float64(monitorScore) + 0.4*float64(hostScore) + 0.2*float64(itemScore))
+	weighted := int(0.3*float64(monitorScore) + 0.2*float64(groupScore) + 0.3*float64(hostScore) + 0.2*float64(itemScore))
 	return HealthScore{
 		Score:         weighted,
 		MonitorTotal:  monitorTotal,
 		MonitorActive: monitorActive,
+		GroupTotal:    groupTotal,
+		GroupActive:   groupActive,
+		GroupImpacted: groupImpacted,
 		HostTotal:     hostTotal,
 		HostActive:    hostActive,
 		ItemTotal:     itemTotal,
 		ItemActive:    itemActive,
 	}, nil
+}
+
+func countImpactedGroups(groups []model.Group, hosts []model.Host) int {
+	if len(groups) == 0 || len(hosts) == 0 {
+		return 0
+	}
+	enabledGroups := make(map[uint]struct{}, len(groups))
+	for _, group := range groups {
+		if group.Enabled != 0 {
+			enabledGroups[group.ID] = struct{}{}
+		}
+	}
+	impacted := map[uint]struct{}{}
+	for _, host := range hosts {
+		if host.Status != 2 || host.GroupID == 0 {
+			continue
+		}
+		if _, ok := enabledGroups[host.GroupID]; ok {
+			impacted[host.GroupID] = struct{}{}
+		}
+	}
+	return len(impacted)
 }
 
 func statusScore(total int, statusFn func(index int) (enabled bool, status int)) (score int, active int, enabledTotal int) {

@@ -143,8 +143,24 @@ export default defineComponent({
         const from = Math.floor(start.getTime() / 1000)
         const to = Math.floor(end.getTime() / 1000)
         
+        console.log('HealthTrendChart fetching data:', { from, to })
+        
         const response = await fetchNetworkStatusHistory({ from, to, limit: 500 })
-        const rows = Array.isArray(response?.data || response) ? (response?.data || response) : []
+        
+        console.log('HealthTrendChart raw response:', response)
+        
+        // Backend returns {success: true, data: [...]}
+        const extractData = (res) => {
+          if (!res) return []
+          if (res.success && res.data !== undefined) {
+            return Array.isArray(res.data) ? res.data : []
+          }
+          if (Array.isArray(res)) return res
+          return []
+        }
+        const rows = extractData(response)
+        
+        console.log('HealthTrendChart extracted rows:', rows.length)
         
         if (rows.length === 0) {
           empty.value = true
@@ -180,13 +196,22 @@ export default defineComponent({
           }
         }
         
+        console.log('HealthTrendChart series:', { points: series.length, prevPoints: prevSeries.length })
+        
         empty.value = series.length === 0
+        loading.value = false
         if (!empty.value) {
           await nextTick()
           buildChart(series, prevSeries)
         }
       } catch (err) {
-        error.value = err.message || t('common.historyLoadFailed')
+        console.error('HealthTrendChart load error:', err)
+        const msg = err.message || t('common.historyLoadFailed')
+        if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized') || err.message.includes('Forbidden'))) {
+          error.value = t('common.sessionExpired') || 'Please log in to view health trend'
+        } else {
+          error.value = msg
+        }
       } finally {
         loading.value = false
       }

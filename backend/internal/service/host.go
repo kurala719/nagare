@@ -509,17 +509,30 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 
 	// Check if host already exists
 	existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+
+	var groupID uint = 0
+	if err == nil {
+		groupID = existingHost.GroupID
+	}
+
+	if h.Metadata != nil {
+		if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+			if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
+				groupID = group.ID
+			}
+		}
+	}
+
 	if err == nil {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-			Name:        h.Name,
-			Hostid:      h.ID,
-			MonitorID:   mid,
-			GroupID:     existingHost.GroupID,
-			Description: h.Description,
-			Enabled:     existingHost.Enabled,
-			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
-			IPAddr:      h.IPAddress,
+			Name:      h.Name,
+			Hostid:    h.ID,
+			MonitorID: mid,
+			GroupID:   groupID,
+			Enabled:   existingHost.Enabled,
+			Status:    mapMonitorHostStatus(h.Status, activeAvailable),
+			IPAddr:    h.IPAddress,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -534,7 +547,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Name:        h.Name,
 			Hostid:      h.ID,
 			MonitorID:   mid,
-			GroupID:     0,
+			GroupID:     groupID,
 			Description: h.Description,
 			Enabled:     1,
 			Status:      mapMonitorHostStatus(h.Status, activeAvailable),

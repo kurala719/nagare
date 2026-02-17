@@ -265,6 +265,7 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	params := map[string]interface{}{
 		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
+		"selectGroups":     []string{"groupid", "name"},
 		"hostids":          hostID,
 	}
 
@@ -273,7 +274,13 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		return nil, err
 	}
 
-	var zabbixHosts []zabbixHost
+	var zabbixHosts []struct {
+		zabbixHost
+		Groups []struct {
+			GroupID string `json:"groupid"`
+			Name    string `json:"name"`
+		} `json:"groups"`
+	}
 	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse host: %w", err)
 	}
@@ -296,16 +303,21 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		status = "down"
 	}
 
+	metadata := map[string]string{
+		"host":             zh.Host,
+		"active_available": zh.ActiveAvailable,
+	}
+	if len(zh.Groups) > 0 {
+		metadata["groupid"] = zh.Groups[0].GroupID
+	}
+
 	return &Host{
 		ID:          zh.HostID,
 		Name:        zh.Name,
 		Description: zh.Description,
 		Status:      status,
 		IPAddress:   ip,
-		Metadata: map[string]string{
-			"host":             zh.Host,
-			"active_available": zh.ActiveAvailable,
-		},
+		Metadata:    metadata,
 	}, nil
 }
 

@@ -228,7 +228,19 @@ export default {
       return getUserPrivileges() >= 3
     },
     filteredUsers() {
-      return this.users
+      const searchTerm = this.search.trim().toLowerCase()
+      if (!searchTerm) {
+        return this.users
+      }
+      // Perform client-side filtering on the current page of users.
+      return this.users.filter((user) => {
+        const username = user.username || ''
+        const nickname = user.nickname || ''
+        const email = user.email || ''
+        return (
+          username.toLowerCase().includes(searchTerm) || nickname.toLowerCase().includes(searchTerm) || email.toLowerCase().includes(searchTerm)
+        )
+      })
     },
     privilegeOptions() {
       const current = getUserPrivileges()
@@ -250,9 +262,10 @@ export default {
     this.loadUsers(true)
   },
   watch: {
+    // The search is now handled on the client-side by the `filteredUsers` computed property.
+    // We reset to page 1 when search is initiated to avoid confusion.
     search() {
       this.currentPage = 1
-      this.loadUsers(true)
     },
     sortKey() {
       this.currentPage = 1
@@ -339,11 +352,13 @@ export default {
       if (reset) {
         this.users = []
       }
-      this.loading = reset
+      this.loading = true
       this.error = null
       try {
         const { sortBy, sortOrder } = this.parseSortKey(this.sortKey)
         const response = await searchUsers({
+          // The search is now primarily client-side for responsiveness.
+          // The server-side query can be kept to fetch a broadly relevant set of users.
           q: this.search || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
@@ -351,11 +366,39 @@ export default {
           order: sortOrder,
           with_total: 1,
         })
-        const data = Array.isArray(response.data)
-          ? response.data
-          : (response.data?.items || response.data?.data || response.data || [])
-        const total = response.data?.total ?? response?.total ?? data.length
-        this.users = Array.isArray(data) ? data : []
+        let payload = []
+        let total = 0
+        
+        // Handle various response formats
+        const data = response?.data || response
+        
+        if (response?.success && response.data) {
+          const resData = response.data
+          if (Array.isArray(resData)) {
+            payload = resData
+            total = resData.length
+          } else if (resData.items && Array.isArray(resData.items)) {
+            payload = resData.items
+            total = resData.total ?? resData.items.length
+          }
+        } else if (data && (data.items || Array.isArray(data))) {
+          if (Array.isArray(data)) {
+            payload = data
+            total = data.length
+          } else if (data.items && Array.isArray(data.items)) {
+            payload = data.items
+            total = data.total ?? data.items.length
+          }
+        }
+        this.users = payload.map((u) => ({
+          id: u.ID || u.id,
+          username: u.Username || u.username,
+          nickname: u.Nickname || u.nickname || '',
+          email: u.Email || u.email || '',
+          phone: u.Phone || u.phone || '',
+          privileges: u.Privileges ?? u.privileges ?? 1,
+          status: u.Status ?? u.status ?? 0,
+        }))
         this.totalUsers = Number.isFinite(total) ? total : this.users.length
       } catch (err) {
         this.error = err?.message || this.$t('users.loadFailed')

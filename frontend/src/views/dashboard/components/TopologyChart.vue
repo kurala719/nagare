@@ -77,6 +77,40 @@ export default defineComponent({
       const links = []
       const groupMap = new Map()
       const monitorMap = new Map()
+      const impactedGroupIds = new Set()
+      const impactedHostIds = new Set()
+
+      const buildLink = (source, target, impacted) => ({
+        source,
+        target,
+        lineStyle: impacted
+          ? { color: '#f56c6c', width: 2.5, opacity: 0.9 }
+          : undefined,
+      })
+      const linkIndex = new Map()
+      const pushLink = (source, target, impacted) => {
+        const key = `${source}|${target}`
+        const existing = linkIndex.get(key)
+        if (existing !== undefined) {
+          if (impacted) {
+            links[existing].lineStyle = { color: '#f56c6c', width: 2.5, opacity: 0.9 }
+          }
+          return
+        }
+        links.push(buildLink(source, target, impacted))
+        linkIndex.set(key, links.length - 1)
+      }
+
+      hosts.forEach((host) => {
+        const hostId = Number(host.ID || host.id)
+        if (!hostId) return
+        const groupId = Number(host.GroupID || host.group_id || 0)
+        const status = host.Status ?? host.status ?? 0
+        if (status === 2) {
+          impactedHostIds.add(hostId)
+          if (groupId) impactedGroupIds.add(groupId)
+        }
+      })
 
       monitors.forEach((monitor) => {
         const id = Number(monitor.ID || monitor.id)
@@ -103,13 +137,20 @@ export default defineComponent({
         const status = group.Status ?? group.status ?? 0
         const nodeId = `group-${id}`
         groupMap.set(id, nodeId)
+        const impacted = impactedGroupIds.has(id)
         nodes.push({
           id: nodeId,
           name,
           category: 1,
           symbolSize: 48,
-          value: { status },
-          itemStyle: { color: getStatusColor(status) },
+          value: { status, impacted },
+          itemStyle: {
+            color: getStatusColor(status),
+            borderColor: impacted ? '#f56c6c' : undefined,
+            borderWidth: impacted ? 3 : 0,
+            shadowBlur: impacted ? 8 : 0,
+            shadowColor: impacted ? '#f56c6c' : undefined,
+          },
           label: { show: true },
         })
       })
@@ -123,7 +164,6 @@ export default defineComponent({
         const name = host.Name || host.name || `Host ${hostId}`
         const status = host.Status ?? host.status ?? 0
         const nodeId = `host-${hostId}`
-        
         nodes.push({
           id: nodeId,
           name,
@@ -135,13 +175,13 @@ export default defineComponent({
         })
 
         if (groupId && groupMap.has(groupId)) {
-          links.push({ source: groupMap.get(groupId), target: nodeId })
+          pushLink(groupMap.get(groupId), nodeId, impactedHostIds.has(hostId))
           groupHostCount.set(groupId, (groupHostCount.get(groupId) || 0) + 1)
           if (monitorId && monitorMap.has(monitorId)) {
-            links.push({ source: monitorMap.get(monitorId), target: groupMap.get(groupId) })
+            pushLink(monitorMap.get(monitorId), groupMap.get(groupId), impactedGroupIds.has(groupId))
           }
         } else if (monitorId && monitorMap.has(monitorId)) {
-          links.push({ source: monitorMap.get(monitorId), target: nodeId })
+          pushLink(monitorMap.get(monitorId), nodeId, impactedHostIds.has(hostId))
         }
       })
 
@@ -170,7 +210,9 @@ export default defineComponent({
             const statusLabel = getStatusInfo(status).label
             const ip = params.data?.value?.ip
             const ipLine = ip ? `<br/>IP: ${ip}` : ''
-            return `<strong>${params.data?.name || '-'}</strong><br/>${statusLabel}${ipLine}`
+            const impacted = params.data?.value?.impacted
+            const impactedLine = impacted ? `<br/>${t('dashboard.impactedLabel')}` : ''
+            return `<strong>${params.data?.name || '-'}</strong><br/>${statusLabel}${ipLine}${impactedLine}`
           }
         },
         legend: [{
@@ -220,11 +262,36 @@ export default defineComponent({
           fetchMonitorData({ limit: 200 }),
         ])
 
-        const groups = Array.isArray(groupRes?.data || groupRes) ? (groupRes?.data || groupRes) : []
-        const hosts = Array.isArray(hostRes?.data || hostRes) ? (hostRes?.data || hostRes) : []
-        const monitors = Array.isArray(monitorRes?.data || monitorRes) ? (monitorRes?.data || monitorRes) : []
+        console.log('TopologyChart raw responses:', { groupRes, hostRes, monitorRes })
+
+        // Backend always returns {success: true, data: ...}
+        // For arrays: data is array directly
+        // For paginated: data is {items: [...], total: N}
+        const extractData = (res) => {
+          if (!res) return []
+          // Check if response has success/data structure
+          if (res.success && res.data !== undefined) {
+            const data = res.data
+            // If data is array, return it
+            if (Array.isArray(data)) return data
+            // If data.items is array (paginated), return items
+            if (Array.isArray(data.items)) return data.items
+            return []
+          }
+          // Fallback: if response itself is array
+          if (Array.isArray(res)) return res
+          return []
+        }
+
+        const groups = extractData(groupRes)
+        const hosts = extractData(hostRes)
+        const monitors = extractData(monitorRes)
+
+        console.log('TopologyChart extracted data:', { groups, hosts, monitors })
 
         const { nodes, links } = buildGraph(groups, hosts, monitors)
+        
+        console.log('TopologyChart graph:', { nodeCount: nodes.length, linkCount: links.length })
         
         if (nodes.length === 0) {
           empty.value = true
@@ -233,11 +300,18 @@ export default defineComponent({
             chartInstance.value = null
           }
         } else {
+          loading.value = false
           await nextTick()
           initChart(nodes, links)
         }
       } catch (err) {
-        error.value = err.message || t('dashboard.topologyLoadFailed')
+        console.error('TopologyChart load error:', err)
+        const msg = err.message || t('dashboard.topologyLoadFailed')
+        if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized') || err.message.includes('Forbidden'))) {
+          error.value = t('common.sessionExpired') || 'Please log in to view topology'
+        } else {
+          error.value = msg
+        }
       } finally {
         loading.value = false
       }

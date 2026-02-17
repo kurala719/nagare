@@ -276,12 +276,6 @@ export default {
       search: '',
       searchField: 'all',
       selectedColumns: ['name', 'enabled', 'status', 'description'],
-      columnOptions: [
-        { key: 'name', label: this.$t('groups.name') },
-        { key: 'enabled', label: this.$t('common.enabled') },
-        { key: 'status', label: this.$t('groups.status') },
-        { key: 'description', label: this.$t('groups.description') },
-      ],
       statusFilter: 'all',
       createDialogVisible: false,
       propertiesDialogVisible: false,
@@ -304,6 +298,14 @@ export default {
   computed: {
     filteredGroups() {
       return this.groups;
+    },
+    columnOptions() {
+      return [
+        { key: 'name', label: this.$t('groups.name') },
+        { key: 'enabled', label: this.$t('common.enabled') },
+        { key: 'status', label: this.$t('groups.status') },
+        { key: 'description', label: this.$t('groups.description') },
+      ];
     },
     searchableColumns() {
       return this.columnOptions;

@@ -72,6 +72,7 @@ func SendChatServ(req ChatReq) (ChatRes, error) {
 func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 	client, llmModel, err := createLLMClient(req.ProviderID, req.Model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, err
 	}
 
@@ -108,15 +109,18 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 	})
 	logLLMRequest("network_status", req.ProviderID, llmModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze network status: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
 	return ChatRes{Content: resp.Content, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 	client, llmModel, err := createLLMClient(req.ProviderID, req.Model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, err
 	}
 
@@ -143,6 +147,7 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		})
 		logLLMRequest("persona_chat", req.ProviderID, llmModel, time.Since(start), err)
 		if err != nil {
+			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
 		}
 		responseText = resp.Content
@@ -150,6 +155,7 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		responseText, err = client.SimpleChat(ctx, llmModel, req.Content)
 		logLLMRequest("simple_chat", req.ProviderID, llmModel, time.Since(start), err)
 		if err != nil {
+			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
 		}
 	}
@@ -164,12 +170,14 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
 	return ChatRes{Content: responseText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	client, llmModel, err := createLLMClient(req.ProviderID, req.Model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, err
 	}
 
@@ -195,6 +203,7 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	})
 	logLLMRequest("tool_chat", req.ProviderID, llmModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
 	}
 
@@ -218,6 +227,7 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		})
 		logLLMRequest("tool_answer", req.ProviderID, llmModel, time.Since(start), err)
 		if err != nil {
+			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
 		}
 		finalText = finalResp.Content
@@ -233,6 +243,7 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
 	return ChatRes{Content: finalText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
@@ -317,6 +328,7 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 
 	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, err
 	}
 
@@ -337,9 +349,11 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 	})
 	logLLMRequest("alert_consult", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze alert: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -359,6 +373,7 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 
 	client, resolvedModel, err := createLLMClient(1, "") // Default to provider ID 1
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(1, 2)
 		return ChatRes{}, err
 	}
 
@@ -379,9 +394,11 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 	})
 	logLLMRequest("item_consult", 1, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(1, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze item: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(1, 1)
 	return ChatRes{Content: resp.Content, ProviderID: 1, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -401,6 +418,7 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 
 	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, err
 	}
 
@@ -431,9 +449,11 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 	})
 	logLLMRequest("host_consult", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze host: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -485,12 +505,14 @@ func createLLMClient(providerID uint, model string) (*llm.Client, string, error)
 func ConsultServ(req ChatReq) (ChatRes, error) {
 	client, resolvedModel, err := createLLMClient(req.ProviderID, req.Model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, err
 	}
 
 	ctx := context.Background()
 	responseText, err := client.SimpleChat(ctx, resolvedModel, req.Content)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, fmt.Errorf("failed to get AI response: %w", err)
 	}
 
@@ -501,6 +523,7 @@ func ConsultServ(req ChatReq) (ChatRes, error) {
 func AnalyzeMonitoringDataServ(providerID uint, model string, data string) (ChatRes, error) {
 	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, err
 	}
 
@@ -518,9 +541,11 @@ func AnalyzeMonitoringDataServ(providerID uint, model string, data string) (Chat
 	})
 	logLLMRequest("monitoring_analysis", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze data: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -528,6 +553,7 @@ func AnalyzeMonitoringDataServ(providerID uint, model string, data string) (Chat
 func ExplainErrorServ(providerID uint, model string, errorMsg string) (ChatRes, error) {
 	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, err
 	}
 
@@ -544,9 +570,11 @@ func ExplainErrorServ(providerID uint, model string, errorMsg string) (ChatRes, 
 	})
 	logLLMRequest("error_explain", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, fmt.Errorf("failed to explain error: %w", err)
 	}
 
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 

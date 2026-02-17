@@ -95,6 +95,9 @@ type NetworkStatusHistory struct {
 	Score         int
 	MonitorTotal  int
 	MonitorActive int
+	GroupTotal    int
+	GroupActive   int
+	GroupImpacted int
 	HostTotal     int
 	HostActive    int
 	ItemTotal     int

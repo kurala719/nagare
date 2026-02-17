@@ -375,16 +375,6 @@ export default {
       search: '',
       searchField: 'all',
       selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'description'],
-      columnOptions: [
-        { key: 'name', label: this.$t('hosts.name') },
-        { key: 'monitor', label: this.$t('hosts.monitor') },
-        { key: 'group', label: this.$t('groups.title') },
-        { key: 'ip_addr', label: this.$t('hosts.ip') },
-        { key: 'hostid', label: this.$t('hosts.hostId') },
-        { key: 'enabled', label: this.$t('common.enabled') },
-        { key: 'status', label: this.$t('hosts.status') },
-        { key: 'description', label: this.$t('hosts.description') },
-      ],
       statusFilter: 'all',
       monitorFilter: 0,
       groupFilter: 0,
@@ -398,6 +388,18 @@ export default {
   computed: {
     filteredHosts() {
       return this.hosts;
+    },
+    columnOptions() {
+      return [
+        { key: 'name', label: this.$t('hosts.name') },
+        { key: 'monitor', label: this.$t('hosts.monitor') },
+        { key: 'group', label: this.$t('groups.title') },
+        { key: 'ip_addr', label: this.$t('hosts.ip') },
+        { key: 'hostid', label: this.$t('hosts.hostId') },
+        { key: 'enabled', label: this.$t('common.enabled') },
+        { key: 'status', label: this.$t('hosts.status') },
+        { key: 'description', label: this.$t('hosts.description') },
+      ];
     },
     searchableColumns() {
       return this.columnOptions.filter((col) => ['name', 'ip_addr', 'hostid', 'description', 'monitor', 'group', 'status', 'enabled'].includes(col.key));
@@ -457,11 +459,18 @@ export default {
     },
     async loadMonitors() {
       try {
+        console.log('Host page loading monitors...')
         const response = await fetchMonitorData();
-        const data = Array.isArray(response)
-          ? response
-          : (response?.data?.monitors || response?.data?.data || response?.data || response?.monitors || []);
-        const list = Array.isArray(data) ? data : [];
+        console.log('Host page monitors response:', response)
+        // Backend returns {success: true, data: [...]}
+        let data = []
+        if (response?.success && response?.data !== undefined) {
+          data = Array.isArray(response.data) ? response.data : 
+                 (Array.isArray(response.data.items) ? response.data.items : [])
+        } else if (Array.isArray(response)) {
+          data = response
+        }
+        const list = data;
         this.monitors = list.map((m: any) => ({
           id: Number(
             m.ID || m.Id || m.id || m.MID || m.Mid || m.mid ||
@@ -469,18 +478,29 @@ export default {
           ),
           name: m.Name || m.name || m.MonitorName || m.monitor_name || m.monitorName || m.Monitor?.Name || m.Monitor?.name || '',
         }));
+        console.log('Host page monitors loaded:', this.monitors.length)
       } catch (err) {
         console.error('Error loading monitors:', err);
       }
     },
     async loadGroups() {
       try {
+        console.log('Host page loading groups...')
         const response = await fetchGroupData();
-        const data = Array.isArray(response) ? response : (response.data || response.groups || []);
+        console.log('Host page groups response:', response)
+        // Backend returns {success: true, data: [...]}
+        let data = []
+        if (response?.success && response?.data !== undefined) {
+          data = Array.isArray(response.data) ? response.data : 
+                 (Array.isArray(response.data.items) ? response.data.items : [])
+        } else if (Array.isArray(response)) {
+          data = response
+        }
         this.groups = data.map((g: any) => ({
           id: g.ID || g.id || 0,
           name: g.Name || g.name || '',
         }));
+        console.log('Host page groups loaded:', this.groups.length)
       } catch (err) {
         console.error('Error loading groups:', err);
       }
@@ -505,6 +525,16 @@ export default {
       this.error = null;
       try {
         const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
+        console.log('Host page loading hosts with params:', {
+          q: this.search || undefined,
+          status: this.statusFilter === 'all' ? undefined : this.statusFilter,
+          m_id: this.monitorFilter || undefined,
+          group_id: this.groupFilter || undefined,
+          limit: this.pageSize,
+          offset: (this.currentPage - 1) * this.pageSize,
+          sort: sortBy,
+          order: sortOrder,
+        })
         const response = await fetchHostData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
@@ -516,10 +546,24 @@ export default {
           order: sortOrder,
           with_total: 1,
         });
-        const payload = Array.isArray(response)
-          ? response
-          : (response.data?.items || response.items || response.data || response.hosts || []);
-        const total = response?.data?.total ?? response?.total ?? payload.length;
+        console.log('Host page hosts response:', response)
+        // Backend returns {success: true, data: [...]} or {success: true, data: {items: [...], total: N}}
+        let payload = []
+        let total = 0
+        if (response?.success && response?.data !== undefined) {
+          const data = response.data
+          if (Array.isArray(data)) {
+            payload = data
+            total = data.length
+          } else if (data.items && Array.isArray(data.items)) {
+            payload = data.items
+            total = data.total ?? data.items.length
+          }
+        } else if (Array.isArray(response)) {
+          payload = response
+          total = response.length
+        }
+        console.log('Host page extracted payload:', { count: payload.length, total })
         const mapped = payload.map((h: any) => {
           const monitorId = h.m_id || h.MID || h.Mid || h.mid || h.MonitorID || h.MonitorId || h.monitorId || h.monitor_id || h.Monitorid || h.monitorID || h.Monitor?.ID || h.Monitor?.Id || h.monitor?.id || h.monitor?.ID || 0;
           return {
@@ -538,8 +582,9 @@ export default {
         });
         this.hosts = mapped;
         this.totalHosts = Number.isFinite(total) ? total : mapped.length;
+        console.log('Host page hosts loaded:', this.hosts.length)
       } catch (err) {
-        this.error = err.message || 'Failed to load hosts';
+        this.error = err.message || this.$t('hosts.loadFailed') || 'Failed to load hosts';
         console.error('Error loading hosts:', err);
       } finally {
         this.loading = false;
@@ -1028,5 +1073,3 @@ export default {
   color: #303133;
 }
 </style>
-
-

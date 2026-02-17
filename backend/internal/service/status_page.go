@@ -45,10 +45,11 @@ func GetPublicStatusSummaryServ() (PublicStatusSummary, error) {
 		}
 
 		statusStr := "operational"
-		if group.Status == 2 { // Error
+		switch group.Status {
+		case 2: // Error
 			statusStr = "outage"
 			groupsDown++
-		} else if group.Status == 3 { // Syncing/Unknown often treated as degraded or operational depending on policy
+		case 3: // Syncing/Unknown often treated as degraded or operational depending on policy
 			statusStr = "operational" // Assume syncing is fine for public display, or check actual logic
 		}
 

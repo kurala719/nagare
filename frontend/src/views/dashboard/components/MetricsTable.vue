@@ -45,7 +45,7 @@
     />
 
     <template v-else>
-      <el-table :data="metrics" style="width: 100%" max-height="320">
+      <el-table :data="metrics" style="width: 100%" height="260">
         <el-table-column prop="host_name" :label="$t('dashboard.host')" min-width="140" show-overflow-tooltip />
         <el-table-column prop="item_name" :label="$t('dashboard.metric')" min-width="160" show-overflow-tooltip />
         <el-table-column :label="$t('dashboard.value')" min-width="140">

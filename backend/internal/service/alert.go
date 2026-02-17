@@ -154,6 +154,7 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 	providerID, model := aiProviderConfig()
 	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return "", err
 	}
 
@@ -198,8 +199,10 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 	})
 	logLLMRequest("alert_analysis", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return "", err
 	}
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 	return strings.TrimSpace(resp.Content), nil
 }
 

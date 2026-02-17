@@ -44,11 +44,15 @@ func StartStatusChecks() {
 		defer ticker.Stop()
 
 		_ = CheckAllMonitorsStatusServ()
-		_ = CheckAllProvidersStatusServ()
+		if viper.GetBool("status_check.provider_enabled") {
+			_ = CheckAllProvidersStatusServ()
+		}
 		_ = CheckAllGroupsStatusServ()
 		for range ticker.C {
 			_ = CheckAllMonitorsStatusServ()
-			_ = CheckAllProvidersStatusServ()
+			if viper.GetBool("status_check.provider_enabled") {
+				_ = CheckAllProvidersStatusServ()
+			}
 			_ = CheckAllGroupsStatusServ()
 		}
 	}()
