@@ -86,6 +86,7 @@ func setupAllRoutes(rg RouteGroup) {
 	setupAlertRoutes(rg)
 	setupQueueRoutes(rg)
 	setupSystemRoutes(rg)
+	setupPublicRoutes(rg)
 	setupIMRoutes(rg)
 	setupMediaTypeRoutes(rg)
 	setupMediaRoutes(rg)
@@ -97,6 +98,11 @@ func setupAllRoutes(rg RouteGroup) {
 	setupProviderRoutes(rg)
 	setupUserRoutes(rg)
 	setupUserInformationRoutes(rg)
+}
+
+func setupPublicRoutes(rg RouteGroup) {
+	public := rg.Group("/public")
+	public.GET("/status", api.GetPublicStatusSummaryCtrl)
 }
 
 func setupConfigurationRoutes(rg RouteGroup) {
@@ -145,6 +151,11 @@ func setupSiteRoutes(rg RouteGroup) {
 	sitesWrite.POST("/:id/push", api.PushSiteToMonitorsCtrl)
 	sitesWrite.POST("/check", api.CheckAllSitesStatusCtrl)
 	sitesWrite.POST("/:id/check", api.CheckSiteStatusCtrl)
+
+	// Monitor sites routes with privilege level 2
+	monitorSites := rg.Group("/monitors/:id/sites", api.PrivilegesMiddleware(2))
+	monitorSites.POST("/pull", api.PullSitesFromMonitorCtrl)
+	monitorSites.POST("/:sid/push", api.PushSiteToMonitorCtrl)
 }
 
 func setupHostRoutes(rg RouteGroup) {

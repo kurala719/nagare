@@ -203,6 +203,7 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	params := map[string]interface{}{
 		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
+		"selectGroups":     []string{"groupid", "name"},
 	}
 
 	resp, err := p.sendRequest(ctx, "host.get", params)
@@ -210,7 +211,14 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 		return nil, err
 	}
 
-	var zabbixHosts []zabbixHost
+	// Define a custom struct to handle groups since standard zabbixHost struct doesn't have it
+	var zabbixHosts []struct {
+		zabbixHost
+		Groups []struct {
+			GroupID string `json:"groupid"`
+			Name    string `json:"name"`
+		} `json:"groups"`
+	}
 	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse hosts: %w", err)
 	}
@@ -230,16 +238,22 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 			status = "down"
 		}
 
+		metadata := map[string]string{
+			"host":             zh.Host,
+			"active_available": zh.ActiveAvailable,
+		}
+		// Add groupid to metadata if available
+		if len(zh.Groups) > 0 {
+			metadata["groupid"] = zh.Groups[0].GroupID
+		}
+
 		hosts = append(hosts, Host{
 			ID:          zh.HostID,
 			Name:        zh.Name,
 			Description: zh.Description,
 			Status:      status,
 			IPAddress:   ip,
-			Metadata: map[string]string{
-				"host":             zh.Host,
-				"active_available": zh.ActiveAvailable,
-			},
+			Metadata:    metadata,
 		})
 	}
 
@@ -1022,6 +1036,49 @@ func (p *ZabbixProvider) GetHostGroups(ctx context.Context) ([]string, error) {
 		groupNames = append(groupNames, g.Name)
 	}
 	return groupNames, nil
+}
+
+func (p *ZabbixProvider) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
+	params := map[string]interface{}{
+		"output": []string{"groupid", "name"},
+	}
+	resp, err := p.sendRequest(ctx, "hostgroup.get", params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get host groups: %w", err)
+	}
+	var groups []struct {
+		GroupID string `json:"groupid"`
+		Name    string `json:"name"`
+	}
+	if err := json.Unmarshal(resp.Result, &groups); err != nil {
+		return nil, fmt.Errorf("failed to parse host groups: %w", err)
+	}
+	result := make([]struct{ ID, Name string }, 0, len(groups))
+	for _, g := range groups {
+		result = append(result, struct{ ID, Name string }{ID: g.GroupID, Name: g.Name})
+	}
+	return result, nil
+}
+
+func (p *ZabbixProvider) UpdateHostGroup(ctx context.Context, id, name string) error {
+	params := map[string]interface{}{
+		"groupid": id,
+		"name":    name,
+	}
+	if _, err := p.sendRequest(ctx, "hostgroup.update", params); err != nil {
+		return fmt.Errorf("failed to update host group: %w", err)
+	}
+	return nil
+}
+
+func (p *ZabbixProvider) DeleteHostGroup(ctx context.Context, id string) error {
+	params := map[string]interface{}{
+		"groupids": []string{id},
+	}
+	if _, err := p.sendRequest(ctx, "hostgroup.delete", params); err != nil {
+		return fmt.Errorf("failed to delete host group: %w", err)
+	}
+	return nil
 }
 
 func (p *ZabbixProvider) GetHostGroupByName(ctx context.Context, name string) (string, error) {

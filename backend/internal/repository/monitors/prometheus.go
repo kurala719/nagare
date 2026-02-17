@@ -139,6 +139,18 @@ func (p *PrometheusProvider) GetHostGroups(ctx context.Context) ([]string, error
 	return nil, fmt.Errorf("prometheus: GetHostGroups not implemented yet")
 }
 
+func (p *PrometheusProvider) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
+	return nil, fmt.Errorf("prometheus: GetHostGroupsDetails not implemented yet")
+}
+
+func (p *PrometheusProvider) UpdateHostGroup(ctx context.Context, id, name string) error {
+	return fmt.Errorf("prometheus: UpdateHostGroup not implemented yet")
+}
+
+func (p *PrometheusProvider) DeleteHostGroup(ctx context.Context, id string) error {
+	return fmt.Errorf("prometheus: DeleteHostGroup not implemented yet")
+}
+
 func (p *PrometheusProvider) GetHostGroupByName(ctx context.Context, name string) (string, error) {
 	return "", fmt.Errorf("prometheus: GetHostGroupByName not implemented yet")
 }

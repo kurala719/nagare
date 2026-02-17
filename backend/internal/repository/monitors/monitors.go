@@ -146,8 +146,11 @@ type Provider interface {
 
 	// Host group operations could be added here if needed
 	GetHostGroups(ctx context.Context) ([]string, error)
+	GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error)
 	GetHostGroupByName(ctx context.Context, name string) (string, error)
 	CreateHostGroup(ctx context.Context, name string) (string, error)
+	UpdateHostGroup(ctx context.Context, id, name string) error
+	DeleteHostGroup(ctx context.Context, id string) error
 
 	// Provider info
 	Name() string
@@ -294,6 +297,11 @@ func (c *Client) GetHostGroups(ctx context.Context) ([]string, error) {
 	return c.provider.GetHostGroups(ctx)
 }
 
+// GetHostGroupsDetails retrieves all host groups with details from the monitoring system
+func (c *Client) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
+	return c.provider.GetHostGroupsDetails(ctx)
+}
+
 // GetHostGroupByName retrieves a host group ID by name
 func (c *Client) GetHostGroupByName(ctx context.Context, name string) (string, error) {
 	return c.provider.GetHostGroupByName(ctx, name)
@@ -302,4 +310,14 @@ func (c *Client) GetHostGroupByName(ctx context.Context, name string) (string, e
 // CreateHostGroup creates a host group in the monitoring system
 func (c *Client) CreateHostGroup(ctx context.Context, name string) (string, error) {
 	return c.provider.CreateHostGroup(ctx, name)
+}
+
+// UpdateHostGroup updates a host group in the monitoring system
+func (c *Client) UpdateHostGroup(ctx context.Context, id, name string) error {
+	return c.provider.UpdateHostGroup(ctx, id, name)
+}
+
+// DeleteHostGroup deletes a host group in the monitoring system
+func (c *Client) DeleteHostGroup(ctx context.Context, id string) error {
+	return c.provider.DeleteHostGroup(ctx, id)
 }

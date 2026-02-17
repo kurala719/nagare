@@ -77,6 +77,16 @@ func AddSiteDAO(site model.Site) error {
 	return database.DB.Create(&site).Error
 }
 
+// GetSiteByExternalIDDAO retrieves a site by its external ID and monitor ID
+func GetSiteByExternalIDDAO(externalID string, monitorID uint) (model.Site, error) {
+	var site model.Site
+	err := database.DB.Where("external_id = ? AND m_id = ?", externalID, monitorID).First(&site).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return site, model.ErrNotFound
+	}
+	return site, err
+}
+
 // UpdateSiteDAO updates a site by ID
 func UpdateSiteDAO(id uint, site model.Site) error {
 	return database.DB.Model(&model.Site{}).Where("id = ?", id).Updates(map[string]interface{}{
@@ -84,6 +94,8 @@ func UpdateSiteDAO(id uint, site model.Site) error {
 		"description": site.Description,
 		"enabled":     site.Enabled,
 		"status":      site.Status,
+		"m_id":        site.MonitorID,
+		"external_id": site.ExternalID,
 	}).Error
 }
 

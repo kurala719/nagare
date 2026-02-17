@@ -1,6 +1,6 @@
 <template>
   <el-config-provider :locale="elementLocale">
-    <router-view v-if="isAuthLayout" />
+    <router-view v-if="isStandaloneLayout" />
     <MainLayout v-else />
   </el-config-provider>
 </template>
@@ -24,7 +24,10 @@ export default defineComponent({
     const route = useRoute()
     const { locale } = useI18n()
     const elementLocale = computed(() => (locale.value === 'zh-CN' ? zhCn : en))
-    const isAuthLayout = computed(() => route.meta?.layout === 'auth')
+    const isStandaloneLayout = computed(() => {
+      const layout = route.meta?.layout
+      return layout === 'auth' || layout === 'status'
+    })
 
     onMounted(() => {
       // Initialize theme from local storage
@@ -51,7 +54,7 @@ export default defineComponent({
 
     return {
       elementLocale,
-      isAuthLayout
+      isStandaloneLayout
     }
   }
 })

@@ -30,8 +30,10 @@ type Site struct {
 	gorm.Model
 	Name        string
 	Description string
-	Enabled     int `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status      int // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	MonitorID   uint   `gorm:"column:m_id"`
+	ExternalID  string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
+	Enabled     int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
+	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 }
 
 // Monitor represents a monitoring system (e.g., Zabbix)

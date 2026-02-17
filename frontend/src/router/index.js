@@ -145,6 +145,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 3 }
   },
   {
+    path: '/status',
+    name: 'StatusPage',
+    component: () => import('@/views/StatusPage.vue'),
+    meta: { requiresAuth: false, layout: 'status' }
+  },
+  {
     path: '/',
     redirect:'/dashboard'
   }
