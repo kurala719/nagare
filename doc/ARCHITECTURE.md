@@ -41,20 +41,20 @@ All endpoints below are prefixed by `/api/v1`.
 - `POST /monitors/check` : Check all monitor status
 - `POST /monitors/:id/check` : Check monitor status
 
-### Sites
+### Groups
 **Read (Privilege 1):**
-- `GET /sites/` : Search sites
-- `GET /sites/:id` : Get site by ID
-- `GET /sites/:id/detail` : Get site detail
+- `GET /groups/` : Search groups
+- `GET /groups/:id` : Get group by ID
+- `GET /groups/:id/detail` : Get group detail
 
 **Write (Privilege 2):**
-- `POST /sites/` : Create site
-- `PUT /sites/:id` : Update site
-- `DELETE /sites/:id` : Delete site
-- `POST /sites/:id/pull` : Pull site data from monitors
-- `POST /sites/:id/push` : Push site data to monitors
-- `POST /sites/check` : Check all site status
-- `POST /sites/:id/check` : Check site status
+- `POST /groups/` : Create group
+- `PUT /groups/:id` : Update group
+- `DELETE /groups/:id` : Delete group
+- `POST /groups/:id/pull` : Pull group data from monitors
+- `POST /groups/:id/push` : Push group data to monitors
+- `POST /groups/check` : Check all group status
+- `POST /groups/:id/check` : Check group status
 
 ### Hosts
 **Read (Privilege 1):**
@@ -237,8 +237,8 @@ All routes are defined in the SPA router and map to Vue view components.
 - `/alert` -> Alert
 - `/host` -> Host
 - `/host/:id/detail` -> HostDetail
-- `/site` -> Site
-- `/site/:id/detail` -> SiteDetail
+- `/group` -> Group
+- `/group/:id/detail` -> GroupDetail
 - `/monitor` -> Monitor
 - `/item` -> Item
 - `/item/:id/detail` -> ItemDetail

@@ -15,7 +15,7 @@ type Host struct {
 	Name              string
 	Hostid            string // External ID from monitoring system
 	MonitorID         uint   `gorm:"column:m_id"`
-	SiteID            uint   `gorm:"column:site_id"`
+	GroupID           uint   `gorm:"column:group_id"`
 	Description       string
 	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
@@ -25,8 +25,8 @@ type Host struct {
 	Comment           string
 }
 
-// Site represents a logical site/grouping of hosts
-type Site struct {
+// Group represents a logical group of hosts
+type Group struct {
 	gorm.Model
 	Name        string
 	Description string
@@ -167,7 +167,7 @@ type Trigger struct {
 	ActionID       uint
 	AlertID        *uint `gorm:"column:alert_id"`
 	AlertStatus    *int  `gorm:"column:alert_status"`
-	AlertSiteID    *uint `gorm:"column:alert_site_id"`
+	AlertGroupID   *uint `gorm:"column:alert_group_id"`
 	AlertMonitorID *uint `gorm:"column:alert_monitor_id"`
 	AlertHostID    *uint `gorm:"column:alert_host_id"`
 	AlertItemID    *uint `gorm:"column:alert_item_id"`

@@ -17,7 +17,7 @@ type TriggerReq struct {
 	ActionID       uint   `json:"action_id"`
 	AlertID        *uint  `json:"alert_id"`
 	AlertStatus    *int   `json:"alert_status"`
-	AlertSiteID    *uint  `json:"alert_site_id"`
+	AlertGroupID   *uint  `json:"alert_group_id"`
 	AlertMonitorID *uint  `json:"alert_monitor_id"`
 	AlertHostID    *uint  `json:"alert_host_id"`
 	AlertItemID    *uint  `json:"alert_item_id"`
@@ -37,7 +37,7 @@ type TriggerResp struct {
 	ActionID       uint   `json:"action_id"`
 	AlertID        *uint  `json:"alert_id"`
 	AlertStatus    *int   `json:"alert_status"`
-	AlertSiteID    *uint  `json:"alert_site_id"`
+	AlertGroupID   *uint  `json:"alert_group_id"`
 	AlertMonitorID *uint  `json:"alert_monitor_id"`
 	AlertHostID    *uint  `json:"alert_host_id"`
 	AlertItemID    *uint  `json:"alert_item_id"`
@@ -97,7 +97,7 @@ func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 		ActionID:       req.ActionID,
 		AlertID:        req.AlertID,
 		AlertStatus:    req.AlertStatus,
-		AlertSiteID:    req.AlertSiteID,
+		AlertGroupID:   req.AlertGroupID,
 		AlertMonitorID: req.AlertMonitorID,
 		AlertHostID:    req.AlertHostID,
 		AlertItemID:    req.AlertItemID,
@@ -129,7 +129,7 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 		ActionID:       req.ActionID,
 		AlertID:        req.AlertID,
 		AlertStatus:    req.AlertStatus,
-		AlertSiteID:    req.AlertSiteID,
+		AlertGroupID:   req.AlertGroupID,
 		AlertMonitorID: req.AlertMonitorID,
 		AlertHostID:    req.AlertHostID,
 		AlertItemID:    req.AlertItemID,
@@ -164,7 +164,7 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 		ActionID:       trigger.ActionID,
 		AlertID:        trigger.AlertID,
 		AlertStatus:    trigger.AlertStatus,
-		AlertSiteID:    trigger.AlertSiteID,
+		AlertGroupID:   trigger.AlertGroupID,
 		AlertMonitorID: trigger.AlertMonitorID,
 		AlertHostID:    trigger.AlertHostID,
 		AlertItemID:    trigger.AlertItemID,
@@ -234,7 +234,7 @@ func buildAlertReplacements(ctx alertMatchContext) map[string]string {
 		"{{host_id}}":        fmt.Sprintf("%d", alert.HostID),
 		"{{item_id}}":        fmt.Sprintf("%d", alert.ItemID),
 		"{{monitor_id}}":     fmt.Sprintf("%d", ctx.monitorID),
-		"{{site_id}}":        fmt.Sprintf("%d", ctx.siteID),
+		"{{group_id}}":       fmt.Sprintf("%d", ctx.groupID),
 		"{{analysis}}":       alert.Comment,
 		"{{created_at}}":     alert.CreatedAt.Format(time.RFC3339),
 	}
@@ -327,7 +327,7 @@ type alertMatchContext struct {
 	host      *model.Host
 	item      *model.Item
 	monitorID uint
-	siteID    uint
+	groupID   uint
 }
 
 func buildAlertMatchContext(alert model.Alert) alertMatchContext {
@@ -349,7 +349,7 @@ func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 	}
 	if ctx.host != nil {
 		ctx.monitorID = ctx.host.MonitorID
-		ctx.siteID = ctx.host.SiteID
+		ctx.groupID = ctx.host.GroupID
 	}
 	return ctx
 }
@@ -372,7 +372,7 @@ func matchAlertTrigger(trigger model.Trigger, ctx alertMatchContext) bool {
 	if trigger.AlertMonitorID != nil && ctx.monitorID != *trigger.AlertMonitorID {
 		return false
 	}
-	if trigger.AlertSiteID != nil && ctx.siteID != *trigger.AlertSiteID {
+	if trigger.AlertGroupID != nil && ctx.groupID != *trigger.AlertGroupID {
 		return false
 	}
 	hostID := alert.HostID

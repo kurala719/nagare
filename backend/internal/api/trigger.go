@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllTriggersCtrl handles GET /trigger
@@ -42,9 +43,9 @@ func SearchTriggersCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid alert_monitor_id")
 		return
 	}
-	alertSiteID, err := parseOptionalUint(c, "alert_site_id")
+	alertGroupID, err := parseOptionalUint(c, "alert_group_id")
 	if err != nil {
-		respondBadRequest(c, "invalid alert_site_id")
+		respondBadRequest(c, "invalid alert_group_id")
 		return
 	}
 	alertHostID, err := parseOptionalUint(c, "alert_host_id")
@@ -83,7 +84,7 @@ func SearchTriggersCtrl(c *gin.Context) {
 		ActionID:       actionIDPtr,
 		AlertID:        alertID,
 		AlertMonitorID: alertMonitorID,
-		AlertSiteID:    alertSiteID,
+		AlertGroupID:   alertGroupID,
 		AlertHostID:    alertHostID,
 		AlertItemID:    alertItemID,
 		Limit:          limit,

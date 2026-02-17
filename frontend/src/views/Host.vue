@@ -47,10 +47,10 @@
         </el-select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">{{ $t('sites.title') }}</span>
-        <el-select v-model="siteFilter" :placeholder="$t('sites.title')" class="hosts-filter" clearable>
+        <span class="filter-label">{{ $t('groups.title') }}</span>
+        <el-select v-model="groupFilter" :placeholder="$t('groups.title')" class="hosts-filter" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
-          <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
+            <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
       </div>
       <div class="filter-group">
@@ -93,10 +93,10 @@
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="newHost.hostid" :placeholder="$t('hosts.hostId')" />
       </el-form-item>
-      <el-form-item :label="$t('sites.title')">
-        <el-select v-model="newHost.site_id" style="width: 100%;" clearable>
+      <el-form-item :label="$t('groups.title')">
+          <el-select v-model="newHost.group_id" style="width: 100%;" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
-          <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
+            <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('hosts.description')">
@@ -173,9 +173,9 @@
         {{ getMonitorName(row) }}
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('site')" :label="$t('sites.title')" min-width="140">
+    <el-table-column v-if="isColumnVisible('group')" :label="$t('groups.title')" min-width="140">
       <template #default="{ row }">
-        {{ getSiteName(row.site_id) }}
+          {{ getGroupName(row.group_id) }}
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" />
@@ -233,10 +233,10 @@
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="selectedHost.hostid" />
       </el-form-item>
-      <el-form-item :label="$t('sites.title')">
-        <el-select v-model="selectedHost.site_id" style="width: 100%;" clearable>
+      <el-form-item :label="$t('groups.title')">
+        <el-select v-model="selectedHost.group_id" style="width: 100%;" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
-          <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
+          <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('hosts.description')">
@@ -322,7 +322,7 @@
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor } from '@/api/hosts';
-import { fetchSiteData } from '@/api/sites';
+import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { Loading } from '@element-plus/icons-vue';
@@ -331,7 +331,7 @@ interface Host {
   id: number;
   name: string;
   mid: number;
-  site_id: number;
+  group_id: number;
   hostid: string;
   description: string;
   enabled: number;
@@ -354,7 +354,7 @@ export default {
       totalHosts: 0,
       sortKey: 'updated_desc',
       monitors: [],
-      sites: [],
+      groups: [],
       createDialogVisible: false,
       propertiesDialogVisible: false,
       aiDialogVisible: false,
@@ -368,17 +368,17 @@ export default {
       bulkDeleting: false,
       pullingHosts: false,
       pushingHosts: false,
-      newHost: { id: 0, name: '', ip_addr: '', hostid: '', site_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
-      selectedHost: { id: 0, name: '', ip_addr: '', hostid: '', site_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
+      newHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
+      selectedHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
       loading: false,
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'monitor', 'site', 'ip_addr', 'hostid', 'enabled', 'status', 'description'],
+      selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'description'],
       columnOptions: [
         { key: 'name', label: this.$t('hosts.name') },
         { key: 'monitor', label: this.$t('hosts.monitor') },
-        { key: 'site', label: this.$t('sites.title') },
+        { key: 'group', label: this.$t('groups.title') },
         { key: 'ip_addr', label: this.$t('hosts.ip') },
         { key: 'hostid', label: this.$t('hosts.hostId') },
         { key: 'enabled', label: this.$t('common.enabled') },
@@ -387,7 +387,7 @@ export default {
       ],
       statusFilter: 'all',
       monitorFilter: 0,
-      siteFilter: 0,
+      groupFilter: 0,
       syncMonitorId: 0,
       bulkForm: {
         enabled: 'nochange',
@@ -400,7 +400,7 @@ export default {
       return this.hosts;
     },
     searchableColumns() {
-      return this.columnOptions.filter((col) => ['name', 'ip_addr', 'hostid', 'description', 'monitor', 'site', 'status', 'enabled'].includes(col.key));
+      return this.columnOptions.filter((col) => ['name', 'ip_addr', 'hostid', 'description', 'monitor', 'group', 'status', 'enabled'].includes(col.key));
     },
     selectedCount() {
       return this.selectedHosts.length;
@@ -422,7 +422,7 @@ export default {
       this.currentPage = 1;
       this.loadHosts(true);
     },
-    siteFilter() {
+    groupFilter() {
       this.currentPage = 1;
       this.loadHosts(true);
     },
@@ -442,7 +442,7 @@ export default {
     this.applySearchFromQuery();
     this.loadHosts(true);
     this.loadMonitors();
-    this.loadSites();
+    this.loadGroups();
   },
   methods: {
     applySearchFromQuery() {
@@ -473,16 +473,16 @@ export default {
         console.error('Error loading monitors:', err);
       }
     },
-    async loadSites() {
+    async loadGroups() {
       try {
-        const response = await fetchSiteData();
-        const data = Array.isArray(response) ? response : (response.data || response.sites || []);
-        this.sites = data.map((s: any) => ({
-          id: s.ID || s.id || 0,
-          name: s.Name || s.name || '',
+        const response = await fetchGroupData();
+        const data = Array.isArray(response) ? response : (response.data || response.groups || []);
+        this.groups = data.map((g: any) => ({
+          id: g.ID || g.id || 0,
+          name: g.Name || g.name || '',
         }));
       } catch (err) {
-        console.error('Error loading sites:', err);
+        console.error('Error loading groups:', err);
       }
     },
     getMonitorName(target: Host | number) {
@@ -492,10 +492,10 @@ export default {
       if (monitor) return monitor.name;
       return mid ? `${this.$t('hosts.unknown')} (#${mid})` : this.$t('hosts.unknown');
     },
-    getSiteName(siteId: number) {
-      if (!siteId) return this.$t('hosts.unknown');
-      const site = this.sites.find((s: any) => s.id === siteId);
-      return site ? site.name : this.$t('hosts.unknown');
+    getGroupName(groupId: number) {
+      if (!groupId) return this.$t('hosts.unknown');
+      const group = this.groups.find((g: any) => g.id === groupId);
+      return group ? group.name : this.$t('hosts.unknown');
     },
     async loadHosts(reset = false) {
       if (reset) {
@@ -509,7 +509,7 @@ export default {
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           m_id: this.monitorFilter || undefined,
-          site_id: this.siteFilter || undefined,
+          group_id: this.groupFilter || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
           sort: sortBy,
@@ -527,7 +527,7 @@ export default {
             name: h.Name || h.name || '',
             ip_addr: h.IPAddr || h.ip_addr || h.ip || '',
             hostid: h.HostID || h.hostid || '',
-            site_id: Number(h.SiteID || h.site_id || 0),
+            group_id: Number(h.GroupID || h.group_id || 0),
             description: h.Description || h.description || '',
             enabled: this.normalizeEnabled(h.Enabled ?? h.enabled ?? h.ENABLED),
             status: this.normalizeStatus(h.Status ?? h.status ?? h.STATUS),
@@ -749,7 +749,7 @@ export default {
             name: host.name,
             ip_addr: host.ip_addr,
             hostid: host.hostid,
-            site_id: host.site_id,
+            group_id: host.group_id,
             description: host.description,
             enabled: enabledOverride === 'nochange' ? host.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? host.status : statusOverride,
@@ -781,7 +781,7 @@ export default {
           name: this.selectedHost.name,
           ip_addr: this.selectedHost.ip_addr,
           hostid: this.selectedHost.hostid,
-          site_id: this.selectedHost.site_id,
+          group_id: this.selectedHost.group_id,
           description: this.selectedHost.description,
           enabled: this.selectedHost.enabled,
           status: this.selectedHost.status,
@@ -852,7 +852,7 @@ export default {
           name: this.newHost.name,
           ip_addr: this.newHost.ip_addr,
           hostid: this.newHost.hostid,
-          site_id: this.newHost.site_id,
+          group_id: this.newHost.group_id,
           description: this.newHost.description,
           enabled: this.newHost.enabled,
           status: this.newHost.status,
@@ -864,7 +864,7 @@ export default {
         // Reload hosts from database to get the updated list
         await this.loadHosts(true);
         
-        this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', site_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
+        this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
         this.createDialogVisible = false;
         ElMessage({
           type: 'success',
@@ -880,7 +880,7 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', site_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
+      this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
     },
     async consultAI(host: Host) {
       this.currentHostForAI = host;
@@ -1028,3 +1028,5 @@ export default {
   color: #303133;
 }
 </style>
+
+

@@ -35,13 +35,13 @@ func ListTools() []ToolDefinition {
 			Name:        "get_hosts",
 			Description: "List hosts with optional filters.",
 			InputSchema: schemaObject(map[string]interface{}{
-				"q":       schemaString("Search by name, hostid, ip, description."),
-				"status":  schemaInt("Host status."),
-				"m_id":    schemaInt("Monitor id."),
-				"site_id": schemaInt("Site id."),
-				"ip_addr": schemaString("Filter by IP address."),
-				"limit":   schemaInt("Max results (default 100)."),
-				"offset":  schemaInt("Offset for pagination."),
+				"q":        schemaString("Search by name, hostid, ip, description."),
+				"status":   schemaInt("Host status."),
+				"m_id":     schemaInt("Monitor id."),
+				"group_id": schemaInt("Group id."),
+				"ip_addr":  schemaString("Filter by IP address."),
+				"limit":    schemaInt("Max results (default 100)."),
+				"offset":   schemaInt("Offset for pagination."),
 			}),
 		},
 		{
@@ -59,11 +59,11 @@ func ListTools() []ToolDefinition {
 			}),
 		},
 		{
-			Name:        "get_sites",
-			Description: "List sites with optional filters.",
+			Name:        "get_groups",
+			Description: "List groups with optional filters.",
 			InputSchema: schemaObject(map[string]interface{}{
 				"q":      schemaString("Search by name or description."),
-				"status": schemaInt("Site status."),
+				"status": schemaInt("Group status."),
 				"limit":  schemaInt("Max results (default 100)."),
 				"offset": schemaInt("Offset for pagination."),
 			}),
@@ -111,7 +111,7 @@ func ListTools() []ToolDefinition {
 				"action_id":        schemaInt("Action id."),
 				"alert_id":         schemaInt("Alert id."),
 				"alert_monitor_id": schemaInt("Alert monitor id."),
-				"alert_site_id":    schemaInt("Alert site id."),
+				"alert_group_id":   schemaInt("Alert group id."),
 				"alert_host_id":    schemaInt("Alert host id."),
 				"alert_item_id":    schemaInt("Alert item id."),
 				"limit":            schemaInt("Max results (default 100)."),
@@ -222,18 +222,18 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		siteID, err := toUintPtr(args.SiteID)
+		groupID, err := toUintPtr(args.GroupID)
 		if err != nil {
 			return nil, err
 		}
 		filter := model.HostFilter{
-			Query:  args.Query,
-			MID:    mid,
-			SiteID: siteID,
-			Status: args.Status,
-			IPAddr: args.IPAddr,
-			Limit:  limit,
-			Offset: offset,
+			Query:   args.Query,
+			MID:     mid,
+			GroupID: groupID,
+			Status:  args.Status,
+			IPAddr:  args.IPAddr,
+			Limit:   limit,
+			Offset:  offset,
 		}
 		return SearchHostsServ(filter)
 	case "get_items":
@@ -260,22 +260,22 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			Offset:    offset,
 		}
 		return SearchItemsServ(filter)
-	case "get_sites":
-		var args siteArgs
+	case "get_groups":
+		var args groupArgs
 		if err := decodeParams(rawArgs, &args); err != nil {
 			return nil, err
 		}
 		if isEmptyArgs(rawArgs) {
-			return GetAllSitesServ()
+			return GetAllGroupsServ()
 		}
 		limit, offset := withDefaultLimitOffset(args.Limit, args.Offset)
-		filter := model.SiteFilter{
+		filter := model.GroupFilter{
 			Query:  args.Query,
 			Status: args.Status,
 			Limit:  limit,
 			Offset: offset,
 		}
-		return SearchSitesServ(filter)
+		return SearchGroupsServ(filter)
 	case "get_monitors":
 		var args monitorArgs
 		if err := decodeParams(rawArgs, &args); err != nil {
@@ -347,7 +347,7 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		alertSiteID, err := toUintPtr(args.AlertSiteID)
+		alertGroupID, err := toUintPtr(args.AlertGroupID)
 		if err != nil {
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			ActionID:       actionID,
 			AlertID:        alertID,
 			AlertMonitorID: alertMonitorID,
-			AlertSiteID:    alertSiteID,
+			AlertGroupID:   alertGroupID,
 			AlertHostID:    alertHostID,
 			AlertItemID:    alertItemID,
 			Limit:          limit,
@@ -499,7 +499,7 @@ type hostArgs struct {
 	Query     string  `json:"q"`
 	Status    *int    `json:"status"`
 	MonitorID *int    `json:"m_id"`
-	SiteID    *int    `json:"site_id"`
+	GroupID   *int    `json:"group_id"`
 	IPAddr    *string `json:"ip_addr"`
 	Limit     *int    `json:"limit"`
 	Offset    *int    `json:"offset"`
@@ -516,7 +516,7 @@ type itemArgs struct {
 	Offset         *int    `json:"offset"`
 }
 
-type siteArgs struct {
+type groupArgs struct {
 	Query  string `json:"q"`
 	Status *int   `json:"status"`
 	Limit  *int   `json:"limit"`
@@ -554,7 +554,7 @@ type triggerArgs struct {
 	ActionID       *int    `json:"action_id"`
 	AlertID        *int    `json:"alert_id"`
 	AlertMonitorID *int    `json:"alert_monitor_id"`
-	AlertSiteID    *int    `json:"alert_site_id"`
+	AlertGroupID   *int    `json:"alert_group_id"`
 	AlertHostID    *int    `json:"alert_host_id"`
 	AlertItemID    *int    `json:"alert_item_id"`
 	Limit          *int    `json:"limit"`

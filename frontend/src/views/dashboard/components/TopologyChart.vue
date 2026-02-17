@@ -37,7 +37,7 @@ import { defineComponent, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { useI18n } from 'vue-i18n'
 import { Loading } from '@element-plus/icons-vue'
-import { fetchSiteData } from '@/api/sites'
+import { fetchGroupData } from '@/api/groups'
 import { fetchHostData } from '@/api/hosts'
 import { fetchMonitorData } from '@/api/monitors'
 
@@ -72,10 +72,10 @@ export default defineComponent({
       return palette[status] || palette[0]
     }
 
-    const buildGraph = (sites, hosts, monitors) => {
+    const buildGraph = (groups, hosts, monitors) => {
       const nodes = []
       const links = []
-      const siteMap = new Map()
+      const groupMap = new Map()
       const monitorMap = new Map()
 
       monitors.forEach((monitor) => {
@@ -96,13 +96,13 @@ export default defineComponent({
         })
       })
 
-      sites.forEach((site) => {
-        const id = Number(site.ID || site.id)
+      groups.forEach((group) => {
+        const id = Number(group.ID || group.id)
         if (!id) return
-        const name = site.Name || site.name || `Site ${id}`
-        const status = site.Status ?? site.status ?? 0
-        const nodeId = `site-${id}`
-        siteMap.set(id, nodeId)
+        const name = group.Name || group.name || `Group ${id}`
+        const status = group.Status ?? group.status ?? 0
+        const nodeId = `group-${id}`
+        groupMap.set(id, nodeId)
         nodes.push({
           id: nodeId,
           name,
@@ -114,11 +114,11 @@ export default defineComponent({
         })
       })
 
-      const siteHostCount = new Map()
+      const groupHostCount = new Map()
       hosts.forEach((host) => {
         const hostId = Number(host.ID || host.id)
         if (!hostId) return
-        const siteId = Number(host.SiteID || host.site_id || 0)
+        const groupId = Number(host.GroupID || host.group_id || 0)
         const monitorId = Number(host.MonitorID || host.monitor_id || 0)
         const name = host.Name || host.name || `Host ${hostId}`
         const status = host.Status ?? host.status ?? 0
@@ -134,22 +134,22 @@ export default defineComponent({
           label: { show: true },
         })
 
-        if (siteId && siteMap.has(siteId)) {
-          links.push({ source: siteMap.get(siteId), target: nodeId })
-          siteHostCount.set(siteId, (siteHostCount.get(siteId) || 0) + 1)
+        if (groupId && groupMap.has(groupId)) {
+          links.push({ source: groupMap.get(groupId), target: nodeId })
+          groupHostCount.set(groupId, (groupHostCount.get(groupId) || 0) + 1)
           if (monitorId && monitorMap.has(monitorId)) {
-            links.push({ source: monitorMap.get(monitorId), target: siteMap.get(siteId) })
+            links.push({ source: monitorMap.get(monitorId), target: groupMap.get(groupId) })
           }
         } else if (monitorId && monitorMap.has(monitorId)) {
           links.push({ source: monitorMap.get(monitorId), target: nodeId })
         }
       })
 
-      // Adjust site node size based on host count
+      // Adjust group node size based on host count
       nodes.forEach((node) => {
-        if (!node.id.startsWith('site-')) return
-        const siteId = Number(node.id.replace('site-', ''))
-        const count = siteHostCount.get(siteId) || 0
+        if (!node.id.startsWith('group-')) return
+        const groupId = Number(node.id.replace('group-', ''))
+        const count = groupHostCount.get(groupId) || 0
         node.symbolSize = Math.min(72, 40 + count * 3)
       })
 
@@ -214,17 +214,17 @@ export default defineComponent({
       empty.value = false
       
       try {
-        const [siteRes, hostRes, monitorRes] = await Promise.all([
-          fetchSiteData({ limit: 200 }),
+        const [groupRes, hostRes, monitorRes] = await Promise.all([
+          fetchGroupData({ limit: 200 }),
           fetchHostData({ limit: 500 }),
           fetchMonitorData({ limit: 200 }),
         ])
-        
-        const sites = Array.isArray(siteRes?.data || siteRes) ? (siteRes?.data || siteRes) : []
+
+        const groups = Array.isArray(groupRes?.data || groupRes) ? (groupRes?.data || groupRes) : []
         const hosts = Array.isArray(hostRes?.data || hostRes) ? (hostRes?.data || hostRes) : []
         const monitors = Array.isArray(monitorRes?.data || monitorRes) ? (monitorRes?.data || monitorRes) : []
-        
-        const { nodes, links } = buildGraph(sites, hosts, monitors)
+
+        const { nodes, links } = buildGraph(groups, hosts, monitors)
         
         if (nodes.length === 0) {
           empty.value = true

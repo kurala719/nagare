@@ -10,8 +10,8 @@ import (
 	"nagare/internal/repository/monitors"
 )
 
-// PullSitesFromMonitorServ pulls sites (host groups) from a monitor
-func PullSitesFromMonitorServ(mid uint) (SyncResult, error) {
+// PullGroupsFromMonitorServ pulls groups (host groups) from a monitor
+func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
 
 	// 1. Get monitor
@@ -63,29 +63,29 @@ func PullSitesFromMonitorServ(mid uint) (SyncResult, error) {
 
 	result.Total = len(groups)
 
-	// 4. Sync sites
-	for _, group := range groups {
-		// Check if site exists by external ID and monitor ID
-		site, err := repository.GetSiteByExternalIDDAO(group.ID, mid)
+	// 4. Sync groups
+	for _, hostGroup := range groups {
+		// Check if group exists by external ID and monitor ID
+		group, err := repository.GetGroupByExternalIDDAO(hostGroup.ID, mid)
 		if err == nil {
-			// Update existing site
-			site.Name = group.Name
-			if err := repository.UpdateSiteDAO(site.ID, site); err == nil {
+			// Update existing group
+			group.Name = hostGroup.Name
+			if err := repository.UpdateGroupDAO(group.ID, group); err == nil {
 				result.Updated++
 			} else {
 				result.Failed++
 			}
 		} else {
-			// Create new site
-			newSite := model.Site{
-				Name:        group.Name,
+			// Create new group
+			newGroup := model.Group{
+				Name:        hostGroup.Name,
 				Description: "Imported from " + monitor.Name,
 				Enabled:     1,
 				Status:      1,
 				MonitorID:   mid,
-				ExternalID:  group.ID,
+				ExternalID:  hostGroup.ID,
 			}
-			if err := repository.AddSiteDAO(newSite); err == nil {
+			if err := repository.AddGroupDAO(newGroup); err == nil {
 				result.Added++
 			} else {
 				result.Failed++
@@ -96,12 +96,12 @@ func PullSitesFromMonitorServ(mid uint) (SyncResult, error) {
 	return result, nil
 }
 
-// PushSiteToMonitorServ pushes a site to a monitor (create or update host group)
-func PushSiteToMonitorServ(mid uint, siteID uint) error {
-	// 1. Get site and monitor
-	site, err := repository.GetSiteByIDDAO(siteID)
+// PushGroupToMonitorServ pushes a group to a monitor (create or update host group)
+func PushGroupToMonitorServ(mid uint, groupID uint) error {
+	// 1. Get group and monitor
+	group, err := repository.GetGroupByIDDAO(groupID)
 	if err != nil {
-		return fmt.Errorf("failed to get site: %w", err)
+		return fmt.Errorf("failed to get group: %w", err)
 	}
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
@@ -143,29 +143,29 @@ func PushSiteToMonitorServ(mid uint, siteID uint) error {
 	}
 
 	// 3. Push Logic
-	if site.ExternalID != "" && site.MonitorID == mid {
+	if group.ExternalID != "" && group.MonitorID == mid {
 		// Update existing host group
-		err := client.UpdateHostGroup(ctx, site.ExternalID, site.Name)
+		err := client.UpdateHostGroup(ctx, group.ExternalID, group.Name)
 		if err != nil {
 			return fmt.Errorf("failed to update host group: %w", err)
 		}
 	} else {
 		// Check if group exists by name to avoid duplicates
-		groupID, err := client.GetHostGroupByName(ctx, site.Name)
-		if err == nil && groupID != "" {
+		extGroupID, err := client.GetHostGroupByName(ctx, group.Name)
+		if err == nil && extGroupID != "" {
 			// Link existing group
-			site.ExternalID = groupID
-			site.MonitorID = mid
-			_ = repository.UpdateSiteDAO(site.ID, site)
+			group.ExternalID = extGroupID
+			group.MonitorID = mid
+			_ = repository.UpdateGroupDAO(group.ID, group)
 		} else {
 			// Create new host group
-			groupID, err = client.CreateHostGroup(ctx, site.Name)
+			extGroupID, err = client.CreateHostGroup(ctx, group.Name)
 			if err != nil {
 				return fmt.Errorf("failed to create host group: %w", err)
 			}
-			site.ExternalID = groupID
-			site.MonitorID = mid
-			_ = repository.UpdateSiteDAO(site.ID, site)
+			group.ExternalID = extGroupID
+			group.MonitorID = mid
+			_ = repository.UpdateGroupDAO(group.ID, group)
 		}
 	}
 

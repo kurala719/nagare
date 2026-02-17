@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllTriggersDAO retrieves all triggers
@@ -41,8 +42,8 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 	if filter.AlertMonitorID != nil {
 		query = query.Where("alert_monitor_id = ?", *filter.AlertMonitorID)
 	}
-	if filter.AlertSiteID != nil {
-		query = query.Where("alert_site_id = ?", *filter.AlertSiteID)
+	if filter.AlertGroupID != nil {
+		query = query.Where("alert_group_id = ?", *filter.AlertGroupID)
 	}
 	if filter.AlertHostID != nil {
 		query = query.Where("alert_host_id = ?", *filter.AlertHostID)
@@ -94,8 +95,8 @@ func CountTriggersDAO(filter model.TriggerFilter) (int64, error) {
 	if filter.AlertMonitorID != nil {
 		query = query.Where("alert_monitor_id = ?", *filter.AlertMonitorID)
 	}
-	if filter.AlertSiteID != nil {
-		query = query.Where("alert_site_id = ?", *filter.AlertSiteID)
+	if filter.AlertGroupID != nil {
+		query = query.Where("alert_group_id = ?", *filter.AlertGroupID)
 	}
 	if filter.AlertHostID != nil {
 		query = query.Where("alert_host_id = ?", *filter.AlertHostID)
@@ -134,7 +135,7 @@ func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 		"action_id":        trigger.ActionID,
 		"alert_id":         trigger.AlertID,
 		"alert_status":     trigger.AlertStatus,
-		"alert_site_id":    trigger.AlertSiteID,
+		"alert_group_id":   trigger.AlertGroupID,
 		"alert_monitor_id": trigger.AlertMonitorID,
 		"alert_host_id":    trigger.AlertHostID,
 		"alert_item_id":    trigger.AlertItemID,

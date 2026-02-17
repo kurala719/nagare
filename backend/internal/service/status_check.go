@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/spf13/viper"
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -44,11 +45,11 @@ func StartStatusChecks() {
 
 		_ = CheckAllMonitorsStatusServ()
 		_ = CheckAllProvidersStatusServ()
-		_ = CheckAllSitesStatusServ()
+		_ = CheckAllGroupsStatusServ()
 		for range ticker.C {
 			_ = CheckAllMonitorsStatusServ()
 			_ = CheckAllProvidersStatusServ()
-			_ = CheckAllSitesStatusServ()
+			_ = CheckAllGroupsStatusServ()
 		}
 	}()
 }
@@ -206,37 +207,37 @@ func checkProviderStatus(provider model.Provider) StatusCheckResult {
 	return result
 }
 
-// CheckSiteStatusServ checks a single site's status.
-func CheckSiteStatusServ(id uint) (StatusCheckResult, error) {
-	site, err := repository.GetSiteByIDDAO(id)
+// CheckGroupStatusServ checks a single group's status.
+func CheckGroupStatusServ(id uint) (StatusCheckResult, error) {
+	group, err := repository.GetGroupByIDDAO(id)
 	if err != nil {
 		return StatusCheckResult{}, err
 	}
-	return checkSiteStatus(site), nil
+	return checkGroupStatus(group), nil
 }
 
-// CheckAllSitesStatusServ checks all sites.
-func CheckAllSitesStatusServ() []StatusCheckResult {
-	sitesList, err := repository.GetAllSitesDAO()
+// CheckAllGroupsStatusServ checks all groups.
+func CheckAllGroupsStatusServ() []StatusCheckResult {
+	groupsList, err := repository.GetAllGroupsDAO()
 	if err != nil {
-		LogSystem("error", "status check failed to load sites", map[string]interface{}{"error": err.Error()}, nil, "")
+		LogSystem("error", "status check failed to load groups", map[string]interface{}{"error": err.Error()}, nil, "")
 		return nil
 	}
 
-	results := make([]StatusCheckResult, len(sitesList))
+	results := make([]StatusCheckResult, len(groupsList))
 	limit := configuredLimit("status_check.concurrency", defaultStatusCheckConcurrency)
-	runWithLimit(len(sitesList), limit, func(i int) {
-		results[i] = checkSiteStatus(sitesList[i])
+	runWithLimit(len(groupsList), limit, func(i int) {
+		results[i] = checkGroupStatus(groupsList[i])
 	})
 	return results
 }
 
-func checkSiteStatus(site model.Site) StatusCheckResult {
-	result := StatusCheckResult{ID: site.ID, Name: site.Name, Status: site.Status}
-	status, err := recomputeSiteStatus(site.ID)
+func checkGroupStatus(group model.Group) StatusCheckResult {
+	result := StatusCheckResult{ID: group.ID, Name: group.Name, Status: group.Status}
+	status, err := recomputeGroupStatus(group.ID)
 	if err != nil {
-		setSiteStatusError(site.ID)
-		LogService("error", "site status check failed", map[string]interface{}{"site_id": site.ID, "error": err.Error()}, nil, "")
+		setGroupStatusError(group.ID)
+		LogService("error", "group status check failed", map[string]interface{}{"group_id": group.ID, "error": err.Error()}, nil, "")
 		result.Status = 2
 		result.Error = err.Error()
 		return result

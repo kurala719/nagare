@@ -156,8 +156,8 @@
       <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertMonitorId')">
         <el-input-number v-model="newTrigger.alert_monitor_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertSiteId')">
-        <el-input-number v-model="newTrigger.alert_site_id" :min="0" :controls="false" style="width: 100%;" />
+      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertGroupId')">
+        <el-input-number v-model="newTrigger.alert_group_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
       <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertHostId')">
         <el-input-number v-model="newTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
@@ -234,8 +234,8 @@
       <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertMonitorId')">
         <el-input-number v-model="selectedTrigger.alert_monitor_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertSiteId')">
-        <el-input-number v-model="selectedTrigger.alert_site_id" :min="0" :controls="false" style="width: 100%;" />
+      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertGroupId')">
+        <el-input-number v-model="selectedTrigger.alert_group_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
       <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertHostId')">
         <el-input-number v-model="selectedTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
@@ -355,7 +355,7 @@ export default {
         alert_query: '',
         alert_id: null,
         alert_monitor_id: null,
-        alert_site_id: null,
+        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
         log_type: '',
@@ -374,7 +374,7 @@ export default {
         alert_query: '',
         alert_id: null,
         alert_monitor_id: null,
-        alert_site_id: null,
+        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
         log_type: '',
@@ -527,7 +527,7 @@ export default {
           alert_query: t.AlertQuery || t.alert_query || '',
           alert_id: t.AlertID ?? t.alert_id ?? null,
           alert_monitor_id: t.AlertMonitorID ?? t.alert_monitor_id ?? null,
-          alert_site_id: t.AlertSiteID ?? t.alert_site_id ?? null,
+          alert_group_id: t.alertGroupId ?? t.alert_group_id ?? null,
           alert_host_id: t.AlertHostID ?? t.alert_host_id ?? null,
           alert_item_id: t.AlertItemID ?? t.alert_item_id ?? null,
           log_type: t.LogType || t.log_type || '',
@@ -587,7 +587,7 @@ export default {
         alert_query: '',
         alert_id: null,
         alert_monitor_id: null,
-        alert_site_id: null,
+        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
         log_type: '',
@@ -619,7 +619,7 @@ export default {
           alert_query: '',
           alert_id: null,
           alert_monitor_id: null,
-          alert_site_id: null,
+          alert_group_id: null,
           alert_host_id: null,
           alert_item_id: null,
           log_type: '',
@@ -696,7 +696,7 @@ export default {
         alert_query: trigger.alert_query,
         alert_id: trigger.alert_id,
         alert_monitor_id: trigger.alert_monitor_id,
-        alert_site_id: trigger.alert_site_id,
+        alert_group_id: trigger.alert_group_id,
         alert_host_id: trigger.alert_host_id,
         alert_item_id: trigger.alert_item_id,
         log_type: trigger.log_type,
@@ -709,7 +709,7 @@ export default {
         delete payload.alert_query;
         delete payload.alert_id;
         delete payload.alert_monitor_id;
-        delete payload.alert_site_id;
+        delete payload.alert_group_id;
         delete payload.alert_host_id;
         delete payload.alert_item_id;
       }
@@ -721,7 +721,7 @@ export default {
       const optionalKeys = [
         'alert_id',
         'alert_monitor_id',
-        'alert_site_id',
+        'alert_group_id',
         'alert_host_id',
         'alert_item_id',
       ];
@@ -807,3 +807,5 @@ export default {
   padding: 40px;
 }
 </style>
+
+

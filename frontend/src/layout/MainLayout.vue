@@ -181,7 +181,7 @@ export default defineComponent({
       { key: 'monitor_group', label: 'menu.monitor', minPrivilege: 1, icon: 'Monitor', children: [
         { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
         { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
-        { key: 'site', path: '/site', label: 'menu.site', minPrivilege: 1 },
+        { key: 'group', path: '/group', label: 'menu.group', minPrivilege: 1 },
         { key: 'item', path: '/item', label: 'menu.item', minPrivilege: 1 },
       ]},
       { key: 'alert_group', label: 'menu.alert', minPrivilege: 1, icon: 'Bell', children: [

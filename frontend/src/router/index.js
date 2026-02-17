@@ -35,27 +35,27 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/host',
-    name: 'Host',
-    component: () => import('@/views/Host.vue'),
+    path: '/group',
+    name: 'Group',
+    component: () => import('@/views/Group.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/host/:id/detail',
-    name: 'HostDetail',
-    component: () => import('@/views/HostDetail.vue'),
+    path: '/group/:id/detail',
+    name: 'GroupDetail',
+    component: () => import('@/views/GroupDetail.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/site',
-    name: 'Site',
-    component: () => import('@/views/Site.vue'),
+    path: '/group',
+    name: 'Group',
+    component: () => import('@/views/Group.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/site/:id/detail',
-    name: 'SiteDetail',
-    component: () => import('@/views/SiteDetail.vue'),
+    path: '/group/:id/detail',
+    name: 'GroupDetail',
+    component: () => import('@/views/GroupDetail.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {

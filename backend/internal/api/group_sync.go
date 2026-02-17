@@ -8,8 +8,8 @@ import (
 	"nagare/internal/service"
 )
 
-// PullSitesFromMonitorCtrl handles the request to pull sites from a monitor
-func PullSitesFromMonitorCtrl(c *gin.Context) {
+// PullGroupsFromMonitorCtrl handles the request to pull groups from a monitor
+func PullGroupsFromMonitorCtrl(c *gin.Context) {
 	idStr := c.Param("id")
 	mid, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
@@ -17,7 +17,7 @@ func PullSitesFromMonitorCtrl(c *gin.Context) {
 		return
 	}
 
-	result, err := service.PullSitesFromMonitorServ(uint(mid))
+	result, err := service.PullGroupsFromMonitorServ(uint(mid))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
@@ -26,8 +26,8 @@ func PullSitesFromMonitorCtrl(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse{Success: true, Data: result})
 }
 
-// PushSiteToMonitorCtrl handles the request to push a site to a monitor
-func PushSiteToMonitorCtrl(c *gin.Context) {
+// PushGroupToMonitorCtrl handles the request to push a group to a monitor
+func PushGroupToMonitorCtrl(c *gin.Context) {
 	idStr := c.Param("id")
 	mid, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
@@ -35,18 +35,18 @@ func PushSiteToMonitorCtrl(c *gin.Context) {
 		return
 	}
 
-	siteIdStr := c.Param("sid")
-	sid, err := strconv.ParseUint(siteIdStr, 10, 32)
+	groupIdStr := c.Param("gid")
+	gid, err := strconv.ParseUint(groupIdStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "invalid site id"})
+		c.JSON(http.StatusBadRequest, APIResponse{Success: false, Error: "invalid group id"})
 		return
 	}
 
-	err = service.PushSiteToMonitorServ(uint(mid), uint(sid))
+	err = service.PushGroupToMonitorServ(uint(mid), uint(gid))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, APIResponse{Success: true, Message: "site pushed successfully"})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Message: "group pushed successfully"})
 }

@@ -127,8 +127,8 @@ func determineTriggerStatus(t model.Trigger, action model.Action) int {
 	return 1
 }
 
-func determineSiteStatus(site model.Site, hosts []model.Host) int {
-	if site.Enabled == 0 {
+func determineGroupStatus(group model.Group, hosts []model.Host) int {
+	if group.Enabled == 0 {
 		return 0
 	}
 	hasActive := false
@@ -225,8 +225,8 @@ func setProviderStatusError(pid uint) {
 	_ = repository.UpdateProviderStatusDAO(pid, 2)
 }
 
-func setSiteStatusError(sid uint) {
-	_ = repository.UpdateSiteStatusDAO(sid, 2)
+func setGroupStatusError(gid uint) {
+	_ = repository.UpdateGroupStatusDAO(gid, 2)
 }
 
 func recomputeMonitorStatus(mid uint) (int, error) {
@@ -259,17 +259,17 @@ func recomputeProviderStatus(pid uint) (int, error) {
 	return status, nil
 }
 
-func recomputeSiteStatus(sid uint) (int, error) {
-	site, err := repository.GetSiteByIDDAO(sid)
+func recomputeGroupStatus(gid uint) (int, error) {
+	group, err := repository.GetGroupByIDDAO(gid)
 	if err != nil {
 		return 0, err
 	}
-	hosts, err := repository.SearchHostsDAO(model.HostFilter{SiteID: &sid})
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
 	if err != nil {
 		return 0, err
 	}
-	status := determineSiteStatus(site, hosts)
-	if err := repository.UpdateSiteStatusDAO(sid, status); err != nil {
+	status := determineGroupStatus(group, hosts)
+	if err := repository.UpdateGroupStatusDAO(gid, status); err != nil {
 		return status, err
 	}
 	return status, nil

@@ -1,0 +1,110 @@
+package repository
+
+import (
+	"errors"
+
+	"gorm.io/gorm"
+	"nagare/internal/database"
+	"nagare/internal/model"
+)
+
+// GetAllGroupsDAO retrieves all groups
+func GetAllGroupsDAO() ([]model.Group, error) {
+	var groups []model.Group
+	if err := database.DB.Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// SearchGroupsDAO retrieves groups by filter
+func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
+	query := database.DB.Model(&model.Group{})
+	if filter.Query != "" {
+		query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
+		"name":       "name",
+		"status":     "status",
+		"created_at": "created_at",
+		"updated_at": "updated_at",
+		"id":         "id",
+	}, "id desc")
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+	var groups []model.Group
+	if err := query.Find(&groups).Error; err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// CountGroupsDAO returns total count for groups by filter
+func CountGroupsDAO(filter model.GroupFilter) (int64, error) {
+	query := database.DB.Model(&model.Group{})
+	if filter.Query != "" {
+		query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+// GetGroupByIDDAO retrieves a group by ID
+func GetGroupByIDDAO(id uint) (model.Group, error) {
+	var group model.Group
+	err := database.DB.First(&group, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return group, model.ErrNotFound
+	}
+	return group, err
+}
+
+// AddGroupDAO creates a new group
+func AddGroupDAO(group model.Group) error {
+	return database.DB.Create(&group).Error
+}
+
+// GetGroupByExternalIDDAO retrieves a group by its external ID and monitor ID
+func GetGroupByExternalIDDAO(externalID string, monitorID uint) (model.Group, error) {
+	var group model.Group
+	err := database.DB.Where("external_id = ? AND m_id = ?", externalID, monitorID).First(&group).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return group, model.ErrNotFound
+	}
+	return group, err
+}
+
+// UpdateGroupDAO updates a group by ID
+func UpdateGroupDAO(id uint, group model.Group) error {
+	return database.DB.Model(&model.Group{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        group.Name,
+		"description": group.Description,
+		"enabled":     group.Enabled,
+		"status":      group.Status,
+		"m_id":        group.MonitorID,
+		"external_id": group.ExternalID,
+	}).Error
+}
+
+// UpdateGroupStatusDAO updates only the status for a group
+func UpdateGroupStatusDAO(id uint, status int) error {
+	return database.DB.Model(&model.Group{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// DeleteGroupByIDDAO deletes a group by ID
+func DeleteGroupByIDDAO(id uint) error {
+	return database.DB.Delete(&model.Group{}, id).Error
+}

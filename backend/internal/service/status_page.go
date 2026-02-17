@@ -10,7 +10,7 @@ type PublicStatusSummary struct {
 	OverallStatus   string           `json:"overall_status"`   // "operational", "degraded", "outage"
 	OverallMessage  string           `json:"overall_message"`  // "All systems operational", etc.
 	ActiveIncidents []PublicIncident `json:"active_incidents"` // List of active critical alerts
-	Services        []PublicService  `json:"services"`         // List of sites/services
+	Groups          []PublicGroup    `json:"groups"`           // List of groups/services
 }
 
 type PublicIncident struct {
@@ -20,7 +20,7 @@ type PublicIncident struct {
 	CreatedAt string `json:"created_at"`
 }
 
-type PublicService struct {
+type PublicGroup struct {
 	ID     uint   `json:"id"`
 	Name   string `json:"name"`
 	Status string `json:"status"` // "operational", "degraded", "outage"
@@ -29,32 +29,32 @@ type PublicService struct {
 
 // GetPublicStatusSummaryServ generates the status page data
 func GetPublicStatusSummaryServ() (PublicStatusSummary, error) {
-	// 1. Fetch Services (Sites)
-	sites, err := repository.GetAllSitesDAO()
+	// 1. Fetch Groups
+	groups, err := repository.GetAllGroupsDAO()
 	if err != nil {
 		return PublicStatusSummary{}, err
 	}
 
-	var publicServices []PublicService
-	sitesDown := 0
-	sitesDegraded := 0
+	var publicGroups []PublicGroup
+	groupsDown := 0
+	groupsDegraded := 0
 
-	for _, site := range sites {
-		if site.Enabled != 1 {
+	for _, group := range groups {
+		if group.Enabled != 1 {
 			continue
 		}
 
 		statusStr := "operational"
-		if site.Status == 2 { // Error
+		if group.Status == 2 { // Error
 			statusStr = "outage"
-			sitesDown++
-		} else if site.Status == 3 { // Syncing/Unknown often treated as degraded or operational depending on policy
+			groupsDown++
+		} else if group.Status == 3 { // Syncing/Unknown often treated as degraded or operational depending on policy
 			statusStr = "operational" // Assume syncing is fine for public display, or check actual logic
 		}
 
-		publicServices = append(publicServices, PublicService{
-			ID:     site.ID,
-			Name:   site.Name,
+		publicGroups = append(publicGroups, PublicGroup{
+			ID:     group.ID,
+			Name:   group.Name,
 			Status: statusStr,
 			Uptime: "100.0%", // Placeholder: Implement real calculation later
 		})
@@ -88,10 +88,10 @@ func GetPublicStatusSummaryServ() (PublicStatusSummary, error) {
 	overallStatus := "operational"
 	overallMessage := "All systems operational"
 
-	if len(publicIncidents) > 0 || sitesDown > 0 {
+	if len(publicIncidents) > 0 || groupsDown > 0 {
 		overallStatus = "outage"
 		overallMessage = "Service Outage"
-	} else if sitesDegraded > 0 {
+	} else if groupsDegraded > 0 {
 		overallStatus = "degraded"
 		overallMessage = "Partial System Degradation"
 	}
@@ -100,6 +100,6 @@ func GetPublicStatusSummaryServ() (PublicStatusSummary, error) {
 		OverallStatus:   overallStatus,
 		OverallMessage:  overallMessage,
 		ActiveIncidents: publicIncidents,
-		Services:        publicServices,
+		Groups:          publicGroups,
 	}, nil
 }

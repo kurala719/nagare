@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // HostWithItems represents a host with its associated items
@@ -33,8 +34,8 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 	if filter.MID != nil {
 		query = query.Where("m_id = ?", *filter.MID)
 	}
-	if filter.SiteID != nil {
-		query = query.Where("site_id = ?", *filter.SiteID)
+	if filter.GroupID != nil {
+		query = query.Where("group_id = ?", *filter.GroupID)
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
@@ -71,8 +72,8 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 	if filter.MID != nil {
 		query = query.Where("m_id = ?", *filter.MID)
 	}
-	if filter.SiteID != nil {
-		query = query.Where("site_id = ?", *filter.SiteID)
+	if filter.GroupID != nil {
+		query = query.Where("group_id = ?", *filter.GroupID)
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
@@ -138,7 +139,7 @@ func UpdateHostDAO(id uint, h model.Host) error {
 		"name":               h.Name,
 		"hostid":             h.Hostid,
 		"m_id":               h.MonitorID,
-		"site_id":            h.SiteID,
+		"group_id":           h.GroupID,
 		"description":        h.Description,
 		"enabled":            h.Enabled,
 		"status":             h.Status,

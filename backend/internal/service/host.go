@@ -14,7 +14,7 @@ import (
 type HostReq struct {
 	Name        string `json:"name" binding:"required"`
 	MID         uint   `json:"m_id"`
-	SiteID      uint   `json:"site_id"`
+	GroupID     uint   `json:"group_id"`
 	Hostid      string `json:"hostid"`
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
@@ -27,7 +27,7 @@ type HostResp struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	MID         uint   `json:"m_id"`
-	SiteID      uint   `json:"site_id"`
+	GroupID     uint   `json:"group_id"`
 	Hostid      string `json:"hostid"`
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
@@ -89,7 +89,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		Name:        h.Name,
 		Hostid:      h.Hostid,
 		MonitorID:   h.MID,
-		SiteID:      h.SiteID,
+		GroupID:     h.GroupID,
 		Description: h.Description,
 		Enabled:     h.Enabled,
 		IPAddr:      h.IPAddr,
@@ -117,7 +117,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		ID:          int(newHost.ID),
 		Name:        newHost.Name,
 		MID:         newHost.MonitorID,
-		SiteID:      newHost.SiteID,
+		GroupID:     newHost.GroupID,
 		Hostid:      newHost.Hostid,
 		Description: newHost.Description,
 		Enabled:     newHost.Enabled,
@@ -142,7 +142,7 @@ func UpdateHostServ(id uint, h HostReq) error {
 		Name:        h.Name,
 		Hostid:      h.Hostid,
 		MonitorID:   monitorID,
-		SiteID:      h.SiteID,
+		GroupID:     h.GroupID,
 		Description: h.Description,
 		Enabled:     h.Enabled,
 		IPAddr:      h.IPAddr,
@@ -262,7 +262,7 @@ func hostToResp(h model.Host) HostResp {
 		ID:          int(h.ID),
 		Name:        h.Name,
 		MID:         h.MonitorID,
-		SiteID:      h.SiteID,
+		GroupID:     h.GroupID,
 		Hostid:      h.Hostid,
 		Description: h.Description,
 		Enabled:     h.Enabled,
@@ -358,15 +358,15 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 		existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 
-		// Try to find site by groupid, defaulting to existing site ID if host exists
-		var siteID uint = 0
+		// Try to find group by groupid, defaulting to existing group ID if host exists
+		var groupID uint = 0
 		if err == nil {
-			siteID = existingHost.SiteID
+			groupID = existingHost.GroupID
 		}
 
-		if groupID, ok := h.Metadata["groupid"]; ok && groupID != "" {
-			if site, err := repository.GetSiteByExternalIDDAO(groupID, mid); err == nil {
-				siteID = site.ID
+		if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+			if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
+				groupID = group.ID
 			}
 		}
 
@@ -376,7 +376,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Name:        h.Name,
 				Hostid:      h.ID,
 				MonitorID:   mid,
-				SiteID:      siteID,
+				GroupID:     groupID,
 				Description: h.Description,
 				Enabled:     existingHost.Enabled,
 				Status:      status,
@@ -395,11 +395,11 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			result.Updated++
 		} else {
 			// Host doesn't exist, add it
-			// Try to find site by groupid for new host
-			var siteID uint = 0
-			if groupID, ok := h.Metadata["groupid"]; ok && groupID != "" {
-				if site, err := repository.GetSiteByExternalIDDAO(groupID, mid); err == nil {
-					siteID = site.ID
+			// Try to find group by groupid for new host
+			var groupID uint = 0
+			if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+				if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
+					groupID = group.ID
 				}
 			}
 
@@ -407,7 +407,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Name:        h.Name,
 				Hostid:      h.ID,
 				MonitorID:   mid,
-				SiteID:      siteID,
+				GroupID:     groupID,
 				Description: h.Description,
 				Enabled:     1,
 				Status:      status,
@@ -515,7 +515,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Name:        h.Name,
 			Hostid:      h.ID,
 			MonitorID:   mid,
-			SiteID:      existingHost.SiteID,
+			GroupID:     existingHost.GroupID,
 			Description: h.Description,
 			Enabled:     existingHost.Enabled,
 			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
@@ -534,7 +534,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Name:        h.Name,
 			Hostid:      h.ID,
 			MonitorID:   mid,
-			SiteID:      0,
+			GroupID:     0,
 			Description: h.Description,
 			Enabled:     1,
 			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
@@ -597,40 +597,40 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 			return fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
 	}
-	// Create host group (site name) then create host in monitor
-	groupID := ""
+	// Create host group (group name) then create host in monitor
+	extGroupID := ""
 	groupName := "Default"
-	if host.SiteID > 0 {
-		if site, err := repository.GetSiteByIDDAO(host.SiteID); err == nil {
-			if site.Name != "" {
-				groupName = site.Name
+	if host.GroupID > 0 {
+		if group, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+			if group.Name != "" {
+				groupName = group.Name
 			}
-			if site.ExternalID != "" && site.MonitorID == mid {
-				groupID = site.ExternalID
-			} else if site.Name != "" {
+			if group.ExternalID != "" && group.MonitorID == mid {
+				extGroupID = group.ExternalID
+			} else if group.Name != "" {
 				// Fallback: Check/Create by name if ExternalID missing or mismatched
-				gid, err := client.CreateHostGroup(context.Background(), site.Name)
+				gid, err := client.CreateHostGroup(context.Background(), group.Name)
 				if err != nil {
 					setMonitorStatusError(mid)
 					setHostStatusErrorWithReason(id, err.Error())
-					LogService("error", "push host failed to create host group", map[string]interface{}{"monitor_id": mid, "host_id": id, "group": site.Name, "error": err.Error()}, nil, "")
+					LogService("error", "push host failed to create host group", map[string]interface{}{"monitor_id": mid, "host_id": id, "group": group.Name, "error": err.Error()}, nil, "")
 					return fmt.Errorf("failed to create host group: %w", err)
 				}
-				groupID = gid
-				// Update site with new ExternalID
-				site.ExternalID = groupID
-				site.MonitorID = mid
-				_ = repository.UpdateSiteDAO(site.ID, site)
+				extGroupID = gid
+				// Update group with new ExternalID
+				group.ExternalID = extGroupID
+				group.MonitorID = mid
+				_ = repository.UpdateGroupDAO(group.ID, group)
 			}
 		}
 	}
-	// Default group if no site or site creation failed
-	if groupID == "" {
+	// Default group if no group or group creation failed
+	if extGroupID == "" {
 		gid, err := client.CreateHostGroup(context.Background(), "Default")
 		if err != nil {
 			return fmt.Errorf("failed to create default host group: %w", err)
 		}
-		groupID = gid
+		extGroupID = gid
 	}
 
 	monitorHost := monitors.Host{
@@ -638,7 +638,7 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 		Name:        host.Name,
 		IPAddress:   host.IPAddr,
 		Description: host.Description,
-		Metadata:    map[string]string{"groupid": groupID},
+		Metadata:    map[string]string{"groupid": extGroupID},
 	}
 	if host.Hostid == "" {
 		created, err := client.CreateHost(context.Background(), monitorHost)

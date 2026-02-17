@@ -10,9 +10,9 @@ function buildQuery(params = {}) {
   return query ? `?${query}` : '';
 }
 
-export async function fetchSiteData(params = {}) {
+export async function fetchGroupData(params = {}) {
   const { limit = 100, offset = 0, ...rest } = params || {};
-  const url = `/api/v1/sites/${buildQuery({ ...rest, limit, offset })}`;
+  const url = `/api/v1/groups/${buildQuery({ ...rest, limit, offset })}`;
   const resp = await authFetch(url, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
@@ -24,8 +24,8 @@ export async function fetchSiteData(params = {}) {
   return await resp.json();
 }
 
-export async function fetchSiteDetail(id) {
-  const url = `/api/v1/sites/${id}/detail`;
+export async function fetchGroupDetail(id) {
+  const url = `/api/v1/groups/${id}/detail`;
   const resp = await authFetch(url, {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
@@ -37,8 +37,8 @@ export async function fetchSiteDetail(id) {
   return await resp.json();
 }
 
-export async function addSite(data) {
-  const url = '/api/v1/sites/';
+export async function addGroup(data) {
+  const url = '/api/v1/groups/';
   const resp = await authFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -51,8 +51,8 @@ export async function addSite(data) {
   return await resp.json();
 }
 
-export async function updateSite(id, data) {
-  const url = `/api/v1/sites/${id}`;
+export async function updateGroup(id, data) {
+  const url = `/api/v1/groups/${id}`;
   const resp = await authFetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -65,8 +65,8 @@ export async function updateSite(id, data) {
   return await resp.json();
 }
 
-export async function deleteSite(id) {
-  const url = `/api/v1/sites/${id}`;
+export async function deleteGroup(id) {
+  const url = `/api/v1/groups/${id}`;
   const resp = await authFetch(url, {
     method: 'DELETE',
     headers: { 'Accept': 'application/json' },
@@ -78,8 +78,8 @@ export async function deleteSite(id) {
   return await resp.json();
 }
 
-export async function checkSiteStatus(id) {
-  const url = `/api/v1/sites/${id}/check`;
+export async function checkGroupStatus(id) {
+  const url = `/api/v1/groups/${id}/check`;
   const resp = await authFetch(url, {
     method: 'POST',
     headers: { 'Accept': 'application/json' },
@@ -91,8 +91,8 @@ export async function checkSiteStatus(id) {
   return await resp.json();
 }
 
-export async function checkAllSitesStatus() {
-  const url = '/api/v1/sites/check';
+export async function checkAllGroupsStatus() {
+  const url = '/api/v1/groups/check';
   const resp = await authFetch(url, {
     method: 'POST',
     headers: { 'Accept': 'application/json' },

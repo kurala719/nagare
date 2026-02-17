@@ -2,8 +2,8 @@
   <div class="detail-page">
     <div class="detail-header">
       <div>
-        <h2>{{ site.name || $t('sites.detailTitle') }}</h2>
-        <p class="subtitle">{{ site.description || '-' }}</p>
+        <h2>{{ group.name || $t('groups.detailTitle') }}</h2>
+        <p class="subtitle">{{ group.description || '-' }}</p>
       </div>
       <el-button @click="$router.back()">{{ $t('common.back') }}</el-button>
     </div>
@@ -11,25 +11,25 @@
     <el-row :gutter="16" class="stats-row">
       <el-col :xs="12" :md="6">
         <el-card>
-          <div class="stat-label">{{ $t('sites.totalHosts') }}</div>
+          <div class="stat-label">{{ $t('groups.totalHosts') }}</div>
           <div class="stat-value">{{ summary.total_hosts }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :md="6">
         <el-card>
-          <div class="stat-label">{{ $t('sites.activeHosts') }}</div>
+          <div class="stat-label">{{ $t('groups.activeHosts') }}</div>
           <div class="stat-value">{{ summary.active_hosts }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :md="6">
         <el-card>
-          <div class="stat-label">{{ $t('sites.errorHosts') }}</div>
+          <div class="stat-label">{{ $t('groups.errorHosts') }}</div>
           <div class="stat-value">{{ summary.error_hosts }}</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :md="6">
         <el-card>
-          <div class="stat-label">{{ $t('sites.totalItems') }}</div>
+          <div class="stat-label">{{ $t('groups.totalItems') }}</div>
           <div class="stat-value">{{ summary.total_items }}</div>
         </el-card>
       </el-col>
@@ -38,7 +38,7 @@
     <el-row :gutter="16">
       <el-col :xs="24" :lg="12">
         <el-card>
-          <template #header>{{ $t('sites.hostStatusChart') }}</template>
+          <template #header>{{ $t('groups.hostStatusChart') }}</template>
           <div ref="statusChartRef" class="chart"></div>
         </el-card>
       </el-col>
@@ -46,7 +46,7 @@
         <el-card>
           <template #header>
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <span>{{ $t('sites.hosts') }}</span>
+              <span>{{ $t('groups.hosts') }}</span>
               <el-button link size="small" @click="showColumnDialog = true">{{ $t('common.columns') }}</el-button>
             </div>
           </template>
@@ -80,11 +80,11 @@ import { onMounted, ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
-import { fetchSiteDetail } from '@/api/sites'
+import { fetchGroupDetail } from '@/api/groups'
 
 const route = useRoute()
 const { t } = useI18n()
-const site = ref({})
+const group = ref({})
 const summary = ref({ total_hosts: 0, active_hosts: 0, error_hosts: 0, syncing_hosts: 0, total_items: 0 })
 const hosts = ref([])
 const statusChartRef = ref(null)
@@ -101,7 +101,7 @@ const availableColumns = [
 const visibleColumns = ref(['name', 'ip_addr', 'status'])
 
 const loadVisibleColumns = () => {
-  const saved = localStorage.getItem('siteDetailColumns')
+  const saved = localStorage.getItem('groupDetailColumns')
   if (saved) {
     try {
       visibleColumns.value = JSON.parse(saved)
@@ -112,7 +112,7 @@ const loadVisibleColumns = () => {
 }
 
 const saveVisibleColumns = () => {
-  localStorage.setItem('siteDetailColumns', JSON.stringify(visibleColumns.value))
+  localStorage.setItem('groupDetailColumns', JSON.stringify(visibleColumns.value))
 }
 
 watch(visibleColumns, saveVisibleColumns, { deep: true })
@@ -167,11 +167,11 @@ const buildStatusChart = () => {
 }
 
 const loadData = async () => {
-  const siteId = Number(route.params.id)
-  if (!siteId) return
-  const resp = await fetchSiteDetail(siteId)
+  const groupId = Number(route.params.id)
+  if (!groupId) return
+  const resp = await fetchGroupDetail(groupId)
   const data = resp.data || resp
-  site.value = data.site || data.Site || {}
+  group.value = data.group || data.Group || {}
   summary.value = data.summary || data.Summary || summary.value
   hosts.value = (data.hosts || data.Hosts || []).map((h) => ({
     id: h.id || h.ID,

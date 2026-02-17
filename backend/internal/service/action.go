@@ -160,10 +160,10 @@ func appendAlertDetails(message string, replacements map[string]string) string {
 		"severity={{severity}} ({{severity_label}})",
 		"status={{status}}",
 		"monitor_id={{monitor_id}}",
-		"site_id={{site_id}}",
 		"host_id={{host_id}}",
 		"item_id={{item_id}}",
 		"created_at={{created_at}}",
+		"group_id={{group_id}}",
 		"analysis={{analysis}}",
 	}, "\n")
 	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))

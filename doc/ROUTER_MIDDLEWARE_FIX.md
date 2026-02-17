@@ -4,7 +4,7 @@
 When sending API requests to endpoints like:
 - `/api/v1/hosts/?sort=updated_at&order=desc&with_total=1&limit=20&offset=0`
 - `/api/v1/monitors/?limit=100&offset=0`
-- `/api/v1/sites/?limit=100&offset=0`
+- `/api/v1/groups/?limit=100&offset=0`
 
 All requests were returning: `{"success":false,"error":"resource not found"}`
 
@@ -41,7 +41,7 @@ monitors.GET("/", presentation.SearchMonitorsCtrl)
 Fixed middleware application in all route setup functions in [cmd/web_server/router/router.go](cmd/web_server/router/router.go):
 
 1. **setupMonitorRoutes** - Split into privilege level 1 (read) and level 2 (write)
-2. **setupSiteRoutes** - Split into privilege level 1 (read) and level 2 (write)
+2. **setupGroupRoutes** - Split into privilege level 1 (read) and level 2 (write)
 3. **setupHostRoutes** - Split into privilege level 1 (read) and level 2 (write)
 4. **setupAlertRoutes** - Split into public webhook, privilege level 1 (read), and level 2 (write)
 5. **setupMediaTypeRoutes** - Split into privilege level 1 (read) and level 2 (write)
@@ -94,7 +94,7 @@ func setupMonitorRoutes(rg RouteGroup) {
 
 ## Expected Result
 After these changes:
-1. Requests to `/api/v1/hosts/`, `/api/v1/monitors/`, `/api/v1/sites/` with valid JWT tokens will now properly match their routes
+1. Requests to `/api/v1/hosts/`, `/api/v1/monitors/`, `/api/v1/groups/` with valid JWT tokens will now properly match their routes
 2. The `PrivilegesMiddleware` will be correctly invoked to verify user permissions
 3. Authenticated requests will receive the expected data responses instead of "resource not found"
 4. Unauthenticated or insufficient privilege requests will receive appropriate 401/403 responses

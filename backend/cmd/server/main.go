@@ -5,13 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/viper"
 	"nagare/cmd/server/router"
-	"nagare/internal/service"
 	"nagare/internal/database"
 	"nagare/internal/model"
 	"nagare/internal/repository"
+	"nagare/internal/service"
 	"nagare/pkg/queue"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -98,7 +99,7 @@ func initDBTables() error {
 	if err := database.DB.AutoMigrate(
 		&model.User{},
 		&model.Monitor{},
-		&model.Site{},
+		&model.Group{},
 		&model.Host{},
 		&model.Item{},
 		&model.ItemHistory{},
@@ -121,6 +122,26 @@ func initDBTables() error {
 }
 
 func preSchemaUpdates() error {
+	if database.DB.Migrator().HasTable("sites") && !database.DB.Migrator().HasTable("groups") {
+		if err := database.DB.Migrator().RenameTable("sites", "groups"); err != nil {
+			return err
+		}
+	}
+	if database.DB.Migrator().HasTable("hosts") {
+		if database.DB.Migrator().HasColumn("hosts", "site_id") && !database.DB.Migrator().HasColumn("hosts", "group_id") {
+			if err := database.DB.Migrator().RenameColumn("hosts", "site_id", "group_id"); err != nil {
+				return err
+			}
+		}
+	}
+	if database.DB.Migrator().HasTable("triggers") {
+		if database.DB.Migrator().HasColumn("triggers", "alert_site_id") && !database.DB.Migrator().HasColumn("triggers", "alert_group_id") {
+			if err := database.DB.Migrator().RenameColumn("triggers", "alert_site_id", "alert_group_id"); err != nil {
+				return err
+			}
+		}
+	}
+
 	if database.DB.Migrator().HasTable(&model.Trigger{}) && database.DB.Migrator().HasColumn(&model.Trigger{}, "log_level") {
 		if err := database.DB.Exec("UPDATE triggers SET log_level = CASE WHEN CAST(log_level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(log_level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(log_level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(log_level AS UNSIGNED) ELSE NULL END").Error; err != nil {
 			return err

@@ -58,7 +58,7 @@ type TriggerFilter struct {
 	ActionID       *uint
 	AlertID        *uint
 	AlertMonitorID *uint
-	AlertSiteID    *uint
+	AlertGroupID   *uint
 	AlertHostID    *uint
 	AlertItemID    *uint
 	Limit          int
@@ -96,7 +96,7 @@ type MonitorFilter struct {
 type HostFilter struct {
 	Query     string
 	MID       *uint
-	SiteID    *uint
+	GroupID   *uint
 	Status    *int
 	IPAddr    *string
 	Limit     int
@@ -105,9 +105,9 @@ type HostFilter struct {
 	SortOrder string
 }
 
-// SiteFilter represents search and filter options for sites
+// GroupFilter represents search and filter options for groups
 // Query matches name/description (LIKE)
-type SiteFilter struct {
+type GroupFilter struct {
 	Query     string
 	Status    *int
 	Limit     int

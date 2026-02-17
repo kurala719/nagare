@@ -10,11 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"nagare/internal/api"
+	"nagare/internal/mcp"
+	"nagare/internal/service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"nagare/internal/service"
-	"nagare/internal/mcp"
-	"nagare/internal/api"
 )
 
 type RouteGroup interface {
@@ -81,7 +82,7 @@ func InitRouter() {
 func setupAllRoutes(rg RouteGroup) {
 	setupConfigurationRoutes(rg)
 	setupMonitorRoutes(rg)
-	setupSiteRoutes(rg)
+	setupGroupRoutes(rg)
 	setupHostRoutes(rg)
 	setupAlertRoutes(rg)
 	setupQueueRoutes(rg)
@@ -135,27 +136,27 @@ func setupMonitorRoutes(rg RouteGroup) {
 	monitorsWrite.POST("/:id/check", api.CheckMonitorStatusCtrl)
 }
 
-func setupSiteRoutes(rg RouteGroup) {
+func setupGroupRoutes(rg RouteGroup) {
 	// Routes with privilege level 1
-	sitesRead := rg.Group("/sites", api.PrivilegesMiddleware(1))
-	sitesRead.GET("/", api.SearchSitesCtrl)
-	sitesRead.GET("/:id", api.GetSiteByIDCtrl)
-	sitesRead.GET("/:id/detail", api.GetSiteDetailCtrl)
+	groupsRead := rg.Group("/groups", api.PrivilegesMiddleware(1))
+	groupsRead.GET("/", api.SearchGroupsCtrl)
+	groupsRead.GET("/:id", api.GetGroupByIDCtrl)
+	groupsRead.GET("/:id/detail", api.GetGroupDetailCtrl)
 
 	// Routes with privilege level 2
-	sitesWrite := rg.Group("/sites", api.PrivilegesMiddleware(2))
-	sitesWrite.POST("/", api.AddSiteCtrl)
-	sitesWrite.PUT("/:id", api.UpdateSiteCtrl)
-	sitesWrite.DELETE("/:id", api.DeleteSiteByIDCtrl)
-	sitesWrite.POST("/:id/pull", api.PullSiteFromMonitorsCtrl)
-	sitesWrite.POST("/:id/push", api.PushSiteToMonitorsCtrl)
-	sitesWrite.POST("/check", api.CheckAllSitesStatusCtrl)
-	sitesWrite.POST("/:id/check", api.CheckSiteStatusCtrl)
+	groupsWrite := rg.Group("/groups", api.PrivilegesMiddleware(2))
+	groupsWrite.POST("/", api.AddGroupCtrl)
+	groupsWrite.PUT("/:id", api.UpdateGroupCtrl)
+	groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
+	groupsWrite.POST("/:id/pull", api.PullGroupFromMonitorsCtrl)
+	groupsWrite.POST("/:id/push", api.PushGroupToMonitorsCtrl)
+	groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
+	groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
 
-	// Monitor sites routes with privilege level 2
-	monitorSites := rg.Group("/monitors/:id/sites", api.PrivilegesMiddleware(2))
-	monitorSites.POST("/pull", api.PullSitesFromMonitorCtrl)
-	monitorSites.POST("/:sid/push", api.PushSiteToMonitorCtrl)
+	// Monitor groups routes with privilege level 2
+	monitorGroups := rg.Group("/monitors/:id/groups", api.PrivilegesMiddleware(2))
+	monitorGroups.POST("/pull", api.PullGroupsFromMonitorCtrl)
+	monitorGroups.POST("/:gid/push", api.PushGroupToMonitorCtrl)
 }
 
 func setupHostRoutes(rg RouteGroup) {

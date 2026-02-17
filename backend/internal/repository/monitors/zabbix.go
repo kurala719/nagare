@@ -919,7 +919,7 @@ func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error
 				},
 			},
 		},
-		"groups":    []map[string]string{{"groupid": groupID}},    // Site group
+		"groups":    []map[string]string{{"groupid": groupID}},    // Group
 		"templates": []map[string]string{{"templateid": "10229"}}, // Default template
 	}
 	resp, err := p.sendRequest(ctx, "host.create", params)

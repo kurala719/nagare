@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllHostsCtrl handles GET /hosts
@@ -31,9 +32,9 @@ func SearchHostsCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid m_id")
 		return
 	}
-	siteID, err := parseOptionalUint(c, "site_id")
+	groupID, err := parseOptionalUint(c, "group_id")
 	if err != nil {
-		respondBadRequest(c, "invalid site_id")
+		respondBadRequest(c, "invalid group_id")
 		return
 	}
 	withTotal, _ := parseOptionalBool(c, "with_total")
@@ -48,7 +49,7 @@ func SearchHostsCtrl(c *gin.Context) {
 	filter := model.HostFilter{
 		Query:     c.Query("q"),
 		MID:       mid,
-		SiteID:    siteID,
+		GroupID:   groupID,
 		Status:    status,
 		IPAddr:    parseOptionalString(c, "ip_addr"),
 		Limit:     limit,
