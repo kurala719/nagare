@@ -23,6 +23,12 @@ func GetAllAlertsCtrl(c *gin.Context) {
 
 // AlertWebhookCtrl handles POST /alerts/webhook
 func AlertWebhookCtrl(c *gin.Context) {
+	var payload map[string]interface{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		respondBadRequest(c, err.Error())
+		return
+	}
+
 	eventToken := strings.TrimSpace(c.GetHeader("X-Monitor-Token"))
 	if eventToken == "" {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
@@ -36,21 +42,28 @@ func AlertWebhookCtrl(c *gin.Context) {
 	if eventToken == "" {
 		eventToken = strings.TrimSpace(c.Query("event_token"))
 	}
+	
+	// Check payload for token if not found in headers/query
+	if eventToken == "" {
+		if t := payloadString(payload, "token", "event_token", "auth_token"); t != "" {
+			eventToken = t
+		}
+	}
+
 	if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
 		respondError(c, err)
 		return
 	}
 
-	var payload map[string]interface{}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		respondBadRequest(c, err.Error())
-		return
-	}
-
 	message := payloadString(payload, "message", "msg", "title", "subject", "alert")
 	if strings.TrimSpace(message) == "" {
-		respondBadRequest(c, "missing message")
-		return
+		// Try to construct a message from problem/trigger name if message is empty
+		if name := payloadString(payload, "name", "problem", "trigger_name"); name != "" {
+			message = name
+		} else {
+			respondBadRequest(c, "missing message")
+			return
+		}
 	}
 	severity := payloadInt(payload, "severity", "level")
 	hostID := payloadUint(payload, "host_id", "hostid")

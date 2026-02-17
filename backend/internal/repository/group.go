@@ -26,6 +26,9 @@ func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
+	if filter.MonitorID != nil {
+		query = query.Where("m_id = ?", *filter.MonitorID)
+	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
@@ -54,6 +57,9 @@ func CountGroupsDAO(filter model.GroupFilter) (int64, error) {
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.MonitorID != nil {
+		query = query.Where("m_id = ?", *filter.MonitorID)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

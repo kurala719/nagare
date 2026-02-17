@@ -23,6 +23,14 @@ func SearchUsersDAO(filter model.UserFilter) ([]model.User, error) {
 	if filter.Query != "" {
 		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
 	}
+	// Security filter based on requester privileges
+	if filter.RequesterPrivileges > 0 && filter.RequesterPrivileges < 3 {
+		query = query.Where("privileges < ?", filter.RequesterPrivileges)
+	} else if filter.RequesterPrivileges == 0 {
+		// Should not happen for authenticated routes, but safety check
+		return []model.User{}, nil
+	}
+
 	if filter.Privileges != nil {
 		query = query.Where("privileges = ?", *filter.Privileges)
 	}
@@ -57,6 +65,13 @@ func CountUsersDAO(filter model.UserFilter) (int64, error) {
 	if filter.Query != "" {
 		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
 	}
+	// Security filter based on requester privileges
+	if filter.RequesterPrivileges > 0 && filter.RequesterPrivileges < 3 {
+		query = query.Where("privileges < ?", filter.RequesterPrivileges)
+	} else if filter.RequesterPrivileges == 0 {
+		return 0, nil
+	}
+
 	if filter.Privileges != nil {
 		query = query.Where("privileges = ?", *filter.Privileges)
 	}

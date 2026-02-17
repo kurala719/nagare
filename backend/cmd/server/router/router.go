@@ -150,6 +150,8 @@ func setupGroupRoutes(rg RouteGroup) {
 	groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
 	groupsWrite.POST("/:id/pull", api.PullGroupFromMonitorsCtrl)
 	groupsWrite.POST("/:id/push", api.PushGroupToMonitorsCtrl)
+	groupsWrite.POST("/:id/hosts/pull", api.PullGroupHostsCtrl)
+	groupsWrite.POST("/:id/hosts/push", api.PushGroupHostsCtrl)
 	groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
 	groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
 

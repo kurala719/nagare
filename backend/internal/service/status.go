@@ -344,6 +344,15 @@ func recomputeMonitorRelated(mid uint) error {
 	if _, err := recomputeMonitorStatus(mid); err != nil {
 		return err
 	}
+	
+	// Recompute groups for this monitor
+	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
+	if err == nil {
+		for _, group := range groups {
+			_, _ = recomputeGroupStatus(group.ID) // Ignore error to continue
+		}
+	}
+
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	if err != nil {
 		return err
@@ -354,6 +363,10 @@ func recomputeMonitorRelated(mid uint) error {
 		}
 		if err := recomputeItemsForHost(host.ID); err != nil {
 			return err
+		}
+		// Also recompute group status if host belongs to one (in case it wasn't caught by monitor filter)
+		if host.GroupID > 0 {
+			_, _ = recomputeGroupStatus(host.GroupID)
 		}
 	}
 	return nil

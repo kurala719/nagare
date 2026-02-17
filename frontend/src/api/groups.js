@@ -103,3 +103,55 @@ export async function checkAllGroupsStatus() {
   }
   return await resp.json();
 }
+
+export async function pullGroup(id) {
+  const url = `/api/v1/groups/${id}/pull`;
+  const resp = await authFetch(url, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!resp.ok) {
+    throw new Error(`Request failed with status ${resp.status}`);
+  }
+  return await resp.json();
+}
+
+export async function pushGroup(id) {
+  const url = `/api/v1/groups/${id}/push`;
+  const resp = await authFetch(url, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!resp.ok) {
+    throw new Error(`Request failed with status ${resp.status}`);
+  }
+  return await resp.json();
+}
+
+export async function pullGroupHosts(id) {
+  const url = `/api/v1/groups/${id}/hosts/pull`;
+  const resp = await authFetch(url, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!resp.ok) {
+    throw new Error(`Request failed with status ${resp.status}`);
+  }
+  return await resp.json();
+}
+
+export async function pushGroupHosts(id) {
+  const url = `/api/v1/groups/${id}/hosts/push`;
+  const resp = await authFetch(url, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    credentials: 'include',
+  });
+  if (!resp.ok) {
+    throw new Error(`Request failed with status ${resp.status}`);
+  }
+  return await resp.json();
+}

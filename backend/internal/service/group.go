@@ -60,10 +60,13 @@ func GetAllGroupsServ() ([]GroupResp, error) {
 // SearchGroupsServ retrieves groups by filter
 func SearchGroupsServ(filter model.GroupFilter) ([]GroupResp, error) {
 	groupFilter := model.GroupFilter{
-		Query:  filter.Query,
-		Status: filter.Status,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
+		Query:     filter.Query,
+		Status:    filter.Status,
+		MonitorID: filter.MonitorID,
+		Limit:     filter.Limit,
+		Offset:    filter.Offset,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
 	}
 	groups, err := repository.SearchGroupsDAO(groupFilter)
 	if err != nil {
@@ -79,10 +82,11 @@ func SearchGroupsServ(filter model.GroupFilter) ([]GroupResp, error) {
 // CountGroupsServ returns total count for groups by filter
 func CountGroupsServ(filter model.GroupFilter) (int64, error) {
 	groupFilter := model.GroupFilter{
-		Query:  filter.Query,
-		Status: filter.Status,
-		Limit:  filter.Limit,
-		Offset: filter.Offset,
+		Query:     filter.Query,
+		Status:    filter.Status,
+		MonitorID: filter.MonitorID,
+		Limit:     filter.Limit,
+		Offset:    filter.Offset,
 	}
 	return repository.CountGroupsDAO(groupFilter)
 }
@@ -206,12 +210,21 @@ func GetGroupDetailServ(id uint) (GroupDetailResp, error) {
 }
 
 func PullGroupFromMonitorsServ(id uint) (SyncResult, error) {
-	_, err := repository.GetGroupByIDDAO(id)
+	group, err := repository.GetGroupByIDDAO(id)
 	if err != nil {
 		setGroupStatusError(id)
 		LogService("error", "pull group failed to load group", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
 	}
+
+	// Pull group itself first if monitor is set
+	if group.MonitorID > 0 {
+		if err := PullGroupFromMonitorServ(group.MonitorID, id); err != nil {
+			setGroupStatusError(id)
+			LogService("error", "pull group failed to pull group entity", map[string]interface{}{"group_id": id, "monitor_id": group.MonitorID, "error": err.Error()}, nil, "")
+		}
+	}
+
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
 	if err != nil {
 		setGroupStatusError(id)
@@ -254,12 +267,23 @@ func PullGroupFromMonitorsServ(id uint) (SyncResult, error) {
 }
 
 func PushGroupToMonitorsServ(id uint) (SyncResult, error) {
-	_, err := repository.GetGroupByIDDAO(id)
+	group, err := repository.GetGroupByIDDAO(id)
 	if err != nil {
 		setGroupStatusError(id)
 		LogService("error", "push group failed to load group", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
 	}
+
+	// Push group itself first if monitor is set
+	if group.MonitorID > 0 {
+		if err := PushGroupToMonitorServ(group.MonitorID, id); err != nil {
+			setGroupStatusError(id)
+			LogService("error", "push group failed to push group entity", map[string]interface{}{"group_id": id, "monitor_id": group.MonitorID, "error": err.Error()}, nil, "")
+			// Continue to push hosts even if group sync fails? 
+			// Probably better to fail or log error. But let's continue as hosts might already exist.
+		}
+	}
+
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
 	if err != nil {
 		setGroupStatusError(id)
@@ -322,14 +346,111 @@ func PushGroupConfigServ(id uint) error {
 	return PushGroupToMonitorServ(group.MonitorID, id)
 }
 
-// PullGroupHostsServ pulls hosts for a group from monitors
+// PullGroupHostsServ pulls hosts for a group from monitors (without pulling group entity)
 func PullGroupHostsServ(id uint) (SyncResult, error) {
-	return PullGroupFromMonitorsServ(id)
+	group, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		setGroupStatusError(id)
+		LogService("error", "pull group hosts failed to load group", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
+		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
+	}
+
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
+	if err != nil {
+		setGroupStatusError(id)
+		LogService("error", "pull group hosts failed to load hosts", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
+		return SyncResult{}, fmt.Errorf("failed to get group hosts: %w", err)
+	}
+	result := SyncResult{}
+	for _, host := range hosts {
+		if host.MonitorID == 0 {
+			// If host has no specific monitor, try to use group's monitor if available
+			if group.MonitorID > 0 {
+				host.MonitorID = group.MonitorID
+			} else {
+				setGroupStatusError(id)
+				LogService("error", "pull group hosts skipped host without monitor", map[string]interface{}{"group_id": id, "host_id": host.ID}, nil, "")
+				result.Failed++
+				continue
+			}
+		}
+		pullHostRes, err := PullHostFromMonitorServ(host.MonitorID, host.ID)
+		if err != nil {
+			setGroupStatusError(id)
+			LogService("error", "pull group hosts failed to pull host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+			result.Failed++
+			continue
+		}
+		result.Added += pullHostRes.Added
+		result.Updated += pullHostRes.Updated
+		result.Failed += pullHostRes.Failed
+		result.Total += pullHostRes.Total
+
+		pullItemRes, err := PullItemsFromHostServ(host.MonitorID, host.ID)
+		if err != nil {
+			setGroupStatusError(id)
+			LogService("error", "pull group hosts failed to pull items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+			result.Failed++
+			continue
+		}
+		result.Added += pullItemRes.Added
+		result.Updated += pullItemRes.Updated
+		result.Failed += pullItemRes.Failed
+		result.Total += pullItemRes.Total
+	}
+	return result, nil
 }
 
-// PushGroupHostsServ pushes hosts for a group to monitors
+// PushGroupHostsServ pushes hosts for a group to monitors (without pushing group entity)
 func PushGroupHostsServ(id uint) (SyncResult, error) {
-	return PushGroupToMonitorsServ(id)
+	group, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		setGroupStatusError(id)
+		LogService("error", "push group hosts failed to load group", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
+		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
+	}
+
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
+	if err != nil {
+		setGroupStatusError(id)
+		LogService("error", "push group hosts failed to load hosts", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
+		return SyncResult{}, fmt.Errorf("failed to get group hosts: %w", err)
+	}
+	result := SyncResult{}
+	for _, host := range hosts {
+		if host.MonitorID == 0 {
+			// If host has no specific monitor, try to use group's monitor if available
+			if group.MonitorID > 0 {
+				host.MonitorID = group.MonitorID
+			} else {
+				setGroupStatusError(id)
+				LogService("error", "push group hosts skipped host without monitor", map[string]interface{}{"group_id": id, "host_id": host.ID}, nil, "")
+				result.Failed++
+				continue
+			}
+		}
+		if err := PushHostToMonitorServ(host.MonitorID, host.ID); err != nil {
+			setGroupStatusError(id)
+			LogService("error", "push group hosts failed to push host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+			result.Failed++
+			continue
+		}
+		result.Added++
+		result.Total++
+
+		pushItemsRes, err := PushItemsFromHostServ(host.MonitorID, host.ID)
+		if err != nil {
+			setGroupStatusError(id)
+			LogService("error", "push group hosts failed to push items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+			result.Failed++
+			continue
+		}
+		result.Added += pushItemsRes.Added
+		result.Updated += pushItemsRes.Updated
+		result.Failed += pushItemsRes.Failed
+		result.Total += pushItemsRes.Total
+	}
+	return result, nil
 }
 
 func groupToResp(group model.Group) GroupResp {

@@ -59,6 +59,13 @@ export function checkAllMonitorsStatus() {
     })
 }
 
+export function syncGroupsFromMonitor(id) {
+    return request({
+        method: 'POST',
+        url: `/monitors/${id}/groups/pull`,
+    })
+}
+
 /**
  * Fetch monitor data from backend via Vite proxy.
  * Uses /api prefix which gets rewritten by proxy to backend.

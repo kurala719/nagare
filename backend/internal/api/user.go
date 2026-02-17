@@ -105,30 +105,31 @@ func SearchUsersCtrl(c *gin.Context) {
 	}
 
 	filter := model.UserFilter{
-		Query:      c.Query("q"),
-		Privileges: privileges,
-		Status:     status,
-		Limit:      limit,
-		Offset:     offset,
-		SortBy:     c.Query("sort"),
-		SortOrder:  c.Query("order"),
+		Query:               c.Query("q"),
+		Privileges:          privileges,
+		Status:              status,
+		Limit:               limit,
+		Offset:              offset,
+		SortBy:              c.Query("sort"),
+		SortOrder:           c.Query("order"),
+		RequesterPrivileges: requesterPrivileges,
 	}
 	users, err := service.SearchUsersServ(filter)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	filtered := filterUsersByPrivileges(users, requesterPrivileges)
+	// Filter logic moved to database query to support correct pagination
 	if withTotal != nil && *withTotal {
 		total, err := service.CountUsersServ(filter)
 		if err != nil {
 			respondError(c, err)
 			return
 		}
-		respondSuccess(c, http.StatusOK, gin.H{"items": filtered, "total": total})
+		respondSuccess(c, http.StatusOK, gin.H{"items": users, "total": total})
 		return
 	}
-	respondSuccess(c, http.StatusOK, filtered)
+	respondSuccess(c, http.StatusOK, users)
 }
 
 func GetUserByIDCtrl(c *gin.Context) {

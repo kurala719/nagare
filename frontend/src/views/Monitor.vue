@@ -138,6 +138,9 @@
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <el-button size="small" @click="openProperties(monitor)">{{ $t('monitors.properties') }}</el-button>
+              <el-button size="small" type="primary" plain @click="onSyncGroups(monitor)" :loading="monitor.syncing_groups">
+                {{ $t('monitors.syncGroups') }}
+              </el-button>
               <el-button size="small" @click="onLogin(monitor)" :loading="monitor.logging_in">
                 {{ monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login') }}
               </el-button>
@@ -260,10 +263,14 @@ import {
   Message,
   Search,
   Star,
+  Refresh, // Add Refresh icon
+  SuccessFilled,
+  CircleCloseFilled,
+  Loading
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
-import { fetchMonitorData, addMonitor, deleteMonitor, updateMonitor, loginMonitor, regenerateMonitorEventToken } from '@/api/monitors'
+import { fetchMonitorData, addMonitor, deleteMonitor, updateMonitor, loginMonitor, regenerateMonitorEventToken, syncGroupsFromMonitor } from '@/api/monitors'
 
 interface Monitor {
   id: number;
@@ -687,7 +694,7 @@ export default {
       },
       async onLogin(monitor: Monitor) {
         // Set loading state for this specific monitor
-        this.$set(monitor, 'logging_in', true);
+        monitor.logging_in = true;
         try {
           const response = await loginMonitor(monitor.id);
           
@@ -707,12 +714,26 @@ export default {
             message: 'Login successful!',
           });
         } catch (err) {
-          this.$set(monitor, 'logging_in', false);
+          monitor.logging_in = false;
           ElMessage({
             type: 'error',
             message: 'Login failed: ' + (err.response?.data?.error || err.message || 'Unknown error'),
           });
           console.error('Error logging in to monitor:', err);
+        }
+      },
+      async onSyncGroups(monitor: Monitor) {
+        monitor.syncing_groups = true;
+        try {
+          const response = await syncGroupsFromMonitor(monitor.id);
+          // Axios returns response object, response.data is body (APIResponse), response.data.data is SyncResult
+          const apiData = response.data || response;
+          const result = apiData.data || {}; 
+          ElMessage.success(`Groups synced: ${result.added || 0} added, ${result.updated || 0} updated, ${result.failed || 0} failed.`);
+        } catch (err) {
+          ElMessage.error('Sync groups failed: ' + (err.message || 'Unknown error'));
+        } finally {
+          monitor.syncing_groups = false;
         }
       },
       cancelCreate() {

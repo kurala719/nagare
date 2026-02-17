@@ -13,8 +13,9 @@ import (
 type TaskType string
 
 const (
-	TaskTypePullHostsFromMonitor TaskType = "pull_hosts"
-	TaskTypePullItemsFromMonitor TaskType = "pull_items"
+	TaskTypePullHostsFromMonitor  TaskType = "pull_hosts"
+	TaskTypePullGroupsFromMonitor TaskType = "pull_groups"
+	TaskTypePullItemsFromMonitor  TaskType = "pull_items"
 	TaskTypePullHostFromMonitor  TaskType = "pull_host"
 	TaskTypePullItemFromMonitor  TaskType = "pull_item"
 	TaskTypePushHostToMonitor    TaskType = "push_host"
@@ -60,6 +61,7 @@ func New(redisAddr string) (*TaskQueue, error) {
 
 	// Register queue names
 	tq.queues[TaskTypePullHostsFromMonitor] = "nagare:queue:pull_hosts"
+	tq.queues[TaskTypePullGroupsFromMonitor] = "nagare:queue:pull_groups"
 	tq.queues[TaskTypePullItemsFromMonitor] = "nagare:queue:pull_items"
 	tq.queues[TaskTypePullHostFromMonitor] = "nagare:queue:pull_host"
 	tq.queues[TaskTypePullItemFromMonitor] = "nagare:queue:pull_item"

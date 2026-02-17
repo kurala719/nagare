@@ -203,7 +203,7 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	params := map[string]interface{}{
 		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
-		"selectGroups":     []string{"groupid", "name"},
+		"selectGroups":     "extend",
 	}
 
 	resp, err := p.sendRequest(ctx, "host.get", params)
@@ -245,6 +245,11 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 		// Add groupid to metadata if available
 		if len(zh.Groups) > 0 {
 			metadata["groupid"] = zh.Groups[0].GroupID
+			var gids []string
+			for _, g := range zh.Groups {
+				gids = append(gids, g.GroupID)
+			}
+			metadata["groupids"] = strings.Join(gids, ",")
 		}
 
 		hosts = append(hosts, Host{
@@ -265,7 +270,7 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	params := map[string]interface{}{
 		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
-		"selectGroups":     []string{"groupid", "name"},
+		"selectGroups":     "extend",
 		"hostids":          hostID,
 	}
 
@@ -284,6 +289,9 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse host: %w", err)
 	}
+
+	// Debug logging
+	fmt.Printf("DEBUG: Zabbix Host Response: %+v\n", zabbixHosts)
 
 	if len(zabbixHosts) == 0 {
 		return nil, fmt.Errorf("host not found: %s", hostID)
@@ -309,6 +317,11 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	}
 	if len(zh.Groups) > 0 {
 		metadata["groupid"] = zh.Groups[0].GroupID
+		var gids []string
+		for _, g := range zh.Groups {
+			gids = append(gids, g.GroupID)
+		}
+		metadata["groupids"] = strings.Join(gids, ",")
 	}
 
 	return &Host{
@@ -915,25 +928,42 @@ func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error
 			groupID = gid
 		}
 	}
-	params := map[string]interface{}{
-		"host": host.Name,
-		"interfaces": []map[string]interface{}{
-			{
-				"type":  2,
-				"main":  1,
-				"useip": 1,
-				"ip":    host.IPAddress,
-				"dns":   "",
-				"port":  "161",
-				"details": map[string]interface{}{
-					"version":   2,
-					"community": "{$SNMP_COMMUNITY}",
-				},
-			},
+	
+	// Default to Zabbix Agent interface
+	interfaces := []map[string]interface{}{
+		{
+			"type":  1, // Agent
+			"main":  1,
+			"useip": 1,
+			"ip":    host.IPAddress,
+			"dns":   "",
+			"port":  "10050",
 		},
-		"groups":    []map[string]string{{"groupid": groupID}},    // Group
-		"templates": []map[string]string{{"templateid": "10229"}}, // Default template
 	}
+	
+	// Prepare templates
+	var templates []map[string]string
+	
+	// Try to use template from metadata
+	if host.Metadata != nil {
+		if tid, ok := host.Metadata["templateid"]; ok && tid != "" {
+			templates = append(templates, map[string]string{"templateid": tid})
+		}
+	}
+	
+	// If no template specified, try to find a default one (optional)
+	// For now we don't force a template if not provided to avoid errors
+	
+	params := map[string]interface{}{
+		"host":       host.Name,
+		"interfaces": interfaces,
+		"groups":     []map[string]string{{"groupid": groupID}},
+	}
+	
+	if len(templates) > 0 {
+		params["templates"] = templates
+	}
+	
 	resp, err := p.sendRequest(ctx, "host.create", params)
 	if err != nil {
 		return Host{}, fmt.Errorf("failed to create host: %w", err)
@@ -985,6 +1015,10 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				}
 			}
 			params["interfaces"] = []map[string]interface{}{ifaceParams}
+		} else {
+			// If no interface found (unlikely for existing host), create one
+             // or just ignore. Logic below handles update. 
+             // Ideally we should try to create one if missing, but let's stick to update logic.
 		}
 	}
 	if _, err := p.sendRequest(ctx, "host.update", params); err != nil {
@@ -1052,12 +1086,16 @@ func (p *ZabbixProvider) GetHostGroups(ctx context.Context) ([]string, error) {
 
 func (p *ZabbixProvider) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
 	params := map[string]interface{}{
-		"output": []string{"groupid", "name"},
+		"output": "extend",
 	}
 	resp, err := p.sendRequest(ctx, "hostgroup.get", params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get host groups: %w", err)
 	}
+	
+	// Debug logging
+	// fmt.Printf("Zabbix HostGroups Response: %s\n", string(resp.Result))
+
 	var groups []struct {
 		GroupID string `json:"groupid"`
 		Name    string `json:"name"`
@@ -1095,7 +1133,7 @@ func (p *ZabbixProvider) DeleteHostGroup(ctx context.Context, id string) error {
 
 func (p *ZabbixProvider) GetHostGroupByName(ctx context.Context, name string) (string, error) {
 	params := map[string]interface{}{
-		"output": []string{"groupid", "name"},
+		"output": "extend",
 		"filter": map[string]interface{}{"name": []string{name}},
 	}
 	resp, err := p.sendRequest(ctx, "hostgroup.get", params)
@@ -1121,7 +1159,7 @@ func (p *ZabbixProvider) CreateHostGroup(ctx context.Context, name string) (stri
 		return "", fmt.Errorf("host group name is required")
 	}
 	getParams := map[string]interface{}{
-		"output": []string{"groupid", "name"},
+		"output": "extend",
 		"filter": map[string]interface{}{"name": []string{name}},
 	}
 	resp, err := p.sendRequest(ctx, "hostgroup.get", getParams)

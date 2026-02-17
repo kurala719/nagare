@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"nagare/internal/model"
@@ -364,9 +365,20 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			groupID = existingHost.GroupID
 		}
 
-		if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
-			if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
-				groupID = group.ID
+		// Try to find a matching group from metadata
+		if h.Metadata != nil {
+			if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
+				extIDs := strings.Split(extGroupIDsStr, ",")
+				for _, extID := range extIDs {
+					if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
+						groupID = group.ID
+						break
+					}
+				}
+			} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+				if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
+					groupID = group.ID
+				}
 			}
 		}
 
@@ -397,9 +409,19 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			// Host doesn't exist, add it
 			// Try to find group by groupid for new host
 			var groupID uint = 0
-			if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
-				if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
-					groupID = group.ID
+			if h.Metadata != nil {
+				if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
+					extIDs := strings.Split(extGroupIDsStr, ",")
+					for _, extID := range extIDs {
+						if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
+							groupID = group.ID
+							break
+						}
+					}
+				} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+					if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
+						groupID = group.ID
+					}
 				}
 			}
 
@@ -516,7 +538,15 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 
 	if h.Metadata != nil {
-		if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
+		if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
+			extIDs := strings.Split(extGroupIDsStr, ",")
+			for _, extID := range extIDs {
+				if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
+					groupID = group.ID
+					break
+				}
+			}
+		} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
 			if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
 				groupID = group.ID
 			}

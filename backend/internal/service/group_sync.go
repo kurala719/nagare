@@ -68,7 +68,7 @@ func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
 	localGroupsByName := make(map[string]model.Group)
 	if err == nil {
 		for _, g := range allGroups {
-			if g.MonitorID == mid {
+			if g.MonitorID == mid || g.MonitorID == 0 {
 				localGroupsByName[g.Name] = g
 			}
 		}

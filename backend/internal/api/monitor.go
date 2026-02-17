@@ -227,3 +227,19 @@ func CheckAllMonitorsStatusCtrl(c *gin.Context) {
 	results := service.CheckAllMonitorsStatusServ()
 	respondSuccess(c, http.StatusOK, results)
 }
+
+// PullGroupsFromMonitorCtrl handles POST /monitors/:id/groups/pull
+func PullGroupsFromMonitorCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid monitor ID")
+		return
+	}
+
+	result, err := service.PullGroupsFromMonitorServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, result)
+}

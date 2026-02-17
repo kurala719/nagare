@@ -26,6 +26,17 @@ func SearchGroupsCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid status")
 		return
 	}
+	monitorIDInt, err := parseOptionalInt(c, "monitor_id")
+	if err != nil {
+		respondBadRequest(c, "invalid monitor ID")
+		return
+	}
+	var monitorID *uint
+	if monitorIDInt != nil {
+		val := uint(*monitorIDInt)
+		monitorID = &val
+	}
+
 	withTotal, _ := parseOptionalBool(c, "with_total")
 	limit := 100
 	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
@@ -38,6 +49,7 @@ func SearchGroupsCtrl(c *gin.Context) {
 	filter := model.GroupFilter{
 		Query:     c.Query("q"),
 		Status:    status,
+		MonitorID: monitorID,
 		Limit:     limit,
 		Offset:    offset,
 		SortBy:    c.Query("sort"),
@@ -161,6 +173,36 @@ func PushGroupToMonitorsCtrl(c *gin.Context) {
 		return
 	}
 	result, err := service.PushGroupToMonitorsServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, result)
+}
+
+// PullGroupHostsCtrl handles POST /groups/:id/hosts/pull
+func PullGroupHostsCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid group ID")
+		return
+	}
+	result, err := service.PullGroupHostsServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, result)
+}
+
+// PushGroupHostsCtrl handles POST /groups/:id/hosts/push
+func PushGroupHostsCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid group ID")
+		return
+	}
+	result, err := service.PushGroupHostsServ(uint(id))
 	if err != nil {
 		respondError(c, err)
 		return

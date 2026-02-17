@@ -1,36 +1,32 @@
 <template>
+  <div class="hosts-page">
   <div class="hosts-toolbar">
     <div class="hosts-filters">
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('common.columns') }}</span>
-        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.search')" class="hosts-filter" style="min-width: 220px;">
+        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" class="filter-item" style="width: 200px">
           <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
         </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('common.search') }}</span>
-        <el-select v-model="searchField" :placeholder="$t('common.search')" class="hosts-filter">
-          <el-option :label="$t('hosts.filterAll')" value="all" />
-          <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
-        </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('common.search') }}</span>
-        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable class="hosts-search" />
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('hosts.filterStatus') }}</span>
-        <el-select v-model="statusFilter" :placeholder="$t('hosts.filterStatus')" class="hosts-filter">
+
+        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable class="filter-item search-input">
+          <template #prepend>
+            <el-select v-model="searchField" style="width: 100px">
+              <el-option :label="$t('hosts.filterAll')" value="all" />
+              <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
+            </el-select>
+          </template>
+          <template #append>
+            <el-button :icon="Search" />
+          </template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('hosts.filterStatus')" class="filter-item" style="width: 120px">
           <el-option :label="$t('hosts.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('common.sort') }}</span>
-        <el-select v-model="sortKey" class="hosts-filter">
+
+        <el-select v-model="sortKey" class="filter-item" style="width: 140px" :placeholder="$t('common.sort')">
           <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
           <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
           <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
@@ -38,47 +34,42 @@
           <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
           <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
         </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('hosts.filterMonitor') }}</span>
-        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" class="hosts-filter" clearable>
+
+        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" class="filter-item" style="width: 140px" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('groups.title') }}</span>
-        <el-select v-model="groupFilter" :placeholder="$t('groups.title')" class="hosts-filter" clearable>
+
+        <el-select v-model="groupFilter" :placeholder="$t('groups.title')" class="filter-item" style="width: 140px" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
             <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">{{ $t('hosts.syncMonitor') }}</span>
-        <el-select v-model="syncMonitorId" :placeholder="$t('hosts.syncMonitor')" class="hosts-filter" clearable>
+
+        <el-select v-model="syncMonitorId" :placeholder="$t('hosts.syncMonitor')" class="filter-item" style="width: 140px" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
-      </div>
-      <el-button type="warning" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
+    </div>
+    <div class="hosts-actions">
+      <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+        {{ $t('hosts.create') }}
+      </el-button>
+      <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
         {{ $t('hosts.pullHosts') }}
       </el-button>
-      <el-button type="success" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pushingHosts" :loading="pushingHosts" @click="pushHosts">
+      <el-button type="success" :icon="Upload" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pushingHosts" :loading="pushingHosts" @click="pushHosts">
         {{ $t('hosts.pushHosts') }}
       </el-button>
-      <div class="hosts-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
-        </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
-      </div>
+      <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
+        {{ $t('common.bulkUpdate') }}
+      </el-button>
+      <el-button type="danger" plain :icon="Delete" :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
+        {{ $t('common.bulkDelete') }}
+      </el-button>
+      <span v-if="selectedCount > 0" class="selection-info">
+        {{ $t('common.selectedCount', { count: selectedCount }) }}
+      </span>
     </div>
-    <el-button type="primary" @click="createDialogVisible=true">
-      {{ $t('hosts.create') }}
-    </el-button>
   </div>
 
   <!-- Create Dialog -->
@@ -197,15 +188,31 @@
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('description')" :label="$t('hosts.description')" min-width="200" show-overflow-tooltip prop="description" />
-    <el-table-column :label="$t('hosts.actions')" min-width="380" fixed="right">
+    <el-table-column :label="$t('hosts.actions')" min-width="300" fixed="right" align="center">
       <template #default="{ row }">
-        <el-button size="small" type="success" @click="consultAI(row)">{{ $t('hosts.ai') }}</el-button>
-        <el-button size="small" type="primary" @click="openDetails(row)">{{ $t('hosts.details') }}</el-button>
-        <el-button size="small" type="primary" @click="viewItems(row)">{{ $t('hosts.items') }}</el-button>
-        <el-button size="small" type="warning" @click="pullHostItems(row)">{{ $t('hosts.pullItems') }}</el-button>
-        <el-button size="small" type="success" @click="pushHostItems(row)">{{ $t('hosts.pushItems') }}</el-button>
-        <el-button size="small" @click="openProperties(row)">{{ $t('hosts.properties') }}</el-button>
-        <el-button size="small" type="danger" @click="onDelete(row)">{{ $t('hosts.delete') }}</el-button>
+        <el-button-group>
+          <el-tooltip :content="$t('hosts.ai')" placement="top">
+            <el-button size="small" type="success" :icon="Search" @click="consultAI(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.details')" placement="top">
+            <el-button size="small" type="primary" :icon="Document" @click="openDetails(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.items')" placement="top">
+            <el-button size="small" type="info" :icon="Setting" @click="viewItems(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.pullItems')" placement="top">
+            <el-button size="small" type="warning" plain :icon="Download" @click="pullHostItems(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.pushItems')" placement="top">
+            <el-button size="small" type="success" plain :icon="Upload" @click="pushHostItems(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.properties')" placement="top">
+            <el-button size="small" :icon="Edit" @click="openProperties(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('hosts.delete')" placement="top">
+            <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />
+          </el-tooltip>
+        </el-button-group>
       </template>
     </el-table-column>
   </el-table>
@@ -317,6 +324,7 @@
       <el-button @click="aiDialogVisible = false">{{ $t('hosts.close') }}</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <script lang="ts">
@@ -325,7 +333,7 @@ import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHost
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
 
 interface Host {
   id: number;
@@ -383,6 +391,8 @@ export default {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons
+      Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting
     };
   },
   computed: {
@@ -998,12 +1008,23 @@ export default {
 </script>
 
 <style scoped>
+.hosts-page {
+  padding: 16px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
 .hosts-toolbar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .hosts-filters {
@@ -1013,50 +1034,37 @@ export default {
   align-items: center;
 }
 
-.hosts-bulk-actions {
+.filter-item {
+  width: 160px;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.hosts-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
+}
+
+.selection-info {
+  color: #909399;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.hosts-scroll {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .hosts-pagination {
+  margin-top: 16px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.hosts-search {
-  width: 240px;
-}
-
-.hosts-filter {
-  min-width: 160px;
-}
-
-.el-row {
-  margin-bottom: 20px;
-}
-.el-row:last-child {
-  margin-bottom: 0;
-}
-.el-col {
-  border-radius: 4px;
-}
-
-.grid-content {
-  border-radius: 4px;
-  min-height: 36px;
 }
 
 .ai-response-content {

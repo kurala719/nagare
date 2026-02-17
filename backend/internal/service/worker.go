@@ -23,7 +23,48 @@ func StartTaskWorkers() {
 		go startWorker(i)
 	}
 
+	// Start periodic scheduler
+	go startScheduler()
+
 	LogSystem("info", "task workers started", map[string]interface{}{"worker_count": workerCount}, nil, "")
+}
+
+func startScheduler() {
+	ticker := time.NewTicker(5 * time.Minute) // Sync every 5 minutes
+	defer ticker.Stop()
+
+	for range ticker.C {
+		schedulePeriodicTasks()
+	}
+}
+
+func schedulePeriodicTasks() {
+	ctx := context.Background()
+	monitors, err := GetAllMonitorsServ()
+	if err != nil {
+		LogService("error", "failed to get monitors for scheduling", map[string]interface{}{"error": err.Error()}, nil, "scheduler")
+		return
+	}
+
+	for _, monitor := range monitors {
+		if monitor.Status != 1 { // Only sync active monitors
+			continue
+		}
+
+		// Schedule Group Sync
+		if _, err := TaskQueue.Enqueue(ctx, queue.TaskTypePullGroupsFromMonitor, map[string]interface{}{
+			"monitor_id": float64(monitor.ID),
+		}); err != nil {
+			LogService("error", "failed to enqueue pull groups task", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "scheduler")
+		}
+
+		// Schedule Host Sync
+		if _, err := TaskQueue.Enqueue(ctx, queue.TaskTypePullHostsFromMonitor, map[string]interface{}{
+			"monitor_id": float64(monitor.ID),
+		}); err != nil {
+			LogService("error", "failed to enqueue pull hosts task", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "scheduler")
+		}
+	}
 }
 
 func startWorker(id int) {
@@ -32,6 +73,7 @@ func startWorker(id int) {
 
 	taskTypes := []queue.TaskType{
 		queue.TaskTypePullHostsFromMonitor,
+		queue.TaskTypePullGroupsFromMonitor,
 		queue.TaskTypePullItemsFromMonitor,
 		queue.TaskTypeGenerateAlerts,
 	}
@@ -61,6 +103,8 @@ func startWorker(id int) {
 		switch task.Type {
 		case queue.TaskTypePullHostsFromMonitor:
 			processErr = processPullHostsTask(task)
+		case queue.TaskTypePullGroupsFromMonitor:
+			processErr = processPullGroupsTask(task)
 		case queue.TaskTypePullItemsFromMonitor:
 			processErr = processPullItemsTask(task)
 		case queue.TaskTypeGenerateAlerts:
@@ -83,6 +127,16 @@ func processPullHostsTask(task *queue.Task) error {
 	}
 
 	_, err := PullHostsFromMonitorServ(uint(monitorID))
+	return err
+}
+
+func processPullGroupsTask(task *queue.Task) error {
+	monitorID, ok := task.Params["monitor_id"].(float64)
+	if !ok {
+		return fmt.Errorf("invalid monitor_id")
+	}
+
+	_, err := PullGroupsFromMonitorServ(uint(monitorID))
 	return err
 }
 

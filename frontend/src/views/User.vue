@@ -370,10 +370,11 @@ export default {
         let total = 0
         
         // Handle various response formats
-        const data = response?.data || response
+        // response might be the axios response object, so response.data is the body
+        const resBody = response?.data || response
         
-        if (response?.success && response.data) {
-          const resData = response.data
+        if (resBody?.success && resBody.data) {
+          const resData = resBody.data
           if (Array.isArray(resData)) {
             payload = resData
             total = resData.length
@@ -381,13 +382,13 @@ export default {
             payload = resData.items
             total = resData.total ?? resData.items.length
           }
-        } else if (data && (data.items || Array.isArray(data))) {
-          if (Array.isArray(data)) {
-            payload = data
-            total = data.length
-          } else if (data.items && Array.isArray(data.items)) {
-            payload = data.items
-            total = data.total ?? data.items.length
+        } else if (resBody && (resBody.items || Array.isArray(resBody))) {
+          if (Array.isArray(resBody)) {
+            payload = resBody
+            total = resBody.length
+          } else if (resBody.items && Array.isArray(resBody.items)) {
+            payload = resBody.items
+            total = resBody.total ?? resBody.items.length
           }
         }
         this.users = payload.map((u) => ({

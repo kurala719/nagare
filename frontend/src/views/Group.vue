@@ -1,48 +1,79 @@
 <template>
-  <div class="groups-toolbar">
-    <div class="groups-filters">
-      <span class="filter-label">{{ $t('common.columns') }}</span>
-      <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.search')" class="groups-filter" style="min-width: 220px;">
-        <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.search') }}</span>
-      <el-select v-model="searchField" :placeholder="$t('common.search')" class="groups-filter">
-        <el-option :label="$t('groups.filterAll')" value="all" />
-        <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('groups.search')" clearable class="groups-search" />
-      <span class="filter-label">{{ $t('groups.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('groups.filterStatus')" class="groups-filter">
-        <el-option :label="$t('groups.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="groups-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="groups-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
+  <div class="groups-page">
+    <div class="groups-toolbar">
+      <div class="groups-filters">
+        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" class="filter-item" style="width: 200px">
+          <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
+        </el-select>
+        
+        <el-input v-model="search" :placeholder="$t('groups.search')" clearable class="filter-item search-input">
+          <template #prepend>
+            <el-select v-model="searchField" style="width: 100px">
+              <el-option :label="$t('groups.filterAll')" value="all" />
+              <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
+            </el-select>
+          </template>
+          <template #append>
+            <el-button :icon="Search" />
+          </template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('groups.filterStatus')" class="filter-item" style="width: 120px">
+          <el-option :label="$t('groups.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+
+        <el-select v-model="sortKey" class="filter-item" style="width: 140px" :placeholder="$t('common.sort')">
+          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
+          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
+          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
+          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
+          <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
+          <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
+        </el-select>
+
+        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" class="filter-item" style="width: 140px" clearable>
+          <el-option :label="$t('hosts.filterAll')" :value="0" />
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+        
+        <el-select v-model="syncMonitorId" :placeholder="$t('hosts.syncMonitor')" class="filter-item" style="width: 140px" clearable>
+          <el-option :label="$t('hosts.filterAll')" :value="0" />
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+      </div>
+
+      <div class="groups-actions">
+        <el-button type="primary" :icon="Plus" @click="createDialogVisible = true">
+          {{ $t('groups.create') }}
+        </el-button>
+        <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingGroups" :loading="pullingGroups" @click="pullGroups">
+          {{ $t('groups.pull') }}
+        </el-button>
+        <el-button type="success" :icon="Upload" :disabled="selectedCount === 0 || pushingGroups" :loading="pushingGroups" @click="pushGroups">
+          {{ $t('groups.push') }}
+        </el-button>
+        <el-button type="warning" plain :icon="Download" :disabled="selectedCount === 0 || pullingHosts" :loading="pullingHosts" @click="pullHosts">
+          {{ $t('groups.pullHosts') }}
+        </el-button>
+        <el-button type="success" plain :icon="Upload" :disabled="selectedCount === 0 || pushingHosts" :loading="pushingHosts" @click="pushHosts">
+          {{ $t('groups.pushHosts') }}
+        </el-button>
+        <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
           {{ $t('common.bulkUpdate') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
+        <el-button type="danger" plain :icon="Delete" :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
           {{ $t('common.bulkDelete') }}
         </el-button>
+
+        <span v-if="selectedCount > 0" class="selection-info">
+          {{ $t('common.selectedCount', { count: selectedCount }) }}
+        </span>
       </div>
     </div>
-    <el-button type="primary" @click="createDialogVisible = true">
-      {{ $t('groups.create') }}
-    </el-button>
-  </div>
 
   <div v-if="loading" class="loading-state">
     <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
@@ -79,43 +110,70 @@
     v-if="filteredGroups.length > 0"
     :data="filteredGroups"
     border
-    style="margin: 20px; width: calc(100% - 40px);"
+    style="width: 100%; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);"
     ref="groupsTableRef"
     row-key="id"
     @selection-change="onSelectionChange"
+    header-cell-class-name="table-header"
   >
-    <el-table-column type="selection" width="50" />
-    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('groups.name')" min-width="160" />
-    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" min-width="110">
+    <el-table-column type="selection" width="50" align="center" />
+    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('groups.name')" min-width="160" show-overflow-tooltip />
+    <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150" show-overflow-tooltip>
       <template #default="{ row }">
-        <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
+        <el-tag effect="plain" type="info" size="small">{{ getMonitorName(row.monitor_id) }}</el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="100" align="center">
+      <template #default="{ row }">
+        <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small" effect="light">
           {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('status')" :label="$t('groups.status')" min-width="160">
+    <el-table-column v-if="isColumnVisible('status')" :label="$t('groups.status')" width="120" align="center">
       <template #default="{ row }">
         <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-          <el-tag :type="getStatusInfo(row.status).type">
+          <el-tag :type="getStatusInfo(row.status).type" size="small" effect="dark">
             {{ getStatusInfo(row.status).label }}
           </el-tag>
         </el-tooltip>
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('description')" prop="description" :label="$t('groups.description')" min-width="200" show-overflow-tooltip />
-    <el-table-column :label="$t('groups.actions')" min-width="240" fixed="right">
+    <el-table-column :label="$t('groups.actions')" width="300" fixed="right" align="center">
       <template #default="{ row }">
-        <el-button size="small" type="primary" @click="openDetails(row)">{{ $t('groups.details') }}</el-button>
-        <el-button size="small" @click="openProperties(row)">{{ $t('groups.properties') }}</el-button>
-        <el-button size="small" type="danger" @click="onDelete(row)">{{ $t('groups.delete') }}</el-button>
+        <el-button-group>
+          <el-tooltip :content="$t('groups.details')" placement="top">
+            <el-button size="small" :icon="Document" @click="openDetails(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.properties')" placement="top">
+            <el-button size="small" :icon="Setting" @click="openProperties(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.pull')" placement="top">
+            <el-button size="small" type="warning" :icon="Download" @click="onPull(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.push')" placement="top">
+            <el-button size="small" type="success" :icon="Upload" @click="onPush(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.pullHosts')" placement="top">
+            <el-button size="small" type="warning" plain :icon="Download" @click="onPullHosts(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.pushHosts')" placement="top">
+            <el-button size="small" type="success" plain :icon="Upload" @click="onPushHosts(row)" />
+          </el-tooltip>
+          <el-tooltip :content="$t('groups.delete')" placement="top">
+            <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />
+          </el-tooltip>
+        </el-button-group>
       </template>
     </el-table-column>
   </el-table>
   </div>
+  </div>
   <div v-if="!loading && !error && totalGroups > 0" class="groups-pagination">
     <el-pagination
       background
-      layout="sizes, prev, pager, next"
+      layout="total, sizes, prev, pager, next, jumper"
       :page-sizes="[10, 20, 50, 100]"
       v-model:page-size="pageSize"
       v-model:current-page="currentPage"
@@ -127,6 +185,12 @@
     <el-form :model="newGroup" label-width="120px">
       <el-form-item :label="$t('groups.name')">
         <el-input v-model="newGroup.name" :placeholder="$t('groups.name')" />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.monitor')">
+        <el-select v-model="newGroup.monitor_id" style="width: 100%;" clearable>
+          <el-option :label="$t('hosts.filterAll')" :value="0" />
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
       </el-form-item>
       <el-form-item :label="$t('groups.description')">
         <el-input v-model="newGroup.description" type="textarea" :placeholder="$t('groups.description')" />
@@ -153,6 +217,12 @@
     <el-form :model="selectedGroup" label-width="120px">
       <el-form-item :label="$t('groups.name')">
         <el-input v-model="selectedGroup.name" />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.monitor')">
+        <el-select v-model="selectedGroup.monitor_id" style="width: 100%;" clearable>
+          <el-option :label="$t('hosts.filterAll')" :value="0" />
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
       </el-form-item>
       <el-form-item :label="$t('groups.description')">
         <el-input v-model="selectedGroup.description" type="textarea" />
@@ -230,16 +300,16 @@
 
       <el-divider content-position="left">{{ $t('groups.summary') }}</el-divider>
       <el-row :gutter="12">
-        <el-col :span="8"><el-card>{{ $t('groups.totalHosts') }}: {{ groupDetail.summary.total_hosts }}</el-card></el-col>
-        <el-col :span="8"><el-card>{{ $t('groups.activeHosts') }}: {{ groupDetail.summary.active_hosts }}</el-card></el-col>
-        <el-col :span="8"><el-card>{{ $t('groups.errorHosts') }}: {{ groupDetail.summary.error_hosts }}</el-card></el-col>
-        <el-col :span="8" style="margin-top: 12px;"><el-card>{{ $t('groups.syncingHosts') }}: {{ groupDetail.summary.syncing_hosts }}</el-card></el-col>
-        <el-col :span="8" style="margin-top: 12px;"><el-card>{{ $t('groups.totalItems') }}: {{ groupDetail.summary.total_items }}</el-card></el-col>
+        <el-col :span="8"><el-card shadow="hover">{{ $t('groups.totalHosts') }}: {{ groupDetail.summary.total_hosts }}</el-card></el-col>
+        <el-col :span="8"><el-card shadow="hover">{{ $t('groups.activeHosts') }}: {{ groupDetail.summary.active_hosts }}</el-card></el-col>
+        <el-col :span="8"><el-card shadow="hover">{{ $t('groups.errorHosts') }}: {{ groupDetail.summary.error_hosts }}</el-card></el-col>
+        <el-col :span="8" style="margin-top: 12px;"><el-card shadow="hover">{{ $t('groups.syncingHosts') }}: {{ groupDetail.summary.syncing_hosts }}</el-card></el-col>
+        <el-col :span="8" style="margin-top: 12px;"><el-card shadow="hover">{{ $t('groups.totalItems') }}: {{ groupDetail.summary.total_items }}</el-card></el-col>
       </el-row>
 
       <el-divider content-position="left">{{ $t('groups.hosts') }}</el-divider>
-      <el-table :data="groupDetail.hosts" border>
-        <el-table-column prop="name" :label="$t('hosts.name')" min-width="160" />
+      <el-table :data="groupDetail.hosts" border style="width: 100%">
+        <el-table-column prop="name" :label="$t('hosts.name')" min-width="160" show-overflow-tooltip />
         <el-table-column prop="ip_addr" :label="$t('hosts.ip')" min-width="140" />
         <el-table-column :label="$t('hosts.status')" min-width="160">
           <template #default="{ row }">
@@ -258,8 +328,9 @@
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
-import { fetchGroupData, addGroup, updateGroup, deleteGroup } from '@/api/groups';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
+import { fetchGroupData, addGroup, updateGroup, deleteGroup, pullGroup, pushGroup, pullGroupHosts, pushGroupHosts } from '@/api/groups';
+import { fetchMonitorData, syncGroupsFromMonitor } from '@/api/monitors';
 
 export default {
   name: 'Group',
@@ -267,6 +338,7 @@ export default {
   data() {
     return {
       groups: [],
+      monitors: [],
       pageSize: 20,
       currentPage: 1,
       totalGroups: 0,
@@ -275,8 +347,10 @@ export default {
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'enabled', 'status', 'description'],
+      selectedColumns: ['name', 'monitor', 'enabled', 'status', 'description'],
       statusFilter: 'all',
+      monitorFilter: 0,
+      syncMonitorId: 0,
       createDialogVisible: false,
       propertiesDialogVisible: false,
       detailDialogVisible: false,
@@ -286,13 +360,19 @@ export default {
       bulkDeleteDialogVisible: false,
       bulkUpdating: false,
       bulkDeleting: false,
+      pullingGroups: false,
+      pushingGroups: false,
+      pullingHosts: false,
+      pushingHosts: false,
       selectedGroupRows: [],
-      newGroup: { name: '', description: '', enabled: 1, status: 1 },
-      selectedGroup: { id: 0, name: '', description: '', enabled: 1, status: 1 },
+      newGroup: { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
+      selectedGroup: { id: 0, name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
       bulkForm: {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons for template usage
+      Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting
     };
   },
   computed: {
@@ -302,6 +382,7 @@ export default {
     columnOptions() {
       return [
         { key: 'name', label: this.$t('groups.name') },
+        { key: 'monitor', label: this.$t('hosts.monitor') },
         { key: 'enabled', label: this.$t('common.enabled') },
         { key: 'status', label: this.$t('groups.status') },
         { key: 'description', label: this.$t('groups.description') },
@@ -323,6 +404,10 @@ export default {
       this.currentPage = 1;
       this.loadGroups(true);
     },
+    monitorFilter() {
+      this.currentPage = 1;
+      this.loadGroups(true);
+    },
     sortKey() {
       this.currentPage = 1;
       this.loadGroups(true);
@@ -336,11 +421,35 @@ export default {
     },
   },
   created() {
+    this.loadMonitors();
     this.loadGroups(true);
   },
   methods: {
     onSelectionChange(selection) {
       this.selectedGroupRows = selection || [];
+    },
+    async loadMonitors() {
+      try {
+        const response = await fetchMonitorData();
+        let data = [];
+        if (response?.success && response?.data !== undefined) {
+          data = Array.isArray(response.data) ? response.data : 
+                 (Array.isArray(response.data.items) ? response.data.items : []);
+        } else if (Array.isArray(response)) {
+          data = response;
+        }
+        this.monitors = data.map((m: any) => ({
+          id: Number(m.ID || m.id || 0),
+          name: m.Name || m.name || '',
+        }));
+      } catch (err) {
+        console.error('Error loading monitors:', err);
+      }
+    },
+    getMonitorName(monitorId) {
+      if (!monitorId) return this.$t('hosts.unknown');
+      const monitor = this.monitors.find((m: any) => m.id === monitorId);
+      return monitor ? monitor.name : `${this.$t('hosts.unknown')} (#${monitorId})`;
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {
@@ -392,6 +501,7 @@ export default {
             description: group.description,
             enabled: enabledOverride === 'nochange' ? group.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? group.status : statusOverride,
+            monitor_id: group.monitor_id,
           };
           return updateGroup(group.id, payload);
         }));
@@ -422,6 +532,7 @@ export default {
         const response = await fetchGroupData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
+          monitor_id: this.monitorFilter || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
           sort: sortBy,
@@ -438,6 +549,7 @@ export default {
           description: g.Description || g.description || '',
           enabled: g.Enabled ?? g.enabled ?? 1,
           status: g.Status ?? g.status ?? 0,
+          monitor_id: g.MonitorID || g.monitor_id || g.monitorId || 0,
           status_reason: g.Reason || g.reason || g.Error || g.error || g.ErrorMessage || g.error_message || g.LastError || g.last_error || '',
         }));
         this.groups = mapped;
@@ -482,6 +594,7 @@ export default {
           description: this.selectedGroup.description,
           enabled: this.selectedGroup.enabled,
           status: this.selectedGroup.status,
+          monitor_id: this.selectedGroup.monitor_id,
         });
         await this.loadGroups(true);
         this.propertiesDialogVisible = false;
@@ -492,7 +605,7 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newGroup = { name: '', description: '', enabled: 1, status: 1 };
+      this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
     },
     async onCreate() {
       if (!this.newGroup.name) {
@@ -503,11 +616,154 @@ export default {
         await addGroup(this.newGroup);
         await this.loadGroups(true);
         this.createDialogVisible = false;
-        this.newGroup = { name: '', description: '', enabled: 1, status: 1 };
+        this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
         ElMessage.success(this.$t('groups.created'));
       } catch (err) {
         ElMessage.error(this.$t('groups.createFailed') + ': ' + (err.message || ''));
       }
+    },
+    async onPull(group) {
+      try {
+        await pullGroup(group.id);
+        ElMessage.success(this.$t('groups.pullSuccess') || 'Group pulled successfully');
+        await this.loadGroups();
+      } catch (err) {
+        ElMessage.error(this.$t('groups.pullFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async onPush(group) {
+      try {
+        await pushGroup(group.id);
+        ElMessage.success(this.$t('groups.pushSuccess') || 'Group pushed successfully');
+        await this.loadGroups();
+      } catch (err) {
+        ElMessage.error(this.$t('groups.pushFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async onPullHosts(group) {
+      try {
+        await pullGroupHosts(group.id);
+        ElMessage.success(this.$t('groups.pullHostsSuccess') || 'Hosts pulled successfully');
+        await this.loadGroups();
+      } catch (err) {
+        ElMessage.error(this.$t('groups.pullHostsFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async onPushHosts(group) {
+      try {
+        await pushGroupHosts(group.id);
+        ElMessage.success(this.$t('groups.pushHostsSuccess') || 'Hosts pushed successfully');
+        await this.loadGroups();
+      } catch (err) {
+        ElMessage.error(this.$t('groups.pushHostsFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async pullGroups() {
+      this.pullingGroups = true;
+      try {
+        if (this.selectedCount > 0) {
+          const results = await this.batchSyncSelectedGroups('pull');
+          ElMessage({
+            type: results.success > 0 ? 'success' : 'warning',
+            message: this.$t('groups.pullSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
+          });
+        } else {
+          const monitorId = this.syncMonitorId || this.monitorFilter;
+          if (!monitorId) {
+            ElMessage.warning(this.$t('hosts.selectMonitorFirst') || this.$t('common.selectAtLeastOne'));
+            return;
+          }
+          await syncGroupsFromMonitor(monitorId);
+          ElMessage.success(this.$t('groups.pullSuccess'));
+        }
+        await this.loadGroups(true);
+        this.clearSelection();
+      } catch (err) {
+        ElMessage.error(err.message || this.$t('groups.pullFailed'));
+      } finally {
+        this.pullingGroups = false;
+      }
+    },
+    async pushGroups() {
+      this.pushingGroups = true;
+      try {
+        if (this.selectedCount > 0) {
+          const results = await this.batchSyncSelectedGroups('push');
+          ElMessage({
+            type: results.success > 0 ? 'success' : 'warning',
+            message: this.$t('groups.pushSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
+          });
+        } else {
+           // For now, only selected push is supported as "Push All" endpoint might not exist or be safe
+           ElMessage.warning(this.$t('common.selectAtLeastOne'));
+        }
+        await this.loadGroups(true);
+        this.clearSelection();
+      } catch (err) {
+        ElMessage.error(err.message || this.$t('groups.pushFailed'));
+      } finally {
+        this.pushingGroups = false;
+      }
+    },
+    async pullHosts() {
+      this.pullingHosts = true;
+      try {
+        if (this.selectedCount > 0) {
+          const results = await this.batchSyncSelectedGroups('pull-hosts');
+          ElMessage({
+            type: results.success > 0 ? 'success' : 'warning',
+            message: this.$t('groups.pullHostsSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
+          });
+        } else {
+           ElMessage.warning(this.$t('common.selectAtLeastOne'));
+        }
+        await this.loadGroups(true);
+        this.clearSelection();
+      } catch (err) {
+        ElMessage.error(err.message || this.$t('groups.pullHostsFailed'));
+      } finally {
+        this.pullingHosts = false;
+      }
+    },
+    async pushHosts() {
+      this.pushingHosts = true;
+      try {
+        if (this.selectedCount > 0) {
+          const results = await this.batchSyncSelectedGroups('push-hosts');
+          ElMessage({
+            type: results.success > 0 ? 'success' : 'warning',
+            message: this.$t('groups.pushHostsSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
+          });
+        } else {
+           ElMessage.warning(this.$t('common.selectAtLeastOne'));
+        }
+        await this.loadGroups(true);
+        this.clearSelection();
+      } catch (err) {
+        ElMessage.error(err.message || this.$t('groups.pushHostsFailed'));
+      } finally {
+        this.pushingHosts = false;
+      }
+    },
+    async batchSyncSelectedGroups(action) {
+      const targets = this.selectedGroupRows || [];
+      const tasks = [];
+      let skipped = 0;
+      targets.forEach((group) => {
+        // Group sync usually relies on associated monitor_id in backend
+        if (action === 'pull') {
+           tasks.push(pullGroup(group.id));
+        } else if (action === 'push') {
+           tasks.push(pushGroup(group.id));
+        } else if (action === 'pull-hosts') {
+           tasks.push(pullGroupHosts(group.id));
+        } else if (action === 'push-hosts') {
+           tasks.push(pushGroupHosts(group.id));
+        }
+      });
+      const results = await Promise.allSettled(tasks);
+      const success = results.filter((result) => result.status === 'fulfilled').length;
+      return { total: tasks.length + skipped, success, skipped };
     },
     onDelete(group) {
       ElMessageBox.confirm(
@@ -547,12 +803,23 @@ export default {
 </script>
 
 <style scoped>
+.groups-page {
+  padding: 16px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
 .groups-toolbar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .groups-filters {
@@ -562,29 +829,41 @@ export default {
   align-items: center;
 }
 
-.groups-bulk-actions {
+.filter-item {
+  width: 160px;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.groups-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
 }
 
+.selection-info {
+  color: #909399;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.groups-scroll {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
 .groups-pagination {
+  margin-top: 16px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
 }
 
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.groups-search {
-  width: 240px;
-}
-
-.groups-filter {
-  min-width: 160px;
+.create-btn {
+  margin-left: 8px;
 }
 
 .loading-state {

@@ -110,6 +110,7 @@ type HostFilter struct {
 type GroupFilter struct {
 	Query     string
 	Status    *int
+	MonitorID *uint
 	Limit     int
 	Offset    int
 	SortBy    string
@@ -146,13 +147,14 @@ type ProviderFilter struct {
 // UserFilter represents search and filter options for users
 // Query matches username (LIKE)
 type UserFilter struct {
-	Query      string
-	Privileges *int
-	Status     *int
-	Limit      int
-	Offset     int
-	SortBy     string
-	SortOrder  string
+	Query               string
+	Privileges          *int
+	Status              *int
+	Limit               int
+	Offset              int
+	SortBy              string
+	SortOrder           string
+	RequesterPrivileges int
 }
 
 // RegisterApplicationFilter represents search and filter options for registration applications
