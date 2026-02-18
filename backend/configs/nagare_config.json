@@ -47,5 +47,17 @@
     "ip_address": "192.168.31.1",
     "port": 8080,
     "availability": true
-  }
+  },
+  "external": [
+    { "type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1 },
+    { "type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2 },
+    { "type": "monitor", "key": "other", "name": "Other", "id": 3 },
+    { "type": "provider", "key": "gemini", "name": "Gemini", "id": 1 },
+    { "type": "provider", "key": "openai", "name": "OpenAI", "id": 2 },
+    { "type": "provider", "key": "other", "name": "Other", "id": 3 },
+    { "type": "media", "key": "email", "name": "Email", "id": 1 },
+    { "type": "media", "key": "webhook", "name": "Webhook", "id": 2 },
+    { "type": "media", "key": "sms", "name": "SMS", "id": 3 },
+    { "type": "media", "key": "qq", "name": "QQ", "id": 4 }
+  ]
 }

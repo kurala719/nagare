@@ -236,11 +236,12 @@ func PushHostToMonitorCtrl(c *gin.Context) {
 		return
 	}
 
-	if err := service.PushHostToMonitorServ(uint(mid), uint(id)); err != nil {
+	result, err := service.PushHostToMonitorServ(uint(mid), uint(id))
+	if err != nil {
 		respondError(c, err)
 		return
 	}
-	respondSuccessMessage(c, http.StatusOK, "host pushed to monitor")
+	respondSuccess(c, http.StatusOK, result)
 }
 
 func PushHostsFromMonitorCtrl(c *gin.Context) {

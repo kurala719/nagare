@@ -200,6 +200,58 @@
           </div>
         </el-tab-pane>
 
+        <!-- External Infrastructure -->
+        <el-tab-pane name="external">
+          <template #label>
+            <span class="tab-label">
+              <el-icon><Share /></el-icon>
+              <span>{{ $t('configuration.external') }}</span>
+            </span>
+          </template>
+          <div class="tab-pane-content" style="max-width: 900px;">
+            <div class="section-header">
+              <div class="section-divider">{{ $t('configuration.externalInfrastructure') }}</div>
+              <el-button type="primary" size="small" @click="addExternalItem" :disabled="!editing">
+                <el-icon><Plus /></el-icon>
+                {{ $t('configuration.addItem') }}
+              </el-button>
+            </div>
+            
+            <el-table :data="editableConfig.external" border stripe style="width: 100%; margin-top: 16px;">
+              <el-table-column :label="$t('configuration.itemType')" width="150">
+                <template #default="{ row }">
+                  <el-select v-model="row.type" size="small" :disabled="!editing">
+                    <el-option label="Monitor" value="monitor" />
+                    <el-option label="Provider" value="provider" />
+                    <el-option label="Media" value="media" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('configuration.itemKey')" width="150">
+                <template #default="{ row }">
+                  <el-input v-model="row.key" size="small" :disabled="!editing" placeholder="zabbix" />
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('configuration.itemName')" min-width="150">
+                <template #default="{ row }">
+                  <el-input v-model="row.name" size="small" :disabled="!editing" placeholder="Zabbix Server" />
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('configuration.itemId')" width="100">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.id" :controls="false" size="small" :disabled="!editing" style="width: 100%;" />
+                </template>
+              </el-table-column>
+              <el-table-column label="Actions" width="80" align="center">
+                <template #default="{ $index }">
+                  <el-button type="danger" :icon="Delete" circle size="small" @click="removeExternalItem($index)" :disabled="!editing" />
+                </template>
+              </el-table-column>
+            </el-table>
+            <p class="help-text">These definitions define the available types for monitors, AI providers, and notification media.</p>
+          </div>
+        </el-tab-pane>
+
         <!-- Advanced -->
         <el-tab-pane name="advanced">
           <template #label>
@@ -234,7 +286,8 @@ import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   Refresh, Edit, Check, Setting, DataLine, Loading, 
-  Monitor, Bell, Warning, Compass, Connection, Operation 
+  Monitor, Bell, Warning, Compass, Connection, Operation,
+  Share, Plus, Delete
 } from '@element-plus/icons-vue';
 import { getMainConfig, updateConfig, saveConfig, resetConfig } from '@/api/config';
 
@@ -253,6 +306,9 @@ export default {
     Compass,
     Connection,
     Operation,
+    Share,
+    Plus,
+    Delete,
   },
   setup() {
     const { t } = useI18n();
@@ -301,6 +357,7 @@ export default {
         media_type_interval_seconds: 30,
         media_interval_seconds: 30,
       },
+      external: [],
     });
     const loading = ref(false);
     const saving = ref(false);
@@ -377,6 +434,12 @@ export default {
         media_type_interval_seconds: ['media_type_interval_seconds', 'MediaTypeIntervalSeconds'],
         media_interval_seconds: ['media_interval_seconds', 'MediaIntervalSeconds']
       });
+
+      if (data.external || data.External) {
+        editableConfig.external = JSON.parse(JSON.stringify(data.external || data.External));
+      } else {
+        editableConfig.external = [];
+      }
     };
 
     const loadConfig = async () => {
@@ -472,6 +535,19 @@ export default {
       }
     };
 
+    const addExternalItem = () => {
+      editableConfig.external.push({
+        type: 'monitor',
+        key: '',
+        name: '',
+        id: 0
+      });
+    };
+
+    const removeExternalItem = (index) => {
+      editableConfig.external.splice(index, 1);
+    };
+
     onMounted(() => {
       loadConfig();
     });
@@ -489,6 +565,9 @@ export default {
       cancelEdit,
       saveChanges,
       handleReset,
+      addExternalItem,
+      removeExternalItem,
+      Delete,
     };
   },
 };
@@ -567,6 +646,20 @@ export default {
 
 .section-divider:first-child {
   margin-top: 0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.help-text {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #909399;
+  font-style: italic;
 }
 
 :deep(.el-form-item__label) {

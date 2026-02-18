@@ -108,7 +108,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
 	}
 	if newHost.MonitorID > 0 {
-		if err := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); err == nil {
+		if _, err := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); err == nil {
 			if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
 				newHost = refreshed
 			}
@@ -216,6 +216,80 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 		})
 	}
 	return hosts, nil
+}
+
+// PullHostsOfGroupFromMonitorServ pulls all hosts belonging to a specific group from monitor
+func PullHostsOfGroupFromMonitorServ(mid uint, groupID uint) (SyncResult, error) {
+	result := SyncResult{}
+	
+	group, err := repository.GetGroupByIDDAO(groupID)
+	if err != nil {
+		return result, fmt.Errorf("failed to get group: %w", err)
+	}
+	if group.ExternalID == "" {
+		return result, fmt.Errorf("group has no external ID")
+	}
+
+	monitor, err := repository.GetMonitorByIDDAO(mid)
+	if err != nil {
+		return result, fmt.Errorf("failed to get monitor: %w", err)
+	}
+
+	client, err := createMonitorClientFromDomain(monitor)
+	if err != nil {
+		return result, fmt.Errorf("failed to create monitor client: %w", err)
+	}
+
+	if monitor.AuthToken != "" {
+		client.SetAuthToken(monitor.AuthToken)
+	} else {
+		if err := client.Authenticate(context.Background()); err != nil {
+			return result, fmt.Errorf("failed to authenticate: %w", err)
+		}
+	}
+
+	monitorHosts, err := client.GetHostsByGroupID(context.Background(), group.ExternalID)
+	if err != nil {
+		return result, fmt.Errorf("failed to fetch hosts for group: %w", err)
+	}
+
+	for _, h := range monitorHosts {
+		// Use PullHostFromMonitorServ for each host to ensure items are also pulled
+		// We need to find or create the host first to get its internal ID
+		existing, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+		var internalID uint
+		if err == nil {
+			internalID = existing.ID
+		} else {
+			// Create placeholder to get an ID
+			newHost := model.Host{
+				Name:      h.Name,
+				Hostid:    h.ID,
+				MonitorID: mid,
+				GroupID:   groupID,
+				Enabled:   1,
+				Status:    3, // Syncing
+			}
+			if err := repository.AddHostDAO(newHost); err != nil {
+				result.Failed++
+				continue
+			}
+			created, _ := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+			internalID = created.ID
+		}
+
+		hostRes, err := PullHostFromMonitorServ(mid, internalID)
+		if err == nil {
+			result.Added += hostRes.Added
+			result.Updated += hostRes.Updated
+			result.Failed += hostRes.Failed
+			result.Total += hostRes.Total
+		} else {
+			result.Failed++
+		}
+	}
+
+	return result, nil
 }
 
 func mapMonitorHostStatus(status string, activeAvailable string) int {
@@ -529,6 +603,18 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			}
 			result.Added++
 		}
+
+		// Cascade to items for this host
+		hostInDB, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+		if err == nil {
+			itemsRes, err := PullItemsFromHostServ(mid, hostInDB.ID)
+			if err == nil {
+				result.Added += itemsRes.Added
+				result.Updated += itemsRes.Updated
+				result.Failed += itemsRes.Failed
+				result.Total += itemsRes.Total
+			}
+		}
 	}
 
 	localHosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
@@ -554,6 +640,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 }
 
 func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
+	result := SyncResult{}
 	host, err := repository.GetHostByIDDAO(id)
 	if err != nil {
 		setHostStatusErrorWithReason(id, err.Error())
@@ -638,9 +725,10 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		if refreshed, err := repository.GetHostByIDDAO(existingHost.ID); err == nil {
 			recordHostHistory(refreshed, time.Now().UTC())
 		}
+		result.Updated++
 	} else {
 		// Host doesn't exist, add it
-		if err := repository.AddHostDAO(model.Host{
+		newHost := model.Host{
 			Name:        h.Name,
 			Hostid:      h.ID,
 			MonitorID:   mid,
@@ -649,7 +737,8 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Enabled:     1,
 			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
 			IPAddr:      h.IPAddress,
-		}); err != nil {
+		}
+		if err := repository.AddHostDAO(newHost); err != nil {
 			setMonitorStatusError(mid)
 			LogService("error", "pull host failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
 			return SyncResult{}, fmt.Errorf("failed to add host: %w", err)
@@ -657,28 +746,36 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		if created, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID); err == nil {
 			recordHostHistory(created, time.Now().UTC())
 		}
+		result.Added++
 	}
+
 	_ = recomputeMonitorRelated(mid)
 	recordNetworkStatusSnapshot(time.Now().UTC())
-	result := SyncResult{Added: 1, Total: 1}
+	result.Total = 1
 	SyncEvent("hosts", mid, 0, result)
 	return result, nil
 }
 
 // PushHostToMonitorServ pushes a host from local database to remote monitor
-func PushHostToMonitorServ(mid uint, id uint) error {
+func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
+	result := SyncResult{}
 	host, err := repository.GetHostByIDDAO(id)
 	if err != nil {
 		setHostStatusErrorWithReason(id, err.Error())
 		LogService("error", "push host failed to load host", map[string]interface{}{"host_id": id, "error": err.Error()}, nil, "")
-		return fmt.Errorf("failed to get host: %w", err)
+		return result, fmt.Errorf("failed to get host: %w", err)
 	}
 	setHostStatusSyncing(id)
 
 	if host.MonitorID != mid {
-		setHostStatusErrorWithReason(id, "host does not belong to the specified monitor")
-		LogService("error", "push host failed due to monitor mismatch", map[string]interface{}{"host_id": id, "monitor_id": mid}, nil, "")
-		return fmt.Errorf("host does not belong to the specified monitor")
+		if host.MonitorID == 0 {
+			host.MonitorID = mid
+			_ = repository.UpdateHostDAO(host.ID, host)
+		} else {
+			setHostStatusErrorWithReason(id, "host does not belong to the specified monitor")
+			LogService("error", "push host failed due to monitor mismatch", map[string]interface{}{"host_id": id, "monitor_id": mid}, nil, "")
+			return result, fmt.Errorf("host does not belong to the specified monitor")
+		}
 	}
 
 	monitor, err := GetMonitorByIDServ(mid)
@@ -686,7 +783,16 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(id, err.Error())
 		LogService("error", "push host failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
-		return fmt.Errorf("failed to get monitor: %w", err)
+		return result, fmt.Errorf("failed to get monitor: %w", err)
+	}
+
+	if monitor.Status == 2 {
+		reason := "monitor is in error state"
+		if monitor.StatusDesc != "" {
+			reason = monitor.StatusDesc
+		}
+		setHostStatusErrorWithReason(id, reason)
+		return result, fmt.Errorf("monitor is in error state: %s", reason)
 	}
 
 	client, err := createMonitorClient(monitor)
@@ -694,7 +800,7 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(id, err.Error())
 		LogService("error", "push host failed to create monitor client", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
-		return fmt.Errorf("failed to create monitor client: %w", err)
+		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
 	if monitor.AuthToken != "" {
@@ -704,7 +810,7 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 			setMonitorStatusError(mid)
 			setHostStatusErrorWithReason(id, err.Error())
 			LogService("error", "push host failed to authenticate", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
-			return fmt.Errorf("failed to authenticate with monitor: %w", err)
+			return result, fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
 	}
 	// Create host group (group name) then create host in monitor
@@ -724,7 +830,7 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 					setMonitorStatusError(mid)
 					setHostStatusErrorWithReason(id, err.Error())
 					LogService("error", "push host failed to create host group", map[string]interface{}{"monitor_id": mid, "host_id": id, "group": group.Name, "error": err.Error()}, nil, "")
-					return fmt.Errorf("failed to create host group: %w", err)
+					return result, fmt.Errorf("failed to create host group: %w", err)
 				}
 				extGroupID = gid
 				// Update group with new ExternalID
@@ -738,7 +844,7 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 	if extGroupID == "" {
 		gid, err := client.CreateHostGroup(context.Background(), "Default")
 		if err != nil {
-			return fmt.Errorf("failed to create default host group: %w", err)
+			return result, fmt.Errorf("failed to create default host group: %w", err)
 		}
 		extGroupID = gid
 	}
@@ -751,28 +857,50 @@ func PushHostToMonitorServ(mid uint, id uint) error {
 		Metadata:    map[string]string{"groupid": extGroupID},
 	}
 	if host.Hostid == "" {
-		created, err := client.CreateHost(context.Background(), monitorHost)
-		if err != nil {
-			setMonitorStatusError(mid)
-			setHostStatusErrorWithReason(id, err.Error())
-			LogService("error", "push host failed to create host", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
-			return fmt.Errorf("failed to create host in monitor: %w", err)
-		}
-		if created.ID != "" {
-			host.Hostid = created.ID
+		// Try to find host by name first to avoid duplicates
+		if existing, err := client.GetHostByName(context.Background(), host.Name); err == nil && existing.ID != "" {
+			host.Hostid = existing.ID
 			_ = repository.UpdateHostDAO(host.ID, host)
+			monitorHost.ID = existing.ID
+			
+			// Update the host since it exists
+			_, err = client.UpdateHost(context.Background(), monitorHost)
+			if err != nil {
+				setMonitorStatusError(mid)
+				setHostStatusErrorWithReason(id, err.Error())
+				LogService("error", "push host failed to update existing host found by name", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
+				return result, fmt.Errorf("failed to update existing host in monitor: %w", err)
+			}
+		} else {
+			// Create new host
+			created, err := client.CreateHost(context.Background(), monitorHost)
+			if err != nil {
+				setMonitorStatusError(mid)
+				setHostStatusErrorWithReason(id, err.Error())
+				LogService("error", "push host failed to create host", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
+				return result, fmt.Errorf("failed to create host in monitor: %w", err)
+			}
+			if created.ID != "" {
+				host.Hostid = created.ID
+				_ = repository.UpdateHostDAO(host.ID, host)
+			}
 		}
 	} else {
 		if _, err := client.UpdateHost(context.Background(), monitorHost); err != nil {
 			setMonitorStatusError(mid)
 			setHostStatusErrorWithReason(id, err.Error())
 			LogService("error", "push host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
-			return fmt.Errorf("failed to update host in monitor: %w", err)
+			return result, fmt.Errorf("failed to update host in monitor: %w", err)
 		}
 	}
 	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.Hostid, "monitor": monitor.Name, "group": groupName}, nil, "")
+	
+	result.Added++
+	result.Total = 1
+
 	_, _ = recomputeHostStatus(id)
-	return recomputeMonitorRelated(mid)
+	_ = recomputeMonitorRelated(mid)
+	return result, nil
 }
 
 // PushHostsFromMonitorServ pushes all hosts from local database to remote monitor
@@ -789,15 +917,15 @@ func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 		return result, fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	// Monitor must be active (status == 1) to push hosts
-	if monitor.Status == 0 || monitor.Status == 2 {
-		reason := "monitor is not active"
+	// Monitor must be active or inactive (not error) to push hosts
+	if monitor.Status == 2 {
+		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
 		}
 		setMonitorStatusErrorWithReason(mid, reason)
-		LogService("warn", "push hosts skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
-		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
+		LogService("warn", "push hosts skipped due to monitor error", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
+		return result, fmt.Errorf("monitor is in error state (status: %d)", monitor.Status)
 	}
 
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
@@ -810,13 +938,17 @@ func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	result.Total = len(hosts)
 
 	for _, host := range hosts {
-		if err := PushHostToMonitorServ(mid, host.ID); err != nil {
+		hostResult, err := PushHostToMonitorServ(mid, host.ID)
+		if err != nil {
 			setHostStatusErrorWithReason(host.ID, err.Error())
 			LogService("error", "push hosts failed to push host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "error": err.Error()}, nil, "")
 			result.Failed++
 			continue
 		}
-		result.Added++
+		result.Added += hostResult.Added
+		result.Updated += hostResult.Updated
+		result.Failed += hostResult.Failed
+		result.Total += hostResult.Total
 	}
 
 	_ = recomputeMonitorRelated(mid)

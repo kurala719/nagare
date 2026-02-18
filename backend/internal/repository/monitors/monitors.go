@@ -120,6 +120,8 @@ type Provider interface {
 
 	// Host operations
 	GetHosts(ctx context.Context) ([]Host, error)
+	GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error)
+	GetHostByName(ctx context.Context, name string) (*Host, error)
 	GetHostByID(ctx context.Context, hostID string) (*Host, error)
 	CreateHost(ctx context.Context, host Host) (Host, error)
 	UpdateHost(ctx context.Context, host Host) (Host, error)
@@ -205,6 +207,16 @@ func (c *Client) SetAuthToken(token string) {
 // GetHosts retrieves all hosts from the monitoring system
 func (c *Client) GetHosts(ctx context.Context) ([]Host, error) {
 	return c.provider.GetHosts(ctx)
+}
+
+// GetHostsByGroupID retrieves all hosts for a specific host group
+func (c *Client) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
+	return c.provider.GetHostsByGroupID(ctx, groupID)
+}
+
+// GetHostByName retrieves a specific host by name
+func (c *Client) GetHostByName(ctx context.Context, name string) (*Host, error) {
+	return c.provider.GetHostByName(ctx, name)
 }
 
 // GetHostByID retrieves a specific host by ID

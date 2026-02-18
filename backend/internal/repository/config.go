@@ -17,6 +17,15 @@ type Config struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
+	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+}
+
+// ExternalItemConfig defines external infrastructure items
+type ExternalItemConfig struct {
+	Type string `yaml:"type" json:"type" mapstructure:"type"` // monitor, provider, media
+	Key  string `yaml:"key" json:"key" mapstructure:"key"`   // unique identifier
+	Name string `yaml:"name" json:"name" mapstructure:"name"` // display name
+	ID   int    `yaml:"id" json:"id" mapstructure:"id"`       // numeric value used in DB
 }
 
 // SystemConfig holds system-level settings
@@ -91,6 +100,7 @@ type ConfigRequest struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
+	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
 
 // ConfigResponse represents the configuration response
@@ -102,6 +112,7 @@ type ConfigResponse struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
+	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
 
 // InitConfig initializes the configuration from the given path
@@ -177,6 +188,21 @@ func ResetConfig() error {
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
 	viper.Set("media_rate_limit.media_type_interval_seconds", 30)
 	viper.Set("media_rate_limit.media_interval_seconds", 30)
+
+	viper.Set("external", []map[string]interface{}{
+		{"type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1},
+		{"type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2},
+		{"type": "monitor", "key": "other", "name": "Other", "id": 3},
+		{"type": "provider", "key": "gemini", "name": "Gemini", "id": 1},
+		{"type": "provider", "key": "openai", "name": "OpenAI", "id": 2},
+		{"type": "provider", "key": "ollama", "name": "Ollama", "id": 3},
+		{"type": "provider", "key": "other_openai", "name": "Other (OpenAI API)", "id": 4},
+		{"type": "provider", "key": "other", "name": "Other", "id": 5},
+		{"type": "media", "key": "email", "name": "Email", "id": 1},
+		{"type": "media", "key": "webhook", "name": "Webhook", "id": 2},
+		{"type": "media", "key": "sms", "name": "SMS", "id": 3},
+		{"type": "media", "key": "qq", "name": "QQ", "id": 4},
+	})
 
 	return SaveConfig()
 }

@@ -46,9 +46,19 @@ func (p *PrometheusProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	return nil, fmt.Errorf("prometheus: GetHosts not implemented yet")
 }
 
+// GetHostsByGroupID implements the Provider interface
+func (p *PrometheusProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
+	return nil, fmt.Errorf("prometheus: GetHostsByGroupID not implemented yet")
+}
+
 // GetHostByID implements the Provider interface
 func (p *PrometheusProvider) GetHostByID(ctx context.Context, hostID string) (*Host, error) {
 	return nil, fmt.Errorf("prometheus: GetHostByID not implemented yet")
+}
+
+// GetHostByName implements the Provider interface
+func (p *PrometheusProvider) GetHostByName(ctx context.Context, name string) (*Host, error) {
+	return nil, fmt.Errorf("prometheus: GetHostByName not implemented yet")
 }
 
 // CreateHost implements the Provider interface

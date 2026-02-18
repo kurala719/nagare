@@ -723,7 +723,7 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 		return fmt.Errorf("host does not belong to the specified monitor")
 	}
 	if host.Hostid == "" {
-		if err := PushHostToMonitorServ(mid, hid); err != nil {
+		if _, err := PushHostToMonitorServ(mid, hid); err != nil {
 			setHostStatusErrorWithReason(hid, err.Error())
 			setItemStatusErrorWithReason(id, err.Error())
 			LogService("error", "push item failed to create host", map[string]interface{}{"item_id": id, "host_id": hid, "monitor_id": mid, "error": err.Error()}, nil, "")
@@ -742,6 +742,15 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 		setItemStatusErrorWithReason(id, err.Error())
 		LogService("error", "push item failed to load monitor", map[string]interface{}{"monitor_id": mid, "item_id": id, "error": err.Error()}, nil, "")
 		return fmt.Errorf("failed to get monitor: %w", err)
+	}
+
+	if monitor.Status == 2 {
+		reason := "monitor is in error state"
+		if monitor.StatusDescription != "" {
+			reason = monitor.StatusDescription
+		}
+		setItemStatusErrorWithReason(id, reason)
+		return fmt.Errorf("monitor is in error state: %s", reason)
 	}
 
 	client, err := createMonitorClientFromDomain(monitor)
@@ -821,34 +830,30 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 		LogService("error", "push items failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get monitor: %w", err)
 	}
-	if monitor.Status == 0 || monitor.Status == 2 {
-		reason := "monitor is not active"
+	if monitor.Status == 2 {
+		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
 		}
 		setMonitorStatusErrorWithReason(mid, reason)
 		setHostStatusErrorWithReason(hid, reason)
-		LogService("warn", "push items skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
-		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
+		LogService("warn", "push items skipped due to monitor error", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
+		return result, fmt.Errorf("monitor is in error state (status: %d)", monitor.Status)
 	}
 
 	currentStatus := determineHostStatus(host, monitor)
 	if currentStatus == 2 {
 		reason := host.StatusDescription
 		if reason == "" {
-			reason = "host is not active"
+			reason = "host is in error state"
 		}
 		setHostStatusErrorWithReason(hid, reason)
-		LogService("warn", "push items skipped due to host not active", map[string]interface{}{"host_id": hid, "host_status": currentStatus, "host_status_description": reason}, nil, "")
-		return result, fmt.Errorf("host is not active (status: %d)", currentStatus)
+		LogService("warn", "push items skipped due to host error", map[string]interface{}{"host_id": hid, "host_status": currentStatus, "host_status_description": reason}, nil, "")
+		return result, fmt.Errorf("host is in error state (status: %d)", currentStatus)
 	}
-	if currentStatus != 1 {
+	
+	if host.Status != currentStatus {
 		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, currentStatus, "")
-		LogService("warn", "push items skipped due to host not active", map[string]interface{}{"host_id": hid, "host_status": currentStatus}, nil, "")
-		return result, fmt.Errorf("host is not active (status: %d)", currentStatus)
-	}
-	if host.Status != 1 || host.StatusDescription != "" {
-		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, 1, "")
 	}
 
 	items, err := repository.GetItemsByHIDDAO(hid)
@@ -888,15 +893,15 @@ func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 		return result, fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	// Monitor must be active (status == 1) to push items
-	if monitor.Status == 0 || monitor.Status == 2 {
-		reason := "monitor is not active"
+	// Monitor must be active or inactive (not error) to push items
+	if monitor.Status == 2 {
+		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
 		}
 		setMonitorStatusErrorWithReason(mid, reason)
-		LogService("warn", "push items skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
-		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
+		LogService("warn", "push items skipped due to monitor error", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
+		return result, fmt.Errorf("monitor is in error state (status: %d)", monitor.Status)
 	}
 
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})

@@ -212,6 +212,29 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 		return nil, err
 	}
 
+	return p.parseZabbixHosts(resp.Result)
+}
+
+// GetHostsByGroupID implements the Provider interface
+func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
+	params := map[string]interface{}{
+		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
+		"selectHostGroups": "extend",
+		"selectGroups":     "extend",
+		"groupids":          groupID,
+	}
+
+	resp, err := p.sendRequest(ctx, "host.get", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.parseZabbixHosts(resp.Result)
+}
+
+// parseZabbixHosts parses Zabbix host.get result into common Host slice
+func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error) {
 	// Define a custom struct to handle groups since standard zabbixHost struct doesn't have it
 	var zabbixHosts []struct {
 		zabbixHost
@@ -224,7 +247,7 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 			Name    string `json:"name"`
 		} `json:"hostgroups"`
 	}
-	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
+	if err := json.Unmarshal(result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse hosts: %w", err)
 	}
 
@@ -277,6 +300,88 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	}
 
 	return hosts, nil
+}
+
+// GetHostByName implements the Provider interface
+func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host, error) {
+	params := map[string]interface{}{
+		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
+		"selectHostGroups": "extend",
+		"selectGroups":     "extend",
+		"filter": map[string]interface{}{
+			"host": []string{name},
+		},
+	}
+
+	resp, err := p.sendRequest(ctx, "host.get", params)
+	if err != nil {
+		return nil, err
+	}
+
+	var zabbixHosts []struct {
+		zabbixHost
+		Groups []struct {
+			GroupID string `json:"groupid"`
+			Name    string `json:"name"`
+		} `json:"groups"`
+		HostGroups []struct {
+			GroupID string `json:"groupid"`
+			Name    string `json:"name"`
+		} `json:"hostgroups"`
+	}
+	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
+		return nil, fmt.Errorf("failed to parse host: %w", err)
+	}
+
+	if len(zabbixHosts) == 0 {
+		return nil, fmt.Errorf("host not found: %s", name)
+	}
+
+	zh := zabbixHosts[0]
+	ip := ""
+	if len(zh.Interfaces) > 0 {
+		ip = zh.Interfaces[0].IP
+	}
+
+	status := "unknown"
+	switch zh.Status {
+	case "0":
+		status = "up"
+	case "1":
+		status = "down"
+	}
+
+	metadata := map[string]string{
+		"host":             zh.Host,
+		"active_available": zh.ActiveAvailable,
+	}
+	selectedGroups := zh.HostGroups
+	if len(selectedGroups) == 0 {
+		selectedGroups = zh.Groups
+	}
+
+	if len(selectedGroups) > 0 {
+		metadata["groupid"] = selectedGroups[0].GroupID
+		metadata["groupname"] = selectedGroups[0].Name
+		var gids []string
+		var gnames []string
+		for _, g := range selectedGroups {
+			gids = append(gids, g.GroupID)
+			gnames = append(gnames, g.Name)
+		}
+		metadata["groupids"] = strings.Join(gids, ",")
+		metadata["groupnames"] = strings.Join(gnames, ",")
+	}
+
+	return &Host{
+		ID:          zh.HostID,
+		Name:        zh.Name,
+		Description: zh.Description,
+		Status:      status,
+		IPAddress:   ip,
+		Metadata:    metadata,
+	}, nil
 }
 
 // GetHostByID implements the Provider interface

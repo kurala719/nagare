@@ -14,7 +14,7 @@ type ProviderReq struct {
 	APIKey       string   `json:"api_key" binding:"required"`
 	DefaultModel string   `json:"default_model"`
 	Models       []string `json:"models"`
-	Type         int      `json:"type" binding:"required,oneof=1 2 3"`
+	Type         int      `json:"type" binding:"required,oneof=1 2 3 4 5"`
 	Description  string   `json:"description"`
 	Enabled      int      `json:"enabled"`
 }

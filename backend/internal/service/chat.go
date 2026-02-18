@@ -475,6 +475,10 @@ func createLLMClient(providerID uint, model string) (*llm.Client, string, error)
 	case 2:
 		providerType = llm.ProviderOpenAI
 	case 3:
+		providerType = llm.ProviderOllama
+	case 4:
+		providerType = llm.ProviderOtherOpenAI
+	case 5:
 		providerType = llm.ProviderOther
 	default:
 		providerType = llm.ProviderGemini
@@ -494,8 +498,15 @@ func createLLMClient(providerID uint, model string) (*llm.Client, string, error)
 	if resolvedModel == "" {
 		resolvedModel = provider.DefaultModel
 	}
-	if resolvedModel == "" && provider.Type == 1 {
-		resolvedModel = "gemini-2.5-flash"
+	if resolvedModel == "" {
+		switch providerType {
+		case llm.ProviderGemini:
+			resolvedModel = "gemini-2.0-flash"
+		case llm.ProviderOpenAI:
+			resolvedModel = "gpt-4o-mini"
+		case llm.ProviderOllama:
+			resolvedModel = "llama3.2"
+		}
 	}
 
 	return client, resolvedModel, nil

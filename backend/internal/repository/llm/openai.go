@@ -7,14 +7,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
 // OpenAIProvider implements the Provider interface for OpenAI-compatible APIs
 type OpenAIProvider struct {
-	apiKey  string
-	baseURL string
-	client  *http.Client
+	apiKey       string
+	baseURL      string
+	providerType ProviderType
+	client       *http.Client
 }
 
 // OpenAI API request/response structures
@@ -46,9 +48,9 @@ type openAIResponse struct {
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
 	Error *struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
-		Code    string `json:"code"`
+		Message string      `json:"message"`
+		Type    string      `json:"type"`
+		Code    interface{} `json:"code"`
 	} `json:"error,omitempty"`
 }
 
@@ -60,8 +62,17 @@ func NewOpenAIProvider(cfg Config) (*OpenAIProvider, error) {
 
 	baseURL := cfg.BaseURL
 	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
+		if cfg.Type == ProviderOpenAI {
+			baseURL = "https://api.openai.com/v1"
+		} else {
+			return nil, fmt.Errorf("baseURL is required for this OpenAI-compatible provider")
+		}
 	}
+
+	// Normalize baseURL: trim trailing slashes and redundant paths
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/chat/completions")
+	baseURL = strings.TrimSuffix(baseURL, "/chat")
 
 	timeout := cfg.Timeout
 	if timeout == 0 {
@@ -69,8 +80,9 @@ func NewOpenAIProvider(cfg Config) (*OpenAIProvider, error) {
 	}
 
 	return &OpenAIProvider{
-		apiKey:  cfg.APIKey,
-		baseURL: baseURL,
+		apiKey:       cfg.APIKey,
+		baseURL:      baseURL,
+		providerType: cfg.Type,
 		client: &http.Client{
 			Timeout: time.Duration(timeout) * time.Second,
 		},
@@ -160,6 +172,9 @@ func (p *OpenAIProvider) Name() string {
 
 // Models returns available OpenAI models
 func (p *OpenAIProvider) Models() []string {
+	if p.providerType == ProviderOtherOpenAI {
+		return []string{}
+	}
 	return []string{
 		"gpt-4o",
 		"gpt-4o-mini",

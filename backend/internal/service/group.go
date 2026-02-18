@@ -217,52 +217,22 @@ func PullGroupFromMonitorsServ(id uint) (SyncResult, error) {
 		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
 	}
 
-	// Pull group itself first if monitor is set
+	result := SyncResult{Total: 1}
+
+	// Pull group metadata first if monitor is set
 	if group.MonitorID > 0 {
 		if err := PullGroupFromMonitorServ(group.MonitorID, id); err != nil {
 			setGroupStatusError(id)
 			LogService("error", "pull group failed to pull group entity", map[string]interface{}{"group_id": id, "monitor_id": group.MonitorID, "error": err.Error()}, nil, "")
+			result.Failed = 1
+			return result, err
 		}
+		result.Updated = 1
+	} else {
+		return result, fmt.Errorf("group is not associated with a monitor")
 	}
 
-	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
-	if err != nil {
-		setGroupStatusError(id)
-		LogService("error", "pull group failed to load hosts", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
-		return SyncResult{}, fmt.Errorf("failed to get group hosts: %w", err)
-	}
-	result := SyncResult{}
-	for _, host := range hosts {
-		if host.MonitorID == 0 {
-			setGroupStatusError(id)
-			LogService("error", "pull group skipped host without monitor", map[string]interface{}{"group_id": id, "host_id": host.ID}, nil, "")
-			result.Failed++
-			continue
-		}
-		pullHostRes, err := PullHostFromMonitorServ(host.MonitorID, host.ID)
-		if err != nil {
-			setGroupStatusError(id)
-			LogService("error", "pull group failed to pull host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added += pullHostRes.Added
-		result.Updated += pullHostRes.Updated
-		result.Failed += pullHostRes.Failed
-		result.Total += pullHostRes.Total
-
-		pullItemRes, err := PullItemsFromHostServ(host.MonitorID, host.ID)
-		if err != nil {
-			setGroupStatusError(id)
-			LogService("error", "pull group failed to pull items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added += pullItemRes.Added
-		result.Updated += pullItemRes.Updated
-		result.Failed += pullItemRes.Failed
-		result.Total += pullItemRes.Total
-	}
+	_, _ = recomputeGroupStatus(id)
 	return result, nil
 }
 
@@ -274,51 +244,21 @@ func PushGroupToMonitorsServ(id uint) (SyncResult, error) {
 		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
 	}
 
-	// Push group itself first if monitor is set
+	result := SyncResult{Total: 1}
+
+	// Push group metadata if monitor is set
 	if group.MonitorID > 0 {
 		if err := PushGroupToMonitorServ(group.MonitorID, id); err != nil {
 			setGroupStatusError(id)
 			LogService("error", "push group failed to push group entity", map[string]interface{}{"group_id": id, "monitor_id": group.MonitorID, "error": err.Error()}, nil, "")
-			// Continue to push hosts even if group sync fails? 
-			// Probably better to fail or log error. But let's continue as hosts might already exist.
+			result.Failed = 1
+			return result, err
 		}
+		result.Updated = 1
+	} else {
+		return result, fmt.Errorf("group is not associated with a monitor")
 	}
 
-	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
-	if err != nil {
-		setGroupStatusError(id)
-		LogService("error", "push group failed to load hosts", map[string]interface{}{"group_id": id, "error": err.Error()}, nil, "")
-		return SyncResult{}, fmt.Errorf("failed to get group hosts: %w", err)
-	}
-	result := SyncResult{}
-	for _, host := range hosts {
-		if host.MonitorID == 0 {
-			setGroupStatusError(id)
-			LogService("error", "push group skipped host without monitor", map[string]interface{}{"group_id": id, "host_id": host.ID}, nil, "")
-			result.Failed++
-			continue
-		}
-		if err := PushHostToMonitorServ(host.MonitorID, host.ID); err != nil {
-			setGroupStatusError(id)
-			LogService("error", "push group failed to push host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added++
-		result.Total++
-
-		pushItemsRes, err := PushItemsFromHostServ(host.MonitorID, host.ID)
-		if err != nil {
-			setGroupStatusError(id)
-			LogService("error", "push group failed to push items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added += pushItemsRes.Added
-		result.Updated += pushItemsRes.Updated
-		result.Failed += pushItemsRes.Failed
-		result.Total += pushItemsRes.Total
-	}
 	return result, nil
 }
 
@@ -355,6 +295,20 @@ func PullGroupHostsServ(id uint) (SyncResult, error) {
 		return SyncResult{}, fmt.Errorf("failed to get group: %w", err)
 	}
 
+	// Discover and sync all hosts belonging to this group from the monitor
+	if group.MonitorID > 0 && group.ExternalID != "" {
+		result, err := PullHostsOfGroupFromMonitorServ(group.MonitorID, id)
+		if err != nil {
+			setGroupStatusError(id)
+			LogService("error", "pull group hosts failed to discover hosts", map[string]interface{}{"group_id": id, "monitor_id": group.MonitorID, "error": err.Error()}, nil, "")
+			return result, err
+		}
+		
+		_, _ = recomputeGroupStatus(id)
+		return result, nil
+	}
+
+	// Fallback: If no monitor or external ID, pull existing local hosts
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
 	if err != nil {
 		setGroupStatusError(id)
@@ -363,10 +317,11 @@ func PullGroupHostsServ(id uint) (SyncResult, error) {
 	}
 	result := SyncResult{}
 	for _, host := range hosts {
-		if host.MonitorID == 0 {
+		mid := host.MonitorID
+		if mid == 0 {
 			// If host has no specific monitor, try to use group's monitor if available
 			if group.MonitorID > 0 {
-				host.MonitorID = group.MonitorID
+				mid = group.MonitorID
 			} else {
 				setGroupStatusError(id)
 				LogService("error", "pull group hosts skipped host without monitor", map[string]interface{}{"group_id": id, "host_id": host.ID}, nil, "")
@@ -374,10 +329,10 @@ func PullGroupHostsServ(id uint) (SyncResult, error) {
 				continue
 			}
 		}
-		pullHostRes, err := PullHostFromMonitorServ(host.MonitorID, host.ID)
+		pullHostRes, err := PullHostFromMonitorServ(mid, host.ID)
 		if err != nil {
 			setGroupStatusError(id)
-			LogService("error", "pull group hosts failed to pull host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+			LogService("error", "pull group hosts failed to pull host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": mid, "error": err.Error()}, nil, "")
 			result.Failed++
 			continue
 		}
@@ -385,18 +340,6 @@ func PullGroupHostsServ(id uint) (SyncResult, error) {
 		result.Updated += pullHostRes.Updated
 		result.Failed += pullHostRes.Failed
 		result.Total += pullHostRes.Total
-
-		pullItemRes, err := PullItemsFromHostServ(host.MonitorID, host.ID)
-		if err != nil {
-			setGroupStatusError(id)
-			LogService("error", "pull group hosts failed to pull items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added += pullItemRes.Added
-		result.Updated += pullItemRes.Updated
-		result.Failed += pullItemRes.Failed
-		result.Total += pullItemRes.Total
 	}
 	return result, nil
 }
@@ -429,26 +372,17 @@ func PushGroupHostsServ(id uint) (SyncResult, error) {
 				continue
 			}
 		}
-		if err := PushHostToMonitorServ(host.MonitorID, host.ID); err != nil {
+		hostResult, err := PushHostToMonitorServ(host.MonitorID, host.ID)
+		if err != nil {
 			setGroupStatusError(id)
 			LogService("error", "push group hosts failed to push host", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
 			result.Failed++
 			continue
 		}
-		result.Added++
-		result.Total++
-
-		pushItemsRes, err := PushItemsFromHostServ(host.MonitorID, host.ID)
-		if err != nil {
-			setGroupStatusError(id)
-			LogService("error", "push group hosts failed to push items", map[string]interface{}{"group_id": id, "host_id": host.ID, "monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
-			result.Failed++
-			continue
-		}
-		result.Added += pushItemsRes.Added
-		result.Updated += pushItemsRes.Updated
-		result.Failed += pushItemsRes.Failed
-		result.Total += pushItemsRes.Total
+		result.Added += hostResult.Added
+		result.Updated += hostResult.Updated
+		result.Failed += hostResult.Failed
+		result.Total += hostResult.Total
 	}
 	return result, nil
 }

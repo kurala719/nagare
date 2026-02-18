@@ -132,8 +132,8 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 		return fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	if monitor.Status != 1 {
-		return fmt.Errorf("monitor is not active")
+	if monitor.Status == 2 {
+		return fmt.Errorf("monitor is in error state")
 	}
 
 	// 2. Create monitor client
@@ -208,8 +208,8 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 		return fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	if monitor.Status != 1 {
-		return fmt.Errorf("monitor is not active")
+	if monitor.Status == 2 {
+		return fmt.Errorf("monitor is in error state")
 	}
 
 	// 2. Create monitor client
