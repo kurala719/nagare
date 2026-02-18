@@ -28,7 +28,9 @@ func SearchMediaTypesDAO(filter model.MediaTypeFilter) ([]model.MediaType, error
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
+		"key":        "key",
 		"status":     "status",
+		"enabled":    "enabled",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",

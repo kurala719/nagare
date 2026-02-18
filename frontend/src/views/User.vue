@@ -1,34 +1,37 @@
 <template>
-  <div class="users-page">
-    <div class="users-toolbar">
-      <span class="filter-label">{{ $t('users.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('users.search')" clearable class="users-search" />
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="users-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div v-if="isSuperAdmin" class="users-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
-        </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
-      </div>
-      <el-button v-if="isSuperAdmin" type="primary" @click="openCreate">
-        <el-icon><Plus /></el-icon>
-        {{ $t('users.create') }}
-      </el-button>
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('users.roleUser') }}</h1>
+      <p class="page-subtitle">{{ totalUsers }} {{ $t('users.roleUser') }}</p>
     </div>
 
-    <div v-if="loading" class="users-loading">
-      <el-icon class="is-loading" size="40"><Loading /></el-icon>
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('users.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+      </div>
+
+      <div class="action-group">
+        <el-button v-if="isSuperAdmin" type="primary" :icon="Plus" @click="openCreate">
+          {{ $t('users.create') }}
+        </el-button>
+        <el-dropdown trigger="click" v-if="isSuperAdmin && selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </div>
+
+    <div v-if="loading" class="loading-state">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
       <p>{{ $t('users.loading') }}</p>
     </div>
 
@@ -51,47 +54,46 @@
       class="users-empty"
     />
 
-    <div
-      v-if="!loading && !error"
-      class="users-scroll"
+  <div v-if="!loading && !error" class="users-content">
+    <el-table
+      v-if="filteredUsers.length > 0"
+      :data="filteredUsers"
+      border
+      ref="usersTableRef"
+      row-key="id"
+      @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
     >
-      <el-table
-        v-if="filteredUsers.length > 0"
-        :data="filteredUsers"
-        class="users-table"
-        border
-        ref="usersTableRef"
-        row-key="id"
-        @selection-change="onSelectionChange"
-      >
-      <el-table-column v-if="isSuperAdmin" type="selection" width="50" />
-      <el-table-column prop="id" :label="$t('users.id')" width="90" />
-      <el-table-column prop="username" :label="$t('users.username')" min-width="140" />
-      <el-table-column prop="nickname" :label="$t('users.nickname')" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="email" :label="$t('users.email')" min-width="180" show-overflow-tooltip />
-      <el-table-column prop="phone" :label="$t('users.phone')" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="privileges" :label="$t('users.role')" width="140">
+      <el-table-column v-if="isSuperAdmin" type="selection" width="50" align="center" />
+      <el-table-column prop="id" :label="$t('users.id')" width="90" align="center" sortable="custom" />
+      <el-table-column prop="username" :label="$t('users.username')" min-width="140" sortable="custom" />
+      <el-table-column prop="nickname" :label="$t('users.nickname')" min-width="140" show-overflow-tooltip sortable="custom" />
+      <el-table-column prop="email" :label="$t('users.email')" min-width="180" show-overflow-tooltip sortable="custom" />
+      <el-table-column prop="phone" :label="$t('users.phone')" width="140" align="center" show-overflow-tooltip sortable="custom" />
+      <el-table-column prop="privileges" :label="$t('users.role')" width="140" align="center" sortable="custom">
         <template #default="{ row }">
-          <el-tag :type="roleTagType(row.privileges)">{{ roleLabel(row.privileges) }}</el-tag>
+          <el-tag :type="roleTagType(row.privileges)" size="small" effect="dark">{{ roleLabel(row.privileges) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" :label="$t('users.status')" width="120">
+      <el-table-column prop="status" :label="$t('users.status')" width="120" align="center" sortable="custom">
         <template #default="{ row }">
           <el-tooltip :content="statusReason(row.status)" placement="top">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
               {{ row.status === 1 ? $t('users.active') : $t('users.inactive') }}
             </el-tag>
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('users.actions')" width="220" fixed="right">
+      <el-table-column v-if="isSuperAdmin" :label="$t('users.actions')" width="200" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button v-if="isSuperAdmin" size="small" @click="openEdit(row)">{{ $t('users.edit') }}</el-button>
-          <el-button v-if="isSuperAdmin" size="small" type="danger" @click="confirmDelete(row)">{{ $t('users.delete') }}</el-button>
+          <el-button-group>
+            <el-button size="small" :icon="Edit" @click="openEdit(row)">{{ $t('users.edit') }}</el-button>
+            <el-button size="small" type="danger" :icon="Delete" @click="confirmDelete(row)">{{ $t('users.delete') }}</el-button>
+          </el-button-group>
         </template>
       </el-table-column>
-      </el-table>
-    </div>
+    </el-table>
+  </div>
     <div v-if="!loading && !error && totalUsers > 0" class="users-pagination">
       <el-pagination
         background
@@ -176,16 +178,21 @@
 
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { markRaw } from 'vue'
 import { searchUsers, addUser, updateUser, deleteUser } from '@/api/users'
 import { getUserInformationByUserID, updateUserInformationByUserID } from '@/api/userInformation'
 import { getUserPrivileges } from '@/utils/auth'
-import { Loading, Plus } from '@element-plus/icons-vue'
+import { Loading, Plus, Search, Edit, Delete, ArrowDown } from '@element-plus/icons-vue'
 
 export default {
   name: 'User',
   components: {
     Loading,
     Plus,
+    Search,
+    Edit,
+    Delete,
+    ArrowDown
   },
   data() {
     return {
@@ -197,7 +204,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalUsers: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       bulkDialogVisible: false,
       bulkDeleteDialogVisible: false,
       bulkUpdating: false,
@@ -221,6 +229,13 @@ export default {
       bulkForm: {
         status: 'nochange',
       },
+      // Icons for template usage
+      Plus: markRaw(Plus),
+      Search: markRaw(Search),
+      Edit: markRaw(Edit),
+      Delete: markRaw(Delete),
+      ArrowDown: markRaw(ArrowDown),
+      Loading: markRaw(Loading)
     }
   },
   computed: {
@@ -267,10 +282,6 @@ export default {
     search() {
       this.currentPage = 1
     },
-    sortKey() {
-      this.currentPage = 1
-      this.loadUsers(true)
-    },
     pageSize() {
       this.currentPage = 1
       this.loadUsers(true)
@@ -285,6 +296,17 @@ export default {
     },
     onSelectionChange(selection) {
       this.selectedUserRows = selection || []
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = ''
+        this.sortOrder = ''
+      } else {
+        this.sortBy = prop
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc'
+      }
+      this.currentPage = 1
+      this.loadUsers(true)
     },
     openBulkDeleteDialog() {
       if (!this.isSuperAdmin) return
@@ -355,15 +377,14 @@ export default {
       this.loading = true
       this.error = null
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey)
         const response = await searchUsers({
           // The search is now primarily client-side for responsiveness.
           // The server-side query can be kept to fetch a broadly relevant set of users.
           q: this.search || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
-          sort: sortBy,
-          order: sortOrder,
+          sort: this.sortBy || undefined,
+          order: this.sortOrder || undefined,
           with_total: 1,
         })
         let payload = []
@@ -405,23 +426,6 @@ export default {
         this.error = err?.message || this.$t('users.loadFailed')
       } finally {
         this.loading = false
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'username', sortOrder: 'asc' }
-        case 'name_desc':
-          return { sortBy: 'username', sortOrder: 'desc' }
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' }
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' }
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' }
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' }
       }
     },
     openCreate() {
@@ -560,58 +564,27 @@ export default {
 </script>
 
 <style scoped>
-.users-page {
-  padding: 16px;
-}
-
-.users-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 12px;
-}
-
-.users-bulk-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.users-search {
-  max-width: 260px;
-}
-
-.users-filter {
-  min-width: 160px;
+.users-content {
+  margin-top: 8px;
 }
 
 .users-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 0 16px;
 }
 
-.users-loading {
+.loading-state {
   text-align: center;
-  padding: 40px;
-  color: #909399;
+  padding: 60px;
 }
 
-.users-error {
-  margin: 16px 0;
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.users-empty {
-  margin: 40px 0;
-}
-
-.users-table {
-  width: 100%;
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

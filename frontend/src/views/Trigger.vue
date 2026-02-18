@@ -1,44 +1,47 @@
 <template>
-  <div class="triggers-toolbar">
-    <div class="triggers-filters">
-      <span class="filter-label">{{ $t('triggers.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('triggers.search')" clearable class="triggers-search" />
-      <span class="filter-label">{{ $t('triggers.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('triggers.filterStatus')" class="triggers-filter">
-        <el-option :label="$t('triggers.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="triggers-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="triggers-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('triggers.title') }}</h1>
+      <p class="page-subtitle">{{ totalTriggers }} {{ $t('triggers.title') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('triggers.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('triggers.filterStatus')" style="width: 120px">
+          <el-option :label="$t('triggers.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button type="primary" :icon="Plus" @click="openCreate">
+          {{ $t('triggers.create') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
-    <el-button type="primary" @click="openCreate">
-      {{ $t('triggers.create') }}
-    </el-button>
-  </div>
 
-  <div v-if="loading" class="loading-state">
-    <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
-    <p>{{ $t('triggers.loading') }}</p>
-  </div>
+    <div v-if="loading" class="loading-state">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
+      <p>{{ $t('triggers.loading') }}</p>
+    </div>
 
   <el-alert
     v-if="error && !loading"
@@ -65,52 +68,51 @@
     style="margin: 40px;"
   />
 
-  <div
-    v-if="!loading && !error"
-    class="triggers-scroll"
-  >
+  <div v-if="!loading && !error" class="triggers-content">
     <el-table
       v-if="filteredTriggers.length > 0"
       :data="filteredTriggers"
       border
-      style="margin: 20px; width: calc(100% - 40px);"
       ref="triggersTableRef"
       row-key="id"
       @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
     >
-      <el-table-column type="selection" width="50" />
-      <el-table-column prop="name" :label="$t('triggers.name')" min-width="160" />
-      <el-table-column :label="$t('triggers.entity')" min-width="120">
+      <el-table-column type="selection" width="50" align="center" />
+      <el-table-column prop="name" :label="$t('triggers.name')" min-width="160" sortable="custom" />
+      <el-table-column :label="$t('triggers.entity')" min-width="120" prop="entity" sortable="custom">
         <template #default="{ row }">
           {{ entityLabel(row.entity) }}
         </template>
       </el-table-column>
-      <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" min-width="140" />
-      <el-table-column :label="$t('triggers.action')" min-width="160">
+      <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" width="140" align="center" sortable="custom" />
+      <el-table-column :label="$t('triggers.action')" min-width="160" prop="action_id" sortable="custom">
         <template #default="{ row }">
           {{ actionName(row.action_id) }}
         </template>
       </el-table-column>
-      <el-table-column :label="$t('common.enabled')" min-width="110">
+      <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
         <template #default="{ row }">
-          <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
             {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('triggers.status')" min-width="160">
+      <el-table-column :label="$t('triggers.status')" width="160" align="center" prop="status" sortable="custom">
         <template #default="{ row }">
           <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-            <el-tag :type="getStatusInfo(row.status).type">
+            <el-tag :type="getStatusInfo(row.status).type" size="small">
               {{ getStatusInfo(row.status).label }}
             </el-tag>
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('triggers.actions')" min-width="200" fixed="right">
+      <el-table-column :label="$t('triggers.actions')" width="200" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button size="small" @click="openProperties(row)">{{ $t('triggers.properties') }}</el-button>
-          <el-button size="small" type="danger" @click="onDelete(row)">{{ $t('triggers.delete') }}</el-button>
+          <el-button-group>
+            <el-button size="small" :icon="Setting" @click="openProperties(row)">{{ $t('triggers.properties') }}</el-button>
+            <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)">{{ $t('triggers.delete') }}</el-button>
+          </el-button-group>
         </template>
       </el-table-column>
     </el-table>
@@ -316,17 +318,27 @@
       <el-button type="danger" @click="deleteSelectedTriggers" :loading="bulkDeleting">{{ $t('triggers.delete') }}</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { markRaw } from 'vue';
+import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchTriggerData, addTrigger, updateTrigger, deleteTrigger } from '@/api/triggers';
 import { fetchActionData } from '@/api/actions';
 
 export default {
   name: 'Trigger',
-  components: { Loading },
+  components: {
+    Loading,
+    Search,
+    Plus,
+    Edit,
+    Delete,
+    ArrowDown,
+    Setting
+  },
   data() {
     return {
       triggers: [],
@@ -338,7 +350,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalTriggers: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       createDialogVisible: false,
       propertiesDialogVisible: false,
       bulkDialogVisible: false,
@@ -387,6 +400,14 @@ export default {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons for template usage
+      Plus: markRaw(Plus),
+      Search: markRaw(Search),
+      Edit: markRaw(Edit),
+      Delete: markRaw(Delete),
+      ArrowDown: markRaw(ArrowDown),
+      Setting: markRaw(Setting),
+      Loading: markRaw(Loading)
     };
   },
   computed: {
@@ -409,10 +430,6 @@ export default {
       this.currentPage = 1;
       this.loadTriggers(true);
     },
-    sortKey() {
-      this.currentPage = 1;
-      this.loadTriggers(true);
-    },
     pageSize() {
       this.currentPage = 1;
       this.loadTriggers(true);
@@ -424,6 +441,17 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedTriggers = selection || [];
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = '';
+        this.sortOrder = '';
+      } else {
+        this.sortBy = prop;
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+      }
+      this.currentPage = 1;
+      this.loadTriggers(true);
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {
@@ -500,15 +528,14 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
         const [triggerResp, actionResp] = await Promise.all([
           fetchTriggerData({
             q: this.search || undefined,
             status: this.statusFilter === 'all' ? undefined : this.statusFilter,
             limit: this.pageSize,
             offset: (this.currentPage - 1) * this.pageSize,
-            sort: sortBy,
-            order: sortOrder,
+            sort: this.sortBy || undefined,
+            order: this.sortOrder || undefined,
             with_total: 1,
           }),
           this.actionOptions.length === 0 ? fetchActionData({ limit: 100, offset: 0 }) : Promise.resolve(null),
@@ -550,23 +577,6 @@ export default {
         this.error = err.message || this.$t('triggers.loadFailed');
       } finally {
         this.loading = false;
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'name', sortOrder: 'asc' };
-        case 'name_desc':
-          return { sortBy: 'name', sortOrder: 'desc' };
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' };
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' };
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' };
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
     actionName(id) {
@@ -762,49 +772,28 @@ export default {
 </script>
 
 <style scoped>
-.triggers-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
-}
-
-.triggers-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.triggers-bulk-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.triggers-content {
+  margin-top: 8px;
 }
 
 .triggers-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.triggers-search {
-  width: 240px;
-}
-
-.triggers-filter {
-  min-width: 160px;
 }
 
 .loading-state {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>
 

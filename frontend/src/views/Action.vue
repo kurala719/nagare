@@ -1,44 +1,47 @@
 <template>
-  <div class="actions-toolbar">
-    <div class="actions-filters">
-      <span class="filter-label">{{ $t('actions.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('actions.search')" clearable class="actions-search" />
-      <span class="filter-label">{{ $t('actions.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('actions.filterStatus')" class="actions-filter">
-        <el-option :label="$t('actions.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="actions-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="actions-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('actions.title') }}</h1>
+      <p class="page-subtitle">{{ totalActions }} {{ $t('actions.title') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('actions.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('actions.filterStatus')" style="width: 120px">
+          <el-option :label="$t('actions.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button type="primary" :icon="Plus" @click="openCreate">
+          {{ $t('actions.create') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
-    <el-button type="primary" @click="openCreate">
-      {{ $t('actions.create') }}
-    </el-button>
-  </div>
 
-  <div v-if="loading" class="loading-state">
-    <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
-    <p>{{ $t('actions.loading') }}</p>
-  </div>
+    <div v-if="loading" class="loading-state">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
+      <p>{{ $t('actions.loading') }}</p>
+    </div>
 
   <el-alert
     v-if="error && !loading"
@@ -65,50 +68,48 @@
     style="margin: 40px;"
   />
 
-  <div
-    v-if="!loading && !error"
-    class="actions-scroll"
-  >
+  <div v-if="!loading && !error" class="actions-content">
     <el-table
       v-if="filteredActions.length > 0"
       :data="filteredActions"
       border
-      style="margin: 20px; width: calc(100% - 40px);"
       ref="actionsTableRef"
       row-key="id"
       @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
     >
-    <el-table-column type="selection" width="50" />
-    <el-table-column prop="name" :label="$t('actions.name')" min-width="160" />
-    <el-table-column :label="$t('actions.media')" min-width="160">
-      <template #default="{ row }">
-        {{ mediaName(row.media_id) }}
-      </template>
-    </el-table-column>
-    <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip />
-    <el-table-column :label="$t('common.enabled')" min-width="110">
-      <template #default="{ row }">
-        <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
-          {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
-        </el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column :label="$t('actions.status')" min-width="160">
-      <template #default="{ row }">
-        <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-          <el-tag :type="getStatusInfo(row.status).type">
-            {{ getStatusInfo(row.status).label }}
+      <el-table-column type="selection" width="50" align="center" />
+      <el-table-column prop="name" :label="$t('actions.name')" min-width="160" sortable="custom" />
+      <el-table-column :label="$t('actions.media')" min-width="160" prop="media_id" sortable="custom">
+        <template #default="{ row }">
+          {{ mediaName(row.media_id) }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip sortable="custom" />
+      <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
+        <template #default="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
+            {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
           </el-tag>
-        </el-tooltip>
-      </template>
-    </el-table-column>
-    <el-table-column prop="description" :label="$t('actions.description')" min-width="200" show-overflow-tooltip />
-    <el-table-column :label="$t('actions.actions')" min-width="200" fixed="right">
-      <template #default="{ row }">
-        <el-button size="small" @click="openProperties(row)">{{ $t('actions.properties') }}</el-button>
-        <el-button size="small" type="danger" @click="onDelete(row)">{{ $t('actions.delete') }}</el-button>
-      </template>
-    </el-table-column>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('actions.status')" width="160" align="center" prop="status" sortable="custom">
+        <template #default="{ row }">
+          <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
+            <el-tag :type="getStatusInfo(row.status).type" size="small">
+              {{ getStatusInfo(row.status).label }}
+            </el-tag>
+          </el-tooltip>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('actions.actions')" width="200" fixed="right" align="center">
+        <template #default="{ row }">
+          <el-button-group>
+            <el-button size="small" :icon="Setting" @click="openProperties(row)">{{ $t('actions.properties') }}</el-button>
+            <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)">{{ $t('actions.delete') }}</el-button>
+          </el-button-group>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
   <div v-if="!loading && !error && totalActions > 0" class="actions-pagination">
@@ -208,17 +209,27 @@
       <el-button type="danger" @click="deleteSelectedActions" :loading="bulkDeleting">{{ $t('actions.delete') }}</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { markRaw } from 'vue';
+import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchActionData, addAction, updateAction, deleteAction } from '@/api/actions';
 import { fetchMediaData } from '@/api/media';
 
 export default {
   name: 'Action',
-  components: { Loading },
+  components: {
+    Loading,
+    Search,
+    Plus,
+    Edit,
+    Delete,
+    ArrowDown,
+    Setting
+  },
   data() {
     return {
       actions: [],
@@ -230,7 +241,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalActions: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       createDialogVisible: false,
       propertiesDialogVisible: false,
       bulkDialogVisible: false,
@@ -244,6 +256,14 @@ export default {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons for template usage
+      Plus: markRaw(Plus),
+      Search: markRaw(Search),
+      Edit: markRaw(Edit),
+      Delete: markRaw(Delete),
+      ArrowDown: markRaw(ArrowDown),
+      Setting: markRaw(Setting),
+      Loading: markRaw(Loading)
     };
   },
   computed: {
@@ -266,10 +286,6 @@ export default {
       this.currentPage = 1;
       this.loadActions(true);
     },
-    sortKey() {
-      this.currentPage = 1;
-      this.loadActions(true);
-    },
     pageSize() {
       this.currentPage = 1;
       this.loadActions(true);
@@ -281,6 +297,17 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedActions = selection || [];
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = '';
+        this.sortOrder = '';
+      } else {
+        this.sortBy = prop;
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+      }
+      this.currentPage = 1;
+      this.loadActions(true);
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {
@@ -361,15 +388,14 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
         const [actionResp, mediaResp] = await Promise.all([
           fetchActionData({
             q: this.search || undefined,
             status: this.statusFilter === 'all' ? undefined : this.statusFilter,
             limit: this.pageSize,
             offset: (this.currentPage - 1) * this.pageSize,
-            sort: sortBy,
-            order: sortOrder,
+            sort: this.sortBy || undefined,
+            order: this.sortOrder || undefined,
             with_total: 1,
           }),
           this.mediaOptions.length === 0 ? fetchMediaData({ limit: 100, offset: 0 }) : Promise.resolve(null),
@@ -401,23 +427,6 @@ export default {
         this.error = err.message || this.$t('actions.loadFailed');
       } finally {
         this.loading = false;
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'name', sortOrder: 'asc' };
-        case 'name_desc':
-          return { sortBy: 'name', sortOrder: 'desc' };
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' };
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' };
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' };
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
     mediaName(id) {
@@ -505,48 +514,27 @@ export default {
 </script>
 
 <style scoped>
-.actions-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
-}
-
-.actions-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.actions-bulk-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.actions-content {
+  margin-top: 8px;
 }
 
 .actions-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.actions-search {
-  width: 240px;
-}
-
-.actions-filter {
-  min-width: 160px;
 }
 
 .loading-state {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

@@ -1,49 +1,59 @@
 <template>
-    <div class="providers-page">
-            <div class="providers-toolbar">
-                <div class="providers-filters">
-                    <span class="filter-label">{{ $t('providers.search') }}</span>
-                    <el-input v-model="search" :placeholder="$t('providers.search')" clearable class="providers-search" />
-                    <span class="filter-label">{{ $t('providers.filterStatus') }}</span>
-                    <el-select v-model="statusFilter" :placeholder="$t('providers.filterStatus')" class="providers-filter">
-                        <el-option :label="$t('providers.filterAll')" value="all" />
-                        <el-option :label="$t('common.statusInactive')" :value="0" />
-                        <el-option :label="$t('common.statusActive')" :value="1" />
-                        <el-option :label="$t('common.statusError')" :value="2" />
-                        <el-option :label="$t('common.statusSyncing')" :value="3" />
-                    </el-select>
-                    <span class="filter-label">{{ $t('providers.filterType') }}</span>
-                    <el-select v-model="typeFilter" :placeholder="$t('providers.filterType')" class="providers-filter">
-                        <el-option :label="$t('providers.filterAll')" value="all" />
-                        <el-option :label="$t('providers.typeGemini')" :value="1" />
-                        <el-option :label="$t('providers.typeOpenAI')" :value="2" />
-                        <el-option :label="$t('providers.typeOllama')" :value="3" />
-                        <el-option :label="$t('providers.typeOtherOpenAI')" :value="4" />
-                        <el-option :label="$t('providers.typeOther')" :value="5" />
-                    </el-select>
-                    <span class="filter-label">{{ $t('providers.sort') }}</span>
-                    <el-select v-model="sortKey" class="providers-filter">
-                        <el-option :label="$t('providers.sortNameAsc')" value="name_asc" />
-                        <el-option :label="$t('providers.sortNameDesc')" value="name_desc" />
-                        <el-option :label="$t('providers.sortStatusAsc')" value="status_asc" />
-                        <el-option :label="$t('providers.sortStatusDesc')" value="status_desc" />
-                    </el-select>
-                    <div class="providers-bulk-actions">
-                        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-                        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-                            {{ $t('common.bulkUpdate') }}
-                        </el-button>
-                        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-                            {{ $t('common.bulkDelete') }}
-                        </el-button>
-                    </div>
-                </div>
-                <div class="providers-actions">
-                    <el-button type="primary" @click="openCreateDialog">
-                        {{ $t('providers.create') }}
-                    </el-button>
-                </div>
-            </div>
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('providers.search') }}</h1>
+      <p class="page-subtitle">{{ totalProviders }} {{ $t('dashboard.aiProviders') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('providers.search')" clearable style="width: 280px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('providers.filterStatus')" style="width: 140px">
+          <el-option :label="$t('providers.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+
+        <el-select v-model="typeFilter" :placeholder="$t('providers.filterType')" style="width: 160px">
+          <el-option :label="$t('providers.filterAll')" value="all" />
+          <el-option :label="$t('providers.typeGemini')" :value="1" />
+          <el-option :label="$t('providers.typeOpenAI')" :value="2" />
+          <el-option :label="$t('providers.typeOllama')" :value="3" />
+          <el-option :label="$t('providers.typeOtherOpenAI')" :value="4" />
+          <el-option :label="$t('providers.typeOther')" :value="5" />
+        </el-select>
+
+        <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
+          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
+          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
+          <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
+          <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button @click="loadProviders(true)" :loading="loading" :icon="Refresh" circle />
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog">
+          {{ $t('providers.create') }}
+        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </div>
 
             <!-- Loading State -->
             <div v-if="loading" class="providers-state">
@@ -80,42 +90,46 @@
                 class="providers-empty"
             />
 
-            <div v-if="!loading && !error" class="providers-list">
-                <!-- Provider Cards -->
-                <el-row :gutter="20" class="providers-grid" v-if="pagedProviders.length > 0">
-                    <el-col :span="6" v-for="provider in pagedProviders" :key="provider.id" class="provider-col">
-                        <el-card class="provider-card" shadow="hover">
-                            <template #header>
-                                <div class="card-header">
-                                    <div class="card-title">
-                                        <el-checkbox :model-value="isSelected(provider.id)" @change="toggleSelection(provider.id, $event)" />
-                                        <span class="provider-name">{{ provider.name }}</span>
-                                        <el-tooltip placement="top-start" :content="provider.status_reason || getStatusInfo(provider.status).reason">
-                                            <el-tag :type="getStatusInfo(provider.status).type" size="small">
-                                                {{ getStatusInfo(provider.status).label }}
-                                            </el-tag>
-                                        </el-tooltip>
-                                    </div>
-                                    <div class="card-actions">
-                                        <el-button size="small" @click="openProperties(provider)">{{ $t('providers.properties') }}</el-button>
-                                        <el-button size="small" @click="onDelete(provider)">{{ $t('providers.delete') }}</el-button>
-                                    </div>
-                                </div>
-                            </template>
-                            <div class="card-body">
-                                <p class="provider-desc">{{ provider.description || '-' }}</p>
-                                <div class="provider-meta">
-                                    <el-tag effect="light" type="info">{{ getTypeLabel(provider.type) }}</el-tag>
-                                    <el-tag v-if="provider.default_model" effect="light" type="success">{{ provider.default_model }}</el-tag>
-                                    <el-tag :type="provider.enabled === 1 ? 'success' : 'info'">
-                                        {{ provider.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
-                                    </el-tag>
-                                </div>
-                            </div>
-                        </el-card>
-                    </el-col>
-                </el-row>
+  <div v-if="!loading && !error" class="providers-content">
+    <el-row :gutter="24">
+      <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="provider in pagedProviders" :key="provider.id" style="margin-bottom: 24px;">
+        <el-card class="provider-card" :body-style="{ padding: '0px' }">
+          <div class="provider-card-header">
+            <div class="provider-icon-box">
+              <el-icon :size="24"><Connection /></el-icon>
             </div>
+            <div class="provider-title-area">
+              <h3 class="provider-name">{{ provider.name }}</h3>
+              <span class="provider-type-tag">{{ getTypeLabel(provider.type) }}</span>
+            </div>
+            <el-checkbox :model-value="isSelected(provider.id)" @change="toggleSelection(provider.id, $event)" class="provider-select" />
+          </div>
+          
+          <div class="provider-card-body">
+            <p class="provider-desc">{{ provider.description || '-' }}</p>
+            <div class="provider-meta-row">
+              <el-tag v-if="provider.default_model" size="small" effect="plain">{{ provider.default_model }}</el-tag>
+              <el-tag :type="provider.enabled === 1 ? 'success' : 'info'" size="small">
+                {{ provider.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              </el-tag>
+              <el-tooltip :content="provider.status_reason || getStatusInfo(provider.status).reason" placement="top">
+                <el-tag :type="getStatusInfo(provider.status).type" size="small" effect="dark">
+                  {{ getStatusInfo(provider.status).label }}
+                </el-tag>
+              </el-tooltip>
+            </div>
+          </div>
+
+          <div class="provider-card-footer">
+            <el-button-group>
+              <el-button size="small" :icon="Edit" @click="openProperties(provider)">{{ $t('providers.properties') }}</el-button>
+              <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(provider)">{{ $t('providers.delete') }}</el-button>
+            </el-button-group>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
 
             <div v-if="!loading && !error && totalProviders > 0" class="providers-pagination">
                 <el-pagination
@@ -225,12 +239,13 @@
                     <el-button type="danger" @click="deleteSelectedProviders" :loading="bulkDeleting">{{ $t('providers.delete') }}</el-button>
                 </template>
             </el-dialog>
-    </div>
+  </div>
 </template>
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { markRaw } from 'vue';
+import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown } from '@element-plus/icons-vue';
 import { fetchProviderData, addProvider, deleteProvider, updateProvider } from '@/api/providers';
 
 interface Provider {
@@ -260,7 +275,7 @@ const defaultProviderItem = (): Provider => ({
 
 export default {
     name: 'Provider',
-    components: { Loading },
+    components: { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown },
     data() {
         return {
             providers: [] as Provider[],
@@ -287,6 +302,15 @@ export default {
                 enabled: 'nochange',
             },
             fetchLimit: 1000,
+            // Icons for template usage
+            Loading: markRaw(Loading),
+            Search: markRaw(Search),
+            Plus: markRaw(Plus),
+            Refresh: markRaw(Refresh),
+            Edit: markRaw(Edit),
+            Delete: markRaw(Delete),
+            Connection: markRaw(Connection),
+            ArrowDown: markRaw(ArrowDown)
         };
     },
     computed: {
@@ -687,139 +711,103 @@ export default {
 </script>
 
 <style scoped>
-.providers-page {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.providers-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin: 8px 0 0;
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: var(--surface-1);
-    border: 1px solid var(--border-1);
-    box-shadow: var(--shadow-soft);
-}
-
-.providers-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-}
-
-.providers-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.providers-bulk-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.selected-count {
-    color: var(--text-muted);
-    font-size: 12px;
-}
-
-.providers-search {
-    width: 240px;
-}
-
-.providers-filter {
-    min-width: 160px;
-}
-
-.providers-state {
-    text-align: center;
-    padding: 32px 0;
-    color: var(--text-muted);
-}
-
-.providers-alert {
-    margin: 8px 0;
-}
-
-.providers-empty {
-    margin: 24px 0;
-}
-
-.providers-list {
-    padding: 0 4px;
-}
-
-.providers-grid {
-    margin: 0;
-}
-
-.provider-col {
-    margin-bottom: 20px;
+.providers-content {
+  margin-top: 8px;
 }
 
 .provider-card {
-    min-height: 300px;
-    border-radius: 18px;
-    border: 1px solid var(--border-1);
-    box-shadow: var(--shadow-soft);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.card-header {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.provider-card-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-1);
+  position: relative;
 }
 
-.card-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+.provider-icon-box {
+  width: 48px;
+  height: 48px;
+  background: var(--brand-50);
+  color: var(--brand-600);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.provider-title-area {
+  flex: 1;
+  min-width: 0;
 }
 
 .provider-name {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-strong);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.card-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+.provider-type-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
-.card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    color: var(--text-muted);
+.provider-select {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.provider-card-body {
+  padding: 20px;
+  flex: 1;
 }
 
 .provider-desc {
-    min-height: 40px;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 16px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  height: 3em;
 }
 
-.provider-meta {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+.provider-meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.provider-card-footer {
+  padding: 12px 20px;
+  background: var(--surface-2);
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border-1);
 }
 
 .providers-pagination {
-    display: flex;
-    justify-content: flex-end;
-    padding-bottom: 12px;
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.providers-form {
-    margin-top: 12px;
+.providers-state {
+  text-align: center;
+  padding: 60px;
+  color: var(--text-muted);
 }
 </style>

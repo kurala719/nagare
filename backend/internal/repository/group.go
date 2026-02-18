@@ -32,6 +32,8 @@ func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
+		"enabled":    "enabled",
+		"monitor_id": "m_id",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",

@@ -154,6 +154,13 @@ type Provider interface {
 	UpdateHostGroup(ctx context.Context, id, name string) error
 	DeleteHostGroup(ctx context.Context, id string) error
 
+	// Media type operations
+	CreateMediaType(ctx context.Context, name string, script string, params map[string]string) error
+	GetMediaTypeIDByName(ctx context.Context, name string) (string, error)
+	GetUserIDByUsername(ctx context.Context, username string) (string, error)
+	EnsureUserMedia(ctx context.Context, userID string, mediaTypeID string, sendTo string) error
+	EnsureActionWithMedia(ctx context.Context, name string, userID string, mediaTypeID string) error
+
 	// Provider info
 	Name() string
 	Type() MonitorType
@@ -332,4 +339,29 @@ func (c *Client) UpdateHostGroup(ctx context.Context, id, name string) error {
 // DeleteHostGroup deletes a host group in the monitoring system
 func (c *Client) DeleteHostGroup(ctx context.Context, id string) error {
 	return c.provider.DeleteHostGroup(ctx, id)
+}
+
+// CreateMediaType creates a media type in the monitoring system
+func (c *Client) CreateMediaType(ctx context.Context, name string, script string, params map[string]string) error {
+	return c.provider.CreateMediaType(ctx, name, script, params)
+}
+
+// GetMediaTypeIDByName retrieves a media type ID by name.
+func (c *Client) GetMediaTypeIDByName(ctx context.Context, name string) (string, error) {
+	return c.provider.GetMediaTypeIDByName(ctx, name)
+}
+
+// GetUserIDByUsername retrieves a user ID by username.
+func (c *Client) GetUserIDByUsername(ctx context.Context, username string) (string, error) {
+	return c.provider.GetUserIDByUsername(ctx, username)
+}
+
+// EnsureUserMedia ensures a user has media of the specified type.
+func (c *Client) EnsureUserMedia(ctx context.Context, userID string, mediaTypeID string, sendTo string) error {
+	return c.provider.EnsureUserMedia(ctx, userID, mediaTypeID, sendTo)
+}
+
+// EnsureActionWithMedia ensures an action is bound to the user and media type.
+func (c *Client) EnsureActionWithMedia(ctx context.Context, name string, userID string, mediaTypeID string) error {
+	return c.provider.EnsureActionWithMedia(ctx, name, userID, mediaTypeID)
 }

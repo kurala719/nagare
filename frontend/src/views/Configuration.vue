@@ -1,18 +1,16 @@
 <template>
-  <div class="configuration-page">
-    <div class="config-header">
+  <div class="nagare-container">
+    <div class="page-header config-header">
       <div class="title-section">
-        <h2>{{ $t('configuration.title') }}</h2>
-        <p class="subtitle">{{ $t('configuration.subtitle') }}</p>
+        <h1 class="page-title">{{ $t('configuration.title') }}</h1>
+        <p class="page-subtitle">{{ $t('configuration.subtitle') }}</p>
       </div>
-      <div class="config-actions">
+      <div class="action-group">
         <el-button-group>
-          <el-button @click="loadConfig" :loading="loading" :disabled="editing">
-            <el-icon><Refresh /></el-icon>
+          <el-button @click="loadConfig" :loading="loading" :disabled="editing" :icon="Refresh">
             {{ $t('configuration.reload') }}
           </el-button>
-          <el-button v-if="!editing" type="primary" @click="startEdit">
-            <el-icon><Edit /></el-icon>
+          <el-button v-if="!editing" type="primary" @click="startEdit" :icon="Edit">
             {{ $t('configuration.edit') }}
           </el-button>
         </el-button-group>
@@ -21,14 +19,12 @@
           <el-button @click="cancelEdit">
             {{ $t('configuration.cancel') }}
           </el-button>
-          <el-button type="primary" @click="saveChanges" :loading="saving">
-            <el-icon><Check /></el-icon>
+          <el-button type="primary" @click="saveChanges" :loading="saving" :icon="Check">
             {{ $t('configuration.save') }}
           </el-button>
         </template>
 
-        <el-button type="danger" plain @click="handleReset" :disabled="editing">
-          <el-icon><Warning /></el-icon>
+        <el-button type="danger" plain @click="handleReset" :disabled="editing" :icon="Warning">
           {{ $t('configuration.reset') }}
         </el-button>
       </div>
@@ -575,74 +571,47 @@ export default {
 </script>
 
 <style scoped>
-.configuration-page {
-  padding: 24px;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
 .config-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: flex-end;
   margin-bottom: 32px;
-}
-
-.title-section h2 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  color: #1f2f3d;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.config-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
 .config-loading {
   text-align: center;
   padding: 100px 20px;
-}
-
-.config-loading p {
-  margin-top: 16px;
-  color: #909399;
-  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .config-tabs {
-  border-radius: 8px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
+  background: var(--surface-1);
 }
 
 .tab-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px;
+  gap: 10px;
+  font-weight: 600;
 }
 
 .tab-pane-content {
-  padding: 24px;
-  max-width: 700px;
+  padding: 32px;
+  max-width: 800px;
 }
 
 .section-divider {
-  margin: 32px 0 24px;
-  font-weight: 600;
-  font-size: 16px;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #ebeef5;
+  margin: 40px 0 24px;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-strong);
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-1);
+  font-family: var(--font-display);
 }
 
 .section-divider:first-child {
@@ -653,25 +622,37 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .help-text {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #909399;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-muted);
   font-style: italic;
-}
-
-:deep(.el-form-item__label) {
-  font-weight: 500;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
 }
 
 :deep(.el-tabs--border-card) {
-  border: 1px solid #ebeef5;
+  background: transparent;
+  border: none;
 }
 
-:deep(.el-tabs__content) {
-  min-height: 400px;
+:deep(.el-tabs--border-card > .el-tabs__header) {
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border-1);
+}
+
+:deep(.el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active) {
+  background: var(--surface-1);
+  border-right-color: var(--border-1);
+  border-left-color: var(--border-1);
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 600;
+  color: var(--text-strong);
 }
 </style>

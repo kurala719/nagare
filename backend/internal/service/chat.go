@@ -19,6 +19,7 @@ type ChatReq struct {
 	Model      string `json:"model"`
 	Content    string `json:"content" binding:"required"`
 	Mode       string `json:"mode,omitempty"`
+	Locale     string `json:"locale,omitempty"`
 	UseTools   *bool  `json:"use_tools,omitempty"`
 	Privileges int    `json:"-"`
 }
@@ -58,7 +59,7 @@ func SendChatServ(req ChatReq) (ChatRes, error) {
 	if isNetworkStatusQuery(req.Content) {
 		return analyzeNetworkStatus(req)
 	}
-	personaPrompt := resolveChatPersonaPrompt(req.Mode)
+	personaPrompt := resolveChatPersonaPrompt(req.Mode, req.Locale)
 	useTools := req.Privileges >= 2
 	if req.UseTools != nil {
 		useTools = *req.UseTools && req.Privileges >= 2
@@ -99,10 +100,17 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
 
+	// Build system prompt with persona (roast mode) if specified
+	systemPrompt := networkStatusPrompt(isChinese(req.Locale))
+	personaPrompt := resolveChatPersonaPrompt(req.Mode, req.Locale)
+	if personaPrompt != "" {
+		systemPrompt = personaPrompt + "\n\n" + systemPrompt
+	}
+
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        llmModel,
-		SystemPrompt: networkStatusPrompt(),
+		SystemPrompt: systemPrompt,
 		Messages: []llm.Message{
 			{Role: "user", Content: context},
 		},
@@ -305,11 +313,21 @@ func toolAnswerPrompt(personaPrompt string) string {
 	return personaPrompt + "\n\n" + base
 }
 
-func resolveChatPersonaPrompt(mode string) string {
+func resolveChatPersonaPrompt(mode string, locale string) string {
 	mode = strings.TrimSpace(strings.ToLower(mode))
 	if mode != "roast" {
 		return ""
 	}
+
+	if isChinese(locale) {
+		return "你是一位机智、略带讽刺的资深SRE工程师。保持幽默且专业的风格。\n" +
+			"规则：\n" +
+			"- 禁止使用脏话、侮辱或人身攻击。\n" +
+			"- 批评配置和指标问题，而不是人。\n" +
+			"- 必须包含至少一个具体可行的修复方案。\n" +
+			"- 保持回复简洁（3-6句话）。"
+	}
+
 	return "You are a witty, slightly sarcastic senior SRE. Keep it playful and professional.\n" +
 		"Rules:\n" +
 		"- No profanity, slurs, or personal attacks.\n" +
@@ -379,7 +397,7 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := itemAnalysisPrompt()
+	systemPrompt := itemAnalysisPrompt(false)
 
 	itemData := fmt.Sprintf("Host: %s\nItem Name: %s\nItem ID: %s\nCurrent Value: %s\nUnits: %s",
 		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ItemID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
@@ -399,6 +417,11 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 	}
 
 	_ = repository.UpdateProviderStatusDAO(1, 1)
+
+	// Store the comment
+	item.Comment = resp.Content
+	_ = repository.UpdateItemDAO(item.ID, item)
+
 	return ChatRes{Content: resp.Content, ProviderID: 1, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -424,7 +447,7 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := hostAnalysisPrompt()
+	systemPrompt := hostAnalysisPrompt(false)
 
 	// Build items data string
 	var itemsData string
@@ -454,6 +477,11 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 	}
 
 	_ = repository.UpdateProviderStatusDAO(providerID, 1)
+
+	// Store the comment
+	host.Comment = resp.Content
+	_ = repository.UpdateHostDAO(host.ID, host)
+
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 
@@ -540,7 +568,7 @@ func AnalyzeMonitoringDataServ(providerID uint, model string, data string) (Chat
 
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := monitoringAnalysisPrompt()
+	systemPrompt := monitoringAnalysisPrompt(false)
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{
@@ -589,7 +617,23 @@ func ExplainErrorServ(providerID uint, model string, errorMsg string) (ChatRes, 
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 
-func itemAnalysisPrompt() string {
+func itemAnalysisPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位专业的系统管理员和运维工程师。\n" +
+			"分析监控指标数据并简明回答。\n\n" +
+			"规则：\n" +
+			"- 仅使用提供的数据；不要编造阈值。\n" +
+			"- 如果缺少基准值，请说明并谨慎评估。\n\n" +
+			"输出格式（使用标题）：\n" +
+			"指标摘要：\n" +
+			"- 指标代表什么及其当前值。\n\n" +
+			"评估：\n" +
+			"- 正常/关注/严重 附简要理由。\n\n" +
+			"潜在影响：\n" +
+			"- 如果该值异常的风险。\n\n" +
+			"建议操作：\n" +
+			"- 立即步骤和后续行动。"
+	}
 	return "You are an expert system administrator and DevOps engineer.\n" +
 		"Analyze the monitoring item data and respond concisely.\n\n" +
 		"Rules:\n" +
@@ -606,7 +650,23 @@ func itemAnalysisPrompt() string {
 		"- Immediate steps and follow-ups."
 }
 
-func hostAnalysisPrompt() string {
+func hostAnalysisPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位专业的系统管理员和运维工程师。\n" +
+			"分析主机监控数据并总结健康状况。\n\n" +
+			"规则：\n" +
+			"- 仅使用提供的数据；不要编造指标。\n" +
+			"- 优先显示最关键的问题。\n\n" +
+			"输出格式（使用标题）：\n" +
+			"健康状态：\n" +
+			"- 健康/警告/严重 附简要理由。\n\n" +
+			"关键发现：\n" +
+			"- 显著指标的列表。\n\n" +
+			"风险：\n" +
+			"- 如果当前状态持续的潜在问题。\n\n" +
+			"建议操作：\n" +
+			"- 立即步骤和后续行动。"
+	}
 	return "You are an expert system administrator and DevOps engineer.\n" +
 		"Analyze the host monitoring data and summarize health.\n\n" +
 		"Rules:\n" +
@@ -623,7 +683,26 @@ func hostAnalysisPrompt() string {
 		"- Immediate steps and follow-ups."
 }
 
-func monitoringAnalysisPrompt() string {
+func monitoringAnalysisPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位经验丰富的系统管理员和DevOps工程师。\n" +
+			"分析监控数据，提供清晰、可操作的评估。\n\n" +
+			"规则：\n" +
+			"- 仅使用提供的数据；不要编造指标或事件。\n" +
+			"- 如果数据缺失或模糊，说明缺失的内容及其如何限制置信度。\n\n" +
+			"输出格式（使用标题）：\n" +
+			"状态摘要：\n" +
+			"- 1-3句话概述当前健康状况。\n\n" +
+			"发现的问题：\n" +
+			"- 列出异常，附带证据（指标、值、时间窗口）。\n" +
+			"- 如无异常，说明\"未检测到异常\"。\n\n" +
+			"严重程度：\n" +
+			"- 关键/警告/正常，附简要理由。\n\n" +
+			"建议措施：\n" +
+			"- 即时措施（如有），然后是短期改进。\n\n" +
+			"假设：\n" +
+			"- 列出任何假设或未知因素。"
+	}
 	return "You are an expert system administrator and DevOps engineer.\n" +
 		"Analyze the monitoring data and produce a clear, actionable assessment.\n\n" +
 		"Rules:\n" +
@@ -643,7 +722,25 @@ func monitoringAnalysisPrompt() string {
 		"- List any assumptions or unknowns."
 }
 
-func networkStatusPrompt() string {
+func networkStatusPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位专业的网络运维分析师。\n" +
+			"使用提供的告警、健康评分和指标数据来评估当前网络状态。\n\n" +
+			"规则：\n" +
+			"- 仅使用提供的数据；不要编造告警或指标。\n" +
+			"- 如果没有告警，明确说明并依赖指标/健康评分。\n\n" +
+			"输出格式（使用标题）：\n" +
+			"网络状态摘要：\n" +
+			"- 1-3句概述。\n\n" +
+			"活跃告警：\n" +
+			"- 数量和主要项目（如有）。\n\n" +
+			"关键指标：\n" +
+			"- 突出显示值得注意的指标。\n\n" +
+			"建议：\n" +
+			"- 立即采取的步骤和后续行动。\n\n" +
+			"置信度：\n" +
+			"- 注明任何缺失数据或限制。"
+	}
 	return "You are an expert network operations analyst.\n" +
 		"Use the provided alerts, health score, and metrics to assess current network status.\n\n" +
 		"Rules:\n" +
@@ -752,6 +849,11 @@ func errorExplainPrompt() string {
 		"3. Provide step-by-step solutions to fix the issue\n" +
 		"4. Mention any preventive measures for the future\n\n" +
 		"Be practical and clear in your explanations."
+}
+
+func isChinese(locale string) bool {
+	lower := strings.ToLower(strings.TrimSpace(locale))
+	return strings.HasPrefix(lower, "zh")
 }
 
 func logLLMRequest(operation string, providerID uint, model string, duration time.Duration, err error) {

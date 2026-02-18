@@ -45,6 +45,13 @@ export function regenerateAlarmEventToken(id) {
     });
 }
 
+export function setupAlarmMedia(id) {
+    return request({
+        method: 'POST',
+        url: `/alarms/${id}/setup-media`,
+    });
+}
+
 function buildQuery(params = {}) {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {

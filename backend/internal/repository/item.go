@@ -41,9 +41,11 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
+		"enabled":    "enabled",
+		"id":         "id",
+		"value":      "last_value",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
-		"id":         "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)

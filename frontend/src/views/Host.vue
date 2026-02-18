@@ -1,24 +1,21 @@
 <template>
-  <div class="hosts-page">
-  <div class="hosts-toolbar">
-    <div class="hosts-filters">
-        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" class="filter-item" style="width: 200px">
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('hosts.search') }}</h1>
+      <p class="page-subtitle">{{ $t('hosts.loading') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" style="width: 180px">
           <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
         </el-select>
 
-        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable class="filter-item search-input">
-          <template #prepend>
-            <el-select v-model="searchField" style="width: 100px">
-              <el-option :label="$t('hosts.filterAll')" value="all" />
-              <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
-            </el-select>
-          </template>
-          <template #append>
-            <el-button :icon="Search" />
-          </template>
+        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="statusFilter" :placeholder="$t('hosts.filterStatus')" class="filter-item" style="width: 120px">
+        <el-select v-model="statusFilter" :placeholder="$t('hosts.filterStatus')" style="width: 120px">
           <el-option :label="$t('hosts.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
@@ -26,51 +23,32 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
 
-        <el-select v-model="sortKey" class="filter-item" style="width: 140px" :placeholder="$t('common.sort')">
-          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-          <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-          <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-        </el-select>
-
-        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" class="filter-item" style="width: 140px" clearable>
+        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" style="width: 140px" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
+      </div>
 
-        <el-select v-model="groupFilter" :placeholder="$t('groups.title')" class="filter-item" style="width: 140px" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
-            <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
-        </el-select>
-
-        <el-select v-model="syncMonitorId" :placeholder="$t('hosts.syncMonitor')" class="filter-item" style="width: 140px" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
-          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
-        </el-select>
+      <div class="action-group">
+        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+          {{ $t('hosts.create') }}
+        </el-button>
+        <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
+          {{ $t('hosts.pullHosts') }}
+        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
-    <div class="hosts-actions">
-      <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
-        {{ $t('hosts.create') }}
-      </el-button>
-      <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
-        {{ $t('hosts.pullHosts') }}
-      </el-button>
-      <el-button type="success" :icon="Upload" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pushingHosts" :loading="pushingHosts" @click="pushHosts">
-        {{ $t('hosts.pushHosts') }}
-      </el-button>
-      <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-        {{ $t('common.bulkUpdate') }}
-      </el-button>
-      <el-button type="danger" plain :icon="Delete" :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-        {{ $t('common.bulkDelete') }}
-      </el-button>
-      <span v-if="selectedCount > 0" class="selection-info">
-        {{ $t('common.selectedCount', { count: selectedCount }) }}
-      </span>
-    </div>
-  </div>
 
   <!-- Create Dialog -->
   <el-dialog v-model="createDialogVisible" :title="$t('hosts.createTitle')" width="500px" align-center>
@@ -156,29 +134,30 @@
     ref="hostsTableRef"
     row-key="id"
     @selection-change="onSelectionChange"
+    @sort-change="onSortChange"
   >
     <el-table-column type="selection" width="50" />
-    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('hosts.name')" min-width="150" />
-    <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150">
+    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('hosts.name')" min-width="150" sortable="custom" />
+    <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150" prop="m_id" sortable="custom">
       <template #default="{ row }">
         {{ getMonitorName(row) }}
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('group')" :label="$t('groups.title')" min-width="140">
+    <el-table-column v-if="isColumnVisible('group')" :label="$t('groups.title')" min-width="140" prop="group_id" sortable="custom">
       <template #default="{ row }">
           {{ getGroupName(row.group_id) }}
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" />
-    <el-table-column v-if="isColumnVisible('hostid')" prop="hostid" :label="$t('hosts.hostId')" min-width="120" />
-    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" min-width="110">
+    <el-table-column v-if="isColumnVisible('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" sortable="custom" />
+    <el-table-column v-if="isColumnVisible('hostid')" prop="hostid" :label="$t('hosts.hostId')" min-width="120" sortable="custom" />
+    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" min-width="110" prop="enabled" sortable="custom">
       <template #default="{ row }">
         <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
           {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('status')" :label="$t('hosts.status')" min-width="160">
+    <el-table-column v-if="isColumnVisible('status')" :label="$t('hosts.status')" min-width="160" prop="status" sortable="custom">
       <template #default="{ row }">
         <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
           <el-tag :type="getStatusInfo(row.status).type">
@@ -329,11 +308,12 @@
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { markRaw } from 'vue';
 import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor } from '@/api/hosts';
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
-import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
 
 interface Host {
   id: number;
@@ -353,6 +333,16 @@ export default {
   name: 'Host',
   components: {
     Loading,
+    Search,
+    Plus,
+    Delete,
+    Edit,
+    Download,
+    Upload,
+    Refresh,
+    Document,
+    Setting,
+    ArrowDown
   },
   data() {
     return {
@@ -360,7 +350,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalHosts: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       monitors: [],
       groups: [],
       createDialogVisible: false,
@@ -392,7 +383,17 @@ export default {
         status: 'nochange',
       },
       // Icons
-      Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting
+      Plus: markRaw(Plus),
+      Delete: markRaw(Delete),
+      Edit: markRaw(Edit),
+      Download: markRaw(Download),
+      Upload: markRaw(Upload),
+      Search: markRaw(Search),
+      Refresh: markRaw(Refresh),
+      Document: markRaw(Document),
+      Setting: markRaw(Setting),
+      ArrowDown: markRaw(ArrowDown),
+      Loading: markRaw(Loading)
     };
   },
   computed: {
@@ -435,10 +436,6 @@ export default {
       this.loadHosts(true);
     },
     groupFilter() {
-      this.currentPage = 1;
-      this.loadHosts(true);
-    },
-    sortKey() {
       this.currentPage = 1;
       this.loadHosts(true);
     },
@@ -534,17 +531,6 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
-        console.log('Host page loading hosts with params:', {
-          q: this.search || undefined,
-          status: this.statusFilter === 'all' ? undefined : this.statusFilter,
-          m_id: this.monitorFilter || undefined,
-          group_id: this.groupFilter || undefined,
-          limit: this.pageSize,
-          offset: (this.currentPage - 1) * this.pageSize,
-          sort: sortBy,
-          order: sortOrder,
-        })
         const response = await fetchHostData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
@@ -552,8 +538,8 @@ export default {
           group_id: this.groupFilter || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
-          sort: sortBy,
-          order: sortOrder,
+          sort: this.sortBy || undefined,
+          order: this.sortOrder || undefined,
           with_total: 1,
         });
         console.log('Host page hosts response:', response)
@@ -598,23 +584,6 @@ export default {
         console.error('Error loading hosts:', err);
       } finally {
         this.loading = false;
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'name', sortOrder: 'asc' };
-        case 'name_desc':
-          return { sortBy: 'name', sortOrder: 'desc' };
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' };
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' };
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' };
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
     openProperties(host: Host) {
@@ -753,6 +722,17 @@ export default {
     },
     onSelectionChange(selection) {
       this.selectedHosts = selection || [];
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = '';
+        this.sortOrder = '';
+      } else {
+        this.sortBy = prop;
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+      }
+      this.currentPage = 1;
+      this.loadHosts(true);
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {
@@ -1008,76 +988,37 @@ export default {
 </script>
 
 <style scoped>
-.hosts-page {
-  padding: 16px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-}
-
-.hosts-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding: 16px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-.hosts-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.filter-item {
-  width: 160px;
-}
-
-.search-input {
-  width: 300px;
-}
-
-.hosts-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.selection-info {
-  color: #909399;
-  font-size: 13px;
-  margin-right: 4px;
-}
-
 .hosts-scroll {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  margin-top: 8px;
 }
 
 .hosts-pagination {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
 }
 
 .ai-response-content {
-  background-color: #f5f7fa;
-  border-radius: 8px;
-  padding: 16px;
-  max-height: 300px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  max-height: 400px;
   overflow-y: auto;
-  line-height: 1.6;
+  line-height: 1.7;
+  border: 1px solid var(--border-1);
 }
 
 .ai-response-content p {
   margin: 0;
-  color: #303133;
+  color: var(--text-strong);
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

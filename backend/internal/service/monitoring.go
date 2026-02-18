@@ -87,12 +87,30 @@ func loadMetricsItems(query string) ([]model.Item, error) {
 			filtered = append(filtered, item)
 		}
 	}
+	if len(filtered) > 0 {
+		return filtered, nil
+	}
+	// Fallback: include any active items with values so network summaries are not empty.
+	for _, item := range items {
+		if item.Status == 1 && item.LastValue != "" {
+			filtered = append(filtered, item)
+		}
+	}
 	return filtered, nil
 }
 
 func isNetworkMetric(name string) bool {
 	lower := strings.ToLower(name)
-	keywords := []string{"cpu", "mem", "memory", "ram", "disk", "io", "network", "net", "traffic", "bandwidth", "latency", "packet"}
+	keywords := []string{
+		"cpu", "processor", "load", "util", "utilization",
+		"mem", "memory", "ram",
+		"disk", "io",
+		"network", "net", "traffic", "bandwidth", "throughput",
+		"interface", "ifin", "ifout", "inbound", "outbound", "rx", "tx",
+		"inbps", "outbps", "octet", "packet", "loss", "icmp", "ping",
+		"latency", "rtt", "delay",
+		"availability", "uptime", "temperature",
+	}
 	for _, keyword := range keywords {
 		if strings.Contains(lower, keyword) {
 			return true

@@ -46,21 +46,21 @@
 
     <template v-else>
       <el-table :data="metrics" style="width: 100%" height="260">
-        <el-table-column prop="host_name" :label="$t('dashboard.host')" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="item_name" :label="$t('dashboard.metric')" min-width="160" show-overflow-tooltip />
-        <el-table-column :label="$t('dashboard.value')" min-width="140">
+        <el-table-column prop="host_name" :label="$t('dashboard.host')" min-width="140" show-overflow-tooltip sortable />
+        <el-table-column prop="item_name" :label="$t('dashboard.metric')" min-width="160" show-overflow-tooltip sortable />
+        <el-table-column prop="value" :label="$t('dashboard.value')" min-width="140" sortable>
           <template #default="{ row }">
             <span>{{ row.value }} {{ row.units }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('dashboard.status')" width="120">
+        <el-table-column prop="status" :label="$t('dashboard.status')" width="120" sortable>
           <template #default="{ row }">
             <el-tag :type="getStatusInfo(row.status).type" size="small">
               {{ getStatusInfo(row.status).label }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('dashboard.updated')" min-width="160">
+        <el-table-column prop="updated_at" :label="$t('dashboard.updated')" min-width="160" sortable>
           <template #default="{ row }">
             {{ formatTimestamp(row.updated_at) }}
           </template>

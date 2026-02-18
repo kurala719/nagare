@@ -46,6 +46,11 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
+		"enabled":    "enabled",
+		"m_id":       "m_id",
+		"group_id":   "group_id",
+		"hostid":     "hostid",
+		"ip_addr":    "ip_addr",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",

@@ -7,13 +7,13 @@
       </div>
     </template>
     <el-table :data="monitors" style="width: 100%" v-loading="loading" size="small">
-      <el-table-column prop="name" :label="$t('dashboard.name')" show-overflow-tooltip />
-      <el-table-column prop="type" :label="$t('monitors.type')" width="100">
+      <el-table-column prop="name" :label="$t('dashboard.name')" show-overflow-tooltip sortable />
+      <el-table-column prop="type" :label="$t('monitors.type')" width="100" sortable>
         <template #default="{ row }">
           <el-tag size="small" effect="plain">{{ row.type }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" :label="$t('dashboard.status')" width="80">
+      <el-table-column prop="status" :label="$t('dashboard.status')" width="80" sortable>
         <template #default="{ row }">
           <el-tag :type="getStatusType(row.status)" size="small">
             {{ getStatusLabel(row.status) }}

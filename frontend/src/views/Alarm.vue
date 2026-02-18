@@ -1,52 +1,52 @@
 <template>
-  <div class="alarms-toolbar">
-    <div class="alarms-filters">
-      <span class="filter-label">{{ $t('alarms.searchField') }}</span>
-      <el-select v-model="searchField" :placeholder="$t('alarms.searchField')" class="search-field-selector" style="width: 130px;">
-        <el-option :label="$t('alarms.searchAll')" value="all" />
-        <el-option :label="$t('alarms.name')" value="name" />
-        <el-option :label="$t('alarms.url')" value="url" />
-        <el-option :label="$t('alarms.type')" value="type" />
-        <el-option :label="$t('alarms.description')" value="description" />
-      </el-select>
-      <span class="filter-label">{{ $t('alarms.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('alarms.search')" clearable class="alarms-search" />
-      <span class="filter-label">{{ $t('alarms.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('alarms.filterStatus')" class="alarms-filter">
-        <el-option :label="$t('alarms.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="alarms-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="alarms-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('alarms.search') }}</h1>
+      <p class="page-subtitle">{{ totalAlarms }} {{ $t('dashboard.alerts') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('alarms.search')" clearable style="width: 280px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('alarms.filterStatus')" style="width: 140px">
+          <el-option :label="$t('alarms.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+
+        <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
+          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
+          <el-option :label="$t('common.sortCreatedAsc')" value="created_asc" />
+          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
+          <el-option :label="$t('common.sortUpdatedAsc')" value="updated_asc" />
+          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
+          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button @click="loadAlarms" :loading="loading" :icon="Refresh" circle />
+        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+          {{ $t('alarms.create') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <el-button @click="loadAlarms" :loading="loading">
-        <el-icon><Refresh /></el-icon>
-      </el-button>
-      <el-button type="primary" @click="createDialogVisible=true">
-        {{ $t('alarms.create') }}
-      </el-button>
-    </div>
-  </div>
 
   <el-dialog v-model="createDialogVisible" :title="$t('alarms.createTitle')" width="500px" align-center>
     <el-form :model="newAlarm" label-width="120px">
@@ -114,43 +114,50 @@
     style="margin: 40px;"
   />
 
-  <div v-if="!loading && !error" class="alarms-scroll">
-    <el-row :gutter="20" style="margin: 20px" v-if="filteredAlarms.length > 0">
-      <el-col :span="6" v-for="alarm in filteredAlarms" :key="alarm.id" style="margin-bottom: 20px;">
-        <el-card style="height: 300px;">
-          <template #header>
-            <div class="card-header" style="display: flex; flex-direction: column; gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <el-checkbox :model-value="isSelected(alarm.id)" @change="toggleSelection(alarm.id, $event)" />
-                <span style="font-size: 32px; margin: 0; flex-shrink: 0;">{{ alarm.name }}</span>
-                <span>
-                  <el-icon size="large" color="green" v-if="alarm.auth_token"><SuccessFilled /></el-icon>
-                  <span v-else>
-                    <el-icon size="large" color="red"><CircleCloseFilled /></el-icon>
-                  </span>
-                </span>
-              </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <el-button size="small" @click="openProperties(alarm)">{{ $t('alarms.properties') }}</el-button>
-                <el-button size="small" @click="onLogin(alarm)" :loading="alarm.logging_in">
-                  {{ alarm.auth_token ? $t('alarms.reLogin') : $t('alarms.login') }}
-                </el-button>
-                <el-button size="small" @click="onDelete(alarm)">{{ $t('alarms.delete') }}</el-button>
-              </div>
+  <div v-if="!loading && !error" class="alarms-content">
+    <el-row :gutter="24">
+      <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="alarm in filteredAlarms" :key="alarm.id" style="margin-bottom: 24px;">
+        <el-card class="alarm-card" :body-style="{ padding: '0px' }">
+          <div class="alarm-card-header">
+            <div class="alarm-icon-box">
+              <el-icon :size="24"><Bell /></el-icon>
             </div>
-          </template>
-          <div class="card-body" style="margin-top: 20px;">
-            <p>{{ alarm.description }}</p>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-              <el-tag :type="alarm.enabled === 1 ? 'success' : 'info'">
+            <div class="alarm-title-area">
+              <h3 class="alarm-name">{{ alarm.name }}</h3>
+              <span class="alarm-type-tag">{{ alarm.type === 1 ? 'Zabbix' : alarm.type === 2 ? 'Prometheus' : 'Other' }}</span>
+            </div>
+            <el-checkbox :model-value="isSelected(alarm.id)" @change="toggleSelection(alarm.id, $event)" class="alarm-select" />
+          </div>
+          
+          <div class="alarm-card-body">
+            <p class="alarm-desc">{{ alarm.description || $t('alarms.noDescription') }}</p>
+            <div class="alarm-status-row">
+              <el-tag :type="alarm.enabled === 1 ? 'success' : 'info'" size="small">
                 {{ alarm.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
               </el-tag>
               <el-tooltip :content="alarm.status_reason || getStatusInfo(alarm.status).reason" placement="top">
-                <el-tag :type="getStatusInfo(alarm.status).type">
+                <el-tag :type="getStatusInfo(alarm.status).type" size="small" effect="dark">
                   {{ getStatusInfo(alarm.status).label }}
                 </el-tag>
               </el-tooltip>
             </div>
+          </div>
+
+          <div class="alarm-card-footer">
+            <el-button-group>
+              <el-tooltip :content="$t('alarms.properties')" placement="bottom">
+                <el-button size="small" :icon="Edit" @click="openProperties(alarm)" />
+              </el-tooltip>
+              <el-tooltip :content="alarm.auth_token ? $t('alarms.reLogin') : $t('alarms.login')" placement="bottom">
+                <el-button size="small" :type="alarm.auth_token ? 'success' : 'warning'" plain :icon="alarm.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(alarm)" :loading="alarm.logging_in" />
+              </el-tooltip>
+              <el-tooltip content="Setup Media" placement="bottom">
+                <el-button size="small" type="success" plain :icon="Message" @click="onSetupMedia(alarm)" :loading="alarm.setting_up_media" v-if="alarm.type === 1" />
+              </el-tooltip>
+              <el-tooltip :content="$t('alarms.delete')" placement="bottom">
+                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(alarm)" />
+              </el-tooltip>
+            </el-button-group>
           </div>
         </el-card>
       </el-col>
@@ -241,6 +248,7 @@
       <el-button type="danger" @click="deleteSelectedAlarms" :loading="bulkDeleting">{{ $t('alarms.delete') }}</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <script lang="ts">
@@ -248,10 +256,18 @@ import {
   Refresh,
   SuccessFilled,
   CircleCloseFilled,
-  Loading
+  Loading,
+  Plus,
+  Search,
+  Edit,
+  Delete,
+  ArrowDown,
+  Bell,
+  Message
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { fetchAlarmData, addAlarm, deleteAlarm, updateAlarm, loginAlarm, regenerateAlarmEventToken } from '@/api/alarms';
+import { markRaw } from 'vue';
+import { fetchAlarmData, addAlarm, deleteAlarm, updateAlarm, loginAlarm, regenerateAlarmEventToken, setupAlarmMedia } from '@/api/alarms';
 
 interface Alarm {
   id: number;
@@ -266,10 +282,25 @@ interface Alarm {
   status_reason?: string;
   description: string;
   type: number;
+  logging_in?: boolean;
+  setting_up_media?: boolean;
 }
 
 export default {
   name: 'Alarm',
+  components: {
+    Refresh,
+    SuccessFilled,
+    CircleCloseFilled,
+    Loading,
+    Plus,
+    Search,
+    Edit,
+    Delete,
+    ArrowDown,
+    Bell,
+    Message
+  },
   data() {
     return {
       alarms: [],
@@ -296,6 +327,18 @@ export default {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons for template usage
+      Refresh: markRaw(Refresh),
+      SuccessFilled: markRaw(SuccessFilled),
+      CircleCloseFilled: markRaw(CircleCloseFilled),
+      Loading: markRaw(Loading),
+      Plus: markRaw(Plus),
+      Search: markRaw(Search),
+      Edit: markRaw(Edit),
+      Delete: markRaw(Delete),
+      ArrowDown: markRaw(ArrowDown),
+      Bell: markRaw(Bell),
+      Message: markRaw(Message)
     };
   },
   computed: {
@@ -695,6 +738,24 @@ export default {
         console.error('Error logging in to alarm:', err);
       }
     },
+    async onSetupMedia(alarm: Alarm) {
+      alarm.setting_up_media = true;
+      try {
+        await setupAlarmMedia(alarm.id);
+        ElMessage({
+          type: 'success',
+          message: 'Media type setup successfully in Zabbix!',
+        });
+      } catch (err) {
+        ElMessage({
+          type: 'error',
+          message: 'Failed to setup media type: ' + (err.response?.data?.error || err.message || 'Unknown error'),
+        });
+        console.error('Error setting up media type:', err);
+      } finally {
+        alarm.setting_up_media = false;
+      }
+    },
     cancelCreate() {
       this.createDialogVisible = false;
       this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 };
@@ -713,58 +774,96 @@ export default {
 </script>
 
 <style scoped>
-.alarms-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
+.alarms-content {
+  margin-top: 8px;
 }
 
-.alarms-filters {
+.alarm-card {
+  height: 100%;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
 }
 
-.alarms-bulk-actions {
+.alarm-card-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-1);
+  position: relative;
+}
+
+.alarm-icon-box {
+  width: 48px;
+  height: 48px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alarm-title-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.alarm-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alarm-type-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.alarm-select {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.alarm-card-body {
+  padding: 20px;
+  flex: 1;
+}
+
+.alarm-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 16px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  height: 3em;
+}
+
+.alarm-status-row {
   display: flex;
   gap: 8px;
-  align-items: center;
+}
+
+.alarm-card-footer {
+  padding: 12px 20px;
+  background: var(--surface-2);
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border-1);
 }
 
 .alarms-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.alarms-search {
-  width: 240px;
-}
-
-.alarms-filter {
-  min-width: 160px;
-}
-
-.el-row {
-  margin-bottom: 20px;
-}
-.el-row:last-child {
-  margin-bottom: 0;
-}
-.el-col {
-  border-radius: 4px;
-}
-
-.grid-content {
-  border-radius: 4px;
-  min-height: 36px;
 }
 </style>

@@ -217,6 +217,7 @@ export default {
             
             this.loading = true;
             try {
+                const locale = localStorage.getItem('nagare_locale') || 'en';
                 const response = await sendChatMessage({ 
                     content: userMessage,
                     provider_id: this.selectedProviderId,
@@ -224,6 +225,7 @@ export default {
                     role: 'user',
                     use_tools: this.toolModeEnabled,
                     mode: this.toneMode,
+                    locale: locale,
                 });
                 
                 // Backend returns response - handle different formats

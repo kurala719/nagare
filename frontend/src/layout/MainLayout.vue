@@ -340,13 +340,13 @@ export default defineComponent({
 
 .el-header {
   position: relative;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-1);
   color: var(--text-strong);
-  height: 60px;
+  height: 64px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-1);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--surface-blur);
   z-index: 100;
   padding: 0;
 }
@@ -356,90 +356,90 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  padding: 0 20px;
+  padding: 0 24px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   flex: 1;
 }
 
 .global-search-container {
   flex: 1;
-  max-width: 400px;
-  margin-left: 20px;
+  max-width: 460px;
 }
 
 .app-title {
   display: flex;
   align-items: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-strong);
-  letter-spacing: 0.5px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--brand-600);
+  letter-spacing: -0.5px;
+  font-family: var(--font-display);
 }
 
 .menu-toggle {
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  padding: 10px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   cursor: pointer;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-toggle:hover {
   background: var(--surface-3);
-  border-color: var(--border-1);
-  transform: scale(1.1);
+  border-color: var(--brand-200);
+  transform: scale(1.05);
+  color: var(--brand-600);
 }
 
 .el-aside {
-  color: var(--el-text-color-primary);
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  background: var(--surface-1);
+  backdrop-filter: var(--surface-blur);
   border-right: 1px solid var(--border-1);
   height: 100%;
   flex-shrink: 0;
   min-width: 0;
   overflow: hidden;
-  box-shadow: 2px 0 14px rgba(15, 23, 42, 0.06);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
 }
 
 .el-aside :deep(.el-menu) {
   background: transparent;
   border-right: none;
+  padding: 12px;
 }
 
 .el-aside :deep(.el-menu-item), .el-aside :deep(.el-sub-menu__title) {
   transition: all 0.3s ease;
-  margin: 4px 8px;
-  border-radius: 8px;
+  margin: 4px 0;
+  border-radius: 12px;
+  height: 48px;
+  line-height: 48px;
+  color: var(--text-muted);
 }
 
 .el-aside :deep(.el-menu-item:hover), .el-aside :deep(.el-sub-menu__title:hover) {
-  background: rgba(37, 99, 235, 0.08);
-  transform: translateX(4px);
+  background: var(--brand-50);
+  color: var(--brand-600);
 }
 
 .el-aside :deep(.el-menu-item.is-active) {
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-600) 100%);
   color: #ffffff;
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .sidebar-transition {
-  transition: width 0.3s ease;
-}
-
-.sidebar-transition.is-collapsed {
-  border-right: none;
-  box-shadow: none;
-}
-
-.sidebar-transition.is-collapsed :deep(.el-scrollbar) {
-  opacity: 0;
-  pointer-events: none;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-edge-toggle {
@@ -447,10 +447,10 @@ export default defineComponent({
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 56px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 0 10px 10px 0;
+  width: 28px;
+  height: 48px;
+  background: var(--brand-600);
+  border-radius: 0 8px 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -458,27 +458,7 @@ export default defineComponent({
   color: white;
   z-index: 20;
   transition: all 0.3s ease;
-  box-shadow: 2px 6px 16px rgba(37, 99, 235, 0.3);
-}
-
-.sidebar-edge-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: 2px 6px 18px rgba(30, 64, 175, 0.35);
-}
-
-.el-main {
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.main-container {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: visible;
+  box-shadow: 2px 0 10px rgba(37, 99, 235, 0.3);
 }
 
 .content-area {
@@ -486,18 +466,32 @@ export default defineComponent({
   height: 100%;
   overflow-y: auto;
   background: transparent;
-  padding: 20px;
+}
+
+.el-main {
+  padding: 0 !important;
+  overflow: hidden;
+  height: 100%;
+}
+
+.main-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 .chat-bar-container {
   position: relative;
-  width: 320px;
+  width: 360px;
   height: 100%;
   border-left: 1px solid var(--border-1);
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  transition: width 0.3s ease;
+  background: var(--surface-1);
+  backdrop-filter: var(--surface-blur);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible;
-  box-shadow: -2px 0 14px rgba(15, 23, 42, 0.06);
+  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.04);
 }
 
 .chat-bar-container.is-collapsed {
@@ -511,10 +505,10 @@ export default defineComponent({
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 48px;
-  height: 64px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 12px 0 0 12px;
+  width: 32px;
+  height: 48px;
+  background: var(--brand-600);
+  border-radius: 8px 0 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,13 +516,12 @@ export default defineComponent({
   color: white;
   z-index: 20;
   transition: all 0.3s ease;
-  box-shadow: -2px 6px 16px rgba(37, 99, 235, 0.3);
+  box-shadow: -2px 0 10px rgba(37, 99, 235, 0.3);
 }
 
 .chat-edge-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
+  background: var(--brand-700);
   transform: translateY(-50%) scale(1.05);
-  box-shadow: -2px 6px 18px rgba(30, 64, 175, 0.35);
 }
 
 .chat-bar-toggle {
@@ -536,10 +529,10 @@ export default defineComponent({
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 48px;
-  height: 64px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 0 12px 12px 0;
+  width: 32px;
+  height: 48px;
+  background: var(--brand-600);
+  border-radius: 0 8px 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -547,35 +540,15 @@ export default defineComponent({
   color: white;
   z-index: 10;
   transition: all 0.3s ease;
-  box-shadow: 2px 6px 16px rgba(37, 99, 235, 0.3);
-}
-
-.chat-bar-toggle:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: 2px 6px 18px rgba(30, 64, 175, 0.35);
+  box-shadow: 2px 0 10px rgba(37, 99, 235, 0.3);
 }
 
 .chat-bar-content {
-  width: 320px;
+  width: 360px;
   height: 100%;
   overflow: hidden;
-  padding-left: 48px;
   opacity: 1;
   transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.chat-bar-container.is-collapsed .chat-bar-content {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(100%);
-}
-
-.toolbar {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
 }
 
 .toolbar-link {
@@ -583,18 +556,20 @@ export default defineComponent({
   align-items: center;
   cursor: pointer;
   color: var(--text-strong);
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
   transition: all 0.3s ease;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   border: 1px solid transparent;
+  background: var(--surface-2);
 }
 
 .toolbar-link:hover {
   background: var(--surface-3);
-  border-color: var(--border-1);
+  border-color: var(--brand-200);
   transform: translateY(-2px);
+  color: var(--brand-600);
 }
 
 .toolbar-username {

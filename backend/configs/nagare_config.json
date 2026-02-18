@@ -44,7 +44,7 @@
   },
   "system": {
     "system_name": "Nagare System",
-    "ip_address": "192.168.31.1",
+    "ip_address": "192.168.32.1",
     "port": 8080,
     "availability": true
   },

@@ -1,24 +1,21 @@
 <template>
-  <div class="groups-page">
-    <div class="groups-toolbar">
-      <div class="groups-filters">
-        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" class="filter-item" style="width: 200px">
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('groups.title') }}</h1>
+      <p class="page-subtitle">{{ $t('groups.loading') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" style="width: 180px">
           <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
         </el-select>
         
-        <el-input v-model="search" :placeholder="$t('groups.search')" clearable class="filter-item search-input">
-          <template #prepend>
-            <el-select v-model="searchField" style="width: 100px">
-              <el-option :label="$t('groups.filterAll')" value="all" />
-              <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
-            </el-select>
-          </template>
-          <template #append>
-            <el-button :icon="Search" />
-          </template>
+        <el-input v-model="search" :placeholder="$t('groups.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="statusFilter" :placeholder="$t('groups.filterStatus')" class="filter-item" style="width: 120px">
+        <el-select v-model="statusFilter" :placeholder="$t('groups.filterStatus')" style="width: 120px">
           <el-option :label="$t('groups.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
@@ -26,46 +23,30 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
 
-        <el-select v-model="sortKey" class="filter-item" style="width: 140px" :placeholder="$t('common.sort')">
-          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-          <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-          <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-        </el-select>
-
-        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" class="filter-item" style="width: 140px" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
-          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
-        </el-select>
-        
-        <el-select v-model="syncMonitorId" :placeholder="$t('hosts.syncMonitor')" class="filter-item" style="width: 140px" clearable>
+        <el-select v-model="monitorFilter" :placeholder="$t('hosts.filterMonitor')" style="width: 140px" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </div>
 
-      <div class="groups-actions">
+      <div class="action-group">
         <el-button type="primary" :icon="Plus" @click="createDialogVisible = true">
           {{ $t('groups.create') }}
         </el-button>
         <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingGroups" :loading="pullingGroups" @click="pullGroups">
           {{ $t('groups.pull') }}
         </el-button>
-        <el-button type="success" :icon="Upload" :disabled="selectedCount === 0 || pushingGroups" :loading="pushingGroups" @click="pushGroups">
-          {{ $t('groups.push') }}
-        </el-button>
-        <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
-        </el-button>
-        <el-button type="danger" plain :icon="Delete" :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
-
-        <span v-if="selectedCount > 0" class="selection-info">
-          {{ $t('common.selectedCount', { count: selectedCount }) }}
-        </span>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -108,23 +89,24 @@
     ref="groupsTableRef"
     row-key="id"
     @selection-change="onSelectionChange"
+    @sort-change="onSortChange"
     header-cell-class-name="table-header"
   >
     <el-table-column type="selection" width="50" align="center" />
-    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('groups.name')" min-width="160" show-overflow-tooltip />
-    <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150" show-overflow-tooltip>
+    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('groups.name')" min-width="160" show-overflow-tooltip sortable="custom" />
+    <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150" show-overflow-tooltip prop="monitor_id" sortable="custom">
       <template #default="{ row }">
         <el-tag effect="plain" type="info" size="small">{{ getMonitorName(row.monitor_id) }}</el-tag>
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="100" align="center">
+    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="100" align="center" prop="enabled" sortable="custom">
       <template #default="{ row }">
         <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small" effect="light">
           {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column v-if="isColumnVisible('status')" :label="$t('groups.status')" width="120" align="center">
+    <el-table-column v-if="isColumnVisible('status')" :label="$t('groups.status')" width="120" align="center" prop="status" sortable="custom">
       <template #default="{ row }">
         <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
           <el-tag :type="getStatusInfo(row.status).type" size="small" effect="dark">
@@ -316,13 +298,14 @@
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
+import { markRaw } from 'vue';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
 import { fetchGroupData, addGroup, updateGroup, deleteGroup, pullGroup, pushGroup } from '@/api/groups';
 import { fetchMonitorData, syncGroupsFromMonitor } from '@/api/monitors';
 
 export default {
   name: 'Group',
-  components: { Loading },
+  components: { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown },
   data() {
     return {
       groups: [],
@@ -330,7 +313,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalGroups: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       loading: false,
       error: null,
       search: '',
@@ -358,7 +342,17 @@ export default {
         status: 'nochange',
       },
       // Icons for template usage
-      Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting
+      Plus: markRaw(Plus),
+      Delete: markRaw(Delete),
+      Edit: markRaw(Edit),
+      Download: markRaw(Download),
+      Upload: markRaw(Upload),
+      Search: markRaw(Search),
+      Refresh: markRaw(Refresh),
+      Document: markRaw(Document),
+      Setting: markRaw(Setting),
+      ArrowDown: markRaw(ArrowDown),
+      Loading: markRaw(Loading)
     };
   },
   computed: {
@@ -394,10 +388,6 @@ export default {
       this.currentPage = 1;
       this.loadGroups(true);
     },
-    sortKey() {
-      this.currentPage = 1;
-      this.loadGroups(true);
-    },
     pageSize() {
       this.currentPage = 1;
       this.loadGroups(true);
@@ -413,6 +403,17 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedGroupRows = selection || [];
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = '';
+        this.sortOrder = '';
+      } else {
+        this.sortBy = prop;
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+      }
+      this.currentPage = 1;
+      this.loadGroups(true);
     },
     async loadMonitors() {
       try {
@@ -514,15 +515,14 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
         const response = await fetchGroupData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           monitor_id: this.monitorFilter || undefined,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
-          sort: sortBy,
-          order: sortOrder,
+          sort: this.sortBy || undefined,
+          order: this.sortOrder || undefined,
           with_total: 1,
         });
         const data = Array.isArray(response)
@@ -544,23 +544,6 @@ export default {
         this.error = err.message || this.$t('groups.loadFailed');
       } finally {
         this.loading = false;
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'name', sortOrder: 'asc' };
-        case 'name_desc':
-          return { sortBy: 'name', sortOrder: 'desc' };
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' };
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' };
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' };
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
     async openDetails(group) {
@@ -727,77 +710,27 @@ export default {
 </script>
 
 <style scoped>
-.groups-page {
-  padding: 16px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-}
-
-.groups-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding: 16px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-.groups-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.filter-item {
-  width: 160px;
-}
-
-.search-input {
-  width: 300px;
-}
-
-.groups-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.selection-info {
-  color: #909399;
-  font-size: 13px;
-  margin-right: 4px;
-}
-
 .groups-scroll {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  margin-top: 8px;
 }
 
 .groups-pagination {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
 }
 
-.create-btn {
-  margin-left: 8px;
-}
-
 .loading-state {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
 }
 
-.empty-detail {
-  text-align: center;
-  padding: 20px;
-  color: #909399;
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

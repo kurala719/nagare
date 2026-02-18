@@ -29,6 +29,8 @@ func SearchActionsDAO(filter model.ActionFilter) ([]model.Action, error) {
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
+		"enabled":    "enabled",
+		"media_id":   "media_id",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",

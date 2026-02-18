@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ type zabbixRequest struct {
 	Jsonrpc string                 `json:"jsonrpc"`
 	Method  string                 `json:"method"`
 	Params  map[string]interface{} `json:"params"`
+	Auth    string                 `json:"auth,omitempty"`
 	ID      int                    `json:"id"`
 }
 
@@ -105,13 +107,26 @@ func NewZabbixProvider(cfg Config) (*ZabbixProvider, error) {
 		timeout = 30
 	}
 
+	url := cfg.Auth.URL
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		url = "http://" + url
+	}
+	url = strings.TrimSuffix(url, "/")
+
+	// Create HTTP client with cookie jar for session management (Zabbix 6.0+)
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
+	}
+
 	return &ZabbixProvider{
-		url:       cfg.Auth.URL,
+		url:       url,
 		username:  cfg.Auth.Username,
 		password:  cfg.Auth.Password,
 		authToken: cfg.Auth.Token,
 		client: &http.Client{
 			Timeout: time.Duration(timeout) * time.Second,
+			Jar:     jar,
 		},
 	}, nil
 }
@@ -127,6 +142,11 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 		ID:      p.reqID,
 	}
 
+	// Try with auth at root level first (Zabbix < 6.0)
+	if p.authToken != "" && method != "user.login" {
+		req.Auth = p.authToken
+	}
+
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -137,12 +157,7 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json-rpc")
-
-	// Add auth token to Authorization header if available and not logging in
-	if p.authToken != "" && method != "user.login" {
-		httpReq.Header.Set("Authorization", "Bearer "+p.authToken)
-	}
+	httpReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
@@ -161,6 +176,57 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 	}
 
 	if zabbixResp.Error != nil {
+		// If we get "unexpected parameter auth" or "Not authorized" error, retry with Bearer token (Zabbix 6.0+)
+		if (strings.Contains(zabbixResp.Error.Data, "unexpected parameter \"auth\"") ||
+			strings.Contains(zabbixResp.Error.Data, "Not authorized")) &&
+			p.authToken != "" && method != "user.login" {
+			// Retry with Bearer token in Authorization header instead
+			p.reqID++
+			req2 := zabbixRequest{
+				Jsonrpc: "2.0",
+				Method:  method,
+				Params:  params,
+				ID:      p.reqID,
+			}
+			// Don't include Auth at root level this time
+
+			body2, err := json.Marshal(req2)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal retry request: %w", err)
+			}
+
+			httpReq2, err := http.NewRequestWithContext(ctx, "POST", p.url+"/api_jsonrpc.php", bytes.NewReader(body2))
+			if err != nil {
+				return nil, fmt.Errorf("failed to create retry request: %w", err)
+			}
+
+			httpReq2.Header.Set("Content-Type", "application/json")
+			// Use Bearer token in Authorization header for Zabbix 6.0+
+			httpReq2.Header.Set("Authorization", "Bearer "+p.authToken)
+
+			resp2, err := p.client.Do(httpReq2)
+			if err != nil {
+				return nil, fmt.Errorf("failed to send retry request: %w", err)
+			}
+			defer resp2.Body.Close()
+
+			respBody2, err := io.ReadAll(resp2.Body)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read retry response: %w", err)
+			}
+
+			var zabbixResp2 zabbixResponse
+			if err := json.Unmarshal(respBody2, &zabbixResp2); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal retry response: %w", err)
+			}
+
+			if zabbixResp2.Error != nil {
+				return nil, fmt.Errorf("Zabbix API error: %s - %s", zabbixResp2.Error.Message, zabbixResp2.Error.Data)
+			}
+
+			return &zabbixResp2, nil
+		}
+
 		return nil, fmt.Errorf("Zabbix API error: %s - %s", zabbixResp.Error.Message, zabbixResp.Error.Data)
 	}
 
@@ -175,6 +241,21 @@ func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
 	}
 
 	resp, err := p.sendRequest(ctx, "user.login", params)
+	if err != nil {
+		if strings.Contains(err.Error(), "unexpected parameter \"username\"") {
+			params = map[string]interface{}{
+				"user":     p.username,
+				"password": p.password,
+			}
+			resp, err = p.sendRequest(ctx, "user.login", params)
+		} else if strings.Contains(err.Error(), "unexpected parameter \"user\"") {
+			params = map[string]interface{}{
+				"username": p.username,
+				"password": p.password,
+			}
+			resp, err = p.sendRequest(ctx, "user.login", params)
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("authentication failed: %w", err)
 	}
@@ -222,7 +303,7 @@ func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) 
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
 		"selectHostGroups": "extend",
 		"selectGroups":     "extend",
-		"groupids":          groupID,
+		"groupids":         groupID,
 	}
 
 	resp, err := p.sendRequest(ctx, "host.get", params)
@@ -1322,4 +1403,367 @@ func (p *ZabbixProvider) CreateHostGroup(ctx context.Context, name string) (stri
 		return "", fmt.Errorf("no host group ID returned after creation")
 	}
 	return createResult.GroupIDs[0], nil
+}
+
+func (p *ZabbixProvider) CreateMediaType(ctx context.Context, name string, script string, params map[string]string) error {
+	// 1. Check if media type already exists
+	getParams := map[string]interface{}{
+		"output": "extend",
+		"filter": map[string]interface{}{"name": name},
+	}
+	resp, err := p.sendRequest(ctx, "mediatype.get", getParams)
+	if err != nil {
+		return fmt.Errorf("failed to check existing media type: %w", err)
+	}
+
+	var existing []struct {
+		MediaTypeID string `json:"mediatypeid"`
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+	}
+	if err := json.Unmarshal(resp.Result, &existing); err != nil {
+		return fmt.Errorf("failed to parse existing media types: %w", err)
+	}
+
+	// Build parameters array according to Zabbix API format
+	zabbixParams := make([]map[string]interface{}, 0, len(params))
+	for k, v := range params {
+		zabbixParams = append(zabbixParams, map[string]interface{}{
+			"name":  k,
+			"value": v,
+		})
+	}
+
+	// Build message templates for different event types
+	messageTemplates := []map[string]interface{}{
+		{
+			"eventsource": 0, // Trigger
+			"recovery":    0, // Problem
+			"subject":     "Problem: {EVENT.NAME}",
+			"message":     "Problem started at {EVENT.TIME} on {EVENT.DATE}\nProblem name: {EVENT.NAME}\nHost: {HOST.NAME}\nSeverity: {EVENT.SEVERITY}\nOriginal problem ID: {EVENT.ID}\n{TRIGGER.URL}",
+		},
+		{
+			"eventsource": 0, // Trigger
+			"recovery":    1, // Problem recovery
+			"subject":     "Resolved: {EVENT.NAME}",
+			"message":     "Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}\nProblem name: {EVENT.NAME}\nHost: {HOST.NAME}\nSeverity: {EVENT.SEVERITY}\nOriginal problem ID: {EVENT.ID}\n{TRIGGER.URL}",
+		},
+		{
+			"eventsource": 0, // Trigger
+			"recovery":    2, // Problem update
+			"subject":     "Updated problem: {EVENT.NAME}",
+			"message":     "Problem updated at {EVENT.UPDATE.TIME} on {EVENT.UPDATE.DATE}\n{USER.FULLNAME} {EVENT.UPDATE.ACTION} problem with note:\n{EVENT.UPDATE.MESSAGE}\n\nCurrent problem status: {EVENT.STATUS}\nOriginal problem ID: {EVENT.ID}\n{TRIGGER.URL}",
+		},
+	}
+
+	if len(existing) > 0 {
+		// Update existing media type
+		updateParams := map[string]interface{}{
+			"mediatypeid":       existing[0].MediaTypeID,
+			"type":              4, // 4 = Webhook
+			"name":              name,
+			"script":            script,
+			"parameters":        zabbixParams,
+			"process_tags":      1,
+			"show_event_menu":   1,
+			"event_menu_url":    "{EVENT.TAGS.__nagare_url}",
+			"event_menu_name":   "View in Nagare",
+			"status":            0, // 0 = Enabled
+			"description":       "Nagare monitoring system webhook for automatic alert notifications",
+			"timeout":           "30s",
+			"message_templates": messageTemplates,
+		}
+		_, err = p.sendRequest(ctx, "mediatype.update", updateParams)
+		if err != nil {
+			return fmt.Errorf("failed to update media type: %w", err)
+		}
+		return nil
+	}
+
+	// Create new media type
+	createParams := map[string]interface{}{
+		"name":              name,
+		"type":              4, // 4 = Webhook
+		"script":            script,
+		"parameters":        zabbixParams,
+		"process_tags":      1,
+		"show_event_menu":   1,
+		"event_menu_url":    "{EVENT.TAGS.__nagare_url}",
+		"event_menu_name":   "View in Nagare",
+		"status":            0, // 0 = Enabled
+		"description":       "Nagare monitoring system webhook for automatic alert notifications",
+		"timeout":           "30s",
+		"message_templates": messageTemplates,
+	}
+	_, err = p.sendRequest(ctx, "mediatype.create", createParams)
+	if err != nil {
+		return fmt.Errorf("failed to create media type: %w", err)
+	}
+
+	return nil
+}
+
+func (p *ZabbixProvider) GetMediaTypeIDByName(ctx context.Context, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("media type name is required")
+	}
+	params := map[string]interface{}{
+		"output": []string{"mediatypeid", "name"},
+		"filter": map[string]interface{}{"name": name},
+	}
+	resp, err := p.sendRequest(ctx, "mediatype.get", params)
+	if err != nil {
+		return "", fmt.Errorf("failed to get media type by name: %w", err)
+	}
+	var mediaTypes []struct {
+		MediaTypeID string `json:"mediatypeid"`
+		Name        string `json:"name"`
+	}
+	if err := json.Unmarshal(resp.Result, &mediaTypes); err != nil {
+		return "", fmt.Errorf("failed to parse media type response: %w", err)
+	}
+	if len(mediaTypes) == 0 {
+		return "", fmt.Errorf("media type not found: %s", name)
+	}
+	return mediaTypes[0].MediaTypeID, nil
+}
+
+func (p *ZabbixProvider) GetUserIDByUsername(ctx context.Context, username string) (string, error) {
+	if username == "" {
+		return "", fmt.Errorf("username is required")
+	}
+	params := map[string]interface{}{
+		"output": []string{"userid", "username", "name", "surname"},
+		"filter": map[string]interface{}{"username": username},
+	}
+	resp, err := p.sendRequest(ctx, "user.get", params)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user by username: %w", err)
+	}
+	var users []struct {
+		UserID   string `json:"userid"`
+		Username string `json:"username"`
+		Name     string `json:"name"`
+		Surname  string `json:"surname"`
+	}
+	if err := json.Unmarshal(resp.Result, &users); err != nil {
+		return "", fmt.Errorf("failed to parse user response: %w", err)
+	}
+	if len(users) == 0 {
+		params = map[string]interface{}{
+			"output": []string{"userid", "username", "name", "surname"},
+			"filter": map[string]interface{}{"name": username},
+		}
+		resp, err = p.sendRequest(ctx, "user.get", params)
+		if err != nil {
+			return "", fmt.Errorf("failed to get user by name: %w", err)
+		}
+		if err := json.Unmarshal(resp.Result, &users); err != nil {
+			return "", fmt.Errorf("failed to parse user response: %w", err)
+		}
+	}
+	if len(users) == 0 {
+		params = map[string]interface{}{
+			"output": []string{"userid", "username", "name", "surname"},
+			"filter": map[string]interface{}{"surname": username},
+		}
+		resp, err = p.sendRequest(ctx, "user.get", params)
+		if err != nil {
+			return "", fmt.Errorf("failed to get user by surname: %w", err)
+		}
+		if err := json.Unmarshal(resp.Result, &users); err != nil {
+			return "", fmt.Errorf("failed to parse user response: %w", err)
+		}
+	}
+	if len(users) == 0 {
+		return "", fmt.Errorf("user not found: %s", username)
+	}
+	return users[0].UserID, nil
+}
+
+func (p *ZabbixProvider) EnsureUserMedia(ctx context.Context, userID string, mediaTypeID string, sendTo string) error {
+	if userID == "" || mediaTypeID == "" {
+		return fmt.Errorf("user ID and media type ID are required")
+	}
+	if sendTo == "" {
+		sendTo = "nagare-webhook"
+	}
+	params := map[string]interface{}{
+		"userids":      []string{userID},
+		"output":       []string{"userid"},
+		"selectMedias": "extend",
+	}
+	resp, err := p.sendRequest(ctx, "user.get", params)
+	if err != nil {
+		return fmt.Errorf("failed to get user medias: %w", err)
+	}
+	var users []struct {
+		UserID string                   `json:"userid"`
+		Medias []map[string]interface{} `json:"medias"`
+	}
+	if err := json.Unmarshal(resp.Result, &users); err != nil {
+		return fmt.Errorf("failed to parse user medias response: %w", err)
+	}
+	if len(users) == 0 {
+		return fmt.Errorf("user not found for media binding: %s", userID)
+	}
+	medias := users[0].Medias
+	if medias == nil {
+		medias = make([]map[string]interface{}, 0, 1)
+	}
+	updated := false
+	cleanedMedias := make([]map[string]interface{}, 0, len(medias)+1)
+	for _, media := range medias {
+		mtID := toString(media["mediatypeid"])
+		if mtID == "" {
+			continue
+		}
+		entry := map[string]interface{}{
+			"mediatypeid": mtID,
+			"sendto":      normalizeSendTo(media["sendto"]),
+			"active":      toInt(media["active"], 0),
+			"severity":    toInt(media["severity"], 63),
+			"period":      toString(media["period"]),
+		}
+		if mtID == mediaTypeID {
+			entry["sendto"] = sendTo
+			entry["active"] = 0
+			entry["severity"] = 63
+			entry["period"] = "1-7,00:00-24:00"
+			updated = true
+		}
+		cleanedMedias = append(cleanedMedias, entry)
+	}
+	if !updated {
+		cleanedMedias = append(cleanedMedias, map[string]interface{}{
+			"mediatypeid": mediaTypeID,
+			"sendto":      sendTo,
+			"active":      0,
+			"severity":    63,
+			"period":      "1-7,00:00-24:00",
+		})
+	}
+	updateParams := map[string]interface{}{
+		"userid": userID,
+		"medias": cleanedMedias,
+	}
+	if _, err := p.sendRequest(ctx, "user.update", updateParams); err != nil {
+		return fmt.Errorf("failed to update user medias: %w", err)
+	}
+	return nil
+}
+
+func (p *ZabbixProvider) EnsureActionWithMedia(ctx context.Context, name string, userID string, mediaTypeID string) error {
+	if name == "" || userID == "" || mediaTypeID == "" {
+		return fmt.Errorf("action name, user ID, and media type ID are required")
+	}
+	getParams := map[string]interface{}{
+		"output": []string{"actionid", "name"},
+		"filter": map[string]interface{}{"name": []string{name}},
+	}
+	resp, err := p.sendRequest(ctx, "action.get", getParams)
+	if err != nil {
+		return fmt.Errorf("failed to get action by name: %w", err)
+	}
+	var actions []struct {
+		ActionID string `json:"actionid"`
+		Name     string `json:"name"`
+	}
+	if err := json.Unmarshal(resp.Result, &actions); err != nil {
+		return fmt.Errorf("failed to parse action response: %w", err)
+	}
+
+	buildOperation := func() map[string]interface{} {
+		return map[string]interface{}{
+			"operationtype": 0,
+			"opmessage": map[string]interface{}{
+				"default_msg": 1,
+				"mediatypeid": mediaTypeID,
+			},
+			"opmessage_usr": []map[string]string{{"userid": userID}},
+		}
+	}
+
+	actionParams := map[string]interface{}{
+		"name":        name,
+		"eventsource": 0,
+		"status":      0,
+		"esc_period":  "1m",
+		"filter": map[string]interface{}{
+			"evaltype":   0,
+			"conditions": []map[string]interface{}{},
+		},
+		"operations":          []map[string]interface{}{buildOperation()},
+		"recovery_operations": []map[string]interface{}{buildOperation()},
+		"update_operations":   []map[string]interface{}{buildOperation()},
+	}
+
+	if len(actions) > 0 {
+		actionParams["actionid"] = actions[0].ActionID
+		if _, err := p.sendRequest(ctx, "action.update", actionParams); err != nil {
+			return fmt.Errorf("failed to update action: %w", err)
+		}
+		return nil
+	}
+
+	if _, err := p.sendRequest(ctx, "action.create", actionParams); err != nil {
+		return fmt.Errorf("failed to create action: %w", err)
+	}
+	return nil
+}
+
+func toString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case json.Number:
+		return v.String()
+	case float64:
+		return strconv.FormatInt(int64(v), 10)
+	case int:
+		return strconv.Itoa(v)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func toInt(value interface{}, fallback int) int {
+	switch v := value.(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	case json.Number:
+		if parsed, err := strconv.Atoi(v.String()); err == nil {
+			return parsed
+		}
+	case string:
+		if parsed, err := strconv.Atoi(v); err == nil {
+			return parsed
+		}
+	}
+	return fallback
+}
+
+func normalizeSendTo(value interface{}) interface{} {
+	switch v := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return v
+	case []string:
+		return v
+	case []interface{}:
+		items := make([]string, 0, len(v))
+		for _, item := range v {
+			items = append(items, toString(item))
+		}
+		return items
+	default:
+		return toString(value)
+	}
 }

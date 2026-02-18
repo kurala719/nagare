@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"nagare/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // GetAllAlarmsCtrl handles GET /alarms
@@ -207,4 +209,37 @@ func RegenerateAlarmEventTokenCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccess(c, http.StatusOK, alarm)
+}
+
+// SetupAlarmMediaTypeCtrl handles POST /alarms/:id/setup-media
+func SetupAlarmMediaTypeCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid alarm ID")
+		return
+	}
+
+	if err := service.SetupAlarmMediaTypeServ(uint(id)); err != nil {
+		respondError(c, err)
+		return
+	}
+
+	// Get webhook URL from config to show in response
+	ip := viper.GetString("system.ip_address")
+	port := viper.GetInt("system.port")
+	if ip == "" {
+		ip = "localhost"
+	}
+	if port == 0 {
+		port = 8080
+	}
+	webhookURL := fmt.Sprintf("http://%s:%d/api/v1/alerts/webhook", ip, port)
+
+	respondSuccess(c, http.StatusOK, gin.H{
+		"message":         "Media type setup successfully",
+		"webhook_url":     webhookURL,
+		"test_url":        webhookURL + "/health",
+		"troubleshooting": "If Zabbix cannot reach the webhook, ensure the IP address is accessible from Zabbix server",
+		"test_command":    fmt.Sprintf("curl -X GET %s/health", webhookURL),
+	})
 }

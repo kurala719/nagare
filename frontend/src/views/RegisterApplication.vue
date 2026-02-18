@@ -1,29 +1,40 @@
 <template>
-  <div class="register-app-page">
-    <div class="register-app-toolbar">
-      <div class="register-app-filters">
-        <span class="filter-label">{{ $t('registerApplications.search') }}</span>
-        <el-input v-model="search" :placeholder="$t('registerApplications.search')" clearable class="register-app-search" />
-        <span class="filter-label">{{ $t('registerApplications.filterStatus') }}</span>
-        <el-select v-model="statusFilter" :placeholder="$t('registerApplications.filterStatus')" class="register-app-filter">
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('registerApplications.title') }}</h1>
+      <p class="page-subtitle">{{ applications.length }} {{ $t('registerApplications.title') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('registerApplications.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('registerApplications.filterStatus')" style="width: 140px">
           <el-option :label="$t('registerApplications.filterAll')" value="all" />
           <el-option :label="$t('registerApplications.statusPending')" :value="0" />
           <el-option :label="$t('registerApplications.statusApproved')" :value="1" />
           <el-option :label="$t('registerApplications.statusRejected')" :value="2" />
         </el-select>
-        <div class="register-app-bulk-actions">
-          <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-          <el-button type="success" plain :disabled="selectedCount === 0" :loading="bulkApproving" @click="approveSelected">
-            {{ $t('registerApplications.approveSelected') }}
-          </el-button>
-          <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkReject">
-            {{ $t('registerApplications.rejectSelected') }}
-          </el-button>
-        </div>
       </div>
-      <el-button type="primary" @click="loadApplications(true)">
-        {{ $t('registerApplications.refresh') }}
-      </el-button>
+
+      <div class="action-group">
+        <el-button type="primary" :icon="Refresh" @click="loadApplications(true)">
+          {{ $t('registerApplications.refresh') }}
+        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Check" @click="approveSelected" style="color: var(--el-color-success)">{{ $t('registerApplications.approveSelected') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Close" @click="openBulkReject" style="color: var(--el-color-danger)">{{ $t('registerApplications.rejectSelected') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -50,8 +61,8 @@
       class="register-app-empty"
     />
 
+  <div v-if="!loading && !error" class="register-app-content">
     <div
-      v-if="!loading && !error"
       class="register-app-scroll"
       v-infinite-scroll="loadMoreApplications"
       :infinite-scroll-disabled="loadingMore || !hasMore"
@@ -61,30 +72,32 @@
         v-if="filteredApplications.length > 0"
         :data="filteredApplications"
         border
-        class="register-app-table"
         ref="applicationsTableRef"
         row-key="id"
         @selection-change="onSelectionChange"
+        @sort-change="onSortChange"
       >
-        <el-table-column type="selection" width="50" />
-        <el-table-column prop="id" :label="$t('registerApplications.id')" width="90" />
-        <el-table-column prop="username" :label="$t('registerApplications.username')" min-width="160" />
-        <el-table-column prop="status" :label="$t('registerApplications.status')" width="140">
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="id" :label="$t('registerApplications.id')" width="90" align="center" sortable="custom" />
+        <el-table-column prop="username" :label="$t('registerApplications.username')" min-width="160" sortable="custom" />
+        <el-table-column prop="status" :label="$t('registerApplications.status')" width="140" align="center" sortable="custom">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="statusTagType(row.status)" size="small" effect="dark">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" :label="$t('registerApplications.reason')" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="approved_by" :label="$t('registerApplications.approvedBy')" width="140" />
-        <el-table-column prop="created_at" :label="$t('registerApplications.createdAt')" min-width="180" />
-        <el-table-column :label="$t('registerApplications.actions')" width="220" fixed="right">
+        <el-table-column prop="reason" :label="$t('registerApplications.reason')" min-width="220" show-overflow-tooltip sortable="custom" />
+        <el-table-column prop="approved_by" :label="$t('registerApplications.approvedBy')" width="140" align="center" sortable="custom" />
+        <el-table-column prop="created_at" :label="$t('registerApplications.createdAt')" width="180" align="center" sortable="custom" />
+        <el-table-column :label="$t('registerApplications.actions')" width="220" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="success" :disabled="row.status !== 0" @click="approve(row)">
-              {{ $t('registerApplications.approve') }}
-            </el-button>
-            <el-button size="small" type="danger" :disabled="row.status !== 0" @click="openReject(row)">
-              {{ $t('registerApplications.reject') }}
-            </el-button>
+            <el-button-group>
+              <el-button size="small" type="success" :icon="Check" :disabled="row.status !== 0" @click="approve(row)">
+                {{ $t('registerApplications.approve') }}
+              </el-button>
+              <el-button size="small" type="danger" :icon="Close" :disabled="row.status !== 0" @click="openReject(row)">
+                {{ $t('registerApplications.reject') }}
+              </el-button>
+            </el-button-group>
           </template>
         </el-table-column>
       </el-table>
@@ -111,16 +124,25 @@
       </template>
     </el-dialog>
   </div>
+  </div>
 </template>
 
 <script>
 import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { markRaw } from 'vue'
+import { Loading, Search, Refresh, Check, Close, ArrowDown } from '@element-plus/icons-vue'
 import { searchRegisterApplications, approveRegisterApplication, rejectRegisterApplication } from '@/api/users'
 
 export default {
   name: 'RegisterApplication',
-  components: { Loading },
+  components: {
+    Loading,
+    Search,
+    Refresh,
+    Check,
+    Close,
+    ArrowDown
+  },
   data() {
     return {
       applications: [],
@@ -130,6 +152,8 @@ export default {
       statusFilter: 'all',
       pageSize: 100,
       pageOffset: 0,
+      sortBy: '',
+      sortOrder: '',
       hasMore: true,
       loadingMore: false,
       rejectDialogVisible: false,
@@ -141,6 +165,13 @@ export default {
         ids: [],
         reason: '',
       },
+      // Icons for template usage
+      Search: markRaw(Search),
+      Refresh: markRaw(Refresh),
+      Check: markRaw(Check),
+      Close: markRaw(Close),
+      ArrowDown: markRaw(ArrowDown),
+      Loading: markRaw(Loading)
     }
   },
   computed: {
@@ -163,6 +194,16 @@ export default {
     onSelectionChange(selection) {
       this.selectedApplicationRows = selection || []
     },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = ''
+        this.sortOrder = ''
+      } else {
+        this.sortBy = prop
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc'
+      }
+      this.loadApplications(true)
+    },
     async loadApplications(reset = false) {
       if (reset) {
         this.pageOffset = 0
@@ -180,6 +221,8 @@ export default {
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           limit: this.pageSize,
           offset: this.pageOffset,
+          sort: this.sortBy || undefined,
+          order: this.sortOrder || undefined,
         }
         const response = await searchRegisterApplications(params)
         const data = Array.isArray(response.data) ? response.data : (response.data?.data || [])
@@ -295,58 +338,31 @@ export default {
 </script>
 
 <style scoped>
-.register-app-page {
-  padding: 16px;
+.register-app-content {
+  margin-top: 8px;
 }
 
-.register-app-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 12px;
+.register-app-scroll {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
 }
 
-.register-app-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.register-app-bulk-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.register-app-search {
-  max-width: 260px;
-}
-
-.register-app-filter {
-  min-width: 180px;
-}
-
-.loading-state {
+.loading-state, .load-more {
   text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+}
+
+.load-more.done {
   padding: 40px;
 }
 
-.register-app-error {
-  margin: 16px 0;
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.register-app-empty {
-  margin: 40px 0;
-}
-
-.register-app-table {
-  width: 100%;
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

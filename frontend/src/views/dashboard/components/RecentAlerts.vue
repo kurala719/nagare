@@ -7,9 +7,9 @@
       </div>
     </template>
     <el-table :data="alerts" style="width: 100%" max-height="250" v-loading="loading">
-      <el-table-column prop="id" :label="$t('dashboard.id')" width="60" />
-      <el-table-column prop="message" :label="$t('dashboard.message')" show-overflow-tooltip />
-      <el-table-column prop="severity" :label="$t('dashboard.severity')" width="100">
+      <el-table-column prop="id" :label="$t('dashboard.id')" width="60" sortable />
+      <el-table-column prop="message" :label="$t('dashboard.message')" show-overflow-tooltip sortable />
+      <el-table-column prop="severity" :label="$t('dashboard.severity')" width="100" sortable>
         <template #default="{ row }">
           <el-tag :type="getSeverityType(row.severity)" size="small">{{ row.severity }}</el-tag>
         </template>

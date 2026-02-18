@@ -51,9 +51,9 @@
             </div>
           </template>
           <el-table :data="hosts" height="320" border>
-            <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('hosts.name')" min-width="160" />
-            <el-table-column v-if="visibleColumns.includes('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" />
-            <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('hosts.status')" min-width="120">
+            <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('hosts.name')" min-width="160" sortable />
+            <el-table-column v-if="visibleColumns.includes('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" sortable />
+            <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('hosts.status')" min-width="120" sortable>
               <template #default="{ row }">
                 <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
                   <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>

@@ -42,9 +42,12 @@ func SearchUsersDAO(filter model.UserFilter) ([]model.User, error) {
 		"username":   "username",
 		"status":     "status",
 		"privileges": "privileges",
+		"id":         "id",
+		"nickname":   "nickname",
+		"email":      "email",
+		"phone":      "phone",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
-		"id":         "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)

@@ -52,11 +52,15 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 		query = query.Where("alert_item_id = ?", *filter.AlertItemID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "name",
-		"status":     "status",
-		"created_at": "created_at",
-		"updated_at": "updated_at",
-		"id":         "id",
+		"name":         "name",
+		"status":       "status",
+		"enabled":      "enabled",
+		"entity":       "entity",
+		"severity_min": "severity_min",
+		"action_id":    "action_id",
+		"created_at":   "created_at",
+		"updated_at":   "updated_at",
+		"id":           "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)

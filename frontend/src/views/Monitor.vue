@@ -1,52 +1,52 @@
 <template>
-  <div class="monitors-toolbar">
-    <div class="monitors-filters">
-      <span class="filter-label">{{ $t('monitors.searchField') }}</span>
-      <el-select v-model="searchField" :placeholder="$t('monitors.searchField')" class="search-field-selector" style="width: 130px;">
-        <el-option :label="$t('monitors.searchAll')" value="all" />
-        <el-option :label="$t('monitors.name')" value="name" />
-        <el-option :label="$t('monitors.url')" value="url" />
-        <el-option :label="$t('monitors.type')" value="type" />
-        <el-option :label="$t('monitors.description')" value="description" />
-      </el-select>
-      <span class="filter-label">{{ $t('monitors.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('monitors.search')" clearable class="monitors-search" />
-      <span class="filter-label">{{ $t('monitors.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('monitors.filterStatus')" class="monitors-filter">
-        <el-option :label="$t('monitors.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="monitors-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="monitors-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('monitors.search') }}</h1>
+      <p class="page-subtitle">{{ totalMonitors }} {{ $t('dashboard.monitors') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('monitors.search')" clearable style="width: 280px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('monitors.filterStatus')" style="width: 140px">
+          <el-option :label="$t('monitors.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+
+        <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
+          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
+          <el-option :label="$t('common.sortCreatedAsc')" value="created_asc" />
+          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
+          <el-option :label="$t('common.sortUpdatedAsc')" value="updated_asc" />
+          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
+          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button @click="loadMonitors" :loading="loading" :icon="Refresh" circle />
+        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+          {{ $t('monitors.create') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <el-button @click="loadMonitors" :loading="loading">
-        <el-icon><Refresh /></el-icon>
-      </el-button>
-      <el-button type="primary" @click="createDialogVisible=true">
-        {{ $t('monitors.create') }}
-      </el-button>
-    </div>
-  </div>
   <el-dialog v-model="createDialogVisible" :title="$t('monitors.createTitle')" width="500px" align-center>
     <el-form :model="newMonitor" label-width="120px">
       <el-form-item :label="$t('monitors.name')">
@@ -116,54 +116,54 @@
     style="margin: 40px;"
   />
 
-  <div
-    v-if="!loading && !error"
-    class="monitors-scroll"
-  >
-  <!-- Monitor Cards -->
-  <el-row :gutter="20" style="margin: 20px" v-if="filteredMonitors.length > 0">
-    <el-col :span="6" v-for="monitor in filteredMonitors" :key="monitor.id" style="margin-bottom: 20px;">
-      <el-card style="height: 300px;">
-        <template #header>
-          <div class="card-header" style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-checkbox :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" />
-              <span style="font-size: 32px; margin: 0; flex-shrink: 0;">{{ monitor.name }}</span>
-              <span>
-                <el-icon size="large" color="green" v-if="monitor.auth_token"><SuccessFilled /></el-icon>
-                <span v-else>
-                  <el-icon size="large" color="red"><CircleCloseFilled /></el-icon>
-                </span>
-              </span>
+  <div v-if="!loading && !error" class="monitors-content">
+    <el-row :gutter="24">
+      <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="monitor in filteredMonitors" :key="monitor.id" style="margin-bottom: 24px;">
+        <el-card class="monitor-card" :body-style="{ padding: '0px' }">
+          <div class="monitor-card-header">
+            <div class="monitor-icon-box">
+              <el-icon :size="24"><MonitorIcon /></el-icon>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <el-button size="small" @click="openProperties(monitor)">{{ $t('monitors.properties') }}</el-button>
-              <el-button size="small" type="primary" plain @click="onSyncGroups(monitor)" :loading="monitor.syncing_groups">
-                {{ $t('monitors.syncGroups') }}
-              </el-button>
-              <el-button size="small" @click="onLogin(monitor)" :loading="monitor.logging_in">
-                {{ monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login') }}
-              </el-button>
-              <el-button size="small" @click="onDelete(monitor)">{{ $t('monitors.delete') }}</el-button>
+            <div class="monitor-title-area">
+              <h3 class="monitor-name">{{ monitor.name }}</h3>
+              <span class="monitor-type-tag">{{ monitor.type === 1 ? 'Zabbix' : monitor.type === 2 ? 'Prometheus' : 'Other' }}</span>
             </div>
+            <el-checkbox :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" class="monitor-select" />
           </div>
-        </template>
-        <div class="card-body" style="margin-top: 20px;">
-          <p>{{ monitor.description }}</p>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-            <el-tag :type="monitor.enabled === 1 ? 'success' : 'info'">
-              {{ monitor.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
-            </el-tag>
-            <el-tooltip :content="monitor.status_reason || getStatusInfo(monitor.status).reason" placement="top">
-              <el-tag :type="getStatusInfo(monitor.status).type">
-                {{ getStatusInfo(monitor.status).label }}
+          
+          <div class="monitor-card-body">
+            <p class="monitor-desc">{{ monitor.description || $t('monitors.noDescription') }}</p>
+            <div class="monitor-status-row">
+              <el-tag :type="monitor.enabled === 1 ? 'success' : 'info'" size="small">
+                {{ monitor.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
               </el-tag>
-            </el-tooltip>
+              <el-tooltip :content="monitor.status_reason || getStatusInfo(monitor.status).reason" placement="top">
+                <el-tag :type="getStatusInfo(monitor.status).type" size="small" effect="dark">
+                  {{ getStatusInfo(monitor.status).label }}
+                </el-tag>
+              </el-tooltip>
+            </div>
           </div>
-        </div>
-      </el-card>
-    </el-col>
-  </el-row>
+
+          <div class="monitor-card-footer">
+            <el-button-group>
+              <el-tooltip :content="$t('monitors.properties')" placement="bottom">
+                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
+              </el-tooltip>
+              <el-tooltip :content="$t('monitors.syncGroups')" placement="bottom">
+                <el-button size="small" type="primary" plain :icon="Refresh" @click="onSyncGroups(monitor)" :loading="monitor.syncing_groups" />
+              </el-tooltip>
+              <el-tooltip :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
+                <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
+              </el-tooltip>
+              <el-tooltip :content="$t('monitors.delete')" placement="bottom">
+                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" />
+              </el-tooltip>
+            </el-button-group>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
   <div v-if="!loading && !error && totalMonitors > 0" class="monitors-pagination">
     <el-pagination
@@ -246,14 +246,14 @@
   <!-- Bulk Delete Confirmation Dialog -->
   <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
     <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
-    <template #footer>
-      <el-button @click="bulkDeleteDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
-      <el-button type="danger" @click="deleteSelectedMonitors" :loading="bulkDeleting">{{ $t('monitors.delete') }}</el-button>
+        <template #footer>
+          <el-button @click="bulkDeleteDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
+          <el-button type="danger" @click="deleteSelectedMonitors" :loading="bulkDeleting">{{ $t('monitors.delete') }}</el-button>
+        </template>
+      </el-dialog>
+      </div>
     </template>
-  </el-dialog>
-
-  
-</template>
+    
 
 <script lang="ts">
 import {
@@ -263,13 +263,17 @@ import {
   Message,
   Search,
   Star,
-  Refresh, // Add Refresh icon
+  Refresh,
   SuccessFilled,
   CircleCloseFilled,
-  Loading
+  Loading,
+  Plus,
+  Monitor as MonitorIcon,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
+import { markRaw } from 'vue'
 import { fetchMonitorData, addMonitor, deleteMonitor, updateMonitor, loginMonitor, regenerateMonitorEventToken, syncGroupsFromMonitor } from '@/api/monitors'
 
 interface Monitor {
@@ -289,6 +293,21 @@ interface Monitor {
 
 export default {
     name: 'Monitor',
+    components: {
+      Check,
+      Delete,
+      Edit,
+      Message,
+      Search,
+      Star,
+      Refresh,
+      SuccessFilled,
+      CircleCloseFilled,
+      Loading,
+      Plus,
+      MonitorIcon,
+      ArrowDown
+    },
     data() {
       return {
         monitors: [],
@@ -311,12 +330,27 @@ export default {
           bulkUpdating: false,
           bulkDeleting: false,
           selectedMonitorIds: [],
-          bulkForm: {
-            enabled: 'nochange',
-            status: 'nochange',
-          },
-      };
-    },
+                      bulkForm: {
+                        enabled: 'nochange',
+                        status: 'nochange',
+                      },
+                      // Icons for template usage
+                      Check: markRaw(Check),
+                      Delete: markRaw(Delete),
+                      Edit: markRaw(Edit),
+                      Message: markRaw(Message),
+                      Search: markRaw(Search),
+                      Star: markRaw(Star),
+                      Refresh: markRaw(Refresh),
+                      SuccessFilled: markRaw(SuccessFilled),
+                      CircleCloseFilled: markRaw(CircleCloseFilled),
+                      Loading: markRaw(Loading),
+                      Plus: markRaw(Plus),
+                      Monitor: markRaw(MonitorIcon),
+                      ArrowDown: markRaw(ArrowDown)
+                  };
+              },
+          
     computed: {
       filteredMonitors() {
         return this.monitors;
@@ -754,58 +788,96 @@ export default {
 </script>
 
 <style scoped>
-.monitors-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
+.monitors-content {
+  margin-top: 8px;
 }
 
-.monitors-filters {
+.monitor-card {
+  height: 100%;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
 }
 
-.monitors-bulk-actions {
+.monitor-card-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-1);
+  position: relative;
+}
+
+.monitor-icon-box {
+  width: 48px;
+  height: 48px;
+  background: var(--brand-50);
+  color: var(--brand-600);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.monitor-title-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.monitor-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monitor-type-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.monitor-select {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.monitor-card-body {
+  padding: 20px;
+  flex: 1;
+}
+
+.monitor-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 16px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  height: 3em;
+}
+
+.monitor-status-row {
   display: flex;
   gap: 8px;
-  align-items: center;
+}
+
+.monitor-card-footer {
+  padding: 12px 20px;
+  background: var(--surface-2);
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border-1);
 }
 
 .monitors-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.monitors-search {
-  width: 240px;
-}
-
-.monitors-filter {
-  min-width: 160px;
-}
-
-.el-row {
-  margin-bottom: 20px;
-}
-.el-row:last-child {
-  margin-bottom: 0;
-}
-.el-col {
-  border-radius: 4px;
-}
-
-.grid-content {
-  border-radius: 4px;
-  min-height: 36px;
 }
 </style>

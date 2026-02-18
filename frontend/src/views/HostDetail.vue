@@ -113,9 +113,9 @@
             </div>
           </template>
           <el-table :data="displayItems" height="320" border>
-            <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('items.name')" min-width="160" />
-            <el-table-column v-if="visibleColumns.includes('value')" prop="value" :label="$t('items.value')" min-width="140" />
-            <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('items.status')" min-width="120">
+            <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('items.name')" min-width="160" sortable />
+            <el-table-column v-if="visibleColumns.includes('value')" prop="value" :label="$t('items.value')" min-width="140" sortable />
+            <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('items.status')" min-width="120" sortable>
               <template #default="{ row }">
                 <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
                   <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>

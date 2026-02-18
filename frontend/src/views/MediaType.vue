@@ -1,44 +1,47 @@
 <template>
-  <div class="media-types-toolbar">
-    <div class="media-types-filters">
-      <span class="filter-label">{{ $t('mediaTypes.search') }}</span>
-      <el-input v-model="search" :placeholder="$t('mediaTypes.search')" clearable class="media-types-search" />
-      <span class="filter-label">{{ $t('mediaTypes.filterStatus') }}</span>
-      <el-select v-model="statusFilter" :placeholder="$t('mediaTypes.filterStatus')" class="media-types-filter">
-        <el-option :label="$t('mediaTypes.filterAll')" value="all" />
-        <el-option :label="$t('common.statusInactive')" :value="0" />
-        <el-option :label="$t('common.statusActive')" :value="1" />
-        <el-option :label="$t('common.statusError')" :value="2" />
-        <el-option :label="$t('common.statusSyncing')" :value="3" />
-      </el-select>
-      <span class="filter-label">{{ $t('common.sort') }}</span>
-      <el-select v-model="sortKey" class="media-types-filter">
-        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-      </el-select>
-      <div class="media-types-bulk-actions">
-        <span class="selected-count">{{ $t('common.selectedCount', { count: selectedCount }) }}</span>
-        <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-          {{ $t('common.bulkUpdate') }}
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('mediaTypes.title') }}</h1>
+      <p class="page-subtitle">{{ totalMediaTypes }} {{ $t('mediaTypes.title') }}</p>
+    </div>
+
+    <div class="standard-toolbar">
+      <div class="filter-group">
+        <el-input v-model="search" :placeholder="$t('mediaTypes.search')" clearable style="width: 240px">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="statusFilter" :placeholder="$t('mediaTypes.filterStatus')" style="width: 140px">
+          <el-option :label="$t('mediaTypes.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+      </div>
+
+      <div class="action-group">
+        <el-button type="primary" :icon="Plus" @click="openCreate">
+          {{ $t('mediaTypes.create') }}
         </el-button>
-        <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-          {{ $t('common.bulkDelete') }}
-        </el-button>
+        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+          <el-button>
+            {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Edit" @click="openBulkUpdateDialog">{{ $t('common.bulkUpdate') }}</el-dropdown-item>
+              <el-dropdown-item :icon="Delete" @click="openBulkDeleteDialog" style="color: var(--el-color-danger)">{{ $t('common.bulkDelete') }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
-    <el-button type="primary" @click="openCreate">
-      {{ $t('mediaTypes.create') }}
-    </el-button>
-  </div>
 
-  <div v-if="loading" class="loading-state">
-    <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
-    <p>{{ $t('mediaTypes.loading') }}</p>
-  </div>
+    <div v-if="loading" class="loading-state">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
+      <p>{{ $t('mediaTypes.loading') }}</p>
+    </div>
 
   <el-alert
     v-if="error && !loading"
@@ -65,45 +68,43 @@
     style="margin: 40px;"
   />
 
-  <div
-    v-if="!loading && !error"
-    class="media-types-scroll"
-  >
+  <div v-if="!loading && !error" class="media-types-content">
     <el-table
       v-if="filteredMediaTypes.length > 0"
       :data="filteredMediaTypes"
       border
-      style="margin: 20px; width: calc(100% - 40px);"
       ref="mediaTypesTableRef"
       row-key="id"
       @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
     >
-    <el-table-column type="selection" width="50" />
-    <el-table-column prop="name" :label="$t('mediaTypes.name')" min-width="160" />
-    <el-table-column prop="key" :label="$t('mediaTypes.key')" min-width="160" />
-    <el-table-column :label="$t('common.enabled')" min-width="110">
-      <template #default="{ row }">
-        <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
-          {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
-        </el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column :label="$t('mediaTypes.status')" min-width="160">
-      <template #default="{ row }">
-        <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-          <el-tag :type="getStatusInfo(row.status).type">
-            {{ getStatusInfo(row.status).label }}
+      <el-table-column type="selection" width="50" align="center" />
+      <el-table-column prop="name" :label="$t('mediaTypes.name')" min-width="160" sortable="custom" />
+      <el-table-column prop="key" :label="$t('mediaTypes.key')" min-width="160" sortable="custom" />
+      <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
+        <template #default="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
+            {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
           </el-tag>
-        </el-tooltip>
-      </template>
-    </el-table-column>
-    <el-table-column prop="description" :label="$t('mediaTypes.description')" min-width="200" show-overflow-tooltip />
-    <el-table-column :label="$t('mediaTypes.actions')" min-width="200" fixed="right">
-      <template #default="{ row }">
-        <el-button size="small" @click="openProperties(row)">{{ $t('mediaTypes.properties') }}</el-button>
-        <el-button size="small" type="danger" @click="onDelete(row)">{{ $t('mediaTypes.delete') }}</el-button>
-      </template>
-    </el-table-column>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('mediaTypes.status')" width="160" align="center" prop="status" sortable="custom">
+        <template #default="{ row }">
+          <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
+            <el-tag :type="getStatusInfo(row.status).type" size="small">
+              {{ getStatusInfo(row.status).label }}
+            </el-tag>
+          </el-tooltip>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('mediaTypes.actions')" width="200" fixed="right" align="center">
+        <template #default="{ row }">
+          <el-button-group>
+            <el-button size="small" :icon="Setting" @click="openProperties(row)">{{ $t('mediaTypes.properties') }}</el-button>
+            <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)">{{ $t('mediaTypes.delete') }}</el-button>
+          </el-button-group>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
   <div v-if="!loading && !error && totalMediaTypes > 0" class="media-types-pagination">
@@ -237,16 +238,26 @@
       <el-button type="danger" @click="deleteSelectedMediaTypes" :loading="bulkDeleting">{{ $t('mediaTypes.delete') }}</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { markRaw } from 'vue';
+import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchMediaTypeData, addMediaType, updateMediaType, deleteMediaType } from '@/api/mediaTypes';
 
 export default {
   name: 'MediaType',
-  components: { Loading },
+  components: {
+    Loading,
+    Search,
+    Plus,
+    Edit,
+    Delete,
+    ArrowDown,
+    Setting
+  },
   data() {
     return {
       mediaTypes: [],
@@ -257,7 +268,8 @@ export default {
       pageSize: 20,
       currentPage: 1,
       totalMediaTypes: 0,
-      sortKey: 'updated_desc',
+      sortBy: '',
+      sortOrder: '',
       createDialogVisible: false,
       propertiesDialogVisible: false,
       bulkDialogVisible: false,
@@ -271,6 +283,14 @@ export default {
         enabled: 'nochange',
         status: 'nochange',
       },
+      // Icons for template usage
+      Plus: markRaw(Plus),
+      Search: markRaw(Search),
+      Edit: markRaw(Edit),
+      Delete: markRaw(Delete),
+      ArrowDown: markRaw(ArrowDown),
+      Setting: markRaw(Setting),
+      Loading: markRaw(Loading)
     };
   },
   computed: {
@@ -293,10 +313,6 @@ export default {
       this.currentPage = 1;
       this.loadMediaTypes(true);
     },
-    sortKey() {
-      this.currentPage = 1;
-      this.loadMediaTypes(true);
-    },
     pageSize() {
       this.currentPage = 1;
       this.loadMediaTypes(true);
@@ -308,6 +324,17 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedMediaTypeRows = selection || [];
+    },
+    onSortChange({ prop, order }) {
+      if (!prop || !order) {
+        this.sortBy = '';
+        this.sortOrder = '';
+      } else {
+        this.sortBy = prop;
+        this.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+      }
+      this.currentPage = 1;
+      this.loadMediaTypes(true);
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {
@@ -387,14 +414,13 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const { sortBy, sortOrder } = this.parseSortKey(this.sortKey);
         const response = await fetchMediaTypeData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
-          sort: sortBy,
-          order: sortOrder,
+          sort: this.sortBy || undefined,
+          order: this.sortOrder || undefined,
           with_total: 1,
         });
         const data = Array.isArray(response)
@@ -418,23 +444,6 @@ export default {
         this.error = err.message || this.$t('mediaTypes.loadFailed');
       } finally {
         this.loading = false;
-      }
-    },
-    parseSortKey(key) {
-      switch (key) {
-        case 'name_asc':
-          return { sortBy: 'name', sortOrder: 'asc' };
-        case 'name_desc':
-          return { sortBy: 'name', sortOrder: 'desc' };
-        case 'status_asc':
-          return { sortBy: 'status', sortOrder: 'asc' };
-        case 'status_desc':
-          return { sortBy: 'status', sortOrder: 'desc' };
-        case 'created_desc':
-          return { sortBy: 'created_at', sortOrder: 'desc' };
-        case 'updated_desc':
-        default:
-          return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
     openCreate() {
@@ -546,48 +555,27 @@ export default {
 </script>
 
 <style scoped>
-.media-types-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 20px 0;
-}
-
-.media-types-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.media-types-bulk-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.media-types-content {
+  margin-top: 8px;
 }
 
 .media-types-pagination {
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  padding: 0 20px 16px;
-}
-
-.selected-count {
-  color: #606266;
-  font-size: 13px;
-}
-
-.media-types-search {
-  width: 240px;
-}
-
-.media-types-filter {
-  min-width: 160px;
 }
 
 .loading-state {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--brand-50) !important;
 }
 </style>

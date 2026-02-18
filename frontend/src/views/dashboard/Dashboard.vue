@@ -1,11 +1,13 @@
 <template>
-  <div class="dashboard-container">
-    <div class="dashboard-header">
-      <el-text size="large" tag="b">{{ $t('dashboard.title') }}</el-text>
-      <span v-if="lastUpdated" class="dashboard-updated">
-        {{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}
-      </span>
-      <el-button size="small" @click="refreshAll" :loading="loading" class="refresh-btn">
+  <div class="nagare-container">
+    <div class="page-header dashboard-header">
+      <div>
+        <h1 class="page-title">{{ $t('dashboard.title') }}</h1>
+        <p class="page-subtitle" v-if="lastUpdated">
+          {{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}
+        </p>
+      </div>
+      <el-button type="primary" @click="refreshAll" :loading="loading" :icon="Refresh">
         {{ $t('common.refresh') }}
       </el-button>
     </div>
@@ -74,7 +76,7 @@
 
 <script>
 import { defineComponent, ref, onMounted } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, Refresh } from '@element-plus/icons-vue'
 import { fetchAlertData } from '@/api/alerts'
 import { fetchHostData } from '@/api/hosts'
 import { fetchProviderData } from '@/api/providers'
@@ -232,30 +234,29 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.dashboard-container {
-  padding: 20px;
-}
 .dashboard-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
-.dashboard-updated {
-  font-size: 13px;
-  color: #909399;
-  margin-left: auto;
-  margin-right: 16px;
-}
+
 .loading-container {
   text-align: center;
-  padding: 60px;
-  color: #909399;
+  padding: 80px;
+  color: var(--text-muted);
 }
+
 .section-container {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
+
 .voice-control-card {
-  height: 360px;
+  height: 100%;
+  min-height: 360px;
+}
+
+:deep(.el-card) {
+  height: 100%;
 }
 </style>

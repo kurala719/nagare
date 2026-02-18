@@ -30,11 +30,14 @@ func SearchMediaDAO(filter model.MediaFilter) ([]model.Media, error) {
 		query = query.Where("media_type_id = ?", *filter.TypeID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "name",
-		"status":     "status",
-		"created_at": "created_at",
-		"updated_at": "updated_at",
-		"id":         "id",
+		"name":          "name",
+		"status":         "status",
+		"enabled":        "enabled",
+		"media_type_id": "media_type_id",
+		"target":         "target",
+		"created_at":    "created_at",
+		"updated_at":    "updated_at",
+		"id":            "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)

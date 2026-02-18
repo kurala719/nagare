@@ -150,34 +150,39 @@ export default defineComponent({
 
 <style scoped>
 .health-stats-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  border: 1px solid var(--border-1);
 }
 
 .summary-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .summary-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
+  margin-right: 20px;
   color: white;
   flex-shrink: 0;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-.score-icon { background: linear-gradient(135deg, #409eff, #36d1dc); }
-.monitors-icon { background: linear-gradient(135deg, #409eff, #3498db); }
-.alerts-icon { background: linear-gradient(135deg, #f56c6c, #fd79a8); }
-.providers-icon { background: linear-gradient(135deg, #e6a23c, #f1c40f); }
-.hosts-icon { background: linear-gradient(135deg, #67c23a, #2ecc71); }
-.groups-icon { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
-.item-icon { background: linear-gradient(135deg, #f56c6c, #e74c3c); }
+.score-icon { background: linear-gradient(135deg, var(--brand-500) 0%, #36d1dc 100%); }
+.monitors-icon { background: linear-gradient(135deg, #0ea5e9 0%, #3498db 100%); }
+.alerts-icon { background: linear-gradient(135deg, #ef4444 0%, #fb7185 100%); }
+.providers-icon { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+.hosts-icon { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+.groups-icon { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); }
+.item-icon { background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%); }
 
 .summary-info {
   flex: 1;
@@ -185,15 +190,26 @@ export default defineComponent({
 }
 
 .summary-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--el-text-color-primary);
-  line-height: 1.2;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-strong);
+  line-height: 1;
+  letter-spacing: -0.5px;
+  font-family: var(--font-display);
 }
 
 .summary-label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label .el-tag {
+  align-self: flex-start;
   margin-top: 4px;
 }
 </style>

@@ -26,6 +26,8 @@ func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 		"name":       "message",
 		"message":    "message",
 		"severity":   "level",
+		"ip":         "ip",
+		"context":    "context",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",

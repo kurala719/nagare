@@ -1,43 +1,72 @@
 <template>
-  <div class="profile-page">
+  <div class="nagare-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('profile.title') }}</h1>
+      <p class="page-subtitle">{{ profile.username }}</p>
+    </div>
+
     <el-card class="profile-card">
       <div class="profile-header">
-        <el-avatar :size="80" :src="profile.avatar" />
+        <div class="avatar-container">
+          <el-avatar :size="100" :src="profile.avatar" />
+          <div class="avatar-edit-overlay" v-if="profile.avatar">
+            <el-icon><Edit /></el-icon>
+          </div>
+        </div>
         <div class="profile-meta">
-          <h2>{{ profile.nickname || profile.username || '-' }}</h2>
-          <p class="role">{{ profile.role || roleLabel }}</p>
+          <h2 class="profile-name">{{ profile.nickname || profile.username || '-' }}</h2>
+          <el-tag effect="dark" class="role-tag">{{ profile.role || roleLabel }}</el-tag>
         </div>
       </div>
 
-      <el-divider />
+      <div class="profile-form-section">
+        <el-form :model="form" label-width="120px" label-position="top">
+          <el-row :gutter="24">
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.username')">
+                <el-input v-model="profile.username" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.nickname')">
+                <el-input v-model="form.nickname" />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-      <el-form :model="form" label-width="120px">
-        <el-form-item :label="$t('profile.username')">
-          <el-input v-model="profile.username" disabled />
-        </el-form-item>
-        <el-form-item :label="$t('profile.nickname')">
-          <el-input v-model="form.nickname" />
-        </el-form-item>
-        <el-form-item :label="$t('profile.email')">
-          <el-input v-model="form.email" />
-        </el-form-item>
-        <el-form-item :label="$t('profile.phone')">
-          <el-input v-model="form.phone" />
-        </el-form-item>
-        <el-form-item :label="$t('profile.avatar')">
-          <el-input v-model="form.avatar" />
-        </el-form-item>
-        <el-form-item :label="$t('profile.address')">
-          <el-input v-model="form.address" />
-        </el-form-item>
-        <el-form-item :label="$t('profile.introduction')">
-          <el-input v-model="form.introduction" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="saving" @click="onSave">{{ $t('profile.save') }}</el-button>
-          <el-button @click="onReset">{{ $t('profile.reset') }}</el-button>
-        </el-form-item>
-      </el-form>
+          <el-row :gutter="24">
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.email')">
+                <el-input v-model="form.email" :prefix-icon="Message" />
+              </el-form-item>
+            </el-col>
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.phone')">
+                <el-input v-model="form.phone" :prefix-icon="Phone" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item :label="$t('profile.avatar')">
+            <el-input v-model="form.avatar" placeholder="https://example.com/avatar.png" :prefix-icon="Link" />
+          </el-form-item>
+
+          <el-form-item :label="$t('profile.address')">
+            <el-input v-model="form.address" :prefix-icon="Location" />
+          </el-form-item>
+
+          <el-form-item :label="$t('profile.introduction')">
+            <el-input v-model="form.introduction" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" />
+          </el-form-item>
+
+          <div class="form-actions">
+            <el-button type="primary" :loading="saving" @click="onSave" class="save-btn">
+              {{ $t('profile.save') }}
+            </el-button>
+            <el-button @click="onReset" plain>{{ $t('profile.reset') }}</el-button>
+          </div>
+        </el-form>
+      </div>
     </el-card>
   </div>
 </template>
@@ -46,6 +75,7 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { Edit, Message, Phone, Link, Location } from '@element-plus/icons-vue'
 import { getUserInformation, updateUserInformation, createUserInformation } from '@/api/userInformation'
 import { getUserClaims, getUserPrivileges } from '@/utils/auth'
 
@@ -150,27 +180,85 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.profile-page {
-  padding: 24px;
-}
-
 .profile-card {
-  max-width: 720px;
+  max-width: 800px;
   margin: 0 auto;
+  border: 1px solid var(--border-1);
 }
 
 .profile-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 32px;
+  padding: 24px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-1);
+  margin: -20px -20px 24px -20px;
 }
 
-.profile-meta h2 {
+.avatar-container {
+  position: relative;
+  display: inline-block;
+}
+
+.avatar-edit-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--brand-600);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-name {
   margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-strong);
+  font-family: var(--font-display);
 }
 
-.role {
-  margin: 4px 0 0;
-  color: #6b7280;
+.role-tag {
+  align-self: flex-start;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.profile-form-section {
+  padding: 8px 12px;
+}
+
+.form-actions {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-1);
+}
+
+.save-btn {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>

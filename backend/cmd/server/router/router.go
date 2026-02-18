@@ -155,6 +155,7 @@ func setupAlarmRoutes(rg RouteGroup) {
 	alarmsWrite.PUT("/:id", api.UpdateAlarmCtrl)
 	alarmsWrite.POST("/:id/login", api.LoginAlarmCtrl)
 	alarmsWrite.POST("/:id/event-token", api.RegenerateAlarmEventTokenCtrl)
+	alarmsWrite.POST("/:id/setup-media", api.SetupAlarmMediaTypeCtrl)
 }
 
 func setupGroupRoutes(rg RouteGroup) {
@@ -204,9 +205,10 @@ func setupHostRoutes(rg RouteGroup) {
 }
 
 func setupAlertRoutes(rg RouteGroup) {
-	// Webhook endpoint - public, no auth required
+	// Webhook endpoints - public, no auth required
 	alerts := rg.Group("/alerts")
 	alerts.POST("/webhook", api.AlertWebhookCtrl)
+	alerts.GET("/webhook/health", api.WebhookHealthCtrl)
 
 	// Routes with privilege level 1
 	alertsRead := rg.Group("/alerts", api.PrivilegesMiddleware(1))
