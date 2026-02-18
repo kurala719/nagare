@@ -1,14 +1,16 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllAlertsCtrl handles GET /alerts
@@ -29,7 +31,10 @@ func AlertWebhookCtrl(c *gin.Context) {
 		return
 	}
 
-	eventToken := strings.TrimSpace(c.GetHeader("X-Monitor-Token"))
+	eventToken := strings.TrimSpace(c.GetHeader("X-Alarm-Token"))
+	if eventToken == "" {
+		eventToken = strings.TrimSpace(c.GetHeader("X-Monitor-Token"))
+	}
 	if eventToken == "" {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if strings.HasPrefix(authHeader, "Bearer ") {
@@ -42,7 +47,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 	if eventToken == "" {
 		eventToken = strings.TrimSpace(c.Query("event_token"))
 	}
-	
+
 	// Check payload for token if not found in headers/query
 	if eventToken == "" {
 		if t := payloadString(payload, "token", "event_token", "auth_token"); t != "" {
@@ -50,7 +55,19 @@ func AlertWebhookCtrl(c *gin.Context) {
 		}
 	}
 
-	if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
+	var alarmID uint
+	if eventToken == "" {
+		respondError(c, model.ErrUnauthorized)
+		return
+	}
+	if alarm, err := service.GetAlarmByEventTokenServ(eventToken); err == nil {
+		alarmID = alarm.ID
+	} else if errors.Is(err, model.ErrNotFound) || errors.Is(err, model.ErrUnauthorized) {
+		if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else {
 		respondError(c, err)
 		return
 	}
@@ -69,6 +86,9 @@ func AlertWebhookCtrl(c *gin.Context) {
 	hostID := payloadUint(payload, "host_id", "hostid")
 	itemID := payloadUint(payload, "item_id", "itemid")
 	comment := payloadString(payload, "comment", "detail", "details")
+	if alarmID == 0 {
+		alarmID = payloadUint(payload, "alarm_id", "alarmid")
+	}
 	if severity == 0 {
 		severity = payloadSeverity(payload, "severity", "level", "priority")
 	}
@@ -79,6 +99,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 	req := service.AlertReq{
 		Message:  message,
 		Severity: severity,
+		AlarmID:  alarmID,
 		HostID:   hostID,
 		ItemID:   itemID,
 		Comment:  comment,
@@ -203,10 +224,16 @@ func SearchAlertsCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid item_id")
 		return
 	}
+	alarmID, err := parseOptionalInt(c, "alarm_id")
+	if err != nil {
+		respondBadRequest(c, "invalid alarm_id")
+		return
+	}
 	filter := model.AlertFilter{
 		Query:     c.Query("q"),
 		Severity:  severity,
 		Status:    status,
+		AlarmID:   alarmID,
 		HostID:    hostID,
 		ItemID:    itemID,
 		Limit:     limit,

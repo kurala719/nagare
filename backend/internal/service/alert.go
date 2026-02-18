@@ -27,6 +27,7 @@ type AlertReq struct {
 	Severity int    `json:"severity"`
 	HostID   uint   `json:"host_id"`
 	ItemID   uint   `json:"item_id"`
+	AlarmID  uint   `json:"alarm_id"`
 	Comment  string `json:"comment"`
 }
 
@@ -38,6 +39,7 @@ type AlertRes struct {
 	Status   int    `json:"status"`
 	HostID   uint   `json:"host_id"`
 	ItemID   uint   `json:"item_id"`
+	AlarmID  uint   `json:"alarm_id"`
 	Comment  string `json:"comment"`
 }
 
@@ -54,6 +56,7 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 			Message:  alert.Message,
 			Severity: alert.Severity,
 			Status:   alert.Status,
+			AlarmID:  alert.AlarmID,
 			HostID:   alert.HostID,
 			ItemID:   alert.ItemID,
 			Comment:  alert.Comment,
@@ -75,6 +78,7 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 			Message:  alert.Message,
 			Severity: alert.Severity,
 			Status:   alert.Status,
+			AlarmID:  alert.AlarmID,
 			HostID:   alert.HostID,
 			ItemID:   alert.ItemID,
 			Comment:  alert.Comment,
@@ -99,6 +103,7 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 		Message:  alert.Message,
 		Severity: alert.Severity,
 		Status:   alert.Status,
+		AlarmID:  alert.AlarmID,
 		HostID:   alert.HostID,
 		ItemID:   alert.ItemID,
 		Comment:  alert.Comment,
@@ -111,6 +116,7 @@ func AddAlertServ(req AlertReq) error {
 		Message:  req.Message,
 		Severity: req.Severity,
 		Status:   0,
+		AlarmID:  req.AlarmID,
 		HostID:   req.HostID,
 		ItemID:   req.ItemID,
 		Comment:  req.Comment,
@@ -176,8 +182,9 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 	start := time.Now()
 
 	alertData := fmt.Sprintf(
-		"Alert ID: %d\nHost ID: %d\nHost Name: %s\nHost IP: %s\nItem ID: %d\nItem Name: %s\nSeverity: %d\nStatus: %d\nCreated At: %s\nMessage: %s\nComment: %s",
+		"Alert ID: %d\nAlarm ID: %d\nHost ID: %d\nHost Name: %s\nHost IP: %s\nItem ID: %d\nItem Name: %s\nSeverity: %d\nStatus: %d\nCreated At: %s\nMessage: %s\nComment: %s",
 		alert.ID,
+		alert.AlarmID,
 		alert.HostID,
 		sanitizeSensitiveText(hostName),
 		sanitizeSensitiveText(hostIP),
@@ -249,6 +256,7 @@ func UpdateAlertServ(id int, req AlertReq) error {
 		Message:  req.Message,
 		Severity: req.Severity,
 		Status:   alert.Status,
+		AlarmID:  req.AlarmID,
 		HostID:   req.HostID,
 		ItemID:   req.ItemID,
 		Comment:  req.Comment,

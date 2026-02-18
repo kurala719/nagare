@@ -52,6 +52,22 @@ type Monitor struct {
 	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
 }
 
+// Alarm represents an external alert source (e.g., Zabbix)
+type Alarm struct {
+	gorm.Model
+	Name              string
+	URL               string
+	Username          string
+	Password          string
+	AuthToken         string
+	EventToken        string `gorm:"size:64;uniqueIndex"`
+	Description       string
+	Type              int    // 1 = zabbix, 2 = prometheus, 3 = other
+	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
+	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
+}
+
 // Item represents a monitoring item/metric
 type Item struct {
 	gorm.Model
@@ -110,7 +126,8 @@ type Alert struct {
 	gorm.Model
 	Message  string
 	Severity int
-	Status   int // 0 = active, 1 = acknowledged, 2 = resolved
+	Status   int  // 0 = active, 1 = acknowledged, 2 = resolved
+	AlarmID  uint `gorm:"column:alarm_id"`
 	HostID   uint
 	ItemID   uint
 	Comment  string

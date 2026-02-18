@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllAlertsDAO retrieves all alerts from the database
@@ -28,6 +29,9 @@ func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.AlarmID != nil {
+		query = query.Where("alarm_id = ?", *filter.AlarmID)
 	}
 	if filter.HostID != nil {
 		query = query.Where("host_id = ?", *filter.HostID)
@@ -68,6 +72,9 @@ func CountAlertsDAO(filter model.AlertFilter) (int64, error) {
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.AlarmID != nil {
+		query = query.Where("alarm_id = ?", *filter.AlarmID)
 	}
 	if filter.HostID != nil {
 		query = query.Where("host_id = ?", *filter.HostID)
@@ -113,6 +120,7 @@ func UpdateAlertDAO(id int, alert model.Alert) error {
 		"message":  alert.Message,
 		"severity": alert.Severity,
 		"status":   alert.Status,
+		"alarm_id": alert.AlarmID,
 		"host_id":  alert.HostID,
 		"item_id":  alert.ItemID,
 		"comment":  alert.Comment,

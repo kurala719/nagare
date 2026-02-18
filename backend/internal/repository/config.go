@@ -22,8 +22,8 @@ type Config struct {
 
 // ExternalItemConfig defines external infrastructure items
 type ExternalItemConfig struct {
-	Type string `yaml:"type" json:"type" mapstructure:"type"` // monitor, provider, media
-	Key  string `yaml:"key" json:"key" mapstructure:"key"`   // unique identifier
+	Type string `yaml:"type" json:"type" mapstructure:"type"` // monitor, alarm, provider, media
+	Key  string `yaml:"key" json:"key" mapstructure:"key"`    // unique identifier
 	Name string `yaml:"name" json:"name" mapstructure:"name"` // display name
 	ID   int    `yaml:"id" json:"id" mapstructure:"id"`       // numeric value used in DB
 }
@@ -193,6 +193,9 @@ func ResetConfig() error {
 		{"type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1},
 		{"type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2},
 		{"type": "monitor", "key": "other", "name": "Other", "id": 3},
+		{"type": "alarm", "key": "zabbix", "name": "Zabbix", "id": 1},
+		{"type": "alarm", "key": "prometheus", "name": "Prometheus", "id": 2},
+		{"type": "alarm", "key": "other", "name": "Other", "id": 3},
 		{"type": "provider", "key": "gemini", "name": "Gemini", "id": 1},
 		{"type": "provider", "key": "openai", "name": "OpenAI", "id": 2},
 		{"type": "provider", "key": "ollama", "name": "Ollama", "id": 3},

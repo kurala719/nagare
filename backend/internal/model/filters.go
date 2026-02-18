@@ -6,6 +6,7 @@ type AlertFilter struct {
 	Query     string
 	Severity  *int
 	Status    *int
+	AlarmID   *int
 	HostID    *int
 	ItemID    *int
 	Limit     int
@@ -84,6 +85,18 @@ type LogFilter struct {
 type MonitorFilter struct {
 	Query     string
 	Type      *string
+	Status    *int
+	Limit     int
+	Offset    int
+	SortBy    string
+	SortOrder string
+}
+
+// AlarmFilter represents search and filter options for alarms
+// Query matches name/url/description (LIKE)
+type AlarmFilter struct {
+	Query     string
+	Type      *int
 	Status    *int
 	Limit     int
 	Offset    int

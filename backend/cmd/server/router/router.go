@@ -82,6 +82,7 @@ func InitRouter() {
 func setupAllRoutes(rg RouteGroup) {
 	setupConfigurationRoutes(rg)
 	setupMonitorRoutes(rg)
+	setupAlarmRoutes(rg)
 	setupGroupRoutes(rg)
 	setupHostRoutes(rg)
 	setupAlertRoutes(rg)
@@ -135,6 +136,25 @@ func setupMonitorRoutes(rg RouteGroup) {
 	monitorsWrite.POST("/:id/event-token", api.RegenerateMonitorEventTokenCtrl)
 	monitorsWrite.POST("/check", api.CheckAllMonitorsStatusCtrl)
 	monitorsWrite.POST("/:id/check", api.CheckMonitorStatusCtrl)
+}
+
+func setupAlarmRoutes(rg RouteGroup) {
+	// Public event token refresh - no auth required, uses event token
+	alarmsPublic := rg.Group("/alarms")
+	alarmsPublic.POST("/:id/event-token/refresh", api.RefreshAlarmEventTokenCtrl)
+
+	// Routes with privilege level 1
+	alarmsRead := rg.Group("/alarms", api.PrivilegesMiddleware(1))
+	alarmsRead.GET("/", api.SearchAlarmsCtrl)
+	alarmsRead.GET("/:id", api.GetAlarmByIDCtrl)
+
+	// Routes with privilege level 2
+	alarmsWrite := rg.Group("/alarms", api.PrivilegesMiddleware(2))
+	alarmsWrite.POST("/", api.AddAlarmCtrl)
+	alarmsWrite.DELETE("/:id", api.DeleteAlarmByIDCtrl)
+	alarmsWrite.PUT("/:id", api.UpdateAlarmCtrl)
+	alarmsWrite.POST("/:id/login", api.LoginAlarmCtrl)
+	alarmsWrite.POST("/:id/event-token", api.RegenerateAlarmEventTokenCtrl)
 }
 
 func setupGroupRoutes(rg RouteGroup) {

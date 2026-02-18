@@ -186,6 +186,7 @@ export default defineComponent({
       ]},
       { key: 'alert_group', label: 'menu.alert', minPrivilege: 1, icon: 'Bell', children: [
         { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
+        { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
         { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
         { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
       ]},

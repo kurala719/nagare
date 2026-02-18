@@ -222,6 +222,7 @@
                 <template #default="{ row }">
                   <el-select v-model="row.type" size="small" :disabled="!editing">
                     <el-option label="Monitor" value="monitor" />
+                    <el-option label="Alarm" value="alarm" />
                     <el-option label="Provider" value="provider" />
                     <el-option label="Media" value="media" />
                   </el-select>
@@ -248,7 +249,7 @@
                 </template>
               </el-table-column>
             </el-table>
-            <p class="help-text">These definitions define the available types for monitors, AI providers, and notification media.</p>
+            <p class="help-text">These definitions define the available types for monitors, alarms, AI providers, and notification media.</p>
           </div>
         </el-tab-pane>
 

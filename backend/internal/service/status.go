@@ -20,6 +20,19 @@ func determineMonitorStatus(m model.Monitor) int {
 	return 1
 }
 
+func determineAlarmStatus(a model.Alarm) int {
+	if a.Enabled == 0 {
+		return 0
+	}
+	if a.AuthToken != "" {
+		return 1
+	}
+	if a.Username == "" && a.Password == "" {
+		return 0
+	}
+	return 1
+}
+
 func determineProviderStatus(p model.Provider) int {
 	if p.Enabled == 0 {
 		return 0
@@ -344,7 +357,7 @@ func recomputeMonitorRelated(mid uint) error {
 	if _, err := recomputeMonitorStatus(mid); err != nil {
 		return err
 	}
-	
+
 	// Recompute groups for this monitor
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
 	if err == nil {

@@ -25,6 +25,7 @@ func ListTools() []ToolDefinition {
 				"q":        schemaString("Search in alert message."),
 				"severity": schemaInt("Alert severity."),
 				"status":   schemaInt("Alert status."),
+				"alarm_id": schemaInt("Filter by alarm id."),
 				"host_id":  schemaInt("Filter by host id."),
 				"item_id":  schemaInt("Filter by item id."),
 				"limit":    schemaInt("Max results (default 100)."),
@@ -203,6 +204,7 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			Query:    args.Query,
 			Severity: args.Severity,
 			Status:   args.Status,
+			AlarmID:  args.AlarmID,
 			HostID:   args.HostID,
 			ItemID:   args.ItemID,
 			Limit:    limit,
@@ -489,6 +491,7 @@ type alertArgs struct {
 	Query    string `json:"q"`
 	Severity *int   `json:"severity"`
 	Status   *int   `json:"status"`
+	AlarmID  *int   `json:"alarm_id"`
 	HostID   *int   `json:"host_id"`
 	ItemID   *int   `json:"item_id"`
 	Limit    *int   `json:"limit"`

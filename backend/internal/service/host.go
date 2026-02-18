@@ -221,7 +221,7 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 // PullHostsOfGroupFromMonitorServ pulls all hosts belonging to a specific group from monitor
 func PullHostsOfGroupFromMonitorServ(mid uint, groupID uint) (SyncResult, error) {
 	result := SyncResult{}
-	
+
 	group, err := repository.GetGroupByIDDAO(groupID)
 	if err != nil {
 		return result, fmt.Errorf("failed to get group: %w", err)
@@ -862,7 +862,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 			host.Hostid = existing.ID
 			_ = repository.UpdateHostDAO(host.ID, host)
 			monitorHost.ID = existing.ID
-			
+
 			// Update the host since it exists
 			_, err = client.UpdateHost(context.Background(), monitorHost)
 			if err != nil {
@@ -894,7 +894,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 		}
 	}
 	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.Hostid, "monitor": monitor.Name, "group": groupName}, nil, "")
-	
+
 	result.Added++
 	result.Total = 1
 
