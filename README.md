@@ -86,4 +86,4 @@ Please ensure you follow the project's coding standards and submit pull requests
 
 ## 📄 License
 
-[License Information]
+Apache License 2.0
