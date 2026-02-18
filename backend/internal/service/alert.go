@@ -181,8 +181,11 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 	defer cancel()
 	start := time.Now()
 
+	// Use RAG to fetch context from local knowledge base
+	localContext := RetrieveContext(alert.Message)
+
 	alertData := fmt.Sprintf(
-		"Alert ID: %d\nAlarm ID: %d\nHost ID: %d\nHost Name: %s\nHost IP: %s\nItem ID: %d\nItem Name: %s\nSeverity: %d\nStatus: %d\nCreated At: %s\nMessage: %s\nComment: %s",
+		"Alert ID: %d\nAlarm ID: %d\nHost ID: %d\nHost Name: %s\nHost IP: %s\nItem ID: %d\nItem Name: %s\nSeverity: %d\nStatus: %d\nCreated At: %s\nMessage: %s\nComment: %s%s",
 		alert.ID,
 		alert.AlarmID,
 		alert.HostID,
@@ -195,6 +198,7 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 		alert.CreatedAt.Format(time.RFC3339),
 		sanitizeSensitiveText(alert.Message),
 		sanitizeSensitiveText(alert.Comment),
+		localContext,
 	)
 
 	resp, err := client.Chat(ctx, llm.ChatRequest{

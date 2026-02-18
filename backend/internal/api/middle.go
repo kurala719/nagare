@@ -17,14 +17,14 @@ import (
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			respondError(c, model.ErrUnauthorized)
-			c.Abort()
-			return
+		tokenString := ""
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			tokenString = c.Query("token")
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
 		if tokenString == "" {
-			service.LogService("warn", "empty token string", map[string]interface{}{"path": c.FullPath()}, nil, c.ClientIP())
 			respondError(c, model.ErrUnauthorized)
 			c.Abort()
 			return
@@ -46,13 +46,19 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 func PrivilegesMiddleware(requiredPrivileges int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			service.LogService("warn", "missing authorization header", map[string]interface{}{"path": c.FullPath()}, nil, c.ClientIP())
+		tokenString := ""
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
+			service.LogService("warn", "missing authorization header or token query", map[string]interface{}{"path": c.FullPath()}, nil, c.ClientIP())
 			respondError(c, model.ErrUnauthorized)
 			c.Abort()
 			return
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		key := []byte(viper.GetString("jwt.secret_key"))
 		token, err := jwt.ParseWithClaims(tokenString, &service.CustomedClaims{}, func(token *jwt.Token) (interface{}, error) {
 			return key, nil

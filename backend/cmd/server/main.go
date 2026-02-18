@@ -68,6 +68,11 @@ func run() error {
 	service.StartAutoSync()
 	service.StartStatusChecks()
 
+	// Initialize cron scheduler for automated reports
+	if err := service.InitCronScheduler(); err != nil {
+		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")
+	}
+
 	router.InitRouter()
 	return nil
 }
@@ -116,6 +121,10 @@ func initDBTables() error {
 		&model.Provider{},
 		&model.UserInformation{},
 		&model.RegisterApplication{},
+		&model.QQWhitelist{},
+		&model.Report{},
+		&model.ReportItem{},
+		&model.ReportConfig{},
 	); err != nil {
 		return err
 	}

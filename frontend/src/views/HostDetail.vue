@@ -6,6 +6,9 @@
         <p class="subtitle">{{ host.ip_addr || host.hostid || '-' }}</p>
       </div>
       <div class="detail-actions">
+        <el-button type="info" @click="$router.push(`/host/${host.id}/terminal`)">
+          Terminal
+        </el-button>
         <el-button type="primary" :loading="reportGenerating" @click="generateReport">
           {{ $t('hosts.reportGenerate') }}
         </el-button>

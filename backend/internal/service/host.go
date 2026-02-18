@@ -9,6 +9,7 @@ import (
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
+	"nagare/internal/service/utils"
 )
 
 // HostReq represents a host request
@@ -21,6 +22,9 @@ type HostReq struct {
 	Enabled     int    `json:"enabled"`
 	IPAddr      string `json:"ip_addr"`
 	Comment     string `json:"comment"`
+	SSHUser     string `json:"ssh_user"`
+	SSHPassword string `json:"ssh_password"`
+	SSHPort     int    `json:"ssh_port"`
 }
 
 // HostResp represents a host response
@@ -36,6 +40,8 @@ type HostResp struct {
 	StatusDesc  string `json:"status_description"`
 	IPAddr      string `json:"ip_addr"`
 	Comment     string `json:"comment"`
+	SSHUser     string `json:"ssh_user"`
+	SSHPort     int    `json:"ssh_port"`
 }
 
 // GetAllHostsServ retrieves all hosts
@@ -95,6 +101,17 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		Enabled:     h.Enabled,
 		IPAddr:      h.IPAddr,
 		Comment:     h.Comment,
+		SSHUser:     h.SSHUser,
+		SSHPort:     h.SSHPort,
+	}
+	if h.SSHPort == 0 {
+		newHost.SSHPort = 22
+	}
+	if h.SSHPassword != "" {
+		encrypted, err := utils.Encrypt(h.SSHPassword)
+		if err == nil {
+			newHost.SSHPassword = encrypted
+		}
 	}
 	if h.MID > 0 {
 		if monitor, err := repository.GetMonitorByIDDAO(h.MID); err == nil {
@@ -148,6 +165,19 @@ func UpdateHostServ(id uint, h HostReq) error {
 		Enabled:     h.Enabled,
 		IPAddr:      h.IPAddr,
 		Comment:     h.Comment,
+		SSHUser:     h.SSHUser,
+		SSHPort:     h.SSHPort,
+	}
+	if h.SSHPort == 0 {
+		updated.SSHPort = 22
+	}
+	if h.SSHPassword != "" {
+		encrypted, err := utils.Encrypt(h.SSHPassword)
+		if err == nil {
+			updated.SSHPassword = encrypted
+		}
+	} else {
+		updated.SSHPassword = existing.SSHPassword
 	}
 	if monitorID > 0 {
 		if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
@@ -271,6 +301,8 @@ func hostToResp(h model.Host) HostResp {
 		StatusDesc:  h.StatusDescription,
 		IPAddr:      h.IPAddr,
 		Comment:     h.Comment,
+		SSHUser:     h.SSHUser,
+		SSHPort:     h.SSHPort,
 	}
 }
 

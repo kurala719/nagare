@@ -190,6 +190,24 @@ func sendMediaMessage(media model.Media, msg string) error {
 		LogService("error", "send message failed", map[string]interface{}{"media": media.Type, "media_id": media.ID, "target": media.Target, "error": err.Error(), "skip_trigger": true}, nil, "")
 		return err
 	}
+
+	// Check QQ whitelist for alert delivery
+	lowerType := strings.ToLower(resolvedType)
+	if lowerType == "qq" || lowerType == "qrobot" {
+		qqID, isGroup := parseQQTarget(media.Target)
+		if !CheckQQWhitelistForAlert(qqID, isGroup) {
+			LogService("info", "send message skipped (QQ alert whitelist)", map[string]interface{}{
+				"media":        media.Type,
+				"media_id":     media.ID,
+				"target":       media.Target,
+				"qq_id":        qqID,
+				"is_group":     isGroup,
+				"skip_trigger": true,
+			}, nil, "")
+			return nil
+		}
+	}
+
 	if ok, wait := allowMediaSend(media); !ok {
 		LogService("info", "send message skipped (rate limit)", map[string]interface{}{
 			"media":         media.Type,
@@ -201,12 +219,42 @@ func sendMediaMessage(media model.Media, msg string) error {
 		}, nil, "")
 		return nil
 	}
-	if err := mediaSvc.GetService().SendMessage(context.Background(), strings.ToLower(resolvedType), media.Target, msg); err != nil {
+	if err := mediaSvc.GetService().SendMessage(context.Background(), lowerType, media.Target, msg); err != nil {
 		LogService("error", "send message failed", map[string]interface{}{"media": media.Type, "target": media.Target, "error": err.Error(), "skip_trigger": true}, nil, "")
 		return err
 	}
 	LogService("info", "send message", map[string]interface{}{"media": media.Type, "target": media.Target, "message": msg, "skip_trigger": true}, nil, "")
 	return nil
+}
+
+// parseQQTarget extracts QQ ID and determines if it's a group
+// Target formats supported:
+// - "group:123456" or "group_123456" (group)
+// - "user:123456" or "user_123456" (user)
+// - "123456" (legacy format, defaults to user)
+func parseQQTarget(target string) (string, bool) {
+	target = strings.TrimSpace(target)
+
+	// Try colon format first
+	colonParts := strings.SplitN(target, ":", 2)
+	if len(colonParts) == 2 {
+		prefix := strings.ToLower(colonParts[0])
+		qqID := colonParts[1]
+		isGroup := prefix == "group"
+		return qqID, isGroup
+	}
+
+	// Try underscore format
+	underscoreParts := strings.SplitN(target, "_", 2)
+	if len(underscoreParts) == 2 {
+		prefix := strings.ToLower(underscoreParts[0])
+		qqID := underscoreParts[1]
+		isGroup := prefix == "group"
+		return qqID, isGroup
+	}
+
+	// Fallback: assume it's a user ID
+	return target, false
 }
 
 func resolveMediaTypeKeyForSend(media model.Media) string {

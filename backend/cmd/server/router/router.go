@@ -98,8 +98,24 @@ func setupAllRoutes(rg RouteGroup) {
 	setupItemRoutes(rg)
 	setupChatRoutes(rg)
 	setupProviderRoutes(rg)
+	setupKnowledgeBaseRoutes(rg)
 	setupUserRoutes(rg)
 	setupUserInformationRoutes(rg)
+	setupQQWhitelistRoutes(rg)
+	setupReportRoutes(rg)
+}
+
+func setupKnowledgeBaseRoutes(rg RouteGroup) {
+	// Routes with privilege level 1
+	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(1))
+	kbRead.GET("/", api.GetAllKnowledgeBaseCtrl)
+	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
+
+	// Routes with privilege level 2
+	kbWrite := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
+	kbWrite.POST("/", api.AddKnowledgeBaseCtrl)
+	kbWrite.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
+	kbWrite.DELETE("/:id", api.DeleteKnowledgeBaseCtrl)
 }
 
 func setupPublicRoutes(rg RouteGroup) {
@@ -188,6 +204,7 @@ func setupHostRoutes(rg RouteGroup) {
 	hostsRead.GET("/:id", api.GetHostByIDCtrl)
 	hostsRead.GET("/:id/history", api.GetHostHistoryCtrl)
 	hostsRead.POST("/:id/consult", api.ConsultHostCtrl)
+	hostsRead.GET("/:id/ssh", api.HandleWebSSH)
 
 	// Routes with privilege level 2
 	hostsWrite := rg.Group("/hosts", api.PrivilegesMiddleware(2))
@@ -409,4 +426,24 @@ func setupMcpRoutes(rg RouteGroup) {
 	mcpGroup := rg.Group("/mcp", mcp.APIKeyMiddleware())
 	mcpGroup.GET("/sse", mcp.SSEHandler)
 	mcpGroup.POST("/message", mcp.MessageHandler)
+}
+
+func setupQQWhitelistRoutes(rg RouteGroup) {
+	// Routes with privilege level 2
+	whitelist := rg.Group("/qq-whitelist", api.PrivilegesMiddleware(2))
+	whitelist.GET("/", api.GetQQWhitelistCtrl)
+	whitelist.POST("/", api.AddQQWhitelistCtrl)
+	whitelist.PUT("/:id", api.UpdateQQWhitelistCtrl)
+	whitelist.DELETE("/:id", api.DeleteQQWhitelistCtrl)
+}
+
+func setupReportRoutes(rg RouteGroup) {
+	// Routes with privilege level 2 (managers/admins)
+	reports := rg.Group("/reports", api.PrivilegesMiddleware(2))
+	reports.GET("/", api.ListReportsCtrl)
+	reports.GET("/:id", api.GetReportCtrl)
+	reports.POST("/generate/weekly", api.GenerateWeeklyReportCtrl)
+	reports.POST("/generate/monthly", api.GenerateMonthlyReportCtrl)
+	reports.DELETE("/:id", api.DeleteReportCtrl)
+	reports.GET("/:id/download", api.DownloadReportCtrl)
 }

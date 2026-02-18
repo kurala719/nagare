@@ -82,6 +82,16 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
       </el-form-item>
+      <el-divider content-position="left">{{ $t('hosts.sshTitle') || 'SSH Configuration' }}</el-divider>
+      <el-form-item :label="$t('hosts.sshUser') || 'SSH User'">
+        <el-input v-model="newHost.ssh_user" placeholder="root" />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.sshPassword') || 'SSH Password'">
+        <el-input v-model="newHost.ssh_password" type="password" show-password />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.sshPort') || 'SSH Port'">
+        <el-input-number v-model="newHost.ssh_port" :min="1" :max="65535" />
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('hosts.cancel') }}</el-button>
@@ -167,9 +177,12 @@
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('description')" :label="$t('hosts.description')" min-width="200" show-overflow-tooltip prop="description" />
-    <el-table-column :label="$t('hosts.actions')" min-width="300" fixed="right" align="center">
+    <el-table-column :label="$t('hosts.actions')" min-width="350" fixed="right" align="center">
       <template #default="{ row }">
         <el-button-group>
+          <el-tooltip :content="$t('hosts.terminal')" placement="top">
+            <el-button size="small" type="primary" :icon="Monitor" @click="openTerminal(row)" />
+          </el-tooltip>
           <el-tooltip :content="$t('hosts.ai')" placement="top">
             <el-button size="small" type="success" :icon="Search" @click="consultAI(row)" />
           </el-tooltip>
@@ -238,6 +251,16 @@
           <el-option :label="$t('common.statusError')" :value="2" />
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
+      </el-form-item>
+      <el-divider content-position="left">{{ $t('hosts.sshTitle') || 'SSH Configuration' }}</el-divider>
+      <el-form-item :label="$t('hosts.sshUser') || 'SSH User'">
+        <el-input v-model="selectedHost.ssh_user" placeholder="root" />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.sshPassword') || 'SSH Password'">
+        <el-input v-model="selectedHost.ssh_password" type="password" show-password :placeholder="$t('hosts.passwordPlaceholder') || 'Leave empty to keep current password'" />
+      </el-form-item>
+      <el-form-item :label="$t('hosts.sshPort') || 'SSH Port'">
+        <el-input-number v-model="selectedHost.ssh_port" :min="1" :max="65535" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -313,7 +336,7 @@ import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHost
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
-import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown, Monitor } from '@element-plus/icons-vue';
 
 interface Host {
   id: number;
@@ -367,8 +390,8 @@ export default {
       bulkDeleting: false,
       pullingHosts: false,
       pushingHosts: false,
-      newHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
-      selectedHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 },
+      newHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 },
+      selectedHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 },
       loading: false,
       error: null,
       search: '',
@@ -393,7 +416,8 @@ export default {
       Document: markRaw(Document),
       Setting: markRaw(Setting),
       ArrowDown: markRaw(ArrowDown),
-      Loading: markRaw(Loading)
+      Loading: markRaw(Loading),
+      Monitor: markRaw(Monitor)
     };
   },
   computed: {
@@ -574,6 +598,9 @@ export default {
             status_reason: h.Reason || h.reason || h.Error || h.error || h.ErrorMessage || h.error_message || h.LastError || h.last_error || '',
             mid: Number(monitorId || 0),
             monitor_name: h.MonitorName || h.monitor_name || h.monitorName || h.Monitor?.Name || h.Monitor?.name || h.monitor?.Name || h.monitor?.name || '',
+            ssh_user: h.ssh_user || '',
+            ssh_port: h.ssh_port || 22,
+            ssh_password: '',
           };
         });
         this.hosts = mapped;
@@ -595,6 +622,9 @@ export default {
     },
     openDetails(host: Host) {
       this.$router.push({ path: `/host/${host.id}/detail` });
+    },
+    openTerminal(host: Host) {
+      this.$router.push({ path: `/host/${host.id}/terminal` });
     },
     async pullHosts() {
       this.pullingHosts = true;
@@ -820,11 +850,14 @@ export default {
           description: this.selectedHost.description,
           enabled: this.selectedHost.enabled,
           status: this.selectedHost.status,
+          ssh_user: this.selectedHost.ssh_user,
+          ssh_password: this.selectedHost.ssh_password,
+          ssh_port: this.selectedHost.ssh_port,
         };
         await updateHost(this.selectedHost.id, updateData);
         const idx = this.hosts.findIndex((h: Host) => h.id === this.selectedHost.id);
         if (idx !== -1) {
-          this.hosts.splice(idx, 1, { ...this.selectedHost });
+          this.hosts.splice(idx, 1, { ...this.selectedHost, ssh_password: '' });
         }
         this.propertiesDialogVisible = false;
         ElMessage({
@@ -891,6 +924,9 @@ export default {
           description: this.newHost.description,
           enabled: this.newHost.enabled,
           status: this.newHost.status,
+          ssh_user: this.newHost.ssh_user,
+          ssh_password: this.newHost.ssh_password,
+          ssh_port: this.newHost.ssh_port,
         };
         
         // Call API to add host to database
@@ -899,7 +935,7 @@ export default {
         // Reload hosts from database to get the updated list
         await this.loadHosts(true);
         
-        this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
+        this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 };
         this.createDialogVisible = false;
         ElMessage({
           type: 'success',

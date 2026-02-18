@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllMediaCtrl handles GET /media
@@ -201,6 +202,8 @@ func HandleQQMessageCtrl(c *gin.Context) {
 
 	// Determine the target for reply
 	var replyTarget string
+	var qqID string
+	var isGroup bool
 	mediaType := "qq"
 
 	if event.MessageType == "group" {
@@ -209,12 +212,34 @@ func HandleQQMessageCtrl(c *gin.Context) {
 			return
 		}
 		replyTarget = "group:" + strconv.FormatInt(event.GroupID, 10)
+		qqID = strconv.FormatInt(event.GroupID, 10)
+		isGroup = true
 	} else {
 		if event.UserID == 0 {
 			respondBadRequest(c, "user_id is required")
 			return
 		}
 		replyTarget = "user:" + strconv.FormatInt(event.UserID, 10)
+		qqID = strconv.FormatInt(event.UserID, 10)
+		isGroup = false
+	}
+
+	// Check whitelist for command execution
+	if strings.HasPrefix(strings.TrimSpace(message), "/") {
+		if !service.CheckQQWhitelistForCommand(qqID, isGroup) {
+			service.LogSystem("warn", "QQ command rejected: not in whitelist", map[string]interface{}{
+				"qq_id":    qqID,
+				"is_group": isGroup,
+				"message":  message,
+			}, nil, "")
+			resp := OneBotMessageResponse{
+				Status:  "ok",
+				Retcode: 0,
+				Message: "You are not authorized to execute commands.",
+			}
+			c.JSON(http.StatusOK, resp)
+			return
+		}
 	}
 
 	// Process the message as a command

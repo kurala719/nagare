@@ -59,9 +59,21 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/host/:id/terminal',
+    name: 'Terminal',
+    component: () => import('@/views/Terminal.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => import('@/views/Monitor.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
+    path: '/knowledge-base',
+    name: 'KnowledgeBase',
+    component: () => import('@/views/KnowledgeBase.vue'),
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {

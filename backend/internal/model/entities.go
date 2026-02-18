@@ -23,6 +23,9 @@ type Host struct {
 	ActiveAvailable   string `gorm:"column:active_available"` // 0=unknown, 1=available, 2=not_available
 	IPAddr            string `gorm:"column:ip_addr"`
 	Comment           string
+	SSHUser           string `gorm:"column:ssh_user"`
+	SSHPassword       string `gorm:"column:ssh_password"`
+	SSHPort           int    `gorm:"column:ssh_port;default:22"`
 }
 
 // Group represents a logical group of hosts
@@ -270,6 +273,27 @@ type RegisterApplication struct {
 	Status     int    // 0 = pending, 1 = approved, 2 = rejected
 	Reason     string // rejection or approval note
 	ApprovedBy *uint  `gorm:"column:approved_by"`
+}
+
+// QQWhitelist represents an allowed QQ user or group for commands and alerts
+type QQWhitelist struct {
+	gorm.Model
+	QQIdentifier string `gorm:"index;uniqueIndex:idx_qq_type"` // QQ user ID or group ID
+	Type         int    `gorm:"uniqueIndex:idx_qq_type"`       // 0 = user, 1 = group
+	Nickname     string // Nickname or group name
+	CanCommand   int    `gorm:"default:1"` // 0 = no, 1 = yes
+	CanReceive   int    `gorm:"default:1"` // 0 = no, 1 = yes (receive alerts)
+	Enabled      int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
+	Comment      string
+}
+
+// KnowledgeBase represents a local knowledge entry for RAG
+type KnowledgeBase struct {
+	gorm.Model
+	Topic    string `gorm:"size:255;index"`
+	Content  string `gorm:"type:text"`
+	Keywords string `gorm:"size:255;index"` // Comma-separated keywords
+	Category string `gorm:"size:50;index"`
 }
 
 // UserWithInfo combines User and UserInformation for convenient querying

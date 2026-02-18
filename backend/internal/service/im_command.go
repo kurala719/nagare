@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"nagare/internal/model"
+	"nagare/internal/repository"
 	mediaSvc "nagare/internal/repository/media"
 )
 
@@ -28,6 +29,113 @@ type imCommand struct {
 	Usage       string
 	Description string
 	Handler     func(args []string, rawArgs string) (IMCommandResult, error)
+}
+
+// CheckQQWhitelistForCommand checks if a QQ user/group is allowed to execute commands
+func CheckQQWhitelistForCommand(qqID string, isGroup bool) bool {
+	result := checkQQWhitelist(qqID, isGroup, true)
+	logLevel := "info"
+	if result {
+		logLevel = "debug"
+	}
+	LogService(logLevel, "QQ command whitelist decision", map[string]interface{}{
+		"qq_id":    qqID,
+		"is_group": isGroup,
+		"allowed":  result,
+	}, nil, "")
+	return result
+}
+
+// CheckQQWhitelistForAlert checks if a QQ user/group is allowed to receive alerts
+func CheckQQWhitelistForAlert(qqID string, isGroup bool) bool {
+	return checkQQWhitelist(qqID, isGroup, false)
+}
+
+func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
+	if strings.TrimSpace(qqID) == "" {
+		LogService("warn", "whitelist check: empty qqID", nil, nil, "")
+		return false
+	}
+
+	// Determine whitelist type based on message source
+	whitelistType := 0 // user
+	if isGroup {
+		whitelistType = 1 // group
+	}
+
+	LogService("info", "whitelist check started", map[string]interface{}{
+		"qqID":          qqID,
+		"isGroup":       isGroup,
+		"whitelistType": whitelistType,
+		"isCommand":     isCommand,
+	}, nil, "")
+
+	// Check the appropriate whitelist entry
+	whitelist, err := getQQWhitelist(qqID, whitelistType)
+	if err != nil {
+		LogService("warn", "whitelist lookup failed", map[string]interface{}{
+			"qqID":      qqID,
+			"type":      whitelistType,
+			"error":     err.Error(),
+			"errorType": fmt.Sprintf("%T", err),
+		}, nil, "")
+		return false
+	}
+
+	if whitelist == nil {
+		LogService("warn", "QQ ID not in whitelist (nil)", map[string]interface{}{
+			"qqID": qqID,
+			"type": whitelistType,
+		}, nil, "")
+		return false
+	}
+
+	LogService("info", "whitelist entry found", map[string]interface{}{
+		"qqID":        qqID,
+		"type":        whitelistType,
+		"enabled":     whitelist.Enabled,
+		"can_command": whitelist.CanCommand,
+		"can_receive": whitelist.CanReceive,
+		"nickname":    whitelist.Nickname,
+	}, nil, "")
+
+	// Check if whitelist entry is enabled
+	if whitelist.Enabled == 0 {
+		LogService("info", "whitelist entry disabled", map[string]interface{}{
+			"qqID": qqID,
+			"type": whitelistType,
+		}, nil, "")
+		return false
+	}
+
+	// Check appropriate permission flag
+	if isCommand {
+		allowed := whitelist.CanCommand == 1
+		LogService("info", "whitelist command check", map[string]interface{}{
+			"qqID":        qqID,
+			"type":        whitelistType,
+			"can_command": whitelist.CanCommand,
+			"allowed":     allowed,
+		}, nil, "")
+		return allowed
+	}
+
+	allowed := whitelist.CanReceive == 1
+	LogService("info", "whitelist alert check", map[string]interface{}{
+		"qqID":        qqID,
+		"type":        whitelistType,
+		"can_receive": whitelist.CanReceive,
+		"allowed":     allowed,
+	}, nil, "")
+	return allowed
+}
+
+func getQQWhitelist(qqID string, whitelistType int) (*model.QQWhitelist, error) {
+	whitelist, err := repository.GetQQWhitelistDAO(qqID, whitelistType)
+	if err != nil {
+		return nil, err
+	}
+	return &whitelist, nil
 }
 
 // HandleIMCommand processes incoming IM commands
