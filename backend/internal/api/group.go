@@ -180,36 +180,6 @@ func PushGroupToMonitorsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// PullGroupHostsCtrl handles POST /groups/:id/hosts/pull
-func PullGroupHostsCtrl(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		respondBadRequest(c, "invalid group ID")
-		return
-	}
-	result, err := service.PullGroupHostsServ(uint(id))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, result)
-}
-
-// PushGroupHostsCtrl handles POST /groups/:id/hosts/push
-func PushGroupHostsCtrl(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		respondBadRequest(c, "invalid group ID")
-		return
-	}
-	result, err := service.PushGroupHostsServ(uint(id))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, result)
-}
-
 // CheckGroupStatusCtrl handles POST /groups/:id/check
 func CheckGroupStatusCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))

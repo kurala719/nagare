@@ -99,6 +99,7 @@ func initDBTables() error {
 	if err := database.DB.AutoMigrate(
 		&model.User{},
 		&model.Monitor{},
+		&model.Alarm{},
 		&model.Group{},
 		&model.Host{},
 		&model.Item{},

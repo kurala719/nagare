@@ -56,12 +56,6 @@
         <el-button type="success" :icon="Upload" :disabled="selectedCount === 0 || pushingGroups" :loading="pushingGroups" @click="pushGroups">
           {{ $t('groups.push') }}
         </el-button>
-        <el-button type="warning" plain :icon="Download" :disabled="selectedCount === 0 || pullingHosts" :loading="pullingHosts" @click="pullHosts">
-          {{ $t('groups.pullHosts') }}
-        </el-button>
-        <el-button type="success" plain :icon="Upload" :disabled="selectedCount === 0 || pushingHosts" :loading="pushingHosts" @click="pushHosts">
-          {{ $t('groups.pushHosts') }}
-        </el-button>
         <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
           {{ $t('common.bulkUpdate') }}
         </el-button>
@@ -154,12 +148,6 @@
           </el-tooltip>
           <el-tooltip :content="$t('groups.push')" placement="top">
             <el-button size="small" type="success" :icon="Upload" @click="onPush(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('groups.pullHosts')" placement="top">
-            <el-button size="small" type="warning" plain :icon="Download" @click="onPullHosts(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('groups.pushHosts')" placement="top">
-            <el-button size="small" type="success" plain :icon="Upload" @click="onPushHosts(row)" />
           </el-tooltip>
           <el-tooltip :content="$t('groups.delete')" placement="top">
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />
@@ -329,7 +317,7 @@
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
-import { fetchGroupData, addGroup, updateGroup, deleteGroup, pullGroup, pushGroup, pullGroupHosts, pushGroupHosts } from '@/api/groups';
+import { fetchGroupData, addGroup, updateGroup, deleteGroup, pullGroup, pushGroup } from '@/api/groups';
 import { fetchMonitorData, syncGroupsFromMonitor } from '@/api/monitors';
 
 export default {
@@ -362,8 +350,6 @@ export default {
       bulkDeleting: false,
       pullingGroups: false,
       pushingGroups: false,
-      pullingHosts: false,
-      pushingHosts: false,
       selectedGroupRows: [],
       newGroup: { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
       selectedGroup: { id: 0, name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
@@ -640,24 +626,6 @@ export default {
         ElMessage.error(this.$t('groups.pushFailed') + ': ' + (err.message || ''));
       }
     },
-    async onPullHosts(group) {
-      try {
-        await pullGroupHosts(group.id);
-        ElMessage.success(this.$t('groups.pullHostsSuccess') || 'Hosts pulled successfully');
-        await this.loadGroups();
-      } catch (err) {
-        ElMessage.error(this.$t('groups.pullHostsFailed') + ': ' + (err.message || ''));
-      }
-    },
-    async onPushHosts(group) {
-      try {
-        await pushGroupHosts(group.id);
-        ElMessage.success(this.$t('groups.pushHostsSuccess') || 'Hosts pushed successfully');
-        await this.loadGroups();
-      } catch (err) {
-        ElMessage.error(this.$t('groups.pushHostsFailed') + ': ' + (err.message || ''));
-      }
-    },
     async pullGroups() {
       this.pullingGroups = true;
       try {
@@ -705,46 +673,6 @@ export default {
         this.pushingGroups = false;
       }
     },
-    async pullHosts() {
-      this.pullingHosts = true;
-      try {
-        if (this.selectedCount > 0) {
-          const results = await this.batchSyncSelectedGroups('pull-hosts');
-          ElMessage({
-            type: results.success > 0 ? 'success' : 'warning',
-            message: this.$t('groups.pullHostsSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
-          });
-        } else {
-           ElMessage.warning(this.$t('common.selectAtLeastOne'));
-        }
-        await this.loadGroups(true);
-        this.clearSelection();
-      } catch (err) {
-        ElMessage.error(err.message || this.$t('groups.pullHostsFailed'));
-      } finally {
-        this.pullingHosts = false;
-      }
-    },
-    async pushHosts() {
-      this.pushingHosts = true;
-      try {
-        if (this.selectedCount > 0) {
-          const results = await this.batchSyncSelectedGroups('push-hosts');
-          ElMessage({
-            type: results.success > 0 ? 'success' : 'warning',
-            message: this.$t('groups.pushHostsSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
-          });
-        } else {
-           ElMessage.warning(this.$t('common.selectAtLeastOne'));
-        }
-        await this.loadGroups(true);
-        this.clearSelection();
-      } catch (err) {
-        ElMessage.error(err.message || this.$t('groups.pushHostsFailed'));
-      } finally {
-        this.pushingHosts = false;
-      }
-    },
     async batchSyncSelectedGroups(action) {
       const targets = this.selectedGroupRows || [];
       const tasks = [];
@@ -755,10 +683,6 @@ export default {
            tasks.push(pullGroup(group.id));
         } else if (action === 'push') {
            tasks.push(pushGroup(group.id));
-        } else if (action === 'pull-hosts') {
-           tasks.push(pullGroupHosts(group.id));
-        } else if (action === 'push-hosts') {
-           tasks.push(pushGroupHosts(group.id));
         }
       });
       const results = await Promise.allSettled(tasks);
