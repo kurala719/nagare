@@ -1,177 +1,166 @@
 <template>
-    <div class="item-layout">
-        <el-container>
-        <el-main>
-            <!-- Header with Add Button -->
-            <div class="items-header">
-                <div class="header-left">
-                    <h2>{{ titleLabel }}</h2>
-                </div>
-                <div class="items-header-actions">
-                    <el-button type="warning" :disabled="(!hostFilter && selectedCount === 0) || pulling" :loading="pulling" @click="pullItems">
-                        {{ $t('items.pull') }}
-                    </el-button>
-                    <el-button type="success" :disabled="(!hostFilter && selectedCount === 0) || pushing" :loading="pushing" @click="pushItems">
-                        {{ $t('items.push') }}
-                    </el-button>
-                    <el-button type="primary" @click="openAddDialog">
-                        <el-icon><Plus /></el-icon>
-                        {{ $t('items.add') }}
-                    </el-button>
-                </div>
-            </div>
+  <div class="items-page">
+    <div class="items-toolbar">
+      <div class="items-filters">
+        <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.columns')" class="filter-item" style="width: 200px">
+          <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
+        </el-select>
 
-            <div class="items-toolbar">
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('common.columns') }}</span>
-                    <el-select v-model="selectedColumns" multiple collapse-tags :placeholder="$t('common.search')" class="items-filter" style="min-width: 220px;">
-                        <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
-                    </el-select>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('common.search') }}</span>
-                    <el-select v-model="searchField" :placeholder="$t('common.search')" class="items-filter">
-                        <el-option :label="$t('items.filterAll')" value="all" />
-                        <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
-                    </el-select>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('common.search') }}</span>
-                    <el-input v-model="search" :placeholder="$t('items.search')" clearable class="items-search" />
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('items.filterHost') }}</span>
-                    <el-select v-model="hostFilter" :placeholder="$t('items.filterHost')" class="items-filter" clearable>
-                        <el-option :label="$t('items.filterAll')" :value="0" />
-                        <el-option v-for="host in hostOptions" :key="host.id" :label="host.name" :value="host.id" />
-                    </el-select>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('items.filterStatus') }}</span>
-                    <el-select v-model="statusFilter" :placeholder="$t('items.filterStatus')" class="items-filter">
-                        <el-option :label="$t('items.filterAll')" value="all" />
-                        <el-option :label="$t('common.statusInactive')" :value="0" />
-                        <el-option :label="$t('common.statusActive')" :value="1" />
-                        <el-option :label="$t('common.statusError')" :value="2" />
-                        <el-option :label="$t('common.statusSyncing')" :value="3" />
-                    </el-select>
-                </div>
-                <div class="filter-group">
-                    <span class="filter-label">{{ $t('common.sort') }}</span>
-                    <el-select v-model="sortKey" class="items-filter">
-                        <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
-                        <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
-                        <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
-                        <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
-                        <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
-                        <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
-                    </el-select>
-                </div>
-                <div class="items-bulk-actions">
-                    <span class="selected-count">{{ $t('items.selectedCount', { count: selectedCount }) }}</span>
-                    <el-button type="primary" plain :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
-                        {{ $t('items.bulkUpdate') }}
-                    </el-button>
-                    <el-button type="danger" plain :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
-                        {{ $t('items.bulkDelete') }}
-                    </el-button>
-                </div>
-            </div>
+        <el-input v-model="search" :placeholder="$t('items.search')" clearable class="filter-item search-input">
+          <template #prepend>
+            <el-select v-model="searchField" style="width: 100px">
+              <el-option :label="$t('items.filterAll')" value="all" />
+              <el-option v-for="col in searchableColumns" :key="col.key" :label="col.label" :value="col.key" />
+            </el-select>
+          </template>
+          <template #append>
+            <el-button :icon="Search" />
+          </template>
+        </el-input>
 
-            <!-- Loading State -->
-            <div v-if="loading" style="text-align: center; padding: 40px;">
-                <el-icon class="is-loading" size="50" color="#409EFF">
-                    <Loading />
-                </el-icon>
-                <p style="margin-top: 16px; color: #909399;">{{ $t('items.loading') }}</p>
-            </div>
+        <el-select v-model="hostFilter" :placeholder="$t('items.filterHost')" class="filter-item" style="width: 160px" clearable>
+          <el-option :label="$t('items.filterAll')" :value="0" />
+          <el-option v-for="host in hostOptions" :key="host.id" :label="host.name" :value="host.id" />
+        </el-select>
 
-            <!-- Error State -->
-            <el-alert 
-                v-if="error && !loading" 
-                :title="error" 
-                type="error" 
-                show-icon
-                style="margin: 20px;"
-                :closable="false"
-            >
-                <template #default>
-                    <el-button size="small" @click="loadItems">{{ $t('items.retry') }}</el-button>
-                </template>
-            </el-alert>
+        <el-select v-model="statusFilter" :placeholder="$t('items.filterStatus')" class="filter-item" style="width: 120px">
+          <el-option :label="$t('items.filterAll')" value="all" />
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
 
-            <!-- Empty State -->
-            <el-empty 
-                v-if="!loading && !error && items && items.length === 0"
-                :description="$t('items.noItems')"
-                style="margin: 40px;"
-            />
+        <el-select v-model="sortKey" class="filter-item" style="width: 140px" :placeholder="$t('common.sort')">
+          <el-option :label="$t('common.sortUpdatedDesc')" value="updated_desc" />
+          <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
+          <el-option :label="$t('common.sortNameAsc')" value="name_asc" />
+          <el-option :label="$t('common.sortNameDesc')" value="name_desc" />
+          <el-option :label="$t('common.sortStatusAsc')" value="status_asc" />
+          <el-option :label="$t('common.sortStatusDesc')" value="status_desc" />
+        </el-select>
+      </div>
 
-            <el-empty
-                v-if="!loading && !error && items && items.length > 0 && filteredItems.length === 0"
-                :description="$t('items.noResults')"
-                style="margin: 40px;"
-            />
+      <div class="items-actions">
+        <el-button type="primary" :icon="Plus" @click="openAddDialog">
+          {{ $t('items.add') }}
+        </el-button>
+        <el-button type="warning" :icon="Download" :disabled="(!hostFilter && selectedCount === 0) || pulling" :loading="pulling" @click="pullItems">
+          {{ $t('items.pull') }}
+        </el-button>
+        <el-button type="success" :icon="Upload" :disabled="(!hostFilter && selectedCount === 0) || pushing" :loading="pushing" @click="pushItems">
+          {{ $t('items.push') }}
+        </el-button>
+        <el-button type="primary" plain :icon="Edit" :disabled="selectedCount === 0" @click="openBulkUpdateDialog">
+          {{ $t('items.bulkUpdate') }}
+        </el-button>
+        <el-button type="danger" plain :icon="Delete" :disabled="selectedCount === 0" @click="openBulkDeleteDialog">
+          {{ $t('items.bulkDelete') }}
+        </el-button>
+        <span v-if="selectedCount > 0" class="selection-info">
+          {{ $t('items.selectedCount', { count: selectedCount }) }}
+        </span>
+      </div>
+    </div>
 
-            <div
-                v-if="!loading && !error"
-                class="items-scroll"
-            >
-                <!-- Items Table -->
-                <div v-if="filteredItems.length > 0" class="items-table-container">
-                    <el-table
-                        ref="itemsTableRef"
-                        :data="filteredItems"
-                        style="width: 100%"
-                        stripe
-                        border
-                        row-key="id"
-                        @selection-change="onSelectionChange"
-                    >
-                    <el-table-column type="selection" width="50" />
-                    <el-table-column v-if="isColumnVisible('id')" prop="id" :label="$t('items.id')" width="80" />
-                    <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('items.name')" min-width="150" show-overflow-tooltip />
-                    <el-table-column v-if="isColumnVisible('value')" prop="value" :label="$t('items.value')" min-width="150" show-overflow-tooltip />
-                    <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="110">
-                        <template #default="{ row }">
-                            <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
-                                {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
-                            </el-tag>
-                        </template>
-                    </el-table-column>
-                    <el-table-column v-if="isColumnVisible('status')" prop="status" :label="$t('items.status')" width="160">
-                        <template #default="{ row }">
-                            <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-                                <el-tag :type="getStatusInfo(row.status).type" size="small">
-                                    {{ getStatusInfo(row.status).label }}
-                                </el-tag>
-                            </el-tooltip>
-                        </template>
-                    </el-table-column>
-                    <el-table-column v-if="isColumnVisible('description')" prop="description" :label="$t('items.description')" min-width="200" show-overflow-tooltip />
-                    <el-table-column :label="$t('items.actions')" width="260" fixed="right">
-                        <template #default="{ row }">
-                            <el-button type="success" size="small" @click="consultAI(row)">{{ $t('items.ai') }}</el-button>
-                            <el-button type="primary" size="small" @click="openDetails(row)">{{ $t('items.details') }}</el-button>
-                            <el-button type="primary" size="small" @click="openEditDialog(row)">{{ $t('items.edit') }}</el-button>
-                            <el-button type="danger" size="small" @click="confirmDelete(row)">{{ $t('items.delete') }}</el-button>
-                        </template>
-                    </el-table-column>
-                    </el-table>
-                </div>
-            </div>
-            <div v-if="!loading && !error && totalItems > 0" class="items-pagination">
-                <el-pagination
-                    background
-                    layout="sizes, prev, pager, next"
-                    :page-sizes="[10, 20, 50, 100]"
-                    v-model:page-size="pageSize"
-                    v-model:current-page="currentPage"
-                    :total="totalItems"
-                />
-            </div>
-        </el-main>
-        </el-container>
+    <!-- Loading State -->
+    <div v-if="loading" style="text-align: center; padding: 40px;">
+        <el-icon class="is-loading" size="50" color="#409EFF">
+            <Loading />
+        </el-icon>
+        <p style="margin-top: 16px; color: #909399;">{{ $t('items.loading') }}</p>
+    </div>
+
+    <!-- Error State -->
+    <el-alert 
+        v-if="error && !loading" 
+        :title="error" 
+        type="error" 
+        show-icon
+        style="margin: 20px;"
+        :closable="false"
+    >
+        <template #default>
+            <el-button size="small" @click="loadItems">{{ $t('items.retry') }}</el-button>
+        </template>
+    </el-alert>
+
+    <!-- Empty State -->
+    <el-empty 
+        v-if="!loading && !error && items && items.length === 0"
+        :description="$t('items.noItems')"
+        style="margin: 40px;"
+    />
+
+    <el-empty
+        v-if="!loading && !error && items && items.length > 0 && filteredItems.length === 0"
+        :description="$t('items.noResults')"
+        style="margin: 40px;"
+    />
+
+    <div v-if="!loading && !error" class="items-scroll">
+      <el-table
+        v-if="filteredItems.length > 0"
+        ref="itemsTableRef"
+        :data="filteredItems"
+        border
+        style="width: 100%; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);"
+        row-key="id"
+        @selection-change="onSelectionChange"
+        header-cell-class-name="table-header"
+      >
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column v-if="isColumnVisible('id')" prop="id" :label="$t('items.id')" width="80" />
+        <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('items.name')" min-width="150" show-overflow-tooltip />
+        <el-table-column v-if="isColumnVisible('value')" prop="value" :label="$t('items.value')" min-width="150" show-overflow-tooltip />
+        <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="110" align="center">
+            <template #default="{ row }">
+                <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small" effect="light">
+                    {{ row.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
+                </el-tag>
+            </template>
+        </el-table-column>
+        <el-table-column v-if="isColumnVisible('status')" prop="status" :label="$t('items.status')" width="160" align="center">
+            <template #default="{ row }">
+                <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
+                    <el-tag :type="getStatusInfo(row.status).type" size="small" effect="dark">
+                        {{ getStatusInfo(row.status).label }}
+                    </el-tag>
+                </el-tooltip>
+            </template>
+        </el-table-column>
+        <el-table-column v-if="isColumnVisible('description')" prop="description" :label="$t('items.description')" min-width="200" show-overflow-tooltip />
+        <el-table-column :label="$t('items.actions')" width="260" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button-group>
+                <el-tooltip :content="$t('items.ai')" placement="top">
+                  <el-button size="small" type="success" :icon="Search" @click="consultAI(row)" />
+                </el-tooltip>
+                <el-tooltip :content="$t('items.details')" placement="top">
+                  <el-button size="small" type="primary" :icon="Document" @click="openDetails(row)" />
+                </el-tooltip>
+                <el-tooltip :content="$t('items.edit')" placement="top">
+                  <el-button size="small" type="primary" :icon="Edit" @click="openEditDialog(row)" />
+                </el-tooltip>
+                <el-tooltip :content="$t('items.delete')" placement="top">
+                  <el-button size="small" type="danger" :icon="Delete" @click="confirmDelete(row)" />
+                </el-tooltip>
+              </el-button-group>
+            </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    
+    <div v-if="!loading && !error && totalItems > 0" class="items-pagination">
+        <el-pagination
+            background
+            layout="sizes, prev, pager, next"
+            :page-sizes="[10, 20, 50, 100]"
+            v-model:page-size="pageSize"
+            v-model:current-page="currentPage"
+            :total="totalItems"
+        />
+    </div>
 
         <!-- Add/Edit Dialog -->
         <el-dialog 
@@ -283,7 +272,7 @@
 import { fetchItemData, addItem, updateItem, deleteItem, consultItemAI, pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { fetchHostData } from '@/api/hosts';
 import { ElMessage } from 'element-plus';
-import { Loading, Plus } from '@element-plus/icons-vue';
+import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting } from '@element-plus/icons-vue';
 
 interface ItemRecord {
     id: number;
@@ -364,6 +353,8 @@ export default {
                         enabled: 'nochange',
                         status: 'nochange',
                 },
+        // Icons
+        Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting
       };
     },
     computed: {
@@ -842,86 +833,76 @@ export default {
 </script>
 
 <style scoped>
-.items-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #e4e7ed;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.items-header h2 {
-    margin: 0;
-    color: #303133;
-}
-
-.items-header-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.items-table-container {
-    padding: 16px;
+.items-page {
+  padding: 16px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .items-toolbar {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 12px 16px 0;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
-.items-bulk-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-left: auto;
+.items-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-item {
+  width: 160px;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.items-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.selection-info {
+  color: #909399;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.items-scroll {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .items-pagination {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 16px 16px;
-}
-
-.filter-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.selected-count {
-    color: #606266;
-    font-size: 13px;
-}
-
-.items-search {
-    width: 240px;
-}
-
-.items-filter {
-    min-width: 160px;
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .ai-response-content {
-    background-color: #f5f7fa;
-    border-radius: 8px;
-    padding: 16px;
-    max-height: 300px;
-    overflow-y: auto;
-    line-height: 1.6;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.6;
 }
 
 .ai-response-content p {
-    margin: 0;
-    color: #303133;
+  margin: 0;
+  color: #303133;
 }
 </style>

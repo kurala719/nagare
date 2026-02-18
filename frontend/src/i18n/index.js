@@ -231,7 +231,6 @@ const messages = {
       matrixResume: 'Resume'
     },
     system: {
-      title: 'System',
       title: 'Configuration',
       configuration: 'Configuration',
       display: 'Display',
@@ -268,6 +267,7 @@ const messages = {
       aiModel: 'Model',
       aiTimeout: 'Timeout (seconds)',
       aiMinSeverity: 'Min Severity',
+      mediaRateLimitSettings: 'Media Rate Limit Settings',
       edit: 'Edit',
       save: 'Save',
       cancel: 'Cancel',
@@ -674,8 +674,9 @@ const messages = {
       trigger: 'Triggers',
       log: 'Logs',
       user: 'User',
+      registerApplication: 'Register Applications',
+      configuration: 'Configuration',
       system: 'System',
-      system: 'Configuration',
       test: 'Test'
     },
     media: {
@@ -905,8 +906,16 @@ const messages = {
     },
     configuration: {
       title: 'System Configuration',
+      subtitle: 'Manage system-wide settings and integrations',
       system: 'System Settings',
       database: 'Database Settings',
+      services: 'Background Services',
+      syncService: 'Sync Service',
+      statusCheckService: 'Status Check Service',
+      integrations: 'Integrations',
+      aiAnalysis: 'AI Analysis',
+      mcpSettings: 'MCP Settings',
+      advanced: 'Advanced',
       systemName: 'System Name',
       ipAddress: 'IP Address',
       port: 'Port',
@@ -919,6 +928,7 @@ const messages = {
       dbName: 'Database Name',
       save: 'Save Configuration',
       reload: 'Reload Configuration',
+      reset: 'Reset Defaults',
       cancel: 'Cancel',
       edit: 'Edit',
       saving: 'Saving...',
@@ -929,6 +939,11 @@ const messages = {
       reloadFailed: 'Failed to reload configuration',
       confirmSave: 'Save Changes?',
       confirmSaveText: 'Are you sure you want to save these configuration changes?',
+      resetConfirmTitle: 'Reset to Defaults?',
+      resetConfirmText: 'This will reset ALL configuration settings to their default system values. This action cannot be undone. Are you sure?',
+      resetConfirmYes: 'Yes, Reset Everything',
+      resetConfirmNo: 'No, Keep My Settings',
+      resetSuccess: 'Configuration has been reset to defaults.',
       yes: 'Yes',
       no: 'No'
     }
@@ -1157,7 +1172,6 @@ const messages = {
       matrixResume: '继续'
     },
     system: {
-      title: '系统',
       title: '配置',
       configuration: '配置',
       display: '显示',
@@ -1194,6 +1208,7 @@ const messages = {
       aiModel: '模型',
       aiTimeout: '超时（秒）',
       aiMinSeverity: '最小严重级别',
+      mediaRateLimitSettings: '通知频率限制设置',
       edit: '编辑',
       save: '保存',
       cancel: '取消',
@@ -1618,8 +1633,8 @@ const messages = {
       log: '日志',
       user: '用户',
       registerApplication: '注册申请',
+      configuration: '配置',
       system: '系统',
-      system: '配置',
       test: '测试'
     },
     media: {
@@ -1837,8 +1852,16 @@ const messages = {
     },
     configuration: {
       title: '系统配置',
+      subtitle: '管理系统全局设置与集成',
       system: '系统设置',
       database: '数据库设置',
+      services: '后台服务',
+      syncService: '同步服务',
+      statusCheckService: '状态检查服务',
+      integrations: '集成',
+      aiAnalysis: 'AI 分析',
+      mcpSettings: 'MCP 设置',
+      advanced: '高级设置',
       systemName: '系统名称',
       ipAddress: 'IP 地址',
       port: '端口',
@@ -1851,6 +1874,7 @@ const messages = {
       dbName: '数据库名称',
       save: '保存配置',
       reload: '重新加载配置',
+      reset: '重置为默认',
       cancel: '取消',
       edit: '编辑',
       saving: '正在保存...',
@@ -1861,6 +1885,11 @@ const messages = {
       reloadFailed: '配置重新加载失败',
       confirmSave: '保存更改？',
       confirmSaveText: '您确定要保存这些配置更改吗？',
+      resetConfirmTitle: '重置为默认值？',
+      resetConfirmText: '这将把所有配置项重置为系统默认值。此操作无法撤销。您确定吗？',
+      resetConfirmYes: '是的，全部重置',
+      resetConfirmNo: '不，保留我的设置',
+      resetSuccess: '配置已重置为默认值。',
       yes: '是',
       no: '否'
     }

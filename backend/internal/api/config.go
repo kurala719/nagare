@@ -81,6 +81,15 @@ func LoadConfigCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "configuration loaded")
 }
 
+// ResetConfigCtrl resets the configuration to defaults
+func ResetConfigCtrl(c *gin.Context) {
+	if err := service.ResetConfigServ(); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "configuration reset to defaults")
+}
+
 // InitConfigCtrl initializes configuration from a path
 func InitConfigCtrl(c *gin.Context) {
 	var req struct {

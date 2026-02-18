@@ -113,6 +113,7 @@ func setupConfigurationRoutes(rg RouteGroup) {
 	config.PUT("/", api.ModifyMainConfigCtrl)
 	config.POST("/save", api.SaveConfigCtrl)
 	config.POST("/reload", api.LoadConfigCtrl)
+	config.POST("/reset", api.ResetConfigCtrl)
 }
 
 func setupMonitorRoutes(rg RouteGroup) {

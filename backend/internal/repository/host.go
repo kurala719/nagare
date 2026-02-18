@@ -135,19 +135,22 @@ func DeleteHostByMIDDAO(mid uint) error {
 
 // UpdateHostDAO updates a host by ID
 func UpdateHostDAO(id uint, h model.Host) error {
-	return database.DB.Model(&model.Host{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":               h.Name,
-		"hostid":             h.Hostid,
-		"m_id":               h.MonitorID,
-		"group_id":           h.GroupID,
-		"description":        h.Description,
-		"enabled":            h.Enabled,
-		"status":             h.Status,
-		"status_description": h.StatusDescription,
-		"active_available":   h.ActiveAvailable,
-		"ip_addr":            h.IPAddr,
-		"comment":            h.Comment,
-	}).Error
+	// Use individual Update calls to ensure all fields including zero values are updated
+	// This bypasses GORM's zero-value skipping behavior
+	db := database.DB.Model(&model.Host{}).Where("id = ?", id).
+		Update("name", h.Name).
+		Update("hostid", h.Hostid).
+		Update("m_id", h.MonitorID).
+		Update("group_id", h.GroupID).
+		Update("description", h.Description).
+		Update("enabled", h.Enabled).
+		Update("status", h.Status).
+		Update("status_description", h.StatusDescription).
+		Update("active_available", h.ActiveAvailable).
+		Update("ip_addr", h.IPAddr).
+		Update("comment", h.Comment)
+
+	return db.Error
 }
 
 // UpdateHostStatusDAO updates only the status for a host

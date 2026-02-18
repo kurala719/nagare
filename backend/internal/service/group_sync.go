@@ -90,6 +90,7 @@ func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
 			// Check if group exists by name
 			if existing, ok := localGroupsByName[hostGroup.Name]; ok {
 				existing.ExternalID = hostGroup.ID
+				existing.MonitorID = mid
 				if err := repository.UpdateGroupDAO(existing.ID, existing); err == nil {
 					result.Updated++
 				} else {

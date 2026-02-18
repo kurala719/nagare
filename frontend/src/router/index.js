@@ -139,9 +139,9 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
-    path: '/system',
-    name: "System",
-    component: () => import('@/views/System.vue'),
+    path: '/config-settings',
+    name: 'Configuration',
+    component: () => import('@/views/Configuration.vue'),
     meta: { requiresAuth: true, minPrivilege: 3 }
   },
   {
@@ -149,6 +149,10 @@ const routes = [
     name: 'StatusPage',
     component: () => import('@/views/StatusPage.vue'),
     meta: { requiresAuth: false, layout: 'status' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/dashboard'
   },
   {
     path: '/',

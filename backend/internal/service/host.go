@@ -274,6 +274,123 @@ func hostToResp(h model.Host) HostResp {
 	}
 }
 
+// findGroupByExternalIDOrName tries to find a group first by external ID, then by name
+func findGroupByExternalIDOrName(externalID, groupName string, mid uint) (uint, error) {
+	// First try by external ID
+	if externalID != "" {
+		if group, err := repository.GetGroupByExternalIDDAO(externalID, mid); err == nil {
+			return group.ID, nil
+		}
+	}
+
+	// Then try by group name if provided
+	if groupName != "" {
+		groups, err := repository.SearchGroupsDAO(model.GroupFilter{Query: groupName})
+		if err == nil {
+			for _, g := range groups {
+				if g.Name == groupName && (g.MonitorID == mid || g.MonitorID == 0) {
+					return g.ID, nil
+				}
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("group not found")
+}
+
+func parseMetadataCSVValues(metadata map[string]string, listKey, singleKey string) []string {
+	if metadata == nil {
+		return nil
+	}
+
+	values := make([]string, 0)
+	seen := make(map[string]struct{})
+	appendValue := func(value string) {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			return
+		}
+		if _, ok := seen[trimmed]; ok {
+			return
+		}
+		seen[trimmed] = struct{}{}
+		values = append(values, trimmed)
+	}
+
+	if list, ok := metadata[listKey]; ok && list != "" {
+		for _, part := range strings.Split(list, ",") {
+			appendValue(part)
+		}
+	}
+
+	if single, ok := metadata[singleKey]; ok && single != "" {
+		appendValue(single)
+	}
+
+	return values
+}
+
+func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallbackGroupID uint) uint {
+	groupID := fallbackGroupID
+	if metadata == nil {
+		return groupID
+	}
+
+	externalGroupIDs := parseMetadataCSVValues(metadata, "groupids", "groupid")
+	externalGroupNames := parseMetadataCSVValues(metadata, "groupnames", "groupname")
+
+	for _, externalGroupID := range externalGroupIDs {
+		if group, err := repository.GetGroupByExternalIDDAO(externalGroupID, mid); err == nil {
+			return group.ID
+		}
+	}
+
+	for idx, groupName := range externalGroupNames {
+		externalGroupID := ""
+		if idx < len(externalGroupIDs) {
+			externalGroupID = externalGroupIDs[idx]
+		}
+
+		if matchedGroupID, err := findGroupByExternalIDOrName(externalGroupID, groupName, mid); err == nil {
+			if externalGroupID != "" {
+				if matchedGroup, err := repository.GetGroupByIDDAO(matchedGroupID); err == nil {
+					if matchedGroup.ExternalID != externalGroupID || matchedGroup.MonitorID != mid {
+						matchedGroup.ExternalID = externalGroupID
+						matchedGroup.MonitorID = mid
+						_ = repository.UpdateGroupDAO(matchedGroup.ID, matchedGroup)
+					}
+				}
+			}
+			return matchedGroupID
+		}
+	}
+
+	if len(externalGroupIDs) == 0 {
+		return groupID
+	}
+
+	newGroupName := fmt.Sprintf("Group %s", externalGroupIDs[0])
+	if len(externalGroupNames) > 0 && strings.TrimSpace(externalGroupNames[0]) != "" {
+		newGroupName = strings.TrimSpace(externalGroupNames[0])
+	}
+
+	newGroup := model.Group{
+		Name:       newGroupName,
+		ExternalID: externalGroupIDs[0],
+		MonitorID:  mid,
+		Enabled:    1,
+		Status:     1,
+	}
+	if err := repository.AddGroupDAO(newGroup); err == nil {
+		if createdGroup, err := repository.GetGroupByExternalIDDAO(externalGroupIDs[0], mid); err == nil {
+			LogService("info", "created group from external metadata", map[string]interface{}{"external_id": externalGroupIDs[0], "group_name": newGroupName, "monitor_id": mid}, nil, "")
+			return createdGroup.ID
+		}
+	}
+
+	return groupID
+}
+
 func PullHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	return pullHostsFromMonitorServ(mid, true)
 }
@@ -359,28 +476,11 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 		existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 
-		// Try to find group by groupid, defaulting to existing group ID if host exists
-		var groupID uint = 0
+		groupID := uint(0)
 		if err == nil {
 			groupID = existingHost.GroupID
 		}
-
-		// Try to find a matching group from metadata
-		if h.Metadata != nil {
-			if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
-				extIDs := strings.Split(extGroupIDsStr, ",")
-				for _, extID := range extIDs {
-					if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
-						groupID = group.ID
-						break
-					}
-				}
-			} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
-				if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
-					groupID = group.ID
-				}
-			}
-		}
+		groupID = resolveHostGroupIDFromMetadata(mid, h.Metadata, groupID)
 
 		if err == nil {
 			// Host exists, update it
@@ -407,24 +507,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			result.Updated++
 		} else {
 			// Host doesn't exist, add it
-			// Try to find group by groupid for new host
-			var groupID uint = 0
-			if h.Metadata != nil {
-				if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
-					extIDs := strings.Split(extGroupIDsStr, ",")
-					for _, extID := range extIDs {
-						if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
-							groupID = group.ID
-							break
-						}
-					}
-				} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
-					if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
-						groupID = group.ID
-					}
-				}
-			}
-
 			if err := repository.AddHostDAO(model.Host{
 				Name:        h.Name,
 				Hostid:      h.ID,
@@ -532,26 +614,11 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	// Check if host already exists
 	existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 
-	var groupID uint = 0
+	groupID := uint(0)
 	if err == nil {
 		groupID = existingHost.GroupID
 	}
-
-	if h.Metadata != nil {
-		if extGroupIDsStr, ok := h.Metadata["groupids"]; ok && extGroupIDsStr != "" {
-			extIDs := strings.Split(extGroupIDsStr, ",")
-			for _, extID := range extIDs {
-				if group, err := repository.GetGroupByExternalIDDAO(strings.TrimSpace(extID), mid); err == nil {
-					groupID = group.ID
-					break
-				}
-			}
-		} else if extGroupID, ok := h.Metadata["groupid"]; ok && extGroupID != "" {
-			if group, err := repository.GetGroupByExternalIDDAO(extGroupID, mid); err == nil {
-				groupID = group.ID
-			}
-		}
-	}
+	groupID = resolveHostGroupIDFromMetadata(mid, h.Metadata, groupID)
 
 	if err == nil {
 		// Host exists, update it

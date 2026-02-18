@@ -33,6 +33,11 @@ func LoadConfigServ() error {
 	return repository.LoadConfig()
 }
 
+// ResetConfigServ resets the configuration to defaults
+func ResetConfigServ() error {
+	return repository.ResetConfig()
+}
+
 // SaveConfigServ persists configuration to disk
 func SaveConfigServ() error {
 	return repository.SaveConfig()

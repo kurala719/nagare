@@ -198,7 +198,7 @@ export default defineComponent({
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
         { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
-        { key: 'system', path: '/system', label: 'menu.system', minPrivilege: 3 },
+        { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},
       { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1, icon: 'User' },
     ])
