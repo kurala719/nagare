@@ -18,13 +18,13 @@ func InitCronScheduler() error {
 	// Add report generation jobs based on configuration
 	cfgData, err := GetReportConfigServ()
 	if err == nil {
-		// Extract values from map
-		autoWeekly := cfgData["auto_generate_weekly"].(int)
-		weeklyDay := cfgData["weekly_generate_day"].(string)
-		weeklyTime := cfgData["weekly_generate_time"].(string)
-		autoMonthly := cfgData["auto_generate_monthly"].(int)
-		monthlyDate := cfgData["monthly_generate_date"].(int)
-		monthlyTime := cfgData["monthly_generate_time"].(string)
+		// Extract values from map with safe assertions
+		autoWeekly, _ := cfgData["auto_generate_weekly"].(int)
+		weeklyDay, _ := cfgData["weekly_generate_day"].(string)
+		weeklyTime, _ := cfgData["weekly_generate_time"].(string)
+		autoMonthly, _ := cfgData["auto_generate_monthly"].(int)
+		monthlyDate, _ := cfgData["monthly_generate_date"].(int)
+		monthlyTime, _ := cfgData["monthly_generate_time"].(string)
 		
 		if autoWeekly == 1 && weeklyDay != "" {
 			cronExpr := buildWeeklyCronExpression(weeklyDay, weeklyTime)
@@ -37,6 +37,7 @@ func InitCronScheduler() error {
 			}); err != nil {
 				LogService("warn", "failed to schedule weekly report", map[string]interface{}{
 					"error": err.Error(),
+					"expr":  cronExpr,
 				}, nil, "")
 			}
 		}
@@ -52,6 +53,7 @@ func InitCronScheduler() error {
 			}); err != nil {
 				LogService("warn", "failed to schedule monthly report", map[string]interface{}{
 					"error": err.Error(),
+					"expr":  cronExpr,
 				}, nil, "")
 			}
 		}
@@ -132,9 +134,17 @@ func GetReportConfigServ() (map[string]interface{}, error) {
 		// Return default config if not found
 		return map[string]interface{}{
 			"auto_generate_weekly":  0,
+			"weekly_generate_day":   "Monday",
+			"weekly_generate_time":  "09:00",
 			"auto_generate_monthly": 0,
+			"monthly_generate_date": 1,
+			"monthly_generate_time": "09:00",
+			"include_alerts":        1,
+			"include_metrics":       1,
 			"top_hosts_count":       5,
 			"enable_llm_summary":    1,
+			"email_notify":          0,
+			"email_recipients":      "",
 		}, nil
 	}
 

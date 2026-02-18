@@ -108,12 +108,12 @@ func setupAllRoutes(rg RouteGroup) {
 func setupKnowledgeBaseRoutes(rg RouteGroup) {
 	// Routes with privilege level 1
 	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(1))
-	kbRead.GET("/", api.GetAllKnowledgeBaseCtrl)
+	kbRead.GET("", api.GetAllKnowledgeBaseCtrl)
 	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
 
 	// Routes with privilege level 2
 	kbWrite := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
-	kbWrite.POST("/", api.AddKnowledgeBaseCtrl)
+	kbWrite.POST("", api.AddKnowledgeBaseCtrl)
 	kbWrite.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
 	kbWrite.DELETE("/:id", api.DeleteKnowledgeBaseCtrl)
 }
@@ -440,8 +440,10 @@ func setupQQWhitelistRoutes(rg RouteGroup) {
 func setupReportRoutes(rg RouteGroup) {
 	// Routes with privilege level 2 (managers/admins)
 	reports := rg.Group("/reports", api.PrivilegesMiddleware(2))
-	reports.GET("/", api.ListReportsCtrl)
+	reports.GET("", api.ListReportsCtrl)
 	reports.GET("/:id", api.GetReportCtrl)
+	reports.GET("/config", api.GetReportConfigCtrl)
+	reports.PUT("/config", api.UpdateReportConfigCtrl)
 	reports.POST("/generate/weekly", api.GenerateWeeklyReportCtrl)
 	reports.POST("/generate/monthly", api.GenerateMonthlyReportCtrl)
 	reports.DELETE("/:id", api.DeleteReportCtrl)

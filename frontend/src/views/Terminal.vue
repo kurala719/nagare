@@ -4,11 +4,11 @@
       <div class="host-info">
         <el-button icon="ArrowLeft" circle @click="$router.back()" />
         <span class="host-name">Terminal: {{ hostName || 'Loading...' }}</span>
-        <span class="host-ip">({{ hostIp }})</span>
+        <span class="host-ip" v-if="hostIp">({{ hostIp }})</span>
       </div>
       <div class="terminal-actions">
-        <el-button type="danger" @click="handleDisconnect">Disconnect</el-button>
-        <el-button type="primary" @click="handleReconnect" :disabled="connected">Reconnect</el-button>
+        <el-button type="danger" size="small" @click="handleDisconnect">Disconnect</el-button>
+        <el-button type="primary" size="small" @click="handleReconnect" :disabled="connected">Reconnect</el-button>
       </div>
     </div>
     <div ref="terminalElement" class="terminal-body"></div>
@@ -22,7 +22,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { getToken } from '@/utils/auth'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,7 +38,7 @@ let socket = null
 
 const fetchHostInfo = async () => {
   try {
-    const response = await axios.get(`/api/v1/hosts/${hostId}`)
+    const response = await request.get(`/hosts/${hostId}`)
     if (response.data.success) {
       hostName.value = response.data.data.name
       hostIp.value = response.data.data.ip_addr
@@ -57,30 +57,18 @@ const initTerminal = () => {
       background: '#1e1e1e',
       foreground: '#d4d4d4',
       cursor: '#aeafad',
-      selection: '#264f78',
-      black: '#000000',
-      red: '#cd3131',
-      green: '#0dbc79',
-      yellow: '#e5e510',
-      blue: '#2472c8',
-      magenta: '#bc3fbc',
-      cyan: '#11a8cd',
-      white: '#e5e5e5',
-      brightBlack: '#666666',
-      brightRed: '#f14c4c',
-      brightGreen: '#23d18b',
-      brightYellow: '#f5f543',
-      brightBlue: '#3b8eea',
-      brightMagenta: '#d670d6',
-      brightCyan: '#29b8db',
-      brightWhite: '#e5e5e5'
+      selection: '#264f78'
     }
   })
 
   fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
   term.open(terminalElement.value)
-  fitAddon.fit()
+  
+  // Initial fit
+  nextTick(() => {
+    fitAddon.fit()
+  })
 
   term.onData((data) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -92,7 +80,7 @@ const initTerminal = () => {
 }
 
 const handleResize = () => {
-  if (fitAddon) {
+  if (fitAddon && term) {
     fitAddon.fit()
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
@@ -108,7 +96,8 @@ const connectWebSocket = () => {
   const token = getToken()
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const host = window.location.host
-  // Note: Adjust URL according to your backend proxy/server setup
+  
+  // Use term dimensions in query
   const url = `${protocol}//${host}/api/v1/hosts/${hostId}/ssh?token=${token}&cols=${term.cols}&rows=${term.rows}`
 
   socket = new WebSocket(url)
@@ -116,9 +105,7 @@ const connectWebSocket = () => {
 
   socket.onopen = () => {
     connected.value = true
-    term.write('
-*** Connected to host ***
-')
+    term.write('\r\n*** Connected to host ***\r\n')
     handleResize()
   }
 
@@ -133,16 +120,13 @@ const connectWebSocket = () => {
 
   socket.onclose = (event) => {
     connected.value = false
-    term.write(`
-*** Connection closed: ${event.reason || 'No reason'} ***
-`)
+    const reason = event.reason ? `: ${event.reason}` : ''
+    term.write(`\r\n*** Connection closed${reason} ***\r\n`)
   }
 
   socket.onerror = (error) => {
     console.error('WebSocket Error:', error)
-    term.write('
-*** WebSocket error ***
-')
+    term.write('\r\n*** WebSocket error ***\r\n')
   }
 }
 
@@ -161,7 +145,6 @@ const handleReconnect = () => {
 
 onMounted(async () => {
   await fetchHostInfo()
-  await nextTick()
   initTerminal()
   connectWebSocket()
 })
@@ -181,17 +164,18 @@ onUnmounted(() => {
 .terminal-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 120px);
   background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
+  margin: 10px;
 }
 
 .terminal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 8px 15px;
   background-color: #333;
   color: #fff;
   border-bottom: 1px solid #444;
@@ -200,12 +184,12 @@ onUnmounted(() => {
 .host-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
 .host-name {
-  font-weight: bold;
-  font-size: 1.1em;
+  font-weight: 600;
+  font-size: 1.05em;
 }
 
 .host-ip {
@@ -215,13 +199,14 @@ onUnmounted(() => {
 
 .terminal-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .terminal-body {
   flex: 1;
-  padding: 5px;
+  padding: 4px;
   overflow: hidden;
+  background-color: #1e1e1e;
 }
 
 :deep(.xterm-viewport) {

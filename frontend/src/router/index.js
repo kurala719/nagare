@@ -169,6 +169,12 @@ const routes = [
     meta: { requiresAuth: false, layout: 'status' }
   },
   {
+    path: '/reports',
+    name: 'Reports',
+    component: () => import('@/views/Reports.vue'),
+    meta: { requiresAuth: true, minPrivilege: 2 }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard'
   },

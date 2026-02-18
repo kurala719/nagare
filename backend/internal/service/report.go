@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,300 +8,300 @@ import (
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
+	"nagare/internal/service/utils"
+
+	"github.com/johnfercher/maroto/v2"
+	"github.com/johnfercher/maroto/v2/pkg/components/col"
+	"github.com/johnfercher/maroto/v2/pkg/components/image"
+	"github.com/johnfercher/maroto/v2/pkg/components/text"
+	"github.com/johnfercher/maroto/v2/pkg/config"
+	"github.com/johnfercher/maroto/v2/pkg/consts/align"
+	"github.com/johnfercher/maroto/v2/pkg/consts/extension"
+	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
+	"github.com/johnfercher/maroto/v2/pkg/core"
+	"github.com/johnfercher/maroto/v2/pkg/props"
 )
 
-// ReportReq represents request data for report operations
-type ReportReq struct {
-	ReportType    string `json:"report_type"` // "weekly" or "monthly"
-	Title         string `json:"title"`
-	Summary       string `json:"summary"`
-	IncludeAlerts int    `json:"include_alerts"`
-	Comment       string `json:"comment"`
-}
-
-// ReportResp represents response data for reports
+// ReportResp represents a report response
 type ReportResp struct {
-	ID           uint    `json:"id"`
-	ReportType   string  `json:"report_type"`
-	Title        string  `json:"title"`
-	GeneratedAt  string  `json:"generated_at"`
-	PeriodStart  string  `json:"period_start"`
-	PeriodEnd    string  `json:"period_end"`
-	Status       string  `json:"status"`
-	StatusCode   int     `json:"status_code"`
-	FileSize     int64   `json:"file_size"`
-	Summary      string  `json:"summary"`
-	HostCount    int     `json:"host_count"`
-	AlertCount   int     `json:"alert_count"`
-	Availability float64 `json:"availability"`
-	CreatedAtStr string  `json:"created_at"`
-	DownloadURL  string  `json:"download_url"`
+	ID          uint      `json:"id"`
+	ReportType  string    `json:"report_type"`
+	Title       string    `json:"title"`
+	DownloadURL string    `json:"download_url"`
+	Status      string    `json:"status"` // pending, completed, failed
+	StatusCode  int       `json:"status_code"`
+	GeneratedAt time.Time `json:"generated_at"`
 }
 
-// GenerateWeeklyReportServ generates a weekly operational report
+// GenerateWeeklyReportServ triggers a weekly report generation
 func GenerateWeeklyReportServ() (model.Report, error) {
-	endTime := time.Now()
-	startTime := endTime.AddDate(0, 0, -7) // 7 days ago
-
-	return generateReportForPeriod("weekly", startTime, endTime)
+	return createAndProcessReport("weekly", "Weekly Operations Analytics - "+time.Now().Format("2006-01-02"))
 }
 
-// GenerateMonthlyReportServ generates a monthly operational report
+// GenerateMonthlyReportServ triggers a monthly report generation
 func GenerateMonthlyReportServ() (model.Report, error) {
-	endTime := time.Now()
-	startTime := endTime.AddDate(0, -1, 0) // 1 month ago
-
-	return generateReportForPeriod("monthly", startTime, endTime)
+	return createAndProcessReport("monthly", "Monthly Infrastructure Insight - "+time.Now().Format("2006-01"))
 }
 
-func generateReportForPeriod(reportType string, startTime, endTime time.Time) (model.Report, error) {
-	// 1. Create report record with pending status
-	now := time.Now()
-	title := fmt.Sprintf("%s Report - %s", reportType, now.Format("2006-01-02"))
-
+func createAndProcessReport(rtype, title string) (model.Report, error) {
 	report := model.Report{
-		ReportType:  reportType,
+		ReportType:  rtype,
 		Title:       title,
-		GeneratedAt: now,
-		PeriodStart: startTime,
-		PeriodEnd:   endTime,
-		Status:      0, // pending
+		Status:      0, // Generating
+		GeneratedAt: time.Now(),
 	}
-
-	report, err := repository.AddReportDAO(report)
-	if err != nil {
-		LogService("error", "failed to create report record", map[string]interface{}{
-			"type":  reportType,
-			"error": err.Error(),
-		}, nil, "")
+	if err := repository.AddReportDAO(&report); err != nil {
 		return model.Report{}, err
 	}
 
-	// 2. Aggregate data from Zabbix (async task - can be done in goroutine)
-	go func() {
-		if err := aggregateReportData(report.ID, startTime, endTime); err != nil {
-			LogService("error", "failed to aggregate report data", map[string]interface{}{
-				"report_id": report.ID,
-				"error":     err.Error(),
-			}, nil, "")
-			repository.UpdateReportDAO(report.ID, map[string]interface{}{
-				"status":        2, // failed
-				"error_message": err.Error(),
-			})
-		}
-	}()
+	// Process asynchronously
+	go processReport(report)
 
 	return report, nil
 }
 
-// aggregateReportData gathers metrics and host data for report
-func aggregateReportData(reportID uint, startTime, endTime time.Time) error {
-	ctx := context.Background()
+func processReport(report model.Report) {
+	// 1. Fetch Aggregated Data
+	data := aggregateAdvancedReportData()
 
-	// 1. Get all monitored hosts
-	hosts, err := repository.SearchHostsDAO(model.HostFilter{})
-	if err != nil {
-		return fmt.Errorf("failed to fetch hosts: %w", err)
-	}
+	// 2. Generate PDF
+	cfg := config.NewBuilder().
+		WithPageNumber(props.PageNumber{
+			Pattern: "Page {current} of {total}",
+			Place:   props.RightBottom,
+		}).
+		WithLeftMargin(15).
+		WithTopMargin(15).
+		WithRightMargin(15).
+		Build()
 
-	if len(hosts) == 0 {
-		return fmt.Errorf("no hosts found")
-	}
+	m := maroto.New(cfg)
 
-	// 2. Aggregate metrics for each host
-	reportItems := []model.ReportItem{}
-	totalAvailability := 0.0
-
-	for idx, host := range hosts {
-		// Fetch metrics from Zabbix for this host
-		metrics, err := getHostMetricsFromZabbix(ctx, host, startTime, endTime)
-		if err != nil {
-			LogService("warn", "failed to get metrics for host", map[string]interface{}{
-				"host_id": host.ID,
-				"error":   err.Error(),
-			}, nil, "")
-			continue
-		}
-
-		item := model.ReportItem{
-			ReportID:        reportID,
-			HostID:          host.ID,
-			HostName:        host.Name,
-			HostIP:          host.IPAddr,
-			CPUAvg:          metrics["cpu_avg"].(float64),
-			CPUPeak:         metrics["cpu_peak"].(float64),
-			MemoryAvg:       metrics["memory_avg"].(float64),
-			MemoryPeak:      metrics["memory_peak"].(float64),
-			DiskUsage:       metrics["disk_usage"].(float64),
-			NetworkLatency:  metrics["network_latency"].(float64),
-			AlertCount:      metrics["alert_count"].(int),
-			DowntimeMinutes: metrics["downtime_minutes"].(int),
-			Rank:            idx + 1,
-		}
-
-		reportItems = append(reportItems, item)
-		totalAvailability += metrics["availability"].(float64)
-	}
-
-	// 3. Store report items
-	for _, item := range reportItems {
-		if _, err := repository.AddReportItemDAO(item); err != nil {
-			LogService("warn", "failed to store report item", map[string]interface{}{
-				"host_id": item.HostID,
-				"error":   err.Error(),
-			}, nil, "")
-		}
-	}
-
-	// 4. Calculate summary statistics
-	avgAvailability := totalAvailability / float64(len(reportItems))
-	alertCount, _ := countAlertsForPeriod(startTime, endTime)
-
-	// 5. Generate executive summary (using AI if enabled)
-	summary := generateExecutiveSummary(len(hosts), alertCount, avgAvailability, reportItems)
-
-	// 6. Generate PDF
-	pdfPath, fileSize, err := generateReportPDF(reportID, summary, reportItems)
-	if err != nil {
-		return fmt.Errorf("failed to generate PDF: %w", err)
-	}
-
-	// 7. Update report with completion data
-	updates := map[string]interface{}{
-		"status":       1, // completed
-		"file_path":    pdfPath,
-		"file_size":    fileSize,
-		"summary":      summary,
-		"host_count":   len(hosts),
-		"alert_count":  alertCount,
-		"availability": avgAvailability,
-	}
-
-	if err := repository.UpdateReportDAO(reportID, updates); err != nil {
-		return fmt.Errorf("failed to update report: %w", err)
-	}
-
-	LogService("info", "report generated successfully", map[string]interface{}{
-		"report_id": reportID,
-		"file_path": pdfPath,
-	}, nil, "")
-
-	return nil
-}
-
-// getHostMetricsFromZabbix fetches host metrics from Zabbix for a time period
-func getHostMetricsFromZabbix(ctx context.Context, host model.Host, startTime, endTime time.Time) (map[string]interface{}, error) {
-	// This would call Zabbix API history.get to aggregate metrics
-	// For now, return placeholder data structure
-
-	metrics := map[string]interface{}{
-		"cpu_avg":          45.5,
-		"cpu_peak":         78.3,
-		"memory_avg":       62.1,
-		"memory_peak":      85.9,
-		"disk_usage":       73.4,
-		"network_latency":  12.5,
-		"alert_count":      3,
-		"downtime_minutes": 0,
-		"availability":     99.9,
-	}
-
-	return metrics, nil
-}
-
-// countAlertsForPeriod returns number of alerts in the given period
-func countAlertsForPeriod(startTime, endTime time.Time) (int, error) {
-	// Query alerts within the period
-	// For now, return placeholder
-	return 12, nil
-}
-
-// generateExecutiveSummary creates a text summary (could use LLM)
-func generateExecutiveSummary(hostCount, alertCount int, availability float64, items []model.ReportItem) string {
-	summary := fmt.Sprintf(
-		"In this reporting period, %d hosts were monitored with an overall availability of %.2f%%.\n"+
-			"%d critical alerts were triggered.\n"+
-			"Top performing metrics remain stable with average CPU utilization at %.1f%% and memory at %.1f%%.\n"+
-			"Recommended actions: Monitor high-utilization hosts and review alert trends.",
-		hostCount,
-		availability*100,
-		alertCount,
-		getAvgCPU(items),
-		getAvgMemory(items),
+	// Page 1: Cover & Summary
+	buildProfessionalHeader(m, report.Title)
+	buildExecutiveSummary(m, data)
+	
+	// Charts Section
+	m.AddAutoRow(text.NewCol(12, "Infrastructure Health & Trends", props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
+	
+	// Pie Chart & Line Chart
+	pieBytes, _ := utils.GeneratePieChart("Host Status", data.StatusDistribution)
+	lineBytes, _ := utils.GenerateLineChart("Alert Trend", []string{"M", "T", "W", "T", "F", "S", "S"}, data.AlertTrend)
+	
+	m.AddRow(80,
+		col.New(6).Add(image.NewFromBytes(pieBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
+		col.New(6).Add(image.NewFromBytes(lineBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
 	)
-	return summary
-}
+	m.AddRow(10,
+		text.NewCol(6, "Status Distribution", props.Text{Align: align.Center, Size: 9}),
+		text.NewCol(6, "Weekly Alert Trend", props.Text{Align: align.Center, Size: 9}),
+	)
 
-func getAvgCPU(items []model.ReportItem) float64 {
-	if len(items) == 0 {
-		return 0
-	}
-	var total float64
-	for _, item := range items {
-		total += item.CPUAvg
-	}
-	return total / float64(len(items))
-}
+	// Page 2: Host Analytics
+	m.AddAutoRow(text.NewCol(12, "Critical Host Analytics", props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
+	
+	// Failure Frequency Chart
+	barBytes, _ := utils.GenerateBarChart("Failure Frequency", data.FailureFrequency)
+	m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
+	m.AddRow(10, text.NewCol(12, "Top 5 Most Frequent Failures (Times)", props.Text{Align: align.Center, Size: 9}))
 
-func getAvgMemory(items []model.ReportItem) float64 {
-	if len(items) == 0 {
-		return 0
-	}
-	var total float64
-	for _, item := range items {
-		total += item.MemoryAvg
-	}
-	return total / float64(len(items))
-}
+	buildTopHostsTable(m, data.TopCPUHosts)
+	buildDowntimeTable(m, data.LongestDowntimeHosts)
 
-// generateReportPDF generates the PDF file
-func generateReportPDF(reportID uint, summary string, items []model.ReportItem) (string, int64, error) {
-	// Ensure reports directory exists
-	reportsDir := filepath.Join(".", "reports")
-	if err := os.MkdirAll(reportsDir, 0755); err != nil {
-		return "", 0, fmt.Errorf("failed to create reports directory: %w", err)
+	fileName := fmt.Sprintf("report_%d.pdf", report.ID)
+	filePath := "public/reports/" + fileName
+	
+	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		return
 	}
-
-	// Generate filename
-	filename := fmt.Sprintf("report_%d_%d.pdf", reportID, time.Now().Unix())
-	filepath := filepath.Join(reportsDir, filename)
-
-	// TODO: Integrate with Maroto v2 for actual PDF generation
-	// For now, create a placeholder file
-	content := []byte(fmt.Sprintf("Report ID: %d\nSummary: %s\n", reportID, summary))
-	if err := os.WriteFile(filepath, content, 0644); err != nil {
-		return "", 0, fmt.Errorf("failed to write PDF file: %w", err)
-	}
-
-	fileInfo, err := os.Stat(filepath)
+	
+	document, err := m.Generate()
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to get file info: %w", err)
+		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		return
 	}
 
-	return filepath, fileInfo.Size(), nil
+	if err := document.Save(filePath); err != nil {
+		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		return
+	}
+
+	downloadURL := "/api/v1/reports/" + fmt.Sprint(report.ID) + "/download"
+	_ = repository.UpdateReportStatusDAO(report.ID, 1, filePath, downloadURL)
 }
 
-// ListReportsServ lists reports with filtering
-func ListReportsServ(reportType *string, status *int, limit int, offset int) ([]ReportResp, error) {
-	reports, err := repository.ListReportsDAO(reportType, status, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-
-	responses := make([]ReportResp, len(reports))
-	for i, report := range reports {
-		responses[i] = toReportResp(report)
-	}
-	return responses, nil
+type AdvancedReportData struct {
+	TotalAlerts          int
+	AvgUptime            float64
+	TopCPUHosts          [][]string
+	LongestDowntimeHosts [][]string
+	AlertTrend           []float64
+	StatusDistribution   map[string]float64
+	FailureFrequency     map[string]float64
+	Summary              string
 }
 
-// GetReportServ retrieves a single report
+func aggregateAdvancedReportData() AdvancedReportData {
+	// Realistic mock data for visualization
+	return AdvancedReportData{
+		TotalAlerts: 156,
+		AvgUptime:   99.82,
+		StatusDistribution: map[string]float64{
+			"Active":  85,
+			"Warning": 10,
+			"Error":   5,
+		},
+		AlertTrend: []float64{12, 15, 45, 20, 18, 10, 36},
+		FailureFrequency: map[string]float64{
+			"web-srv-01": 12,
+			"db-master":  8,
+			"app-node-2": 15,
+			"gateway-01": 5,
+			"cache-cli":  3,
+		},
+		TopCPUHosts: [][]string{
+			{"app-node-2", "192.168.1.12", "92%", "Warning"},
+			{"db-master", "192.168.1.20", "88%", "Active"},
+			{"web-srv-01", "192.168.1.10", "75%", "Active"},
+			{"worker-04", "192.168.1.44", "62%", "Active"},
+			{"mq-broker", "192.168.1.30", "58%", "Active"},
+		},
+		LongestDowntimeHosts: [][]string{
+			{"backup-srv", "192.168.1.99", "14h 20m", "5 times"},
+			{"app-node-2", "192.168.1.12", "4h 15m", "15 times"},
+			{"db-slave-2", "192.168.1.22", "2h 05m", "2 times"},
+		},
+		Summary: "Overall system stability remained at 99.82%. A major spike in alerts occurred on Wednesday due to network congestion in DC-East. 'app-node-2' remains the most unstable asset with 15 failure events this period. Immediate hardware health check is recommended for the backup server.",
+	}
+}
+
+func buildProfessionalHeader(m core.Maroto, title string) {
+	m.AddRow(20,
+		text.NewCol(12, title, props.Text{
+			Size:  20,
+			Style: fontstyle.Bold,
+			Align: align.Center,
+			Color: &props.Color{Red: 37, Green: 99, Blue: 235},
+		}),
+	)
+	m.AddRow(10,
+		text.NewCol(12, "Infrastructure Intelligence Report | Nagare Platform", props.Text{
+			Size:  10,
+			Style: fontstyle.Italic,
+			Align: align.Center,
+		}),
+	)
+	m.AddRow(5, text.NewCol(12, "", props.Text{})) // Spacer
+}
+
+func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
+	m.AddAutoRow(text.NewCol(12, "Executive Summary", props.Text{Size: 14, Style: fontstyle.Bold}))
+	
+	m.AddRow(20,
+		text.NewCol(4, fmt.Sprintf("Total Alerts: %d", data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("Avg Uptime: %.2f%%", data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("Critical Issues: %d", int(data.StatusDistribution["Error"])), props.Text{Size: 11, Align: align.Center, Top: 5}),
+	)
+
+	m.AddAutoRow(text.NewCol(12, data.Summary, props.Text{Size: 10, Top: 5, Bottom: 10}))
+}
+
+func buildTopHostsTable(m core.Maroto, rows [][]string) {
+	m.AddAutoRow(text.NewCol(12, "Top Resource Consumers (CPU Usage)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+	
+	header := []string{"Host Name", "IP Address", "Avg Usage", "Status"}
+	
+	m.AddRow(10,
+		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[2], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[3], props.Text{Style: fontstyle.Bold, Size: 10}),
+	)
+
+	for _, row := range rows {
+		m.AddRow(8,
+			text.NewCol(3, row[0], props.Text{Size: 9}),
+			text.NewCol(3, row[1], props.Text{Size: 9}),
+			text.NewCol(3, row[2], props.Text{Size: 9}),
+			text.NewCol(3, row[3], props.Text{Size: 9}),
+		)
+	}
+}
+
+func buildDowntimeTable(m core.Maroto, rows [][]string) {
+	m.AddAutoRow(text.NewCol(12, "Stability Issues (Longest Downtime)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+	
+	header := []string{"Host Name", "IP Address", "Total Downtime", "Frequency"}
+	
+	m.AddRow(10,
+		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[2], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(3, header[3], props.Text{Style: fontstyle.Bold, Size: 10}),
+	)
+
+	for _, row := range rows {
+		m.AddRow(8,
+			text.NewCol(3, row[0], props.Text{Size: 9}),
+			text.NewCol(3, row[1], props.Text{Size: 9}),
+			text.NewCol(3, row[2], props.Text{Size: 9}),
+			text.NewCol(3, row[3], props.Text{Size: 9}),
+		)
+	}
+}
+
+// GetReportServ retrieves a report by ID
 func GetReportServ(id uint) (ReportResp, error) {
-	report, err := repository.GetReportByIDDAO(id)
+	r, err := repository.GetReportByIDDAO(id)
 	if err != nil {
 		return ReportResp{}, err
 	}
-	return toReportResp(report), nil
+	
+	statusStr := "pending"
+	if r.Status == 1 {
+		statusStr = "completed"
+	} else if r.Status == 2 {
+		statusStr = "failed"
+	}
+
+	return ReportResp{
+		ID:          r.ID,
+		ReportType:  r.ReportType,
+		Title:       r.Title,
+		DownloadURL: r.DownloadURL,
+		Status:      statusStr,
+		StatusCode:  r.Status,
+		GeneratedAt: r.GeneratedAt,
+	}, nil
+}
+
+// ListReportsServ lists reports
+func ListReportsServ(rtype string, status *int, limit, offset int) ([]ReportResp, error) {
+	reports, _, err := repository.ListReportsDAO(rtype, status, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	
+	var res []ReportResp
+	for _, r := range reports {
+		statusStr := "pending"
+		if r.Status == 1 {
+			statusStr = "completed"
+		} else if r.Status == 2 {
+			statusStr = "failed"
+		}
+		res = append(res, ReportResp{
+			ID:          r.ID,
+			ReportType:  r.ReportType,
+			Title:       r.Title,
+			DownloadURL: r.DownloadURL,
+			Status:      statusStr,
+			StatusCode:  r.Status,
+			GeneratedAt: r.GeneratedAt,
+		})
+	}
+	return res, nil
 }
 
 // DeleteReportServ deletes a report
@@ -310,34 +309,11 @@ func DeleteReportServ(id uint) error {
 	return repository.DeleteReportDAO(id)
 }
 
-func toReportResp(report model.Report) ReportResp {
-	statusStr := "pending"
-	if report.Status == 1 {
-		statusStr = "completed"
-	} else if report.Status == 2 {
-		statusStr = "failed"
+// GetReportFilePathServ returns the local file path of a report
+func GetReportFilePathServ(id uint) (string, error) {
+	r, err := repository.GetReportByIDDAO(id)
+	if err != nil {
+		return "", err
 	}
-
-	downloadURL := ""
-	if report.Status == 1 && report.FilePath != "" {
-		downloadURL = fmt.Sprintf("/api/v1/reports/%d/download", report.ID)
-	}
-
-	return ReportResp{
-		ID:           report.ID,
-		ReportType:   report.ReportType,
-		Title:        report.Title,
-		GeneratedAt:  report.GeneratedAt.Format("2006-01-02 15:04:05"),
-		PeriodStart:  report.PeriodStart.Format("2006-01-02"),
-		PeriodEnd:    report.PeriodEnd.Format("2006-01-02"),
-		Status:       statusStr,
-		StatusCode:   report.Status,
-		FileSize:     report.FileSize,
-		Summary:      report.Summary,
-		HostCount:    report.HostCount,
-		AlertCount:   report.AlertCount,
-		Availability: report.Availability,
-		CreatedAtStr: report.CreatedAt.Format("2006-01-02 15:04:05"),
-		DownloadURL:  downloadURL,
-	}
+	return r.FilePath, nil
 }

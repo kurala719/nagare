@@ -62,6 +62,7 @@ All endpoints below are prefixed by `/api/v1`.
 - `GET /hosts/:id` : Get host by ID
 - `GET /hosts/:id/history` : Get host history
 - `POST /hosts/:id/consult` : Consult host
+- `GET /hosts/:id/ssh` : WebSSH WebSocket endpoint
 
 **Write (Privilege 2):**
 - `POST /hosts/` : Create host
@@ -73,6 +74,26 @@ All endpoints below are prefixed by `/api/v1`.
 - `POST /monitors/:id/hosts/:hid/pull` : Pull single host from monitor
 - `POST /monitors/:id/hosts/push` : Push all hosts to monitor
 - `POST /monitors/:id/hosts/:hid/push` : Push single host to monitor
+
+### Knowledge Base
+**Read (Privilege 1):**
+- `GET /knowledge-base` : Search/List knowledge base entries
+- `GET /knowledge-base/:id` : Get specific entry
+
+**Write (Privilege 2):**
+- `POST /knowledge-base` : Create knowledge entry
+- `PUT /knowledge-base/:id` : Update knowledge entry
+- `DELETE /knowledge-base/:id` : Delete knowledge entry
+
+### Reports (Privilege 2)
+- `GET /reports` : List generated reports
+- `GET /reports/:id` : Get report metadata
+- `GET /reports/config` : Get reporting configuration
+- `PUT /reports/config` : Update reporting configuration
+- `POST /reports/generate/weekly` : Trigger weekly report generation
+- `POST /reports/generate/monthly` : Trigger monthly report generation
+- `DELETE /reports/:id` : Delete report
+- `GET /reports/:id/download` : Download PDF report file
 
 ### Alerts
 **Public Webhook:**
@@ -237,9 +258,11 @@ All routes are defined in the SPA router and map to Vue view components.
 - `/alert` -> Alert
 - `/host` -> Host
 - `/host/:id/detail` -> HostDetail
+- `/host/:id/terminal` -> Terminal (WebSSH)
 - `/group` -> Group
 - `/group/:id/detail` -> GroupDetail
 - `/monitor` -> Monitor
+- `/knowledge-base` -> KnowledgeBase
 - `/item` -> Item
 - `/item/:id/detail` -> ItemDetail
 - `/host/:hostId/items` -> Redirect to /item with hostId filter
@@ -253,6 +276,7 @@ All routes are defined in the SPA router and map to Vue view components.
 - `/trigger` -> Trigger
 - `/log` -> Log
 - `/user` -> User
+- `/reports` -> Reports
 
 **Privilege 3:**
 - `/register-application` -> RegisterApplication

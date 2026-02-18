@@ -32,7 +32,12 @@ func ListReportsCtrl(c *gin.Context) {
 		offset = *o
 	}
 
-	reports, err := service.ListReportsServ(reportType, status, limit, offset)
+	var rType string
+	if reportType != nil {
+		rType = *reportType
+	}
+
+	reports, err := service.ListReportsServ(rType, status, limit, offset)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -131,12 +136,18 @@ func DownloadReportCtrl(c *gin.Context) {
 		return
 	}
 
+	filePath, err := service.GetReportFilePathServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
 	// Check if file exists
-	if _, err := os.Stat(report.DownloadURL); err != nil {
-		respondBadRequest(c, "report file not found")
+	if _, err := os.Stat(filePath); err != nil {
+		respondBadRequest(c, "report file not found on disk")
 		return
 	}
 
 	// Serve the PDF file
-	c.File(report.DownloadURL)
+	c.File(filePath)
 }

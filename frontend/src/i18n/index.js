@@ -14,6 +14,7 @@ const messages = {
       night: 'Night',
       back: 'Back',
       refresh: 'Refresh',
+      loading: 'Loading...',
       startTime: 'Start time',
       endTime: 'End time',
       noHistoryData: 'No history data',
@@ -29,6 +30,7 @@ const messages = {
       globalSearch: 'Global Search',
       searchPlaceholder: 'Search anything...',
       columns: 'Columns',
+      actions: 'Actions',
       enabled: 'Enabled',
       disabled: 'Disabled',
       statusInactive: 'Inactive',
@@ -716,7 +718,9 @@ const messages = {
       registerApplication: 'Register Applications',
       configuration: 'Configuration',
       system: 'System',
-      test: 'Test'
+      maintenance: 'Maintenance',
+      test: 'Test',
+      reports: 'Reports'
     },
     media: {
       title: 'Media',
@@ -1015,6 +1019,28 @@ const messages = {
       topicRequired: 'Topic is required',
       contentRequired: 'Content is required',
       categoryRequired: 'Category is required'
+    },
+    reports: {
+      title: 'Reports',
+      subtitle: 'Automated Operations Reports',
+      filterType: 'Filter Type',
+      config: 'Configuration',
+      configTitle: 'Report Configuration',
+      generateWeekly: 'Generate Weekly',
+      generateMonthly: 'Generate Monthly',
+      autoGenerate: 'Auto Generate',
+      generateDay: 'Generate Day',
+      generateTime: 'Generate Time',
+      generateDate: 'Generate Date',
+      reportTitle: 'Title',
+      type: 'Type',
+      generatedAt: 'Generated At',
+      status: 'Status',
+      loadFailed: 'Failed to load reports',
+      generationStarted: 'Report generation started',
+      generationFailed: 'Report generation failed',
+      deleteConfirm: 'Are you sure you want to delete this report?',
+      deleteSuccess: 'Report deleted successfully'
     }
   },
   'zh-CN': {
@@ -1024,6 +1050,7 @@ const messages = {
       night: '夜间',
       back: '返回',
       refresh: '刷新',
+      loading: '正在加载...',
       startTime: '开始时间',
       endTime: '结束时间',
       noHistoryData: '暂无历史数据',
@@ -1039,6 +1066,7 @@ const messages = {
       globalSearch: '全局搜索',
       searchPlaceholder: '搜索任何内容...',
       columns: '列',
+      actions: '操作',
       enabled: '启用',
       disabled: '禁用',
       statusInactive: '未激活',
@@ -1743,7 +1771,9 @@ const messages = {
       registerApplication: '注册申请',
       configuration: '配置',
       system: '系统',
-      test: '测试'
+      maintenance: '维护',
+      test: '测试',
+      reports: '报表'
     },
     media: {
       title: '媒介',
@@ -2033,6 +2063,28 @@ const messages = {
       topicRequired: '请输入主题',
       contentRequired: '请输入内容',
       categoryRequired: '请选择分类'
+    },
+    reports: {
+      title: '报表',
+      subtitle: '自动化运维报表',
+      filterType: '筛选类型',
+      config: '配置',
+      configTitle: '报表配置',
+      generateWeekly: '生成周报',
+      generateMonthly: '生成月报',
+      autoGenerate: '自动生成',
+      generateDay: '生成日',
+      generateTime: '生成时间',
+      generateDate: '生成日期',
+      reportTitle: '标题',
+      type: '类型',
+      generatedAt: '生成时间',
+      status: '状态',
+      loadFailed: '加载报表失败',
+      generationStarted: '报表生成已开始',
+      generationFailed: '报表生成失败',
+      deleteConfirm: '确定要删除这份报表吗？',
+      deleteSuccess: '报表删除成功'
     }
   }
 }

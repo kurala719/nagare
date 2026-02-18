@@ -39,7 +39,7 @@ type Message struct {
 
 // HandleWebSSH handles WebSocket connections for WebSSH
 func HandleWebSSH(c *gin.Context) {
-	hostIDStr := c.Query("id")
+	hostIDStr := c.Param("id")
 	if hostIDStr == "" {
 		respondBadRequest(c, "host id is required")
 		return

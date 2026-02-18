@@ -140,7 +140,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny } from '@element-plus/icons-vue'
+import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools } from '@element-plus/icons-vue'
 import SideBarChat from '@/components/Customed/SideBarChat.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import { getUserPrivileges, getToken, clearToken, getUserClaims } from '@/utils/auth'
@@ -157,7 +157,8 @@ export default defineComponent({
     Monitor,
     Setting,
     Moon,
-    Sunny
+    Sunny,
+    Tools
   },
   setup() {
     const route = useRoute()
@@ -186,7 +187,6 @@ export default defineComponent({
       ]},
       { key: 'alert_group', label: 'menu.alert', minPrivilege: 1, icon: 'Bell', children: [
         { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
-        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
         { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
         { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
         { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
@@ -195,6 +195,10 @@ export default defineComponent({
         { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
         { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
         { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
+      ]},
+      { key: 'maintenance_group', label: 'menu.maintenance', minPrivilege: 1, icon: 'Tools', children: [
+        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
+        { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },

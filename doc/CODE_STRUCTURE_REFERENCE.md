@@ -164,20 +164,18 @@ backend/
 │
 └── internal/
     ├── api/ (Presentation Layer)
-    │   └── media.go                       [Controllers]
-    │       ├── HandleQQMessageCtrl()
-    │       ├── OneBotMessageEvent
-    │       ├── OneBotSender
-    │       ├── OneBotMessageResponse
-    │       └── (existing controllers)
+    │   ├── media.go                       [Controllers]
+    │   ├── webssh.go                      [WebSSH WebSocket Handler]
+    │   ├── knowledge_base.go              [Knowledge Base Controllers]
+    │   ├── report.go                      [Report Management Controllers]
+    │   ├── report_config.go               [Report Config Controllers]
+    │   └── (existing controllers)
     │
     ├── service/ (Business Logic Layer)
     │   ├── im_command.go                  [IM Logic]
-    │   │   ├── HandleIMCommand()
-    │   │   ├── handleGetAlerts()
-    │   │   ├── handleChatCommand()
-    │   │   └── HandleIMCommandWithContext()
-    │   │
+    │   ├── knowledge_base.go              [RAG and KB Logic]
+    │   ├── report.go                      [PDF Generation Logic]
+    │   ├── cron.go                        [Task Scheduling]
     │   └── (other services)
     │       ├── GetHealthScoreServ()
     │       ├── SearchAlertsServ()
@@ -185,10 +183,16 @@ backend/
     │       └── GetAllProvidersServ()
     │
     ├── repository/ (Data Access Layer)
+    │   ├── knowledge_base.go              [KB DAOs]
+    │   ├── report.go                      [Report DAOs]
     │   └── (DAOs and external adapters)
     │
-    └── model/ (Domain Model)
-        └── (Entities)
+    ├── model/ (Domain Model)
+    │   └── entities.go                    [Core Entities including KB and Report]
+    │
+    └── utils/
+        ├── charts.go                      [Chart Generation Utility]
+        └── crypto.go                      [AES Encryption Utility]
 ```
 
 ## Frontend File Structure

@@ -123,8 +123,8 @@ func initDBTables() error {
 		&model.RegisterApplication{},
 		&model.QQWhitelist{},
 		&model.Report{},
-		&model.ReportItem{},
 		&model.ReportConfig{},
+		&model.KnowledgeBase{},
 	); err != nil {
 		return err
 	}

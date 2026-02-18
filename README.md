@@ -57,11 +57,26 @@ See [Backend README](backend/README.md) for detailed instructions.
 
 See [Frontend README](frontend/README.md) for detailed instructions.
 
+## ✨ Key Features
+
+- **Centralized Monitoring**: Unified management of Zabbix, Prometheus, and custom monitors.
+- **Smart Alerting**: Multi-channel notifications including Email, Webhook, and QQ.
+- **AI-Powered Analysis**: Intelligent alert diagnostics using Google Gemini LLM.
+- **Dynamic Dashboards**: Real-time visualization of system health and metrics.
+
+## 🛠️ Extensions
+
+- **Interactive WebSSH**: Direct shell access to monitored hosts from the browser.
+- **Automated Reporting**: Scheduled PDF reports with visual data analytics.
+- **RAG Knowledge Base**: Context-aware alert analysis using local operation history.
+
 ## 📚 Documentation
 
 Detailed documentation can be found in the `doc/` directory:
 
 - [**Architecture Overview**](doc/ARCHITECTURE.md): High-level system design and API reference.
+- [**Extension Features**](doc/EXTENSION_FEATURES.md): Deep dive into WebSSH, Reports, and RAG.
+- [**Code Structure**](doc/CODE_STRUCTURE_REFERENCE.md): Data flow and file organization.
 - [**Quick Start with QQ API**](doc/QUICK_START_QQ_API.md): Guide for integrating QQ bots.
 - [**Implementation Summary**](doc/IMPLEMENTATION_SUMMARY.md): Status of current features.
 

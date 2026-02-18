@@ -296,6 +296,34 @@ type KnowledgeBase struct {
 	Category string `gorm:"size:50;index"`
 }
 
+// ReportConfig stores configuration for automated report generation
+type ReportConfig struct {
+	gorm.Model
+	AutoGenerateWeekly  int    `gorm:"default:0"` // 0=disabled, 1=enabled
+	WeeklyGenerateDay   string // "Monday", "Friday", etc.
+	WeeklyGenerateTime  string // "09:00"
+	AutoGenerateMonthly int    `gorm:"default:0"` // 0=disabled, 1=enabled
+	MonthlyGenerateDate int    // 1-28
+	MonthlyGenerateTime string // "09:00"
+	IncludeAlerts       int    `gorm:"default:1"`
+	IncludeMetrics      int    `gorm:"default:1"`
+	TopHostsCount       int    `gorm:"default:5"`
+	EnableLLMSummary    int    `gorm:"default:1"`
+	EmailNotify         int    `gorm:"default:0"`
+	EmailRecipients     string // Comma-separated emails
+}
+
+// Report represents a generated PDF report
+type Report struct {
+	gorm.Model
+	ReportType  string // "weekly", "monthly", "manual"
+	Title       string
+	FilePath    string
+	DownloadURL string
+	Status      int // 0=generating, 1=completed, 2=failed
+	GeneratedAt time.Time
+}
+
 // UserWithInfo combines User and UserInformation for convenient querying
 type UserWithInfo struct {
 	User
