@@ -1,89 +1,41 @@
-# Nagare - Unified Monorepo
+# Nagare (流) - Next-Gen AI-Powered Operations Platform
 
-Welcome to the **Nagare** project! This is a comprehensive monitoring and automation system featuring a modern web UI and a robust Go-based backend.
+Nagare is a unified monitoring, automation, and diagnostic platform designed for modern SRE and DevOps teams. It combines high-concurrency data ingestion with Large Language Models (LLM) and Retrieval-Augmented Generation (RAG) to transform raw monitoring data into actionable intelligence.
+
+## 🌟 Key Features
+
+- **Unified Monitoring**: Seamless integration with Zabbix and Prometheus.
+- **AI Diagnostic Engine (RAG)**: Context-aware alert analysis using local operations history and Gemini/OpenAI.
+- **High Performance**: Go-based backend optimized with `jsoniter` for 20-30% faster serialization.
+- **Integrated WebSSH**: Secure, browser-based terminal access to monitored hosts.
+- **Automated Reporting**: Professional PDF reports with AI-generated summaries and server-side charts.
+- **Modern UI**: Vue 3 + Vite frontend with skeleton screens for optimized perceived speed.
+- **MCP Protocol**: Support for Model Context Protocol, enabling Nagare to act as an AI Agent toolkit.
 
 ## 📂 Project Structure
 
-This repository is organized as a monorepo containing both the frontend and backend codebases:
+- **`frontend/`**: Vue 3, Vite, Element Plus, ECharts, xterm.js.
+- **`backend/`**: Go 1.24, Gin, GORM, Redis, jsoniter, Gemini SDK.
+- **`doc/`**: Detailed architectural and feature documentation.
 
-- **`frontend/`**: The web user interface built with **Vue 3** and **Vite**.
-- **`backend/`**: The API server and core logic built with **Go (Golang)** and **Gin**.
-- **`doc/`**: Project documentation, guides, and architectural references.
-- **`tests/`**: Integration tests and utility scripts.
+## 🚀 Quick Start
 
-## 🚀 Getting Started
+### Backend (Go)
+1. `cd backend`
+2. `go mod download`
+3. `go build -tags=jsoniter -o nagare-server ./cmd/server`
+4. `./nagare-server` (Ensure `configs/nagare_config.json` is set up)
 
-### Prerequisites
+### Frontend (Vue 3)
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev`
 
-- **Go**: Version 1.21 or higher (for backend).
-- **Node.js**: Version 18 or higher (for frontend).
-- **Database**: A compatible SQL database (e.g., MySQL, SQLite) supported by GORM.
-- **Redis**: (Optional) For task queue management.
-
-### Quick Start
-
-#### Backend
-
-1.  Navigate to the backend directory:
-    ```bash
-    cd backend
-    ```
-2.  Install dependencies:
-    ```bash
-    go mod download
-    ```
-3.  Run the server:
-    ```bash
-    go run cmd/server/main.go
-    ```
-    *Note: Ensure your `configs/nagare_config.json` is properly configured.*
-
-See [Backend README](backend/README.md) for detailed instructions.
-
-#### Frontend
-
-1.  Navigate to the frontend directory:
-    ```bash
-    cd frontend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the development server:
-    ```bash
-    npm run dev
-    ```
-
-See [Frontend README](frontend/README.md) for detailed instructions.
-
-## ✨ Key Features
-
-- **Centralized Monitoring**: Unified management of Zabbix, Prometheus, and custom monitors.
-- **Smart Alerting**: Multi-channel notifications including Email, Webhook, and QQ.
-- **AI-Powered Analysis**: Intelligent alert diagnostics using Google Gemini LLM.
-- **Dynamic Dashboards**: Real-time visualization of system health and metrics.
-
-## 🛠️ Extensions
-
-- **Interactive WebSSH**: Direct shell access to monitored hosts from the browser.
-- **Automated Reporting**: Scheduled PDF reports with visual data analytics.
-- **RAG Knowledge Base**: Context-aware alert analysis using local operation history.
-
-## 📚 Documentation
-
-Detailed documentation can be found in the `doc/` directory:
-
-- [**Architecture Overview**](doc/ARCHITECTURE.md): High-level system design and API reference.
-- [**Extension Features**](doc/EXTENSION_FEATURES.md): Deep dive into WebSSH, Reports, and RAG.
-- [**Code Structure**](doc/CODE_STRUCTURE_REFERENCE.md): Data flow and file organization.
-- [**Quick Start with QQ API**](doc/QUICK_START_QQ_API.md): Guide for integrating QQ bots.
-- [**Implementation Summary**](doc/IMPLEMENTATION_SUMMARY.md): Status of current features.
-
-## 🤝 Contributing
-
-Please ensure you follow the project's coding standards and submit pull requests to the appropriate subdirectory (`frontend` or `backend`).
+## 🛠️ Performance & Security Highlights
+- **Build Tags**: Uses `-tags=jsoniter` for high-speed JSON processing.
+- **Code Splitting**: Optimized Vite build with manual chunks for UI and Charting libraries.
+- **Tunnel Friendly**: Built-in support for Microsoft Dev Tunnels with anti-phishing bypass.
+- **RAG Optimization**: Custom keyword re-ranking algorithm for superior AI context retrieval.
 
 ## 📄 License
-
 Apache License 2.0
