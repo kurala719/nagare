@@ -1,37 +1,32 @@
 # Nagare Automation & Chaos Engineering
 
-Nagare integrates configuration management and fault injection directly into the monitoring dashboard.
+This manual details the closed-loop remediation and simulation capabilities of Nagare.
 
-## 1. Ansible Automation Engine
+## 1. Ansible Integration Engine
 
-Nagare's Ansible module allows for "Monitor-to-Action" closed-loop automation.
+Nagare provides native integration with Ansible for automated remediation.
 
-### 1.1 Architecture (`backend/internal/service/ansible.go`)
--   **Dynamic Inventory**: Nagare provides a `GET /ansible/inventory` endpoint that serves an Ansible-compatible JSON inventory of all `hosts` and `groups` in the Nagare database.
--   **Playbook Orchestration**: 
-    -   Users can create/edit Ansible playbooks (`AnsiblePlaybook`) via the UI.
-    -   Execution is offloaded to background workers using the `AnsibleJob` model.
--   **AI Integration**: A "Recommend Playbook" feature (`POST /ansible/playbooks/recommend`) uses Gemini to suggest a specific playbook based on the current alert's context.
+### 1.1 Dynamic Inventory Service
+Nagare serves a dynamic JSON inventory at `GET /api/v1/ansible/inventory`.
+- **Structure**: Maps Nagare `Groups` to Ansible `Groups` and Nagare `Hosts` to Ansible `Hosts`.
+- **Credential Injection**: Automatically attaches configured SSH credentials to the dynamic inventory output for Ansible consumption.
 
-### 1.2 Execution Lifecycle
-1.  **Selection**: A user (or trigger) selects a playbook.
-2.  **Job Creation**: A record is created in `ansible_jobs`.
-3.  **Command Execution**: Nagare runs `ansible-playbook` with its own dynamic inventory as the source.
-4.  **Log Capture**: Output is streamed and stored in the database for auditing and post-mortem analysis.
+### 1.2 Playbook Management
+- **Persistence**: Playbooks are stored as raw text in MySQL.
+- **Async Execution**: Triggering a playbook creates an `AnsibleJob`, executed via a background worker.
+- **Streaming Logs**: Job output is captured and available for real-time monitoring via the UI.
 
-## 2. Chaos Engineering: Alert Storm Simulation
+## 2. Chaos Engineering: Alert Storm Simulator
 
-To test the robustness of alerting channels and LLM analysis, Nagare includes a "Chaos" module.
+Nagare includes a built-in stress-test tool to validate SRE responsiveness and AI correlation.
 
-### 2.1 The "Alert Storm" Trigger (`backend/internal/api/chaos.go`)
--   **Functionality**: Simulates a high-intensity failure event by injecting dozens of critical alerts across multiple hosts in a very short window.
--   **Parameters**:
-    -   `intensity`: Number of alerts per second.
-    -   `target_group`: Specific infrastructure segment to affect.
--   **Purpose**: 
-    -   Stress-test the **Rate Limiting** logic for QQ/Email notifications.
-    -   Validate the **AI's ability to correlate** multiple simultaneous failures.
+### 2.1 Logic (`internal/api/chaos.go`)
+The Alert Storm simulator mimics a cascading infrastructure failure:
+- **Injection**: Creates multiple critical `Alert` records across a targeted `Group` within a 1-second window.
+- **Validation Path**:
+    1. Tests **Notification Rate Limiting** (preventing QQ/Email spam).
+    2. Tests **AI Correlation** (Gemini's ability to identify a single root cause from 50+ concurrent alerts).
 
-## 3. Automation Triggers (`internal/service/trigger.go`)
--   Nagare allows users to link monitoring `Items` to `Actions`.
--   **Auto-Remediation**: If an alert matches a trigger's condition (e.g., `Severity > 2`), it can automatically launch an Ansible playbook to restart the service or clear a cache.
+## 3. Automation Triggers
+- **Event-Action Mapping**: Users define triggers (e.g., `CPU > 90%`) linked to `Actions` (e.g., `Run Ansible Playbook: Restart-App`).
+- **State Logic**: Triggers include cooldown periods to prevent remediation loops.

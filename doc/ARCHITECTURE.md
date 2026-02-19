@@ -1,43 +1,36 @@
 # Nagare System Architecture
 
-Nagare is a high-availability, AI-native operations framework. Its decoupled architecture separates high-speed telemetry ingestion from intelligent analysis.
+Nagare is designed as a decoupled, monorepo system that prioritizes ingestion throughput and intelligent response latency.
 
-## 1. High-Performance Backend (Go 1.24+ / Gin)
+## 1. Backend: The Go Engine (Go 1.24+)
 
-### 1.1 Serialization Optimization (`jsoniter`)
-To handle thousands of monitoring metrics per second, Nagare replaces the standard Go `encoding/json` with `github.com/json-iterator/go`.
--   **Implementation**: A package-level `jsonIter` variable in `backend/internal/api/webssh.go` and `internal/api/media.go`.
--   **Performance Gain**: Benchmarked at 20-30% CPU overhead reduction on high-load metric endpoints (Zabbix/Prometheus Webhooks).
+### 1.1 Serialization Strategy (`jsoniter`)
+To maximize throughput for high-frequency monitoring data, Nagare replaces `encoding/json` with `github.com/json-iterator/go`.
+- **Implementation**: Used explicitly in `webssh.go` and globally enabled via build tags.
+- **Impact**: Significant performance gains in `POST /api/v1/alerts/webhook` which processes hundreds of concurrent JSON payloads from Zabbix/Prometheus.
 
-### 1.2 Concurrency & Orchestration
--   **Goroutine Hub**: Nagare uses a `WebSocket Hub` (`internal/service/hub.go`) to manage hundreds of concurrent terminal and site message connections.
--   **Task Queue (Redis)**: Asynchronous tasks like **PDF Generation**, **Monitor Syncing**, and **Ansible Jobs** are offloaded to background workers.
+### 1.2 Concurrency & Real-time Hub
+- **Global Hub (`internal/service/hub.go`)**: Manages long-lived WebSocket connections for site messages. It uses a thread-safe registration/broadcast pattern to prevent race conditions.
+- **Task Queue (Redis)**: Non-blocking execution of heavy workloads (PDF generation, bulk monitor syncs) via the `pkg/queue` library.
 
-## 2. Persistence Layer (MySQL / GORM)
+## 2. Persistence & Models (MySQL / GORM)
 
-### 2.1 Data Models (`internal/model/entities.go`)
--   **`Monitor`**: Metadata for Zabbix/Prometheus nodes.
--   **`Item`**: Individual monitoring metrics (CPU, Memory, Disk).
--   **`Alert`**: Centralized event model with `Severity` (0-3).
--   **`KnowledgeBase`**: Source of truth for the RAG engine.
+### 2.1 Unified Monitoring Model
+Nagare standardizes heterogeneous monitoring data:
+- **`Monitor`**: Metadata for the source (Zabbix/Prometheus).
+- **`Item`**: Individual metrics (CPU, Mem, Latency).
+- **`Alert`**: Event-based data with standardized severities (0-3).
 
-### 2.2 Migrations & Updates (`backend/cmd/server/main.go`)
--   Nagare uses GORM AutoMigrate for schema evolution.
--   **Schema Legacy Support**: Built-in logic to rename deprecated columns (e.g., `site_id` to `group_id`) ensuring backward compatibility.
+### 2.2 Knowledge Graph Metadata
+- **`KnowledgeBase`**: Optimized for RAG retrieval with dedicated fields for `topic`, `keywords`, and `content`.
 
-## 3. Communication & Connectivity
+## 3. Global Data Flow
 
-### 3.1 Real-time Hub
--   Nagare supports **WebSocket (wss://)** for real-time site messages and WebSSH.
--   **Origin Security**: Strict origin checks are applied in `internal/api/webssh.go`.
+1. **Ingestion Layer**: `Monitor Node -> HTTP Webhook -> Gin Router -> Ingestion Service`.
+2. **Analysis Layer**: `Alert Event -> RAG Engine -> Knowledge Retrieval -> LLM Provider -> Diagnostic Report`.
+3. **Execution Layer**: `User Action -> Ansible Playbook -> SSH Target -> Status Feedback`.
+4. **Presentation Layer**: `Service Event -> WebSocket Hub -> Vue 3 Reactive View`.
 
-### 3.2 Connectivity & Health
--   **Root Handler**: `GET /` returns a `200 OK` JSON response, bypassing Microsoft Dev Tunnel anti-phishing pages for external callers.
--   **Health Endpoint**: `GET /health` provides a "UP/DOWN" signal for load balancers.
--   **System Metrics**: `GET /api/v1/system/metrics` exposes Go runtime statistics (Goroutines, GC, MemAlloc).
-
-## 4. Automation Pipeline
-1.  **Ingestion**: `Prometheus -> Nagare Webhook -> Alert Model`.
-2.  **RAG Diagnosis**: `Alert -> RAG Engine -> Knowledge Retrieval -> Gemini -> AI SRE Report`.
-3.  **Remediation**: `User -> Ansible Playbook -> Host CLI -> Resolution`.
-4.  **Reporting**: `Cron -> Report Engine -> PDF Generation -> User Download`.
+## 4. Connectivity & Deployment
+- **Root Health Check**: `GET /` and `GET /health` provide unauthenticated heartbeat signals for load balancers.
+- **Tunnel Bypass**: Injects headers to bypass Microsoft Dev Tunnel anti-phishing pages, ensuring external webhooks reach the backend without manual intervention.

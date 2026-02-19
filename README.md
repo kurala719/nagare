@@ -1,33 +1,35 @@
-# Nagare (流) - Unified AIOps & Infrastructure Orchestration
+# Nagare (流) - Enterprise AIOps & Infrastructure Orchestration
 
-Nagare is a high-performance, AI-native operations platform that bridges the gap between traditional monitoring (Zabbix/Prometheus) and autonomous system diagnosis. Built on a Go 1.24+ backend and a Vue 3 + Vite frontend, Nagare leverages Large Language Models (LLM) and a custom Retrieval-Augmented Generation (RAG) engine to provide context-aware troubleshooting.
+Nagare is a high-performance, AI-native operations platform designed to bridge the gap between traditional monitoring (Zabbix/Prometheus) and autonomous system diagnosis. Built on a Go 1.24+ backend and a Vue 3 + Vite frontend, Nagare leverages Large Language Models (LLM) and a custom Retrieval-Augmented Generation (RAG) engine to provide context-aware troubleshooting and automated remediation.
 
-## 🚀 Vision: Autonomous SRE
-Nagare is not just a dashboard; it is an intelligent agent designed to reduce MTTR (Mean Time To Repair) by automating the "Detection -> Context Retrieval -> AI Analysis -> Action" pipeline.
+## 📂 Technical Documentation Manuals
 
----
-
-## 📂 Technical Documentation Index
-
-For exhaustive technical details, refer to the specialized manuals in the `doc/` directory:
-
-| Document | Scope |
+| Manual | Description |
 | :--- | :--- |
-| [**Core Architecture**](./doc/ARCHITECTURE.md) | High-concurrency design, `jsoniter` optimizations, and data flow. |
-| [**AI & RAG Engine**](./doc/AI_RAG_ENGINE.md) | Scoring algorithms, tokenization, and prompt engineering. |
-| [**Automated Reporting**](./doc/REPORTING_SYSTEM.md) | PDF generation, Go-chart rendering, and cron orchestration. |
-| [**Automation & Chaos**](./doc/AUTOMATION_CHAOS.md) | Ansible integration and Chaos Engineering (Alert Storm) logic. |
-| [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) | PTY proxying, XSS prevention, and WebSocket safety. |
-| [**Frontend Engineering**](./doc/FRONTEND_GUIDE.md) | Skeleton screens, code splitting, and Dev Tunnel interoperability. |
-| [**API Technical Reference**](./doc/API_REFERENCE.md) | Comprehensive endpoint list, RBAC, and MCP support. |
+| [**Architecture**](./doc/ARCHITECTURE.md) | System design, high-concurrency Go patterns, and `jsoniter` optimization. |
+| [**AI & RAG Engine**](./doc/AI_RAG_ENGINE.md) | Precision scoring algorithms, tokenization, and prompt engineering. |
+| [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) | WebSocket-PTY proxying, XSS prevention, and terminal protocols. |
+| [**Reporting & Async Tasks**](./doc/REPORTING_SYSTEM.md) | Redis workers, Maroto PDF generation, and Go-chart rendering. |
+| [**Automation & Chaos**](./doc/AUTOMATION_CHAOS.md) | Ansible dynamic inventory and Alert Storm simulation logic. |
+| [**Frontend Engineering**](./doc/FRONTEND_GUIDE.md) | UX skeleton screens, manual chunking, and tunnel interoperability. |
+| [**API Reference**](./doc/API_REFERENCE.md) | RESTful specifications, RBAC levels, and MCP agent support. |
 
 ---
 
-## 🛠️ Performance & Engineering Benchmarks
-- **Backend Optimization**: Uses `jsoniter` for high-speed serialization (20-30% CPU overhead reduction).
-- **Frontend Perception**: Employs `el-skeleton` for smooth asynchronous loading.
-- **Build Strategy**: Vite manual chunking for long-term browser caching of heavy libs (ECharts, xterm).
-- **Network Resilience**: Automatic bypass of Microsoft Dev Tunnel phishing pages via header injection.
+## ⚡ Engineering Highlights
+
+### 1. High-Performance Serialization
+Nagare replaces the standard library with `jsoniter` across all high-load paths.
+- **Backend Build**: `go build -tags=jsoniter -o server ./cmd/server`
+- **Result**: 20-30% reduction in CPU overhead during Zabbix/Prometheus webhook ingestion.
+
+### 2. Autonomous RAG Scoring
+Context retrieval uses a precise keyword relevance algorithm:
+$$S = \sum_{t \in T} \mathbb{1}(t \in KB_{entry}) \times 2$$
+This ensures AI diagnostics are grounded in your specific infrastructure runbooks.
+
+### 3. Dev-Tunnel Interoperability
+Native bypass for Microsoft Dev Tunnels using automated header injection (`X-Tunnel-Skip-AntiPhishing-Page`), enabling seamless remote testing and webhook delivery.
 
 ## 📄 License
 Apache License 2.0

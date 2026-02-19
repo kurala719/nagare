@@ -1,52 +1,43 @@
 # Nagare API Technical Reference
 
-All Nagare API endpoints follow a standardized RESTful pattern with JWT authentication.
+## 1. Request Standards
 
-## 1. Global Endpoints
+### Base URL
+`/api/v1`
 
-### Root & Health Checks
--   `GET /`: Returns a 200 OK JSON confirmation (Bypass anti-phishing/tunnel checks).
--   `GET /health`: Returns system status (`UP/DOWN`).
--   `GET /api/v1/system/metrics`: Real-time Go runtime stats (Goroutines, Memory).
+### Response Structure
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Optional feedback",
+  "error": "Optional error string"
+}
+```
 
-## 2. Intelligence & AI
+## 2. Endpoint Catalog (Highlights)
 
-### Diagnostic Consultation
--   `POST /api/v1/alerts/:id/consult`: Trigger an AI-powered RAG diagnosis for a specific alert.
--   `POST /api/v1/chats/`: Normal LLM interaction with "Persona" support.
--   `POST /api/v1/hosts/:id/consult`: Analyze a host's entire resource trend using LLM.
+### 2.1 Intelligence & Agents
+- `POST /alerts/:id/consult`: Trigger RAG diagnostic.
+- `GET /mcp/sse`: Connect to Model Context Protocol stream.
+- `POST /chats/`: Direct LLM interface with persona support.
 
-## 3. Automation & Chaos
+### 2.2 System & Metrics
+- `GET /`: Root heartbeat (Bypass tunnel phishing).
+- `GET /health`: Binary status.
+- `GET /system/metrics`: Go runtime telemetry (MemAlloc, Goroutines).
 
-### Ansible Automation
--   `GET /api/v1/ansible/inventory`: Serves an Ansible-compatible dynamic JSON inventory.
--   `POST /api/v1/ansible/playbooks/`: Create or update an Ansible playbook.
--   `POST /api/v1/ansible/playbooks/:id/run`: Execute a playbook on targeted hosts.
--   `POST /api/v1/ansible/playbooks/recommend`: Get AI-recommended playbooks for a specific alert.
+### 2.3 Operational Resources
+- `GET /hosts/`: Search/List with pagination.
+- `GET /monitors/:id/hosts/pull`: Synchronize from source.
+- `POST /ansible/playbooks/:id/run`: Trigger remediation.
 
-### Chaos Engineering
--   `POST /api/v1/chaos/alert-storm`: Simulate a high-intensity failure event across the system.
+## 3. RBAC & Privilege Levels
 
-## 4. Operational Assets
+Middleware (`PrivilegesMiddleware`) enforces the following hierarchy:
+- **Level 1 (User)**: Read metrics, view alerts, chat with AI.
+- **Level 2 (Manager)**: Manage monitors, update host credentials, generate reports.
+- **Level 3 (Admin)**: System configuration, Audit logs, User/RBAC management.
 
-### WebSSH
--   `GET /api/v1/hosts/:id/ssh`: Establish a WebSocket bridge to a specific host's terminal.
--   `GET /api/v1/terminal/ssh`: Establish an ad-hoc terminal connection (query params required).
-
-### Reports
--   `GET /api/v1/reports/`: List available reports.
--   `GET /api/v1/reports/:id/download`: Download a generated PDF report.
-
-## 5. Intelligence & Agent Support (MCP)
-
-### Model Context Protocol (MCP)
-Nagare provides a standard MCP interface for external AI agents:
--   `GET /api/v1/mcp/sse`: Connect to the MCP Server-Sent Events stream.
--   `POST /api/v1/mcp/message`: Send and receive MCP-compatible tool call messages.
-
-## 6. Security & Privileges
-
-Endpoints are protected by `PrivilegesMiddleware`:
--   **Level 1 (User)**: Read access, personal settings, and chat.
--   **Level 2 (Manager)**: Manage monitors, hosts, reports, and Ansible playbooks.
--   **Level 3 (Admin)**: System configuration, audit logs, and user management.
+## 4. Connectivity Bypass
+All endpoints support the `X-Tunnel-Skip-AntiPhishing-Page: true` header to ensure compatibility with Microsoft Dev Tunnels.

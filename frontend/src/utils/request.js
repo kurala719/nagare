@@ -27,7 +27,7 @@ request.interceptors.request.use((config) => {
 let isAuthAlertOpen = false
 
 request.interceptors.response.use(
-    (response) => response,
+    (response) => response.data,
     async (error) => {
         const status = error?.response?.status
         if (status === 401 || status === 403) {
