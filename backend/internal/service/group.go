@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -15,6 +16,8 @@ type GroupReq struct {
 	Enabled     int     `json:"enabled"`
 	MonitorID   *uint   `json:"monitor_id,omitempty"`
 	ExternalID  *string `json:"external_id,omitempty"`
+	LastSyncAt  *time.Time `json:"last_sync_at,omitempty"`
+	ExternalSource *string `json:"external_source,omitempty"`
 }
 
 // GroupResp represents a group response
@@ -26,6 +29,8 @@ type GroupResp struct {
 	Status      int    `json:"status"`
 	MonitorID   uint   `json:"monitor_id"`
 	ExternalID  string `json:"external_id"`
+	LastSyncAt  *time.Time `json:"last_sync_at"`
+	ExternalSource string `json:"external_source"`
 }
 
 // GroupSummary represents aggregated group data
@@ -140,6 +145,8 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		Enabled:     req.Enabled,
 		MonitorID:   existing.MonitorID,  // Preserve existing value
 		ExternalID:  existing.ExternalID, // Preserve existing value
+		LastSyncAt:  existing.LastSyncAt, // Preserve existing value
+		ExternalSource: existing.ExternalSource, // Preserve existing value
 	}
 
 	// Only update if provided in request
@@ -148,6 +155,12 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 	}
 	if req.ExternalID != nil {
 		updated.ExternalID = *req.ExternalID
+	}
+	if req.LastSyncAt != nil {
+		updated.LastSyncAt = req.LastSyncAt
+	}
+	if req.ExternalSource != nil {
+		updated.ExternalSource = *req.ExternalSource
 	}
 
 	updated.Status = determineGroupStatus(updated, hosts)
@@ -295,5 +308,7 @@ func groupToResp(group model.Group) GroupResp {
 		Status:      group.Status,
 		MonitorID:   group.MonitorID,
 		ExternalID:  group.ExternalID,
+		LastSyncAt:  group.LastSyncAt,
+		ExternalSource: group.ExternalSource,
 	}
 }

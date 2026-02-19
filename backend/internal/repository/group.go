@@ -98,12 +98,14 @@ func GetGroupByExternalIDDAO(externalID string, monitorID uint) (model.Group, er
 // UpdateGroupDAO updates a group by ID
 func UpdateGroupDAO(id uint, group model.Group) error {
 	return database.DB.Model(&model.Group{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":        group.Name,
-		"description": group.Description,
-		"enabled":     group.Enabled,
-		"status":      group.Status,
-		"m_id":        group.MonitorID,
-		"external_id": group.ExternalID,
+		"name":            group.Name,
+		"description":     group.Description,
+		"enabled":         group.Enabled,
+		"status":          group.Status,
+		"m_id":            group.MonitorID,
+		"external_id":     group.ExternalID,
+		"last_sync_at":    group.LastSyncAt,
+		"external_source": group.ExternalSource,
 	}).Error
 }
 

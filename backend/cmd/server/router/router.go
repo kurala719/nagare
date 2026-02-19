@@ -20,6 +20,10 @@ import (
 
 type RouteGroup interface {
 	Group(string, ...gin.HandlerFunc) *gin.RouterGroup
+	GET(string, ...gin.HandlerFunc) gin.IRoutes
+	POST(string, ...gin.HandlerFunc) gin.IRoutes
+	PUT(string, ...gin.HandlerFunc) gin.IRoutes
+	DELETE(string, ...gin.HandlerFunc) gin.IRoutes
 }
 
 // InitRouter initializes and starts the HTTP router
@@ -43,9 +47,12 @@ func InitRouter() {
 	})
 
 	// Setup all routes
-	api := r.Group("/api/v1")
-	setupAllRoutes(api)
+	apiGroup := r.Group("/api/v1")
+	setupAllRoutes(apiGroup)
 	setupMcpRoutes(r)
+
+	// Start WebSocket Hub
+	go service.GlobalHub.Run()
 
 	port := viper.GetInt("system.port")
 	if port == 0 {
@@ -103,6 +110,41 @@ func setupAllRoutes(rg RouteGroup) {
 	setupUserInformationRoutes(rg)
 	setupQQWhitelistRoutes(rg)
 	setupReportRoutes(rg)
+	setupSiteMessageRoutes(rg)
+	setupAnsibleRoutes(rg)
+}
+
+func setupAnsibleRoutes(rg RouteGroup) {
+	// Public Dynamic Inventory (used by ansible-playbook command)
+	rg.GET("/ansible/inventory", api.GetAnsibleInventoryCtrl)
+
+	// Playbooks
+	pbs := rg.Group("/ansible/playbooks", api.PrivilegesMiddleware(2))
+	pbs.GET("", api.ListPlaybooksCtrl)
+	pbs.POST("", api.CreatePlaybookCtrl)
+	pbs.GET("/:id", api.GetPlaybookCtrl)
+	pbs.PUT("/:id", api.UpdatePlaybookCtrl)
+	pbs.DELETE("/:id", api.DeletePlaybookCtrl)
+	pbs.POST("/:id/run", api.RunPlaybookCtrl)
+	pbs.POST("/recommend", api.RecommendPlaybookCtrl)
+
+	// Jobs
+	jobs := rg.Group("/ansible/jobs", api.PrivilegesMiddleware(2))
+	jobs.GET("", api.ListAnsibleJobsCtrl)
+	jobs.GET("/:id", api.GetAnsibleJobCtrl)
+}
+
+func setupSiteMessageRoutes(rg RouteGroup) {
+	// Public WebSocket endpoint (auth via token in query handled by middleware)
+	rg.GET("/site-messages/ws", api.PrivilegesMiddleware(1), api.HandleSiteMessageWS)
+
+	// Protected routes
+	messages := rg.Group("/site-messages", api.PrivilegesMiddleware(1))
+	messages.GET("", api.GetSiteMessagesCtrl)
+	messages.GET("/unread-count", api.GetUnreadSiteMessagesCountCtrl)
+	messages.PUT("/:id/read", api.MarkSiteMessageAsReadCtrl)
+	messages.PUT("/read-all", api.MarkAllSiteMessagesAsReadCtrl)
+	messages.DELETE("/:id", api.DeleteSiteMessageCtrl)
 }
 
 func setupKnowledgeBaseRoutes(rg RouteGroup) {
@@ -205,6 +247,10 @@ func setupHostRoutes(rg RouteGroup) {
 	hostsRead.GET("/:id/history", api.GetHostHistoryCtrl)
 	hostsRead.POST("/:id/consult", api.ConsultHostCtrl)
 	hostsRead.GET("/:id/ssh", api.HandleWebSSH)
+
+	// Generic terminal route
+	terminal := rg.Group("/terminal", api.PrivilegesMiddleware(1))
+	terminal.GET("/ssh", api.HandleWebSSH)
 
 	// Routes with privilege level 2
 	hostsWrite := rg.Group("/hosts", api.PrivilegesMiddleware(2))

@@ -124,6 +124,10 @@ func AddAlertServ(req AlertReq) error {
 	if err := repository.AddAlertDAO(&alert); err != nil {
 		return err
 	}
+
+	// Trigger Site Message
+	_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
+
 	go analyzeAndNotifyAlert(alert)
 	return nil
 }

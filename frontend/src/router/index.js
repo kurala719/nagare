@@ -71,6 +71,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/site-messages',
+    name: 'SiteMessages',
+    component: () => import('@/views/SiteMessage.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => import('@/views/Monitor.vue'),
@@ -178,6 +184,24 @@ const routes = [
     path: '/reports',
     name: 'Reports',
     component: () => import('@/views/Reports.vue'),
+    meta: { requiresAuth: true, minPrivilege: 2 }
+  },
+  {
+    path: '/ansible/playbooks',
+    name: 'AnsiblePlaybooks',
+    component: () => import('@/views/AnsiblePlaybook.vue'),
+    meta: { requiresAuth: true, minPrivilege: 2 }
+  },
+  {
+    path: '/ansible/jobs',
+    name: 'AnsibleJobs',
+    component: () => import('@/views/AnsibleJob.vue'),
+    meta: { requiresAuth: true, minPrivilege: 2 }
+  },
+  {
+    path: '/ansible/jobs/:id',
+    name: 'AnsibleJobDetail',
+    component: () => import('@/views/AnsibleJob.vue'),
     meta: { requiresAuth: true, minPrivilege: 2 }
   },
   {

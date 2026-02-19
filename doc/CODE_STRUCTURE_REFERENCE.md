@@ -169,12 +169,15 @@ backend/
     │   ├── knowledge_base.go              [Knowledge Base Controllers]
     │   ├── report.go                      [Report Management Controllers]
     │   ├── report_config.go               [Report Config Controllers]
+    │   ├── site_message.go                [Site Message Controllers]
     │   └── (existing controllers)
     │
     ├── service/ (Business Logic Layer)
     │   ├── im_command.go                  [IM Logic]
     │   ├── knowledge_base.go              [RAG and KB Logic]
     │   ├── report.go                      [PDF Generation Logic]
+    │   ├── site_message.go                [Site Message & Notification Logic]
+    │   ├── hub.go                         [WebSocket Hub for Real-time Notifications]
     │   ├── cron.go                        [Task Scheduling]
     │   └── (other services)
     │       ├── GetHealthScoreServ()
@@ -185,6 +188,7 @@ backend/
     ├── repository/ (Data Access Layer)
     │   ├── knowledge_base.go              [KB DAOs]
     │   ├── report.go                      [Report DAOs]
+    │   ├── site_message.go                [Site Message DAOs]
     │   └── (DAOs and external adapters)
     │
     ├── model/ (Domain Model)
@@ -200,9 +204,9 @@ backend/
 ```
 frontend/
 ├── src/
-│   ├── api/          [API Client Modules]
-│   ├── components/   [Reusable Vue Components]
-│   ├── views/        [Page Components (mapped to routes)]
+│   ├── api/          [API Client Modules (Added siteMessage.js)]
+│   ├── components/   [Reusable Vue Components (Added SiteMessageCenter.vue)]
+│   ├── views/        [Page Components (Added SiteMessage.vue)]
 │   ├── router/       [Vue Router Configuration]
 │   ├── utils/        [Helper Functions]
 │   └── App.vue       [Root Component]

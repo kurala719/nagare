@@ -63,6 +63,10 @@ func ApproveRegisterApplicationServ(id uint, approverUsername string) error {
 	if err := repository.AddUserDAO(user); err != nil {
 		return err
 	}
+	
+	// Create welcome message for new user
+	_ = CreateSiteMessageServ("Welcome to Nagare", "Your registration has been approved. Welcome aboard!", "system", 1, &user.ID)
+
 	approverID, err := repository.GetUserIDByUsernameDAO(approverUsername)
 	if err != nil {
 		return err

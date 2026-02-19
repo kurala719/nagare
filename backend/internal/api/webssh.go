@@ -9,8 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"nagare/internal/repository"
-	"nagare/internal/service/utils"
+	"nagare/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -39,33 +38,39 @@ type Message struct {
 
 // HandleWebSSH handles WebSocket connections for WebSSH
 func HandleWebSSH(c *gin.Context) {
+	var ip, user, password string
+	var port int
+	var err error
+
 	hostIDStr := c.Param("id")
-	if hostIDStr == "" {
-		respondBadRequest(c, "host id is required")
-		return
-	}
+	if hostIDStr != "" {
+		hostID, err := strconv.ParseUint(hostIDStr, 10, 32)
+		if err != nil {
+			respondBadRequest(c, "invalid host id")
+			return
+		}
 
-	hostID, err := strconv.ParseUint(hostIDStr, 10, 32)
-	if err != nil {
-		respondBadRequest(c, "invalid host id")
-		return
-	}
-
-	host, err := repository.GetHostByIDDAO(uint(hostID))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-
-	if host.SSHUser == "" || host.SSHPassword == "" {
-		respondBadRequest(c, "SSH credentials not configured for this host")
-		return
-	}
-
-	password, err := utils.Decrypt(host.SSHPassword)
-	if err != nil {
-		respondError(c, fmt.Errorf("failed to decrypt SSH password: %w", err))
-		return
+		ip, port, user, password, err = service.GetHostConnectionDetails(uint(hostID))
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+	} else {
+		// Generic route - get details from query params
+		ip = c.Query("ip")
+		user = c.Query("user")
+		password = c.Query("password")
+		portStr := c.Query("port")
+		
+		if ip == "" || user == "" {
+			respondBadRequest(c, "ip and user are required for direct connection")
+			return
+		}
+		
+		port, _ = strconv.Atoi(portStr)
+		if port == 0 {
+			port = 22
+		}
 	}
 
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -77,7 +82,7 @@ func HandleWebSSH(c *gin.Context) {
 
 	// SSH configuration
 	sshConfig := &ssh.ClientConfig{
-		User: host.SSHUser,
+		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
@@ -110,9 +115,9 @@ func HandleWebSSH(c *gin.Context) {
 	}
 	sshConfig.HostKeyAlgorithms = append(sshConfig.HostKeyAlgorithms, "ssh-rsa", "ssh-dss")
 
-	addr := fmt.Sprintf("%s:%d", host.IPAddr, host.SSHPort)
-	if host.SSHPort == 0 {
-		addr = fmt.Sprintf("%s:22", host.IPAddr)
+	addr := fmt.Sprintf("%s:%d", ip, port)
+	if port == 0 {
+		addr = fmt.Sprintf("%s:22", ip)
 	}
 
 	client, err := ssh.Dial("tcp", addr, sshConfig)

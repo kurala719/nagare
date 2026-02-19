@@ -565,6 +565,10 @@ export default {
       addExternalItem,
       removeExternalItem,
       Delete,
+      Refresh,
+      Edit,
+      Warning,
+      Check,
     };
   },
 };

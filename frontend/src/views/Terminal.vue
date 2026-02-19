@@ -17,19 +17,44 @@
     <div ref="terminalElement" class="terminal-body"></div>
 
     <!-- Host Selection Dialog -->
-    <el-dialog v-model="showHostSelector" title="Select Host for Terminal" width="400px" :close-on-click-modal="false" :show-close="!!currentHostId">
-      <el-select v-model="selectedHostId" placeholder="Select a host" style="width: 100%" filterable>
-        <el-option v-for="h in availableHosts" :key="h.id" :label="`${h.name} (${h.ip_addr})`" :value="h.id" />
-      </el-select>
+    <el-dialog v-model="showHostSelector" title="Connect to Host" width="500px" :close-on-click-modal="false" :show-close="!!currentHostId">
+      <el-tabs v-model="connectionMode">
+        <el-tab-pane label="Saved Host" name="saved">
+          <div style="padding: 20px 0">
+            <el-select v-model="selectedHostId" placeholder="Select a host" style="width: 100%" filterable>
+              <el-option v-for="h in availableHosts" :key="h.id" :label="`${h.name} (${h.ip_addr})`" :value="h.id" />
+            </el-select>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="Direct Connect" name="direct">
+          <div style="padding: 20px 0">
+            <el-form :model="directConfig" label-width="100px">
+              <el-form-item label="IP Address">
+                <el-input v-model="directConfig.ip" placeholder="192.168.1.1" />
+              </el-form-item>
+              <el-form-item label="Port">
+                <el-input-number v-model="directConfig.port" :min="1" :max="65535" style="width: 100%" />
+              </el-form-item>
+              <el-form-item label="Username">
+                <el-input v-model="directConfig.user" placeholder="root" />
+              </el-form-item>
+              <el-form-item label="Password">
+                <el-input v-model="directConfig.password" type="password" show-password />
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
-        <el-button type="primary" @click="confirmHostSelection" :disabled="!selectedHostId">Connect</el-button>
+        <el-button @click="showHostSelector = false" v-if="!!currentHostId">Cancel</el-button>
+        <el-button type="primary" @click="confirmHostSelection" :disabled="!canConnect">Connect</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -37,6 +62,7 @@ import '@xterm/xterm/css/xterm.css'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 import { fetchHostData } from '@/api/hosts'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,6 +73,21 @@ const connected = ref(false)
 const showHostSelector = ref(false)
 const selectedHostId = ref(null)
 const availableHosts = ref([])
+const connectionMode = ref('saved')
+const directConfig = ref({
+  ip: '',
+  port: 22,
+  user: '',
+  password: ''
+})
+
+const canConnect = computed(() => {
+  if (connectionMode.value === 'saved') {
+    return !!selectedHostId.value
+  } else {
+    return !!directConfig.value.ip && !!directConfig.value.user
+  }
+})
 
 const terminalElement = ref(null)
 let term = null
@@ -88,20 +129,26 @@ const loadAvailableHosts = async () => {
 }
 
 const confirmHostSelection = async () => {
-  if (!selectedHostId.value) return
+  if (!canConnect.value) return
   
-  currentHostId.value = selectedHostId.value
+  if (connectionMode.value === 'saved') {
+    currentHostId.value = selectedHostId.value
+    await fetchHostInfo(currentHostId.value)
+  } else {
+    currentHostId.value = 'direct'
+    hostName.value = directConfig.value.ip
+    hostIp.value = directConfig.value.ip
+    hostSSHUser.value = directConfig.value.user
+  }
+  
   showHostSelector.value = false
   
   if (term) {
     term.clear()
   }
   
-  await fetchHostInfo(currentHostId.value)
   handleDisconnect()
-  if (hostSSHUser.value) {
-    connectWebSocket()
-  }
+  connectWebSocket()
 }
 
 const initTerminal = () => {
@@ -154,8 +201,13 @@ const connectWebSocket = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const host = window.location.host
   
-  // Use term dimensions in query
-  const url = `${protocol}//${host}/api/v1/hosts/${currentHostId.value}/ssh?token=${token}&cols=${term.cols}&rows=${term.rows}`
+  let url = ''
+  if (currentHostId.value === 'direct') {
+    const { ip, port, user, password } = directConfig.value
+    url = `${protocol}//${host}/api/v1/terminal/ssh?token=${token}&ip=${ip}&port=${port}&user=${user}&password=${encodeURIComponent(password)}&cols=${term.cols}&rows=${term.rows}`
+  } else {
+    url = `${protocol}//${host}/api/v1/hosts/${currentHostId.value}/ssh?token=${token}&cols=${term.cols}&rows=${term.rows}`
+  }
 
   socket = new WebSocket(url)
   socket.binaryType = 'arraybuffer'

@@ -113,22 +113,28 @@ func processReport(report model.Report) {
 	
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to create report directory for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 	
 	document, err := m.Generate()
 	if err != nil {
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to generate PDF for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	if err := document.Save(filePath); err != nil {
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to save PDF for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	downloadURL := "/api/v1/reports/" + fmt.Sprint(report.ID) + "/download"
 	_ = repository.UpdateReportStatusDAO(report.ID, 1, filePath, downloadURL)
+
+	// Add Site Message
+	_ = CreateSiteMessageServ("Report Ready", fmt.Sprintf("Report '%s' has been generated successfully.", report.Title), "report", 1, nil)
 }
 
 type AdvancedReportData struct {

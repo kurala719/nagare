@@ -176,6 +176,12 @@
         </el-tooltip>
       </template>
     </el-table-column>
+    <el-table-column v-if="isColumnVisible('lastSync')" :label="$t('hosts.lastSync')" min-width="180" prop="last_sync_at" sortable="custom">
+      <template #default="{ row }">
+        {{ row.last_sync_at ? new Date(row.last_sync_at).toLocaleString() : '-' }}
+      </template>
+    </el-table-column>
+    <el-table-column v-if="isColumnVisible('externalSource')" :label="$t('hosts.externalSource')" min-width="140" prop="external_source" sortable="custom" />
     <el-table-column v-if="isColumnVisible('description')" :label="$t('hosts.description')" min-width="200" show-overflow-tooltip prop="description" />
     <el-table-column :label="$t('hosts.actions')" min-width="350" fixed="right" align="center">
       <template #default="{ row }">
@@ -396,7 +402,7 @@ export default {
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'description'],
+      selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
       statusFilter: 'all',
       monitorFilter: 0,
       groupFilter: 0,
@@ -433,6 +439,8 @@ export default {
         { key: 'hostid', label: this.$t('hosts.hostId') },
         { key: 'enabled', label: this.$t('common.enabled') },
         { key: 'status', label: this.$t('hosts.status') },
+        { key: 'lastSync', label: this.$t('hosts.lastSync') },
+        { key: 'externalSource', label: this.$t('hosts.externalSource') },
         { key: 'description', label: this.$t('hosts.description') },
       ];
     },
@@ -601,6 +609,8 @@ export default {
             ssh_user: h.ssh_user || '',
             ssh_port: h.ssh_port || 22,
             ssh_password: '',
+            last_sync_at: h.last_sync_at,
+            external_source: h.external_source || '',
           };
         });
         this.hosts = mapped;

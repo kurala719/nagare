@@ -117,6 +117,12 @@
                 </el-tooltip>
             </template>
         </el-table-column>
+        <el-table-column v-if="isColumnVisible('lastSync')" :label="$t('hosts.lastSync')" min-width="180" prop="last_sync_at" sortable="custom">
+            <template #default="{ row }">
+                {{ row.last_sync_at ? new Date(row.last_sync_at).toLocaleString() : '-' }}
+            </template>
+        </el-table-column>
+        <el-table-column v-if="isColumnVisible('externalSource')" :label="$t('hosts.externalSource')" min-width="140" prop="external_source" sortable="custom" />
         <el-table-column v-if="isColumnVisible('description')" prop="description" :label="$t('items.description')" min-width="200" show-overflow-tooltip />
         <el-table-column :label="$t('items.actions')" width="260" fixed="right" align="center">
             <template #default="{ row }">
@@ -337,13 +343,15 @@ export default {
         formRules: {},
         search: '',
         searchField: 'all',
-        selectedColumns: ['id', 'name', 'value', 'enabled', 'status', 'description'],
+        selectedColumns: ['id', 'name', 'value', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
         columnOptions: [
             { key: 'id', label: this.$t('items.id') },
             { key: 'name', label: this.$t('items.name') },
             { key: 'value', label: this.$t('items.value') },
             { key: 'enabled', label: this.$t('common.enabled') },
             { key: 'status', label: this.$t('items.status') },
+            { key: 'lastSync', label: this.$t('hosts.lastSync') },
+            { key: 'externalSource', label: this.$t('hosts.externalSource') },
             { key: 'description', label: this.$t('items.description') },
         ],
         hostFilter: 0 as number,
@@ -495,6 +503,8 @@ export default {
                     status_reason: item.Reason || item.reason || item.Error || item.error || item.ErrorMessage || item.error_message || item.LastError || item.last_error || item.Comment || item.comment || '',
                     description: item.Comment || item.comment || item.Description || item.description || '',
                     host_id: item.HID || item.hid || item.HostID || item.host_id || item.hostId || null,
+                    last_sync_at: item.last_sync_at,
+                    external_source: item.external_source || '',
                 }));
                 this.items = mapped;
                 this.totalItems = Number.isFinite(total) ? total : mapped.length;

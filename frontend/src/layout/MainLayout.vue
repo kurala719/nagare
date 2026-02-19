@@ -18,6 +18,8 @@
           </div>
         </div>
         <div class="toolbar">
+          <SiteMessageCenter />
+          <el-divider direction="vertical" />
           <el-dropdown @command="setLanguage">
             <span class="toolbar-link">
               <el-icon style="margin-right: 8px; margin-top: 1px">
@@ -143,6 +145,7 @@ import { useI18n } from 'vue-i18n'
 import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools } from '@element-plus/icons-vue'
 import SideBarChat from '@/components/Customed/SideBarChat.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
+import SiteMessageCenter from '@/components/SiteMessageCenter.vue'
 import { getUserPrivileges, getToken, clearToken, getUserClaims } from '@/utils/auth'
 
 export default defineComponent({
@@ -150,6 +153,7 @@ export default defineComponent({
   components: {
     GlobalSearch,
     SideBarChat,
+    SiteMessageCenter,
     Expand,
     Fold,
     DArrowLeft,
@@ -199,6 +203,7 @@ export default defineComponent({
       { key: 'maintenance_group', label: 'menu.maintenance', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
+        { key: 'ansible', path: '/ansible/playbooks', label: 'menu.ansible', minPrivilege: 2 },
         { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [

@@ -64,7 +64,7 @@ func PrivilegesMiddleware(requiredPrivileges int) gin.HandlerFunc {
 			return key, nil
 		})
 		if err != nil {
-			service.LogService("error", "jwt parsing error", map[string]interface{}{"error": err.Error(), "path": c.FullPath()}, nil, c.ClientIP())
+			service.LogService("error", "jwt parsing error", map[string]interface{}{"error": err.Error(), "path": c.FullPath(), "token_len": len(tokenString)}, nil, c.ClientIP())
 			respondError(c, model.ErrUnauthorized)
 			c.Abort()
 			return
@@ -76,6 +76,7 @@ func PrivilegesMiddleware(requiredPrivileges int) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+			c.Set("uid", claims.UID)
 			c.Set("username", claims.Username)
 			c.Set("privileges", claims.Privileges)
 			c.Next()

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -160,6 +161,7 @@ func UpdateUserServ(id int, req UserRequest) error {
 }
 
 type CustomedClaims struct {
+	UID        uint   `json:"uid"`
 	Username   string `json:"username"`
 	Privileges int    `json:"privileges"`
 	jwt.RegisteredClaims
@@ -175,6 +177,7 @@ func LoginUserServ(username, password string) (string, error) {
 	}
 	// Create JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, CustomedClaims{
+		UID:        user.ID,
 		Username:   user.Username,
 		Privileges: user.Privileges,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -207,11 +210,17 @@ func RegisterUserServ(req RegisterRequest) error {
 	} else if !errors.Is(err, model.ErrNotFound) {
 		return err
 	}
-	return repository.CreateRegisterApplicationDAO(model.RegisterApplication{
+	if err := repository.CreateRegisterApplicationDAO(model.RegisterApplication{
 		Username: req.Username,
 		Password: req.Password,
 		Status:   0,
-	})
+	}); err != nil {
+		return err
+	}
+
+	// Notify admins (target specific user_id if needed, nil for all)
+	_ = CreateSiteMessageServ("New Registration", fmt.Sprintf("A new user '%s' has applied for registration.", req.Username), "system", 2, nil)
+	return nil
 }
 
 func ResetPasswordServ(req ResetPasswordRequest) error {

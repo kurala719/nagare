@@ -125,6 +125,9 @@ func initDBTables() error {
 		&model.Report{},
 		&model.ReportConfig{},
 		&model.KnowledgeBase{},
+		&model.SiteMessage{},
+		&model.AnsiblePlaybook{},
+		&model.AnsibleJob{},
 	); err != nil {
 		return err
 	}

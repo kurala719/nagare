@@ -26,6 +26,8 @@ type Host struct {
 	SSHUser           string `gorm:"column:ssh_user"`
 	SSHPassword       string `gorm:"column:ssh_password"`
 	SSHPort           int    `gorm:"column:ssh_port;default:22"`
+	LastSyncAt        *time.Time
+	ExternalSource    string `gorm:"column:external_source"`
 }
 
 // Group represents a logical group of hosts
@@ -37,6 +39,8 @@ type Group struct {
 	ExternalID  string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
 	Enabled     int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
 	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	LastSyncAt  *time.Time
+	ExternalSource string `gorm:"column:external_source"`
 }
 
 // Monitor represents a monitoring system (e.g., Zabbix)
@@ -85,6 +89,8 @@ type Item struct {
 	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	StatusDescription string // Reason for error status (e.g., "host is down", "pull failed")
 	Comment           string
+	LastSyncAt        *time.Time
+	ExternalSource    string `gorm:"column:external_source"`
 }
 
 // ItemHistory tracks item metric values over time.
@@ -296,6 +302,26 @@ type KnowledgeBase struct {
 	Category string `gorm:"size:50;index"`
 }
 
+// AnsiblePlaybook stores YAML content for Ansible operations
+type AnsiblePlaybook struct {
+	gorm.Model
+	Name        string `gorm:"size:255"`
+	Description string `gorm:"type:text"`
+	Content     string `gorm:"type:text"` // YAML content
+	Tags        string `gorm:"size:255"`  // Comma-separated tags
+}
+
+// AnsibleJob tracks execution of playbooks
+type AnsibleJob struct {
+	gorm.Model
+	PlaybookID  uint
+	Playbook    AnsiblePlaybook `gorm:"foreignKey:PlaybookID"`
+	Status      string          `gorm:"size:50"` // "pending", "running", "success", "failed"
+	Output      string          `gorm:"type:longtext"`
+	TriggeredBy *uint           `gorm:"index"`
+	HostFilter  string          `gorm:"size:255"` // Specific host or group filter
+}
+
 // ReportConfig stores configuration for automated report generation
 type ReportConfig struct {
 	gorm.Model
@@ -322,6 +348,17 @@ type Report struct {
 	DownloadURL string
 	Status      int // 0=generating, 1=completed, 2=failed
 	GeneratedAt time.Time
+}
+
+// SiteMessage represents an internal system notification for users
+type SiteMessage struct {
+	gorm.Model
+	Title     string `gorm:"size:255"`
+	Content   string `gorm:"type:text"`
+	Type      string `gorm:"size:50"` // "alert", "sync", "system", "report"
+	Severity  int    // 0=info, 1=success, 2=warn, 3=error
+	IsRead    int    `gorm:"default:0"` // 0=unread, 1=read
+	UserID    *uint  `gorm:"index"`     // Optional: target specific user, null for all
 }
 
 // UserWithInfo combines User and UserInformation for convenient querying

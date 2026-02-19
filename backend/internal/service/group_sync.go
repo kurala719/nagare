@@ -248,10 +248,13 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 		return fmt.Errorf("failed to get host groups: %w", err)
 	}
 
+	now := time.Now().UTC()
 	for _, g := range groups {
 		if (group.ExternalID != "" && g.ID == group.ExternalID) || g.Name == group.Name {
 			group.Name = g.Name
 			group.ExternalID = g.ID
+			group.LastSyncAt = &now
+			group.ExternalSource = monitor.Name
 			return repository.UpdateGroupDAO(group.ID, group)
 		}
 	}

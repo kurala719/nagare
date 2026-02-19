@@ -146,6 +146,8 @@ func UpdateItemDAO(id uint, item model.Item) error {
 		"status":             item.Status,
 		"status_description": item.StatusDescription,
 		"comment":            item.Comment,
+		"last_sync_at":       item.LastSyncAt,
+		"external_source":    item.ExternalSource,
 	}).Error
 }
 

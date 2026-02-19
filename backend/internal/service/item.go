@@ -23,6 +23,8 @@ type ItemReq struct {
 	ExternalHostID string `json:"hostid"`
 	Units          string `json:"units"`
 	Comment        string `json:"comment"`
+	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
+	ExternalSource string `json:"external_source,omitempty"`
 }
 
 // ItemResp represents an item response
@@ -35,6 +37,8 @@ type ItemResp struct {
 	Status     int    `json:"status"`
 	StatusDesc string `json:"status_description"`
 	Comment    string `json:"comment"`
+	LastSyncAt *time.Time `json:"last_sync_at"`
+	ExternalSource string `json:"external_source"`
 }
 
 // SyncResult is defined in host.go - using the same type here
@@ -126,13 +130,18 @@ func AddItemServ(req ItemReq) (ItemResp, error) {
 
 // UpdateItemServ updates an existing item
 func UpdateItemServ(id uint, req ItemReq) error {
+	existing, err := repository.GetItemByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
 	hid := req.HID
 	if hid == 0 {
-		hid = req.HID
+		hid = existing.HID
 	}
 	valueType := req.ValueType
 	if valueType == "" {
-		valueType = req.Type
+		valueType = req.ValueType
 	}
 	updated := model.Item{
 		Name:           req.Name,
@@ -144,6 +153,14 @@ func UpdateItemServ(id uint, req ItemReq) error {
 		Units:          req.Units,
 		Enabled:        req.Enabled,
 		Comment:        req.Comment,
+		LastSyncAt:     existing.LastSyncAt,
+		ExternalSource: existing.ExternalSource,
+	}
+	if req.LastSyncAt != nil {
+		updated.LastSyncAt = req.LastSyncAt
+	}
+	if req.ExternalSource != "" {
+		updated.ExternalSource = req.ExternalSource
 	}
 	if host, err := repository.GetHostByIDDAO(hid); err == nil {
 		updated.Status = determineItemStatus(updated, host)
@@ -344,6 +361,8 @@ func itemToResp(item model.Item) ItemResp {
 		Status:     item.Status,
 		StatusDesc: item.StatusDescription,
 		Comment:    item.Comment,
+		LastSyncAt: item.LastSyncAt,
+		ExternalSource: item.ExternalSource,
 	}
 }
 
@@ -527,6 +546,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		monitorItemIDs[mItem.ID] = struct{}{}
 	}
 
+	now := time.Now().UTC()
 	for _, mItem := range monitorItems {
 		enabled, status := mapMonitorItemStatus(mItem.Status)
 		item, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID)
@@ -542,6 +562,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 				Units:          mItem.Units,
 				Enabled:        enabled,
 				Status:         status,
+				LastSyncAt:     &now,
+				ExternalSource: monitor.Name,
 			}
 			if err := repository.AddItemDAO(newItem); err != nil {
 				setHostStatusErrorWithReason(hid, err.Error())
@@ -568,6 +590,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			item.Units = mItem.Units
 			item.Enabled = enabled
 			item.Status = status
+			item.LastSyncAt = &now
+			item.ExternalSource = monitor.Name
 			if err := repository.UpdateItemDAO(item.ID, item); err != nil {
 				setItemStatusErrorWithReason(item.ID, err.Error())
 				LogService("error", "pull items failed to update item", map[string]interface{}{"monitor_id": mid, "host_id": hid, "item_id": item.ID, "error": err.Error()}, nil, "")

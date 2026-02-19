@@ -58,3 +58,29 @@ Instead of a heavy vector database, this module uses a high-performance SQL-base
 - **KB Entry**: "Daily backup at 2 AM causes high CPU usage. Expected behavior."
 - **Alert**: "Host-01 high CPU usage at 02:05 AM."
 - **AI Output**: "This alert is likely caused by the scheduled daily backup task as noted in the local knowledge base. No immediate action is required."
+
+---
+
+## 4. Site-wide Notification System
+A real-time event distribution system that keeps users informed of critical activities without requiring page refreshes.
+
+### Key Components
+- **WebSocket Hub**: A global thread-safe hub in the backend (`service/hub.go`) that manages all active browser connections.
+- **Notification Center**: A frontend header component (`SiteMessageCenter.vue`) that handles real-time message reception and unread counts.
+- **Message History**: Persistent storage of notifications allowing users to review past events.
+
+### Automated Triggers
+- **Sync Completion**: Notifies users when background synchronization of hosts/items finishes.
+- **New Alerts**: Immediate pop-up when a new monitoring alert is ingested.
+- **Report Ready**: Notifies users when an automated or manual report has finished generating.
+
+---
+
+## 5. Batch Operations & Enhanced Data Tracking
+Improves operational efficiency when managing large numbers of resources.
+
+### Features
+- **Multi-resource Action**: Batch delete and update status/enabled state for Hosts, Groups, Items, and Reports.
+- **Synchronization Tracking**: 
+    - `LastSyncAt`: Tracks the exact time each resource was last updated from an external monitor.
+    - `ExternalSource`: Identifies which monitoring system (e.g., Zabbix-Prod, Prom-Cluster-A) is the source of truth for the data.

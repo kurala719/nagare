@@ -22,6 +22,14 @@ func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
 		Failed:    result.Failed,
 		Total:     result.Total,
 	})
+
+	// Add Site Message
+	title := fmt.Sprintf("Sync %s Finished", entity)
+	msgSeverity := 1 // success
+	if result.Failed > 0 {
+		msgSeverity = 3 // error
+	}
+	_ = CreateSiteMessageServ(title, message, "sync", msgSeverity, nil)
 }
 
 func syncSeverity(result SyncResult) int {

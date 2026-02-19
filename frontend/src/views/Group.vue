@@ -115,6 +115,12 @@
         </el-tooltip>
       </template>
     </el-table-column>
+    <el-table-column v-if="isColumnVisible('lastSync')" :label="$t('hosts.lastSync')" min-width="180" prop="last_sync_at" sortable="custom">
+      <template #default="{ row }">
+        {{ row.last_sync_at ? new Date(row.last_sync_at).toLocaleString() : '-' }}
+      </template>
+    </el-table-column>
+    <el-table-column v-if="isColumnVisible('externalSource')" :label="$t('hosts.externalSource')" min-width="140" prop="external_source" sortable="custom" />
     <el-table-column v-if="isColumnVisible('description')" prop="description" :label="$t('groups.description')" min-width="200" show-overflow-tooltip />
     <el-table-column :label="$t('groups.actions')" width="300" fixed="right" align="center">
       <template #default="{ row }">
@@ -319,7 +325,7 @@ export default {
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'monitor', 'enabled', 'status', 'description'],
+      selectedColumns: ['name', 'monitor', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
       statusFilter: 'all',
       monitorFilter: 0,
       syncMonitorId: 0,
@@ -365,6 +371,8 @@ export default {
         { key: 'monitor', label: this.$t('hosts.monitor') },
         { key: 'enabled', label: this.$t('common.enabled') },
         { key: 'status', label: this.$t('groups.status') },
+        { key: 'lastSync', label: this.$t('hosts.lastSync') },
+        { key: 'externalSource', label: this.$t('hosts.externalSource') },
         { key: 'description', label: this.$t('groups.description') },
       ];
     },
@@ -537,6 +545,8 @@ export default {
           status: g.Status ?? g.status ?? 0,
           monitor_id: g.MonitorID || g.monitor_id || g.monitorId || 0,
           status_reason: g.Reason || g.reason || g.Error || g.error || g.ErrorMessage || g.error_message || g.LastError || g.last_error || '',
+          last_sync_at: g.last_sync_at,
+          external_source: g.external_source || '',
         }));
         this.groups = mapped;
         this.totalGroups = Number.isFinite(total) ? total : mapped.length;

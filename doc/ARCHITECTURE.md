@@ -62,7 +62,10 @@ All endpoints below are prefixed by `/api/v1`.
 - `GET /hosts/:id` : Get host by ID
 - `GET /hosts/:id/history` : Get host history
 - `POST /hosts/:id/consult` : Consult host
-- `GET /hosts/:id/ssh` : WebSSH WebSocket endpoint
+- `GET /hosts/:id/ssh` : WebSSH WebSocket endpoint (Host-specific)
+
+**Generic Terminal (Privilege 1):**
+- `GET /terminal/ssh` : WebSSH WebSocket endpoint (Ad-hoc connection via query params)
 
 **Write (Privilege 2):**
 - `POST /hosts/` : Create host
@@ -74,6 +77,14 @@ All endpoints below are prefixed by `/api/v1`.
 - `POST /monitors/:id/hosts/:hid/pull` : Pull single host from monitor
 - `POST /monitors/:id/hosts/push` : Push all hosts to monitor
 - `POST /monitors/:id/hosts/:hid/push` : Push single host to monitor
+
+### Site Messages (Privilege 1)
+- `GET /site-messages/` : Get notifications for current user
+- `GET /site-messages/unread-count` : Get number of unread notifications
+- `PUT /site-messages/:id/read` : Mark a message as read
+- `PUT /site-messages/read-all` : Mark all messages as read
+- `DELETE /site-messages/:id` : Delete a notification
+- `GET /site-messages/ws` : WebSocket endpoint for real-time notifications
 
 ### Knowledge Base
 **Read (Privilege 1):**
@@ -258,7 +269,8 @@ All routes are defined in the SPA router and map to Vue view components.
 - `/alert` -> Alert
 - `/host` -> Host
 - `/host/:id/detail` -> HostDetail
-- `/host/:id/terminal` -> Terminal (WebSSH)
+- `/host/:id/terminal` -> Terminal (WebSSH, Host-specific)
+- `/terminal` -> Terminal (WebSSH, with host selector and direct connect)
 - `/group` -> Group
 - `/group/:id/detail` -> GroupDetail
 - `/monitor` -> Monitor
@@ -267,6 +279,7 @@ All routes are defined in the SPA router and map to Vue view components.
 - `/item/:id/detail` -> ItemDetail
 - `/host/:hostId/items` -> Redirect to /item with hostId filter
 - `/profile` -> Profile
+- `/site-messages` -> SiteMessages (Notification History)
 
 **Privilege 2:**
 - `/provider` -> Provider

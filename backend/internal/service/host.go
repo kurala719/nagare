@@ -25,6 +25,8 @@ type HostReq struct {
 	SSHUser     string `json:"ssh_user"`
 	SSHPassword string `json:"ssh_password"`
 	SSHPort     int    `json:"ssh_port"`
+	LastSyncAt  *time.Time `json:"last_sync_at,omitempty"`
+	ExternalSource string `json:"external_source,omitempty"`
 }
 
 // HostResp represents a host response
@@ -42,6 +44,8 @@ type HostResp struct {
 	Comment     string `json:"comment"`
 	SSHUser     string `json:"ssh_user"`
 	SSHPort     int    `json:"ssh_port"`
+	LastSyncAt  *time.Time `json:"last_sync_at"`
+	ExternalSource string `json:"external_source"`
 }
 
 // GetAllHostsServ retrieves all hosts
@@ -167,6 +171,14 @@ func UpdateHostServ(id uint, h HostReq) error {
 		Comment:     h.Comment,
 		SSHUser:     h.SSHUser,
 		SSHPort:     h.SSHPort,
+		LastSyncAt:  existing.LastSyncAt,
+		ExternalSource: existing.ExternalSource,
+	}
+	if h.LastSyncAt != nil {
+		updated.LastSyncAt = h.LastSyncAt
+	}
+	if h.ExternalSource != "" {
+		updated.ExternalSource = h.ExternalSource
 	}
 	if h.SSHPort == 0 {
 		updated.SSHPort = 22
@@ -193,6 +205,29 @@ func UpdateHostServ(id uint, h HostReq) error {
 		recordHostHistory(refreshed, time.Now().UTC())
 	}
 	return recomputeItemsForHost(id)
+}
+
+// GetHostConnectionDetails retrieves host connection details including decrypted password
+func GetHostConnectionDetails(id uint) (string, int, string, string, error) {
+	host, err := repository.GetHostByIDDAO(id)
+	if err != nil {
+		return "", 0, "", "", fmt.Errorf("failed to get host: %w", err)
+	}
+
+	if host.SSHUser == "" {
+		return "", 0, "", "", fmt.Errorf("SSH user not configured")
+	}
+
+	password := ""
+	if host.SSHPassword != "" {
+		decrypted, err := utils.Decrypt(host.SSHPassword)
+		if err != nil {
+			return "", 0, "", "", fmt.Errorf("failed to decrypt SSH password: %w", err)
+		}
+		password = decrypted
+	}
+
+	return host.IPAddr, host.SSHPort, host.SSHUser, password, nil
 }
 
 // DeleteHostByIDServ deletes a host by ID
@@ -303,6 +338,8 @@ func hostToResp(h model.Host) HostResp {
 		Comment:     h.Comment,
 		SSHUser:     h.SSHUser,
 		SSHPort:     h.SSHPort,
+		LastSyncAt:  h.LastSyncAt,
+		ExternalSource: h.ExternalSource,
 	}
 }
 
@@ -496,6 +533,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	result.Total = len(monitorHosts)
 
+	now := time.Now().UTC()
 	for _, h := range monitorHosts {
 		// Get active_available from metadata
 		activeAvailable := ""
@@ -528,6 +566,8 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				SSHUser:     existingHost.SSHUser,
 				SSHPassword: "", // UpdateHostDAO won't update if empty
 				SSHPort:     existingHost.SSHPort,
+				LastSyncAt:  &now,
+				ExternalSource: monitor.Name,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -551,6 +591,8 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Enabled:     1,
 				Status:      status,
 				IPAddr:      h.IPAddress,
+				LastSyncAt:  &now,
+				ExternalSource: monitor.Name,
 			}); err != nil {
 				setMonitorStatusError(mid)
 				LogService("error", "pull hosts failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
