@@ -525,6 +525,9 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Enabled:     existingHost.Enabled,
 				Status:      status,
 				IPAddr:      h.IPAddress,
+				SSHUser:     existingHost.SSHUser,
+				SSHPassword: "", // UpdateHostDAO won't update if empty
+				SSHPort:     existingHost.SSHPort,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -675,6 +678,8 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Enabled:   existingHost.Enabled,
 			Status:    mapMonitorHostStatus(h.Status, activeAvailable),
 			IPAddr:    h.IPAddress,
+			SSHUser:   existingHost.SSHUser,
+			SSHPort:   existingHost.SSHPort,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")

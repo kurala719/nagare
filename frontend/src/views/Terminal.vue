@@ -3,48 +3,104 @@
     <div class="terminal-header">
       <div class="host-info">
         <el-button icon="ArrowLeft" circle @click="$router.back()" />
-        <span class="host-name">Terminal: {{ hostName || 'Loading...' }}</span>
+        <span class="host-name">Terminal: {{ hostName || 'Select a host' }}</span>
         <span class="host-ip" v-if="hostIp">({{ hostIp }})</span>
+        <el-button v-if="!route.params.id" size="small" style="margin-left: 10px" @click="showHostSelector = true">
+          Switch Host
+        </el-button>
       </div>
       <div class="terminal-actions">
-        <el-button type="danger" size="small" @click="handleDisconnect">Disconnect</el-button>
-        <el-button type="primary" size="small" @click="handleReconnect" :disabled="connected">Reconnect</el-button>
+        <el-button type="danger" size="small" @click="handleDisconnect" :disabled="!connected">Disconnect</el-button>
+        <el-button type="primary" size="small" @click="handleReconnect" :disabled="connected || !currentHostId">Reconnect</el-button>
       </div>
     </div>
     <div ref="terminalElement" class="terminal-body"></div>
+
+    <!-- Host Selection Dialog -->
+    <el-dialog v-model="showHostSelector" title="Select Host for Terminal" width="400px" :close-on-click-modal="false" :show-close="!!currentHostId">
+      <el-select v-model="selectedHostId" placeholder="Select a host" style="width: 100%" filterable>
+        <el-option v-for="h in availableHosts" :key="h.id" :label="`${h.name} (${h.ip_addr})`" :value="h.id" />
+      </el-select>
+      <template #footer>
+        <el-button type="primary" @click="confirmHostSelection" :disabled="!selectedHostId">Connect</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
+import { fetchHostData } from '@/api/hosts'
 
 const route = useRoute()
 const router = useRouter()
-const hostId = route.params.id
+const currentHostId = ref(route.params.id)
 const hostName = ref('')
 const hostIp = ref('')
 const connected = ref(false)
+const showHostSelector = ref(false)
+const selectedHostId = ref(null)
+const availableHosts = ref([])
 
 const terminalElement = ref(null)
 let term = null
 let fitAddon = null
 let socket = null
 
-const fetchHostInfo = async () => {
+const hostSSHUser = ref('')
+
+const fetchHostInfo = async (id) => {
   try {
-    const response = await request.get(`/hosts/${hostId}`)
+    const response = await request.get(`/hosts/${id}`)
     if (response.data.success) {
       hostName.value = response.data.data.name
       hostIp.value = response.data.data.ip_addr
+      hostSSHUser.value = response.data.data.ssh_user
+      
+      if (!hostSSHUser.value) {
+        ElMessage.warning('SSH credentials not configured for this host. Please update host properties first.')
+      }
     }
   } catch (err) {
     console.error('Failed to fetch host info', err)
+    ElMessage.error('Failed to fetch host information')
+  }
+}
+
+const loadAvailableHosts = async () => {
+  try {
+    const res = await fetchHostData()
+    if (res.success) {
+      availableHosts.value = (res.data || []).filter(h => h.ssh_user) // Only show hosts with SSH user if from maintenance menu
+      if (availableHosts.value.length === 0 && res.data?.length > 0) {
+        availableHosts.value = res.data // Fallback to all hosts if none have SSH user configured
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load hosts', err)
+  }
+}
+
+const confirmHostSelection = async () => {
+  if (!selectedHostId.value) return
+  
+  currentHostId.value = selectedHostId.value
+  showHostSelector.value = false
+  
+  if (term) {
+    term.clear()
+  }
+  
+  await fetchHostInfo(currentHostId.value)
+  handleDisconnect()
+  if (hostSSHUser.value) {
+    connectWebSocket()
   }
 }
 
@@ -93,12 +149,13 @@ const handleResize = () => {
 }
 
 const connectWebSocket = () => {
+  if (!currentHostId.value) return
   const token = getToken()
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const host = window.location.host
   
   // Use term dimensions in query
-  const url = `${protocol}//${host}/api/v1/hosts/${hostId}/ssh?token=${token}&cols=${term.cols}&rows=${term.rows}`
+  const url = `${protocol}//${host}/api/v1/hosts/${currentHostId.value}/ssh?token=${token}&cols=${term.cols}&rows=${term.rows}`
 
   socket = new WebSocket(url)
   socket.binaryType = 'arraybuffer'
@@ -127,6 +184,7 @@ const connectWebSocket = () => {
   socket.onerror = (error) => {
     console.error('WebSocket Error:', error)
     term.write('\r\n*** WebSocket error ***\r\n')
+    ElMessage.error('WebSocket connection failed. Ensure the host is reachable and SSH credentials are correct.')
   }
 }
 
@@ -144,9 +202,14 @@ const handleReconnect = () => {
 }
 
 onMounted(async () => {
-  await fetchHostInfo()
   initTerminal()
-  connectWebSocket()
+  if (currentHostId.value) {
+    await fetchHostInfo(currentHostId.value)
+    connectWebSocket()
+  } else {
+    await loadAvailableHosts()
+    showHostSelector.value = true
+  }
 })
 
 onUnmounted(() => {

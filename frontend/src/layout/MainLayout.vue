@@ -199,6 +199,7 @@ export default defineComponent({
       { key: 'maintenance_group', label: 'menu.maintenance', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
+        { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },

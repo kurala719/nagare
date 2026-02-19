@@ -36,6 +36,10 @@ export function deleteReport(id) {
   })
 }
 
+export function bulkDeleteReports(ids) {
+  return Promise.all(ids.map(id => deleteReport(id)))
+}
+
 export function downloadReport(id) {
   return request({
     url: `/reports/${id}/download`,

@@ -153,7 +153,13 @@ func UpdateHostDAO(id uint, h model.Host) error {
 		Update("status_description", h.StatusDescription).
 		Update("active_available", h.ActiveAvailable).
 		Update("ip_addr", h.IPAddr).
-		Update("comment", h.Comment)
+		Update("comment", h.Comment).
+		Update("ssh_user", h.SSHUser).
+		Update("ssh_port", h.SSHPort)
+
+	if h.SSHPassword != "" {
+		db = db.Update("ssh_password", h.SSHPassword)
+	}
 
 	return db.Error
 }

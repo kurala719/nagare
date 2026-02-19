@@ -83,7 +83,32 @@ func HandleWebSSH(c *gin.Context) {
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
+		Config: ssh.Config{
+			KeyExchanges: []string{
+				"diffie-hellman-group1-sha1",
+				"diffie-hellman-group14-sha1",
+				"ecdh-sha2-nistp256",
+				"ecdh-sha2-nistp384",
+				"ecdh-sha2-nistp521",
+				"curve25519-sha256@libssh.org",
+			},
+			Ciphers: []string{
+				"aes128-cbc",
+				"aes128-ctr",
+				"aes192-ctr",
+				"aes256-ctr",
+				"aes128-gcm@openssh.com",
+				"chacha20-poly1305@openssh.com",
+			},
+			MACs: []string{
+				"hmac-sha1",
+				"hmac-sha2-256",
+				"hmac-sha2-512",
+				"hmac-sha1-96",
+			},
+		},
 	}
+	sshConfig.HostKeyAlgorithms = append(sshConfig.HostKeyAlgorithms, "ssh-rsa", "ssh-dss")
 
 	addr := fmt.Sprintf("%s:%d", host.IPAddr, host.SSHPort)
 	if host.SSHPort == 0 {

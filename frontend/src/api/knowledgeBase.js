@@ -37,3 +37,7 @@ export function deleteKnowledgeBase(id) {
     method: 'delete'
   })
 }
+
+export function bulkDeleteKnowledgeBase(ids) {
+  return Promise.all(ids.map(id => deleteKnowledgeBase(id)))
+}

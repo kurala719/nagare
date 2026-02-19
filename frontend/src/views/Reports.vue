@@ -13,6 +13,19 @@
         </el-select>
       </div>
       <div class="action-group">
+        <el-dropdown v-if="selectedRows.length > 0" class="batch-actions">
+          <el-button type="warning">
+            {{ $t('common.selectedCount', { count: selectedRows.length }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Delete" @click="handleBulkDelete" style="color: var(--el-color-danger)">
+                {{ $t('common.bulkDelete') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
         <el-button @click="configDialogVisible = true" :icon="Setting">{{ $t('reports.config') }}</el-button>
         <el-dropdown split-button type="primary" @click="generateWeekly" @command="handleGenerateCommand">
           {{ $t('reports.generateWeekly') }}
@@ -25,7 +38,8 @@
       </div>
     </div>
 
-    <el-table :data="reports" border style="width: 100%" v-loading="loading">
+    <el-table :data="reports" border style="width: 100%" v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="title" :label="$t('reports.reportTitle')" min-width="200" />
       <el-table-column prop="report_type" :label="$t('reports.type')" width="120">
@@ -90,12 +104,13 @@
 
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { Download, Delete, Setting } from '@element-plus/icons-vue'
+import { Download, Delete, Setting, ArrowDown } from '@element-plus/icons-vue'
 import { 
   fetchReports, 
   generateWeeklyReport, 
   generateMonthlyReport, 
   deleteReport, 
+  bulkDeleteReports,
   getReportConfig, 
   updateReportConfig 
 } from '@/api/reports'
@@ -109,6 +124,30 @@ const loading = ref(false)
 const filterType = ref('')
 const configDialogVisible = ref(false)
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const selectedRows = ref([])
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBulkDelete = () => {
+  if (selectedRows.value.length === 0) return
+  
+  ElMessageBox.confirm(
+    t('common.bulkDeleteConfirmText', { count: selectedRows.value.length }),
+    t('common.bulkDeleteConfirmTitle'),
+    { type: 'warning' }
+  ).then(async () => {
+    try {
+      const ids = selectedRows.value.map(row => row.id)
+      await bulkDeleteReports(ids)
+      ElMessage.success(t('common.bulkDeleteSuccess', { count: selectedRows.value.length }))
+      loadReports()
+    } catch (err) {
+      ElMessage.error(t('common.bulkDeleteFailed'))
+    }
+  }).catch(() => {})
+}
 
 const configForm = reactive({
   auto_generate_weekly: 0,

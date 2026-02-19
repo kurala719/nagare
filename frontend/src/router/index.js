@@ -65,6 +65,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/terminal',
+    name: 'MaintenanceTerminal',
+    component: () => import('@/views/Terminal.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => import('@/views/Monitor.vue'),

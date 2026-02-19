@@ -13,6 +13,23 @@
       </div>
 
       <div class="action-group">
+        <el-dropdown v-if="selectedIds.length > 0" class="batch-actions">
+          <el-button type="warning">
+            {{ $t('common.selectedCount', { count: selectedIds.length }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="Delete" @click="handleBulkDelete" style="color: var(--el-color-danger)">
+                {{ $t('common.bulkDelete') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        
+        <el-button v-if="items.length > 0" @click="toggleSelectAll">
+          {{ isAllSelected ? $t('common.deselectAll') : $t('common.selectAll') }}
+        </el-button>
+
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('kb.create') }}
         </el-button>
@@ -27,10 +44,21 @@
     <el-empty v-else-if="items.length === 0" :description="$t('kb.noItems')" />
 
     <div v-else class="kb-grid">
-      <el-card v-for="item in items" :key="item.ID" class="kb-card">
+      <el-card v-for="item in items" :key="item.ID" 
+        class="kb-card" 
+        :class="{ 'is-selected': isSelected(item.ID) }"
+        @click="toggleSelection(item.ID)"
+      >
         <template #header>
           <div class="card-header">
-            <span class="topic">{{ item.Topic }}</span>
+            <div class="header-left">
+              <el-checkbox 
+                :model-value="isSelected(item.ID)" 
+                @change="() => toggleSelection(item.ID)" 
+                @click.stop
+              />
+              <span class="topic">{{ item.Topic }}</span>
+            </div>
             <el-tag size="small">{{ item.Category }}</el-tag>
           </div>
         </template>
@@ -78,9 +106,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { Search, Plus, Edit, Delete, Loading } from '@element-plus/icons-vue'
-import { fetchKnowledgeBase, addKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '@/api/knowledgeBase'
+import { ref, onMounted, watch, computed } from 'vue'
+import { Search, Plus, Edit, Delete, Loading, ArrowDown } from '@element-plus/icons-vue'
+import { fetchKnowledgeBase, addKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase, bulkDeleteKnowledgeBase } from '@/api/knowledgeBase'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
@@ -92,6 +120,30 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
 const formRef = ref(null)
+const selectedIds = ref([])
+
+const isAllSelected = computed(() => {
+  return items.value.length > 0 && selectedIds.value.length === items.value.length
+})
+
+const isSelected = (id) => selectedIds.value.includes(id)
+
+const toggleSelection = (id) => {
+  const index = selectedIds.value.indexOf(id)
+  if (index > -1) {
+    selectedIds.value.splice(index, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = items.value.map(item => item.ID)
+  }
+}
 
 const form = ref({
   id: null,
@@ -109,10 +161,13 @@ const rules = {
 
 const loadData = async () => {
   loading.value = true
+  selectedIds.value = []
   try {
     const response = await fetchKnowledgeBase({ q: searchQuery.value })
-    if (response.success) {
-      items.value = response.data || []
+    if (response.data && response.data.success) {
+      items.value = response.data.data || []
+    } else {
+      ElMessage.error(t('kb.loadFailed'))
     }
   } catch (err) {
     ElMessage.error(t('kb.loadFailed'))
@@ -150,14 +205,34 @@ const handleDelete = (item) => {
   }).then(async () => {
     try {
       const res = await deleteKnowledgeBase(item.ID)
-      if (res.success) {
+      if (res.data && res.data.success) {
         ElMessage.success(t('kb.deleteSuccess'))
         loadData()
+      } else {
+        ElMessage.error(t('kb.deleteFailed'))
       }
     } catch (err) {
       ElMessage.error(t('kb.deleteFailed'))
     }
-  })
+  }).catch(() => {})
+}
+
+const handleBulkDelete = () => {
+  if (selectedIds.value.length === 0) return
+  
+  ElMessageBox.confirm(
+    t('common.bulkDeleteConfirmText', { count: selectedIds.value.length }),
+    t('common.bulkDeleteConfirmTitle'),
+    { type: 'warning' }
+  ).then(async () => {
+    try {
+      await bulkDeleteKnowledgeBase(selectedIds.value)
+      ElMessage.success(t('common.bulkDeleteSuccess', { count: selectedIds.value.length }))
+      loadData()
+    } catch (err) {
+      ElMessage.error(t('common.bulkDeleteFailed'))
+    }
+  }).catch(() => {})
 }
 
 const submitForm = async () => {
@@ -178,10 +253,13 @@ const submitForm = async () => {
         } else {
           res = await addKnowledgeBase(payload)
         }
-        if (res.success) {
+        
+        if (res.data && res.data.success) {
           ElMessage.success(isEdit.value ? t('kb.updateSuccess') : t('kb.createSuccess'))
           dialogVisible.value = false
           loadData()
+        } else {
+          ElMessage.error(t('kb.saveFailed'))
         }
       } catch (err) {
         ElMessage.error(t('kb.saveFailed'))
@@ -226,6 +304,30 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kb-card {
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.kb-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.kb-card.is-selected {
+  border-color: var(--el-color-primary);
+  background-color: var(--el-color-primary-light-9);
 }
 
 .topic {
