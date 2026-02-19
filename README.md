@@ -1,41 +1,33 @@
-# Nagare (流) - Next-Gen AI-Powered Operations Platform
+# Nagare (流) - Unified AIOps & Infrastructure Orchestration
 
-Nagare is a unified monitoring, automation, and diagnostic platform designed for modern SRE and DevOps teams. It combines high-concurrency data ingestion with Large Language Models (LLM) and Retrieval-Augmented Generation (RAG) to transform raw monitoring data into actionable intelligence.
+Nagare is a high-performance, AI-native operations platform that bridges the gap between traditional monitoring (Zabbix/Prometheus) and autonomous system diagnosis. Built on a Go 1.24+ backend and a Vue 3 + Vite frontend, Nagare leverages Large Language Models (LLM) and a custom Retrieval-Augmented Generation (RAG) engine to provide context-aware troubleshooting.
 
-## 🌟 Key Features
+## 🚀 Vision: Autonomous SRE
+Nagare is not just a dashboard; it is an intelligent agent designed to reduce MTTR (Mean Time To Repair) by automating the "Detection -> Context Retrieval -> AI Analysis -> Action" pipeline.
 
-- **Unified Monitoring**: Seamless integration with Zabbix and Prometheus.
-- **AI Diagnostic Engine (RAG)**: Context-aware alert analysis using local operations history and Gemini/OpenAI.
-- **High Performance**: Go-based backend optimized with `jsoniter` for 20-30% faster serialization.
-- **Integrated WebSSH**: Secure, browser-based terminal access to monitored hosts.
-- **Automated Reporting**: Professional PDF reports with AI-generated summaries and server-side charts.
-- **Modern UI**: Vue 3 + Vite frontend with skeleton screens for optimized perceived speed.
-- **MCP Protocol**: Support for Model Context Protocol, enabling Nagare to act as an AI Agent toolkit.
+---
 
-## 📂 Project Structure
+## 📂 Technical Documentation Index
 
-- **`frontend/`**: Vue 3, Vite, Element Plus, ECharts, xterm.js.
-- **`backend/`**: Go 1.24, Gin, GORM, Redis, jsoniter, Gemini SDK.
-- **`doc/`**: Detailed architectural and feature documentation.
+For exhaustive technical details, refer to the specialized manuals in the `doc/` directory:
 
-## 🚀 Quick Start
+| Document | Scope |
+| :--- | :--- |
+| [**Core Architecture**](./doc/ARCHITECTURE.md) | High-concurrency design, `jsoniter` optimizations, and data flow. |
+| [**AI & RAG Engine**](./doc/AI_RAG_ENGINE.md) | Scoring algorithms, tokenization, and prompt engineering. |
+| [**Automated Reporting**](./doc/REPORTING_SYSTEM.md) | PDF generation, Go-chart rendering, and cron orchestration. |
+| [**Automation & Chaos**](./doc/AUTOMATION_CHAOS.md) | Ansible integration and Chaos Engineering (Alert Storm) logic. |
+| [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) | PTY proxying, XSS prevention, and WebSocket safety. |
+| [**Frontend Engineering**](./doc/FRONTEND_GUIDE.md) | Skeleton screens, code splitting, and Dev Tunnel interoperability. |
+| [**API Technical Reference**](./doc/API_REFERENCE.md) | Comprehensive endpoint list, RBAC, and MCP support. |
 
-### Backend (Go)
-1. `cd backend`
-2. `go mod download`
-3. `go build -tags=jsoniter -o nagare-server ./cmd/server`
-4. `./nagare-server` (Ensure `configs/nagare_config.json` is set up)
+---
 
-### Frontend (Vue 3)
-1. `cd frontend`
-2. `npm install`
-3. `npm run dev`
-
-## 🛠️ Performance & Security Highlights
-- **Build Tags**: Uses `-tags=jsoniter` for high-speed JSON processing.
-- **Code Splitting**: Optimized Vite build with manual chunks for UI and Charting libraries.
-- **Tunnel Friendly**: Built-in support for Microsoft Dev Tunnels with anti-phishing bypass.
-- **RAG Optimization**: Custom keyword re-ranking algorithm for superior AI context retrieval.
+## 🛠️ Performance & Engineering Benchmarks
+- **Backend Optimization**: Uses `jsoniter` for high-speed serialization (20-30% CPU overhead reduction).
+- **Frontend Perception**: Employs `el-skeleton` for smooth asynchronous loading.
+- **Build Strategy**: Vite manual chunking for long-term browser caching of heavy libs (ECharts, xterm).
+- **Network Resilience**: Automatic bypass of Microsoft Dev Tunnel phishing pages via header injection.
 
 ## 📄 License
 Apache License 2.0
