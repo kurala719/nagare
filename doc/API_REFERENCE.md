@@ -16,16 +16,16 @@ All Nagare API endpoints follow a standardized RESTful pattern with JWT authenti
 -   `POST /api/v1/chats/`: Normal LLM interaction with "Persona" support.
 -   `POST /api/v1/hosts/:id/consult`: Analyze a host's entire resource trend using LLM.
 
-## 3. Monitoring & Data Ingestion
+## 3. Automation & Chaos
 
-### Monitor Management
--   `GET /api/v1/monitors/`: Search and list monitors.
--   `POST /api/v1/monitors/:id/login`: Authenticate and obtain tokens from Zabbix/Prometheus.
--   `POST /api/v1/monitors/:id/hosts/pull`: Sync all hosts from a specific monitoring node.
+### Ansible Automation
+-   `GET /api/v1/ansible/inventory`: Serves an Ansible-compatible dynamic JSON inventory.
+-   `POST /api/v1/ansible/playbooks/`: Create or update an Ansible playbook.
+-   `POST /api/v1/ansible/playbooks/:id/run`: Execute a playbook on targeted hosts.
+-   `POST /api/v1/ansible/playbooks/recommend`: Get AI-recommended playbooks for a specific alert.
 
-### Alert Webhooks (Unauthenticated)
--   `POST /api/v1/alerts/webhook`: Generic webhook for Prometheus Alertmanager.
--   `POST /api/v1/media/qq/message`: QQ OneBot 11 message handler.
+### Chaos Engineering
+-   `POST /api/v1/chaos/alert-storm`: Simulate a high-intensity failure event across the system.
 
 ## 4. Operational Assets
 
@@ -37,9 +37,16 @@ All Nagare API endpoints follow a standardized RESTful pattern with JWT authenti
 -   `GET /api/v1/reports/`: List available reports.
 -   `GET /api/v1/reports/:id/download`: Download a generated PDF report.
 
-## 5. Security & Privileges
+## 5. Intelligence & Agent Support (MCP)
+
+### Model Context Protocol (MCP)
+Nagare provides a standard MCP interface for external AI agents:
+-   `GET /api/v1/mcp/sse`: Connect to the MCP Server-Sent Events stream.
+-   `POST /api/v1/mcp/message`: Send and receive MCP-compatible tool call messages.
+
+## 6. Security & Privileges
 
 Endpoints are protected by `PrivilegesMiddleware`:
 -   **Level 1 (User)**: Read access, personal settings, and chat.
--   **Level 2 (Manager)**: Manage monitors, hosts, and reports.
+-   **Level 2 (Manager)**: Manage monitors, hosts, reports, and Ansible playbooks.
 -   **Level 3 (Admin)**: System configuration, audit logs, and user management.

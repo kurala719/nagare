@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bell, InfoFilled, Warning, CircleCloseFilled, SuccessFilled, Management, Operation } from '@element-plus/icons-vue'
 import { fetchSiteMessages, getUnreadCount, markAsRead, markAllAsRead } from '@/api/siteMessage'

@@ -194,7 +194,7 @@ export default defineComponent({
     const loadHealthScore = async () => {
       healthLoading.value = true
       try {
-        const res = await authFetch('/api/v1/system/health')
+        const res = await authFetch('/system/health')
         const json = await res.json()
         if (json.success) {
           healthScore.value = json.data
@@ -230,7 +230,8 @@ export default defineComponent({
       refreshAll,
       trendChart,
       metricsTable,
-      topologyChart
+      topologyChart,
+      Refresh
     }
   }
 })

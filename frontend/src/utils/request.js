@@ -6,7 +6,7 @@ import { ElMessageBox } from 'element-plus'
 import { getToken, clearToken } from './auth'
 import i18n from '../i18n'
 const request = axios.create({
-    baseURL: '/api/v1', // 基础路径,将统一的部分全部封装
+    baseURL: '', // Set to empty because call sites already include /api/v1
     withCredentials: false, // 表示请求可以携带cookie
     headers: {
         'X-Tunnel-Skip-AntiPhishing-Page': 'true'
