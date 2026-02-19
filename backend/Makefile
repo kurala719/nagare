@@ -3,7 +3,7 @@
 APP_NAME := nagare-web-server
 
 build:
-	go build -o bin/$(APP_NAME) ./cmd/server
+	go build -tags=jsoniter -o bin/$(APP_NAME) ./cmd/server
 
 run:
 	go run ./cmd/server

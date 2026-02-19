@@ -12,9 +12,12 @@
       </el-button>
     </div>
 
-    <div v-if="loading && !lastUpdated" class="loading-container">
-      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
-      <p>{{ $t('dashboard.loading') }}</p>
+    <div v-if="loading && !lastUpdated" class="dashboard-content skeleton-container">
+      <el-skeleton :rows="5" animated />
+      <el-row :gutter="20" style="margin-top: 20px">
+        <el-col :span="16"><el-skeleton style="width: 100%" :rows="10" animated /></el-col>
+        <el-col :span="8"><el-skeleton style="width: 100%" :rows="10" animated /></el-col>
+      </el-row>
     </div>
 
     <div v-else class="dashboard-content">

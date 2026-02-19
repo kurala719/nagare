@@ -126,6 +126,75 @@ func AccessLogMiddleware() gin.HandlerFunc {
 	}
 }
 
+func AuditLogMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		method := c.Request.Method
+		// Only log data-modifying operations
+		if method == "GET" || method == "HEAD" || method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
+		start := time.Now()
+		c.Next()
+		latency := time.Since(start).Microseconds()
+
+		uidValue, existsUid := c.Get("uid")
+		usernameValue, existsUsername := c.Get("username")
+
+		var uid uint
+		var username string
+		if existsUid {
+			uid = uidValue.(uint)
+		}
+		if existsUsername {
+			username = usernameValue.(string)
+		}
+
+		entry := model.AuditLog{
+			UserID:    uid,
+			Username:  username,
+			Action:    getActionDescription(c),
+			Method:    method,
+			Path:      c.FullPath(),
+			IP:        c.ClientIP(),
+			Status:    c.Writer.Status(),
+			Latency:   latency,
+			UserAgent: c.Request.UserAgent(),
+		}
+
+		// Save asynchronously to not block the response
+		go func(e model.AuditLog) {
+			_ = service.AddAuditLogServ(e)
+		}(entry)
+	}
+}
+
+func getActionDescription(c *gin.Context) string {
+	path := c.FullPath()
+	method := c.Request.Method
+
+	// Simple heuristic for action description
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) > 0 {
+		resource := parts[len(parts)-1]
+		// If the last part is a parameter (like :id), use the second to last
+		if strings.HasPrefix(resource, ":") && len(parts) > 1 {
+			resource = parts[len(parts)-2]
+		}
+
+		switch method {
+		case "POST":
+			return "Create " + resource
+		case "PUT", "PATCH":
+			return "Update " + resource
+		case "DELETE":
+			return "Delete " + resource
+		}
+	}
+	return method + " " + path
+}
+
 func newRequestID() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {

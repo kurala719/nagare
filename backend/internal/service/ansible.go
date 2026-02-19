@@ -202,6 +202,11 @@ func executePlaybook(jobID uint, content string, hostFilter string) {
 	invFile.Close()
 
 	// 3. Build command
+	args := []string{"-i", invFile.Name(), tmpFile.Name()}
+	if hostFilter != "" && hostFilter != "all" {
+		args = append(args, "-l", hostFilter)
+	}
+
 	var cmd *exec.Cmd
 	
 	if runtime.GOOS == "windows" {

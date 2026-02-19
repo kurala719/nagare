@@ -7,7 +7,10 @@ import { getToken, clearToken } from './auth'
 import i18n from '../i18n'
 const request = axios.create({
     baseURL: '/api/v1', // 基础路径,将统一的部分全部封装
-    withCredentials: false // 表示请求可以携带cookie
+    withCredentials: false, // 表示请求可以携带cookie
+    headers: {
+        'X-Tunnel-Skip-AntiPhishing-Page': 'true'
+    }
 })
 
 request.interceptors.request.use((config) => {

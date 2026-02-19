@@ -142,7 +142,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools } from '@element-plus/icons-vue'
+import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools, PieChart } from '@element-plus/icons-vue'
 import SideBarChat from '@/components/Customed/SideBarChat.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import SiteMessageCenter from '@/components/SiteMessageCenter.vue'
@@ -162,7 +162,8 @@ export default defineComponent({
     Setting,
     Moon,
     Sunny,
-    Tools
+    Tools,
+    PieChart
   },
   setup() {
     const route = useRoute()
@@ -183,6 +184,10 @@ export default defineComponent({
 
     const menuItems = computed(() => [
       { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1, icon: 'DataBoard' },
+      { key: 'insights_group', label: 'menu.insights', minPrivilege: 1, icon: 'PieChart', children: [
+        { key: 'systemStatus', path: '/system-status', label: 'menu.systemStatus', minPrivilege: 1 },
+        { key: 'analytics', path: '/analytics', label: 'menu.analytics', minPrivilege: 1 },
+      ]},
       { key: 'monitor_group', label: 'menu.monitor', minPrivilege: 1, icon: 'Monitor', children: [
         { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
         { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
@@ -209,6 +214,7 @@ export default defineComponent({
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
+        { key: 'auditLog', path: '/audit-log', label: 'menu.auditLog', minPrivilege: 2 },
         { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
         { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},

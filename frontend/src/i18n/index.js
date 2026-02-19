@@ -729,7 +729,11 @@ const messages = {
       user: 'User',
       registerApplication: 'Register Applications',
       configuration: 'Configuration',
+      auditLog: 'Audit Log',
       system: 'System',
+      insights: 'Insights',
+      systemStatus: 'System Status',
+      analytics: 'Analytics',
       maintenance: 'Maintenance',
       test: 'Test',
       reports: 'Reports'
@@ -1108,6 +1112,15 @@ const messages = {
       deleteFailed: 'Failed to delete playbook',
       updateSuccess: 'Playbook updated successfully',
       createSuccess: 'Playbook created successfully'
+    },
+    auditLog: {
+      title: 'Security Audit Log',
+      search: 'Search user actions...'
+    },
+    analytics: {
+      chaosTitle: 'Chaos Simulator',
+      chaosDesc: 'Trigger a simulated alert storm to test system resilience.',
+      triggerChaos: 'Trigger Alert Storm'
     }
   },
   'zh-CN': {
@@ -1849,7 +1862,11 @@ const messages = {
       user: '用户',
       registerApplication: '注册申请',
       configuration: '配置',
+      auditLog: '审计日志',
       system: '系统',
+      insights: '智能洞察',
+      systemStatus: '平台状态',
+      analytics: '告警统计',
       maintenance: '维护',
       test: '测试',
       reports: '报表'
@@ -2219,6 +2236,15 @@ const messages = {
       deleteFailed: '删除剧本失败',
       updateSuccess: '剧本已更新',
       createSuccess: '剧本已创建'
+    },
+    auditLog: {
+      title: '审计日志',
+      search: '搜索用户操作...'
+    },
+    analytics: {
+      chaosTitle: '混沌模拟器',
+      chaosDesc: '触发模拟告警风暴，测试系统抗压能力。',
+      triggerChaos: '触发告警风暴'
     }
   }
 }

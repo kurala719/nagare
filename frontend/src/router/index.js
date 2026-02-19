@@ -151,6 +151,24 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 2 }
   },
   {
+    path: '/audit-log',
+    name: 'AuditLog',
+    component: () => import('@/views/AuditLog.vue'),
+    meta: { requiresAuth: true, minPrivilege: 2 }
+  },
+  {
+    path: '/system-status',
+    name: 'SystemStatus',
+    component: () => import('@/views/SystemStatus.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
+    path: '/analytics',
+    name: 'Analytics',
+    component: () => import('@/views/Analytics.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/user',
     name: 'User',
     component: () => import('@/views/User.vue'),

@@ -46,8 +46,21 @@ func InitRouter() {
 		})
 	})
 
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "Nagare Backend is running",
+			"version": "1.0.0",
+		})
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "UP"})
+	})
+
 	// Setup all routes
 	apiGroup := r.Group("/api/v1")
+	apiGroup.Use(api.AuditLogMiddleware())
 	setupAllRoutes(apiGroup)
 	setupMcpRoutes(r)
 
@@ -102,6 +115,9 @@ func setupAllRoutes(rg RouteGroup) {
 	setupActionRoutes(rg)
 	setupTriggerRoutes(rg)
 	setupLogRoutes(rg)
+	setupAuditLogRoutes(rg)
+	setupAnalyticsRoutes(rg)
+	setupChaosRoutes(rg)
 	setupItemRoutes(rg)
 	setupChatRoutes(rg)
 	setupProviderRoutes(rg)
@@ -299,6 +315,7 @@ func setupSystemRoutes(rg RouteGroup) {
 	system.GET("/health", api.GetHealthScoreCtrl)
 	system.GET("/health/history", api.GetNetworkStatusHistoryCtrl)
 	system.GET("/metrics", api.GetNetworkMetricsCtrl)
+	system.GET("/status", api.GetSystemStatusCtrl)
 }
 
 func setupIMRoutes(rg RouteGroup) {
@@ -367,6 +384,24 @@ func setupLogRoutes(rg RouteGroup) {
 	logs := rg.Group("/logs", api.PrivilegesMiddleware(2))
 	logs.GET("/system", api.GetSystemLogsCtrl)
 	logs.GET("/service", api.GetServiceLogsCtrl)
+}
+
+func setupAuditLogRoutes(rg RouteGroup) {
+	// Routes with privilege level 2 (managers/admins)
+	auditLogs := rg.Group("/audit-logs", api.PrivilegesMiddleware(2))
+	auditLogs.GET("", api.SearchAuditLogsCtrl)
+}
+
+func setupAnalyticsRoutes(rg RouteGroup) {
+	// Routes with privilege level 1
+	analytics := rg.Group("/analytics", api.PrivilegesMiddleware(1))
+	analytics.GET("/alerts", api.GetAlertAnalyticsCtrl)
+}
+
+func setupChaosRoutes(rg RouteGroup) {
+	// Routes with privilege level 2 (managers/admins)
+	chaos := rg.Group("/chaos", api.PrivilegesMiddleware(2))
+	chaos.POST("/alert-storm", api.TriggerAlertStormCtrl)
 }
 
 func setupItemRoutes(rg RouteGroup) {

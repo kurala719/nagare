@@ -117,6 +117,7 @@ func initDBTables() error {
 		&model.Action{},
 		&model.Trigger{},
 		&model.LogEntry{},
+		&model.AuditLog{},
 		&model.Chat{},
 		&model.Provider{},
 		&model.UserInformation{},

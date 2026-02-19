@@ -13,6 +13,7 @@ export async function authFetch(url, options = {}) {
     finalUrl = `/api/v1${finalUrl.slice('/api'.length)}`
   }
   const headers = new Headers(options.headers || {})
+  headers.set('X-Tunnel-Skip-AntiPhishing-Page', 'true')
   const token = getToken()
   if (token) {
     headers.set('Authorization', `Bearer ${token}`)

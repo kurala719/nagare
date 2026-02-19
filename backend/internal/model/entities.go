@@ -250,6 +250,20 @@ type LogEntry struct {
 	IP       string
 }
 
+// AuditLog represents a record of a user's operational action for security and compliance.
+type AuditLog struct {
+	gorm.Model
+	UserID    uint   `gorm:"index"`
+	Username  string `gorm:"size:100"`
+	Action    string `gorm:"size:255"` // e.g., "Create Host", "Delete Monitor"
+	Method    string `gorm:"size:10"`  // GET, POST, PUT, DELETE
+	Path      string `gorm:"size:255"` // API path
+	IP        string `gorm:"size:45"`
+	Status    int    // HTTP status code
+	Latency   int64  // Latency in microseconds
+	UserAgent string `gorm:"size:255"`
+}
+
 // User represents the authentication and authorization information
 type User struct {
 	gorm.Model

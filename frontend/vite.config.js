@@ -31,6 +31,29 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Manual chunk splitting for better caching
+          if (id.includes('node_modules')) {
+            if (id.includes('element-plus')) {
+              return 'element-plus'
+            }
+            if (id.includes('echarts')) {
+              return 'echarts'
+            }
+            if (id.includes('xterm')) {
+              return 'xterm'
+            }
+            return 'vendor'
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
+    cssCodeSplit: true,
+  },
   server: {
     proxy: {
         '/api': {

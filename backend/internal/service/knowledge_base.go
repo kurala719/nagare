@@ -10,17 +10,17 @@ import (
 
 // RetrieveContext retrieves relevant knowledge from the knowledge base based on the alert message
 func RetrieveContext(alertMsg string) string {
-	// 1. Simple tokenization by spaces and common punctuation
+	// 1. Smarter tokenization by spaces and common punctuation, including IP patterns
 	f := func(c rune) bool {
 		return c == ' ' || c == ',' || c == '.' || c == ':' || c == ';' || c == '!' || c == '?' || c == '(' || c == ')' || c == '[' || c == ']'
 	}
 	tokens := strings.FieldsFunc(alertMsg, f)
 
-	// 2. Filter out short or common words
+	// 2. Filter out short or common words, but keep specific entities like IP segments
 	stopWords := map[string]bool{
 		"the": true, "is": true, "at": true, "which": true, "on": true, "a": true, "an": true,
 		"and": true, "or": true, "but": true, "error": true, "alert": true, "detected": true,
-		"warning": true, "critical": true, "failed": true, "failure": true,
+		"warning": true, "critical": true, "failed": true, "failure": true, "nagare": true,
 	}
 
 	validTokens := make([]string, 0)
@@ -33,18 +33,50 @@ func RetrieveContext(alertMsg string) string {
 		}
 	}
 
-	// 3. Search database
-	results, err := repository.SearchKnowledgeBaseDAO(validTokens, 3)
+	// 3. Search database and perform keyword-based re-ranking
+	results, err := repository.SearchKnowledgeBaseDAO(validTokens, 10) // Fetch more for re-ranking
 	if err != nil || len(results) == 0 {
 		return ""
 	}
 
-	// 4. Construct context string
-	var sb strings.Builder
-	sb.WriteString("\nLocal Knowledge Base Reference Information:\n")
-	for i, res := range results {
-		sb.WriteString(fmt.Sprintf("[%d] Topic: %s\nContent: %s\n", i+1, res.Topic, res.Content))
+	// Re-ranking by keyword hit count
+	type scoredResult struct {
+		kb    model.KnowledgeBase
+		score int
 	}
+	scored := make([]scoredResult, 0, len(results))
+	for _, res := range results {
+		score := 0
+		content := strings.ToLower(res.Content + " " + res.Topic + " " + res.Keywords)
+		for _, token := range validTokens {
+			if strings.Contains(content, token) {
+				score += 2 // Boost score for direct keyword matches
+			}
+		}
+		scored = append(scored, scoredResult{res, score})
+	}
+
+	// Simple bubble sort for demonstration (could use sort package for production)
+	for i := 0; i < len(scored)-1; i++ {
+		for j := 0; j < len(scored)-i-1; j++ {
+			if scored[j].score < scored[j+1].score {
+				scored[j], scored[j+1] = scored[j+1], scored[j]
+			}
+		}
+	}
+
+	// 4. Construct context string (top 3)
+	var sb strings.Builder
+	sb.WriteString("\n--- Relevant Operations Knowledge Base (RAG) ---\n")
+	limit := 3
+	if len(scored) < limit {
+		limit = len(scored)
+	}
+	for i := 0; i < limit; i++ {
+		res := scored[i].kb
+		sb.WriteString(fmt.Sprintf("[%d] Topic: %s (Relevance: %d)\nContext: %s\n", i+1, res.Topic, scored[i].score, res.Content))
+	}
+	sb.WriteString("--------------------------------------------------\n")
 	return sb.String()
 }
 
