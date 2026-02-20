@@ -16,11 +16,11 @@ const (
 	TaskTypePullHostsFromMonitor  TaskType = "pull_hosts"
 	TaskTypePullGroupsFromMonitor TaskType = "pull_groups"
 	TaskTypePullItemsFromMonitor  TaskType = "pull_items"
-	TaskTypePullHostFromMonitor  TaskType = "pull_host"
-	TaskTypePullItemFromMonitor  TaskType = "pull_item"
-	TaskTypePushHostToMonitor    TaskType = "push_host"
-	TaskTypePushItemToMonitor    TaskType = "push_item"
-	TaskTypeGenerateAlerts       TaskType = "generate_alerts"
+	TaskTypePullHostFromMonitor   TaskType = "pull_host"
+	TaskTypePullItemFromMonitor   TaskType = "pull_item"
+	TaskTypePushHostToMonitor     TaskType = "push_host"
+	TaskTypePushItemToMonitor     TaskType = "push_item"
+	TaskTypeGenerateAlerts        TaskType = "generate_alerts"
 )
 
 // Task represents a task to be queued

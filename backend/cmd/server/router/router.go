@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"nagare/internal/api"
-	"nagare/internal/service"
+	"nagare/internal/adapter/handler"
+	"nagare/internal/core/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -24,17 +24,17 @@ func InitRouter() {
 	r.Use(gin.Recovery())
 
 	r.RedirectTrailingSlash = true
-	r.Use(api.RequestIDMiddleware())
-	r.Use(api.AccessLogMiddleware())
+	r.Use(handler.RequestIDMiddleware())
+	r.Use(handler.AccessLogMiddleware())
 
 	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, api.APIResponse{
+		c.JSON(http.StatusNotFound, handler.APIResponse{
 			Success: false,
 			Error:   "resource not found",
 		})
 	})
 	r.NoMethod(func(c *gin.Context) {
-		c.JSON(http.StatusMethodNotAllowed, api.APIResponse{
+		c.JSON(http.StatusMethodNotAllowed, handler.APIResponse{
 			Success: false,
 			Error:   "method not allowed",
 		})
@@ -53,11 +53,11 @@ func InitRouter() {
 	})
 
 	// Direct SNMP poll route
-	r.POST("/api/v1/snmp-poll-direct/:id", api.TestSNMPCtrl)
+	r.POST("/api/v1/snmp-poll-direct/:id", handler.TestSNMPCtrl)
 
 	// Setup all routes
 	apiGroup := r.Group("/api/v1")
-	apiGroup.Use(api.AuditLogMiddleware())
+	apiGroup.Use(handler.AuditLogMiddleware())
 	setupAllRoutes(apiGroup)
 	setupMcpRoutes(apiGroup)
 
@@ -126,4 +126,3 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupAnsibleRoutes(rg)
 	setupRetentionRoutes(rg)
 }
-

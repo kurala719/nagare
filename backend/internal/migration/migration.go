@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
+	"nagare/internal/core/domain"
+	"nagare/internal/core/service"
 	"nagare/internal/database"
-	"nagare/internal/model"
-	"nagare/internal/service"
 )
 
 // InitDBTables initializes the database tables and performs necessary migrations.
@@ -15,33 +15,33 @@ func InitDBTables() error {
 		return err
 	}
 	if err := database.DB.AutoMigrate(
-		&model.User{},
-		&model.Monitor{},
-		&model.Alarm{},
-		&model.Group{},
-		&model.Host{},
-		&model.Item{},
-		&model.ItemHistory{},
-		&model.HostHistory{},
-		&model.NetworkStatusHistory{},
-		&model.Alert{},
-		&model.Media{},
-		&model.Action{},
-		&model.Trigger{},
-		&model.LogEntry{},
-		&model.AuditLog{},
-		&model.Chat{},
-		&model.Provider{},
-		&model.RegisterApplication{},
-		&model.PasswordResetApplication{},
-		&model.QQWhitelist{},
-		&model.Report{},
-		&model.ReportConfig{},
-		&model.KnowledgeBase{},
-		&model.SiteMessage{},
-		&model.AnsiblePlaybook{},
-		&model.AnsibleJob{},
-		&model.RetentionPolicy{},
+		&domain.User{},
+		&domain.Monitor{},
+		&domain.Alarm{},
+		&domain.Group{},
+		&domain.Host{},
+		&domain.Item{},
+		&domain.ItemHistory{},
+		&domain.HostHistory{},
+		&domain.NetworkStatusHistory{},
+		&domain.Alert{},
+		&domain.Media{},
+		&domain.Action{},
+		&domain.Trigger{},
+		&domain.LogEntry{},
+		&domain.AuditLog{},
+		&domain.Chat{},
+		&domain.Provider{},
+		&domain.RegisterApplication{},
+		&domain.PasswordResetApplication{},
+		&domain.QQWhitelist{},
+		&domain.Report{},
+		&domain.ReportConfig{},
+		&domain.KnowledgeBase{},
+		&domain.SiteMessage{},
+		&domain.AnsiblePlaybook{},
+		&domain.AnsibleJob{},
+		&domain.RetentionPolicy{},
 	); err != nil {
 		return err
 	}
@@ -53,11 +53,11 @@ func InitDBTables() error {
 
 func ensureDefaultMonitor() error {
 	var count int64
-	if err := database.DB.Model(&model.Monitor{}).Count(&count).Error; err != nil {
+	if err := database.DB.Model(&domain.Monitor{}).Count(&count).Error; err != nil {
 		return err
 	}
 	if count == 0 {
-		defaultMonitor := model.Monitor{
+		defaultMonitor := domain.Monitor{
 			Name:        "Nagare Internal",
 			URL:         "localhost",
 			Type:        4, // SNMP
@@ -81,7 +81,7 @@ func preSchemaUpdates() error {
 		`).Error
 		if err != nil {
 			// Log error but continue - migration might fail later if duplicates persist
-			// but we don't want to stop the whole process if this specific MySQL syntax fails 
+			// but we don't want to stop the whole process if this specific MySQL syntax fails
 			// (though it's standard for MySQL/MariaDB)
 		}
 	}
@@ -106,19 +106,19 @@ func preSchemaUpdates() error {
 		}
 	}
 
-	if database.DB.Migrator().HasTable(&model.Trigger{}) && database.DB.Migrator().HasColumn(&model.Trigger{}, "log_level") {
+	if database.DB.Migrator().HasTable(&domain.Trigger{}) && database.DB.Migrator().HasColumn(&domain.Trigger{}, "log_level") {
 		if err := database.DB.Exec("UPDATE triggers SET log_level = CASE WHEN CAST(log_level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(log_level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(log_level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(log_level AS UNSIGNED) ELSE NULL END").Error; err != nil {
 			return err
 		}
 	}
-	if database.DB.Migrator().HasTable(&model.LogEntry{}) && database.DB.Migrator().HasColumn(&model.LogEntry{}, "level") {
+	if database.DB.Migrator().HasTable(&domain.LogEntry{}) && database.DB.Migrator().HasColumn(&domain.LogEntry{}, "level") {
 		if err := database.DB.Exec("UPDATE log_entries SET level = CASE WHEN CAST(level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(level AS UNSIGNED) ELSE NULL END").Error; err != nil {
 			return err
 		}
 	}
 	// Migrate monitor type from string to int: 'zabbix' -> 1, 'prometheus' -> 2, others -> 3
-	if database.DB.Migrator().HasTable(&model.Monitor{}) && database.DB.Migrator().HasColumn(&model.Monitor{}, "type") {
-		columnType, err := database.DB.Migrator().ColumnTypes(&model.Monitor{})
+	if database.DB.Migrator().HasTable(&domain.Monitor{}) && database.DB.Migrator().HasColumn(&domain.Monitor{}, "type") {
+		columnType, err := database.DB.Migrator().ColumnTypes(&domain.Monitor{})
 		if err != nil {
 			return err
 		}
@@ -142,12 +142,12 @@ func preSchemaUpdates() error {
 
 func applySchemaUpdates() error {
 	// Explicitly remove deprecated columns that AutoMigrate does not drop.
-	if database.DB.Migrator().HasColumn(&model.Action{}, "severity_min") {
-		if err := database.DB.Migrator().DropColumn(&model.Action{}, "severity_min"); err != nil {
+	if database.DB.Migrator().HasColumn(&domain.Action{}, "severity_min") {
+		if err := database.DB.Migrator().DropColumn(&domain.Action{}, "severity_min"); err != nil {
 			return err
 		}
 	}
-	if database.DB.Migrator().HasTable(&model.LogEntry{}) {
+	if database.DB.Migrator().HasTable(&domain.LogEntry{}) {
 		if err := database.DB.Exec("ALTER TABLE log_entries MODIFY COLUMN level INT").Error; err != nil {
 			return err
 		}

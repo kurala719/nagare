@@ -3,7 +3,7 @@ package mcp
 import (
 	"encoding/json"
 
-	"nagare/internal/service"
+	"nagare/internal/core/service"
 )
 
 type rpcRequest struct {

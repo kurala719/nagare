@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 
 	"nagare/cmd/server/router"
+	"nagare/internal/adapter/repository"
+	"nagare/internal/core/service"
 	"nagare/internal/database"
 	"nagare/internal/migration"
-	"nagare/internal/repository"
-	"nagare/internal/service"
 	"nagare/pkg/queue"
 
 	"github.com/spf13/viper"
