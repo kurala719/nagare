@@ -101,6 +101,7 @@
         <el-table-column v-if="isColumnVisible('id')" prop="id" :label="$t('items.id')" width="80" sortable="custom" />
         <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('items.name')" min-width="150" show-overflow-tooltip sortable="custom" />
         <el-table-column v-if="isColumnVisible('value')" prop="value" :label="$t('items.value')" min-width="150" show-overflow-tooltip sortable="custom" />
+        <el-table-column v-if="isColumnVisible('units')" prop="units" :label="$t('items.units')" width="100" show-overflow-tooltip sortable="custom" />
         <el-table-column v-if="isColumnVisible('enabled')" :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
             <template #default="{ row }">
                 <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small" effect="light">
@@ -343,11 +344,12 @@ export default {
         formRules: {},
         search: '',
         searchField: 'all',
-        selectedColumns: ['id', 'name', 'value', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
+        selectedColumns: ['id', 'name', 'value', 'units', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
         columnOptions: [
             { key: 'id', label: this.$t('items.id') },
             { key: 'name', label: this.$t('items.name') },
             { key: 'value', label: this.$t('items.value') },
+            { key: 'units', label: this.$t('items.units') },
             { key: 'enabled', label: this.$t('common.enabled') },
             { key: 'status', label: this.$t('items.status') },
             { key: 'lastSync', label: this.$t('hosts.lastSync') },

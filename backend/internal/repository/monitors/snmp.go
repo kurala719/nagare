@@ -55,34 +55,34 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	if config.Community == "" { config.Community = "public" }
 	if config.Version == "" { config.Version = "v2c" }
 
-	fmt.Printf("SNMP Debug: Starting high-detail V200 poll for %s\n", hostID)
+	fmt.Printf("SNMP Debug: Starting Absolute forensic poll for %s\n", hostID)
 
 	oidNames := make(map[string]string)
-	addOID := func(oid, name string) { oidNames[normalizeOID(oid)] = name }
+	
+	// MANDATORY NAMING MAP (Forces professional English names in Frontend)
+	translate := map[string]string{
+		"1.3.6.1.2.1.1.1.0": "System Version Details",
+		"1.3.6.1.2.1.1.3.0": "System Uptime",
+		"1.3.6.1.2.1.1.5.0": "System Hostname",
+		"1.3.6.1.4.1.2011.6.3.4.1.3": "CPU Usage (%)",
+		"1.3.6.1.4.1.2011.6.1.2.1.1.2": "Physical Memory Capacity",
+		"1.3.6.1.4.1.2011.6.1.2.1.1.3": "Physical Memory Available",
+		"1.3.6.1.4.1.2011.6.3.4.1.1": "Core Temperature",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.10.1.7": "Fan Tray Status",
+	}
 
-	// Essential Hardware Metrics
-	addOID(".1.3.6.1.2.1.1.1.0", "sysDescr")
-	addOID(".1.3.6.1.2.1.1.3.0", "sysUpTime")
-	addOID(".1.3.6.1.2.1.1.5.0", "sysName")
-	addOID(".1.3.6.1.4.1.2011.6.3.4.1.3", "hwEntityCpuUsage")
-	addOID(".1.3.6.1.4.1.2011.6.1.2.1.1.2", "hwMemoryDevSize")
-	addOID(".1.3.6.1.4.1.2011.6.1.2.1.1.3", "hwMemoryDevFree")
-	addOID(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11", "hwEntityTemperature")
-	addOID(".1.3.6.1.4.1.2011.5.25.31.1.1.10.1.7", "hwEntityFanState")
-
-	// Merge Custom OIDs
+	for k, v := range translate { oidNames[k] = v }
 	for k, v := range config.CustomOIDs {
-		if _, exists := oidNames[normalizeOID(k)]; !exists { addOID(k, v) }
+		norm := normalizeOID(k)
+		if _, exists := oidNames[norm]; !exists { oidNames[norm] = v }
 	}
 
 	gs := &gosnmp.GoSNMP{
-		Target: hostID, Port: uint16(config.Port), Timeout: 10 * time.Second, Retries: 1, MaxOids: 20,
+		Target: hostID, Port: uint16(config.Port), Timeout: 5 * time.Second, Retries: 2, MaxOids: 20,
 	}
 
 	// Auth Config (v1/v2c/v3 logic)
-	if config.Version == "v1" {
-		gs.Version = gosnmp.Version1; gs.Community = config.Community
-	} else if config.Version == "v3" {
+	if config.Version == "v3" {
 		gs.Version = gosnmp.Version3; gs.SecurityModel = gosnmp.UserSecurityModel
 		level := config.V3SecurityLevel
 		if level == "" { level = "NoAuthNoPriv" }
@@ -107,6 +107,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 			}
 		}
 		gs.SecurityParameters = sp
+	} else if config.Version == "v1" {
+		gs.Version = gosnmp.Version1; gs.Community = config.Community
 	} else {
 		gs.Version = gosnmp.Version2c; gs.Community = config.Community
 	}
@@ -115,90 +117,116 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	if err != nil { return nil, fmt.Errorf("SNMP connect failed: %w", err) }
 	defer gs.Conn.Close()
 
+	// Entity Map for hardware discovery
+	entityMap := make(map[string]string)
+	_ = gs.BulkWalk(".1.3.6.1.2.1.47.1.1.1.1.7", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		if val != "" && val != "N/A" {
+			idx := v.Name[strings.LastIndex(v.Name, ".")+1:]
+			entityMap[idx] = val
+		}
+		return nil
+	})
+
 	var targetOids []string
 	for rawOid := range oidNames { targetOids = append(targetOids, "."+rawOid) }
 
 	var items []Item
 	var memSize, memFree float64
-	validBitrateCount := 0
 
-	// Batch Fetch
+	// Resilient Batch Fetch
 	for i := 0; i < len(targetOids); i += 20 {
-		end := i + 20
-		if end > len(targetOids) { end = len(targetOids) }
-		result, err := gs.Get(targetOids[i:end])
-		if err != nil { continue }
+		end := i + 20; if end > len(targetOids) { end = len(targetOids) }
+		batch := targetOids[i:end]
+		result, err := gs.Get(batch)
+		
+		if err != nil {
+			for _, singleOid := range batch {
+				sRes, sErr := gs.Get([]string{singleOid})
+				if sErr == nil && len(sRes.Variables) > 0 {
+					p.processPDU(sRes.Variables[0], oidNames, &items, &memSize, &memFree, gs)
+				}
+			}
+			continue
+		}
 
 		for _, variable := range result.Variables {
-			normalized := normalizeOID(variable.Name)
-			name := oidNames[normalized]
-			if name == "" { name = normalized }
-			val := formatSnmpValue(variable)
-			
-			if (val == "N/A" || val == "" || val == "0") && isV200HardwareMetric(name) {
-				discoveredVal := p.discoverV200Metric(gs, normalized)
-				if discoveredVal != "" { val = discoveredVal }
-			}
-
-			if strings.Contains(name, "Bitrate") && val != "N/A" && val != "" { validBitrateCount++ }
-			if name == "hwMemoryDevSize" { memSize = float64(gosnmp.ToBigInt(variable.Value).Int64()) }
-			if name == "hwMemoryDevFree" { memFree = float64(gosnmp.ToBigInt(variable.Value).Int64()) }
-
-			items = append(items, Item{
-				ID: normalized, Name: name, Key: normalized, Value: val, Timestamp: time.Now().Unix(), Status: "0",
-			})
+			p.processPDU(variable, oidNames, &items, &memSize, &memFree, gs)
 		}
 	}
 
-	if len(items) == 0 && len(targetOids) > 0 {
-		walkItems, _ := p.pollViaWalk(gs, oidNames, hostID)
-		items = append(items, walkItems...)
-	}
-
-	// Memory Percentage
-	if memSize > 0 && memFree > 0 && memFree <= memSize {
+	// Memory Percentage (VRP V5 Fix)
+	if memSize > 0 && memFree > 0 {
+		if memFree > memSize { memFree = memFree / 1024 }
 		usage := ((memSize - memFree) / memSize) * 100
 		items = append(items, Item{
-			ID: "calculated.mem.usage", Name: "Memory Usage (%)", Key: "mem_usage_pct", Value: fmt.Sprintf("%.2f", usage), Timestamp: time.Now().Unix(), Status: "0",
+			ID: "calculated.mem.usage", Name: "Memory Usage (%)", Key: "mem_usage_pct", Value: fmt.Sprintf("%.2f", usage), Units: "%", Timestamp: time.Now().Unix(), Status: "0",
 		})
 	}
 
-	// Dynamic Deep Discovery (Run if bitrates are missing or first time)
-	hasCustomBitrates := false
-	expectedBitrateCount := 0
-	for k := range config.CustomOIDs {
-		if strings.Contains(strings.ToLower(config.CustomOIDs[k]), "bitrate") {
-			hasCustomBitrates = true; expectedBitrateCount++
-		}
-	}
-
-	if len(config.CustomOIDs) == 0 || (hasCustomBitrates && validBitrateCount < (expectedBitrateCount/2)) {
-		fmt.Printf("SNMP Debug: Starting deep V200 discovery for %s...\n", hostID)
-		ifaceItems, _ := p.discoverInterfaces(gs)
-		routingItems, _ := p.discoverRoutingMetrics(gs)
-		lldpItems, _ := p.discoverLLDPNeighbors(gs)
-		sfpItems, _ := p.discoverSFPDetails(gs)
-		invItems, _ := p.discoverInventory(gs)
-		
-		discovered := append(ifaceItems, routingItems...)
-		discovered = append(discovered, lldpItems...)
-		discovered = append(discovered, sfpItems...)
-		discovered = append(discovered, invItems...)
-		
-		existingIDs := make(map[string]bool)
-		for _, it := range items { existingIDs[it.ID] = true }
-		for _, it := range discovered {
-			if !existingIDs[it.ID] { items = append(items, it) }
-		}
+	// ENFORCED DEEP forensic DISCOVERY
+	fmt.Printf("SNMP Debug: Running enforced forensic Deep Discovery for %s...\n", hostID)
+	
+	ifaceItems, _ := p.discoverInterfaces(gs)
+	routingItems, _ := p.discoverRoutingMetrics(gs)
+	bgpItems, _ := p.discoverBGPMetrics(gs)
+	stpItems, _ := p.discoverSTPMetrics(gs, entityMap)
+	lldpItems, _ := p.discoverLLDPNeighbors(gs)
+	sfpItems, _ := p.discoverSFPDetails(gs, entityMap)
+	invItems, _ := p.discoverInventory(gs)
+	healthItems, _ := p.discoverAdvancedHealth(gs, entityMap)
+	
+	discovered := append(ifaceItems, routingItems...)
+	discovered = append(discovered, lldpItems...)
+	discovered = append(discovered, sfpItems...)
+	discovered = append(discovered, invItems...)
+	discovered = append(discovered, healthItems...)
+	discovered = append(discovered, bgpItems...)
+	discovered = append(discovered, stpItems...)
+	
+	existingIDs := make(map[string]bool)
+	for _, it := range items { existingIDs[it.ID] = true }
+	for _, it := range discovered {
+		if !existingIDs[it.ID] { items = append(items, it) }
 	}
 
 	return items, nil
 }
 
+func (p *SnmpProvider) processPDU(v gosnmp.SnmpPDU, oidNames map[string]string, items *[]Item, memSize, memFree *float64, gs *gosnmp.GoSNMP) {
+	norm := normalizeOID(v.Name)
+	name := oidNames[norm]
+	if name == "" { name = norm }
+	val := formatSnmpValue(v)
+	
+	if (val == "N/A" || val == "" || val == "0") && isV200HardwareMetric(name) {
+		root := norm; if idx := strings.LastIndex(root, "."); idx != -1 { root = root[:idx] }
+		discoveredVal := p.discoverV200Metric(gs, root)
+		if discoveredVal != "" { val = discoveredVal }
+	}
+
+	if strings.Contains(name, "Memory Capacity") { *memSize = float64(gosnmp.ToBigInt(v.Value).Int64()) }
+	if strings.Contains(name, "Memory Available") { *memFree = float64(gosnmp.ToBigInt(v.Value).Int64()) }
+
+	*items = append(*items, Item{
+		ID: norm, Name: name, Key: norm, Value: val, Units: determineUnits(name, norm), Timestamp: time.Now().Unix(), Status: "0",
+	})
+}
+
+func determineUnits(name, oid string) string {
+	lower := strings.ToLower(name)
+	if strings.Contains(lower, "percentage") || strings.Contains(lower, "(%)") || strings.Contains(lower, "usage") { return "%" }
+	if strings.Contains(lower, "temperature") { return "°C" }
+	if strings.Contains(lower, "bitrate") || strings.Contains(lower, "speed") || strings.Contains(lower, "rate") { return "bps" }
+	if strings.Contains(lower, "capacity") || strings.Contains(lower, "available") || strings.Contains(lower, "total") || strings.Contains(lower, "free") { return "B" }
+	if strings.Contains(lower, "power") && strings.Contains(lower, "dbm") { return "dBm" }
+	if strings.Contains(lower, "errors") || strings.Contains(lower, "discards") || strings.Contains(lower, "count") { return "pkts" }
+	return ""
+}
+
 func isV200HardwareMetric(name string) bool {
-	return name == "hwCpuDevDuty" || name == "hwMemoryDevSize" || name == "hwMemoryDevFree" || 
-	       name == "hwEntityTemperature" || name == "hwEntityFanState" ||
-	       name == "hwEntityCpuUsage" || name == "hwEntityMemUsage"
+	return strings.Contains(name, "CPU Usage") || strings.Contains(name, "Memory") || 
+	       strings.Contains(name, "Temperature") || strings.Contains(name, "Fan Status")
 }
 
 func (p *SnmpProvider) discoverV200Metric(gs *gosnmp.GoSNMP, baseOid string) string {
@@ -215,24 +243,70 @@ func (p *SnmpProvider) discoverV200Metric(gs *gosnmp.GoSNMP, baseOid string) str
 
 func (p *SnmpProvider) discoverInventory(gs *gosnmp.GoSNMP) ([]Item, error) {
 	var items []Item
-	// entPhysicalSerialNum (.1.3.6.1.2.1.47.1.1.1.1.11)
-	// Usually index 1 is the main chassis
 	_ = gs.Walk(".1.3.6.1.2.1.47.1.1.1.1.11", func(v gosnmp.SnmpPDU) error {
-		val := formatSnmpValue(v)
-		if val == "" || val == "N/A" { return nil }
-		items = append(items, Item{
-			ID: normalizeOID(v.Name), Name: "Hardware Serial Number", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix(),
-		})
-		return fmt.Errorf("found") // Just take the first valid serial (chassis)
-	})
-	// entPhysicalModelName (.1.3.6.1.2.1.47.1.1.1.1.13)
-	_ = gs.Walk(".1.3.6.1.2.1.47.1.1.1.1.13", func(v gosnmp.SnmpPDU) error {
-		val := formatSnmpValue(v)
-		if val == "" || val == "N/A" { return nil }
-		items = append(items, Item{
-			ID: normalizeOID(v.Name), Name: "Hardware Model", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix(),
-		})
+		val := formatSnmpValue(v); if val == "" || val == "N/A" { return nil }
+		items = append(items, Item{ID: normalizeOID(v.Name), Name: "Hardware Serial Number", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
 		return fmt.Errorf("found")
+	})
+	_ = gs.Walk(".1.3.6.1.2.1.47.1.1.1.1.13", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v); if val == "" || val == "N/A" { return nil }
+		items = append(items, Item{ID: normalizeOID(v.Name), Name: "Hardware Model Identifier", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return fmt.Errorf("found")
+	})
+	return items, nil
+}
+
+func (p *SnmpProvider) discoverAdvancedHealth(gs *gosnmp.GoSNMP, entityMap map[string]string) ([]Item, error) {
+	var items []Item
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.13", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v); idx := v.Name[strings.LastIndex(v.Name, ".")+1:]
+		pretty := entityMap[idx]; if pretty == "" { pretty = "Power Module " + idx }
+		switch val {
+		case "1": val = "Normal"; case "2": val = "Abnormal"; case "3": val = "Not Supplied"
+		}
+		items = append(items, Item{ID: normalizeOID(v.Name), Name: pretty + " Health State", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return nil
+	})
+	// MAC table count
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.42.2.1.1.1.1.1.1", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		items = append(items, Item{ID: normalizeOID(v.Name), Name: "Total MAC Address Count", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return fmt.Errorf("found")
+	})
+	// ARP Entry Count
+	_ = gs.Walk(".1.3.6.1.4.1.2011.6.3.12.1.3", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		items = append(items, Item{ID: normalizeOID(v.Name), Name: "Total ARP Entry Count", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return fmt.Errorf("found")
+	})
+	return items, nil
+}
+
+func (p *SnmpProvider) discoverBGPMetrics(gs *gosnmp.GoSNMP) ([]Item, error) {
+	var items []Item
+	_ = gs.Walk(".1.3.6.1.2.1.15.3.1.2", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v); norm := normalizeOID(v.Name)
+		parts := strings.Split(norm, "."); nbrIp := "Unknown"
+		if len(parts) >= 4 { nbrIp = strings.Join(parts[len(parts)-4:], ".") }
+		switch val {
+		case "6": val = "Established"; case "1": val = "Idle"; default: val = "Connecting"
+		}
+		items = append(items, Item{ID: norm, Name: "BGP Neighbor [" + nbrIp + "] Session", Key: norm, Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return nil
+	})
+	return items, nil
+}
+
+func (p *SnmpProvider) discoverSTPMetrics(gs *gosnmp.GoSNMP, entityMap map[string]string) ([]Item, error) {
+	var items []Item
+	_ = gs.Walk(".1.3.6.1.2.1.17.2.15.1.3", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v); norm := normalizeOID(v.Name)
+		idx := norm[strings.LastIndex(norm, ".")+1:]
+		switch val {
+		case "5": val = "Forwarding"; case "2": val = "Blocking"; case "1": val = "Disabled"; default: val = "Transitioning"
+		}
+		items = append(items, Item{ID: norm, Name: "STP Port [" + idx + "] Operational State", Key: norm, Value: val, Status: "0", Timestamp: time.Now().Unix()})
+		return nil
 	})
 	return items, nil
 }
@@ -244,10 +318,7 @@ func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
 		if v.Type == gosnmp.OctetString {
 			if bytes, ok := v.Value.([]byte); ok {
 				val := string(bytes)
-				if val != "" {
-					idx := v.Name[strings.LastIndex(v.Name, ".")+1:]
-					ifNames[idx] = val
-				}
+				if val != "" { idx := v.Name[strings.LastIndex(v.Name, ".")+1:]; ifNames[idx] = val }
 			}
 		}
 		return nil
@@ -265,36 +336,34 @@ func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
 		   !strings.Contains(lowerName, "xge") && !strings.Contains(lowerName, "meth") {
 			continue
 		}
+		// Accurate Traffic & Physical Properties
 		inOid := ".1.3.6.1.2.1.31.1.1.1.6." + idx
 		outOid := ".1.3.6.1.2.1.31.1.1.1.10." + idx
 		statOid := ".1.3.6.1.2.1.2.2.1.8." + idx
 		speedOid := ".1.3.6.1.2.1.31.1.1.1.15." + idx
+		errOid := ".1.3.6.1.2.1.2.2.1.14." + idx
 
-		fetchOids = append(fetchOids, inOid, outOid, statOid, speedOid)
+		fetchOids = append(fetchOids, inOid, outOid, statOid, speedOid, errOid)
 		oidToMeta[normalizeOID(inOid)] = struct{Name, Type string}{name + " Inbound Bitrate", "traffic"}
 		oidToMeta[normalizeOID(outOid)] = struct{Name, Type string}{name + " Outbound Bitrate", "traffic"}
-		oidToMeta[normalizeOID(statOid)] = struct{Name, Type string}{name + " Status", "status"}
-		oidToMeta[normalizeOID(speedOid)] = struct{Name, Type string}{name + " Speed (Mbps)", "speed"}
+		oidToMeta[normalizeOID(statOid)] = struct{Name, Type string}{name + " Link Status", "status"}
+		oidToMeta[normalizeOID(speedOid)] = struct{Name, Type string}{name + " Link Speed (Mbps)", "speed"}
+		oidToMeta[normalizeOID(errOid)] = struct{Name, Type string}{name + " Input Error Count", "error"}
 	}
 
 	for i := 0; i < len(fetchOids); i += 20 {
-		end := i + 20
-		if end > len(fetchOids) { end = len(fetchOids) }
+		end := i + 20; if end > len(fetchOids) { end = len(fetchOids) }
 		result, err := gs.Get(fetchOids[i:end])
 		if err != nil { continue }
 		for _, v := range result.Variables {
-			val := formatSnmpValue(v)
-			normOid := normalizeOID(v.Name)
-			meta := oidToMeta[normOid]
+			val := formatSnmpValue(v); normOid := normalizeOID(v.Name); meta := oidToMeta[normOid]
 			if meta.Name == "" { continue }
 			if meta.Type == "status" {
 				switch val {
 				case "1": val = "Up"; case "2": val = "Down"; default: val = "Unknown"
 				}
 			}
-			items = append(items, Item{
-				ID: normOid, Name: meta.Name, Key: normOid, Value: val, Status: "0", Timestamp: time.Now().Unix(),
-			})
+			items = append(items, Item{ID: normOid, Name: meta.Name, Key: normOid, Value: val, Units: determineUnits(meta.Name, normOid), Status: "0", Timestamp: time.Now().Unix()})
 		}
 	}
 	return items, nil
@@ -307,11 +376,9 @@ func (p *SnmpProvider) discoverRoutingMetrics(gs *gosnmp.GoSNMP) ([]Item, error)
 		parts := strings.Split(normOid, "."); nbrIp := "Unknown"
 		if len(parts) >= 4 { nbrIp = strings.Join(parts[len(parts)-4:], ".") }
 		switch val {
-		case "8": val = "Full"; case "1": val = "Down"; default: val = "Syncing (" + val + ")"
+		case "8": val = "Full"; case "1": val = "Down"; default: val = "Syncing"
 		}
-		items = append(items, Item{
-			ID: normOid, Name: "OSPF Neighbor " + nbrIp + " State", Key: normOid, Value: val, Status: "0", Timestamp: time.Now().Unix(),
-		})
+		items = append(items, Item{ID: normOid, Name: "OSPF Neighbor [" + nbrIp + "] Session", Key: normOid, Value: val, Status: "0", Timestamp: time.Now().Unix()})
 		return nil
 	})
 	return items, nil
@@ -322,34 +389,22 @@ func (p *SnmpProvider) discoverLLDPNeighbors(gs *gosnmp.GoSNMP) ([]Item, error) 
 	_ = gs.Walk(".1.0.8802.1.1.2.1.4.1.1.9", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v); normOid := normalizeOID(v.Name)
 		if val == "" || val == "N/A" { return nil }
-		items = append(items, Item{
-			ID: normOid, Name: "LLDP Neighbor " + val, Key: normOid, Value: "Connected", Status: "0", Timestamp: time.Now().Unix(),
-		})
+		items = append(items, Item{ID: normOid, Name: "LLDP Neighbor Device [" + val + "]", Key: normOid, Value: "Active Link", Status: "0", Timestamp: time.Now().Unix()})
 		return nil
 	})
 	return items, nil
 }
 
-func (p *SnmpProvider) discoverSFPDetails(gs *gosnmp.GoSNMP) ([]Item, error) {
+func (p *SnmpProvider) discoverSFPDetails(gs *gosnmp.GoSNMP, entityMap map[string]string) ([]Item, error) {
 	var items []Item
 	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.22", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v); normOid := normalizeOID(v.Name)
 		if val == "" || val == "N/A" || val == "0" { return nil }
-		
-		// Scale dBm: VRP usually sends centi-dBm (e.g. -1500 = -15.00)
-		numVal := 0.0
-		fmt.Sscanf(val, "%f", &numVal)
+		numVal := 0.0; fmt.Sscanf(val, "%f", &numVal)
 		if numVal != 0 { val = fmt.Sprintf("%.2f dBm", numVal/100.0) }
-
 		idx := normOid[strings.LastIndex(normOid, ".")+1:]
-		items = append(items, Item{
-			ID: normOid, Name: "SFP Port " + idx + " RX Power", Key: normOid, Value: val, Status: "0", Timestamp: time.Now().Unix(),
-		})
-		// TX Power
-		txOid := "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.17." + idx
-		items = append(items, Item{
-			ID: txOid, Name: "SFP Port " + idx + " TX Power", Key: txOid, Value: "Checking...", Status: "0", Timestamp: time.Now().Unix(),
-		})
+		pretty := entityMap[idx]; if pretty == "" { pretty = "SFP Port " + idx }
+		items = append(items, Item{ID: normOid, Name: pretty + " RX Power Level", Key: normOid, Value: val, Units: "dBm", Status: "0", Timestamp: time.Now().Unix()})
 		return nil
 	})
 	return items, nil
@@ -360,9 +415,7 @@ func (p *SnmpProvider) pollViaWalk(gs *gosnmp.GoSNMP, oidNames map[string]string
 	for rawOid, name := range oidNames {
 		_ = gs.Walk("."+rawOid, func(v gosnmp.SnmpPDU) error {
 			norm := normalizeOID(v.Name)
-			items = append(items, Item{
-				ID: norm, Name: name, Key: norm, Value: formatSnmpValue(v), Timestamp: time.Now().Unix(), Status: "0",
-			})
+			items = append(items, Item{ID: norm, Name: name, Key: norm, Value: formatSnmpValue(v), Timestamp: time.Now().Unix(), Status: "0"})
 			return fmt.Errorf("found") 
 		})
 	}

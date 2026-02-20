@@ -118,6 +118,7 @@
           <el-table :data="displayItems" height="320" border>
             <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('items.name')" min-width="160" sortable />
             <el-table-column v-if="visibleColumns.includes('value')" prop="value" :label="$t('items.value')" min-width="140" sortable />
+            <el-table-column v-if="visibleColumns.includes('units')" prop="units" :label="$t('items.units')" min-width="100" sortable />
             <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('items.status')" min-width="120" sortable>
               <template #default="{ row }">
                 <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
@@ -256,10 +257,11 @@ let statusChart
 const availableColumns = [
   { key: 'name', label: t('items.name') },
   { key: 'value', label: t('items.value') },
+  { key: 'units', label: t('items.units') },
   { key: 'status', label: t('items.status') },
 ]
 
-const visibleColumns = ref(['name', 'value', 'status'])
+const visibleColumns = ref(['name', 'value', 'units', 'status'])
 
 const loadVisibleColumns = () => {
   const saved = localStorage.getItem('hostDetailColumns')

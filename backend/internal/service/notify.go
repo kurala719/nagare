@@ -1,6 +1,9 @@
 package service
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // SyncEvent sends a notification for sync results
 func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
@@ -31,7 +34,21 @@ func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
 			msgSeverity = 3 // error
 		}
 		_ = CreateSiteMessageServ(title, message, "sync", msgSeverity, nil)
+
+		// BROADCAST to Frontend via WebSocket to force UI refresh
+		broadcastSyncUpdate(entity, monitorID, hostID)
 	}()
+}
+
+func broadcastSyncUpdate(entity string, mid, hid uint) {
+	msg := map[string]interface{}{
+		"type":       "sync_complete",
+		"entity":     entity,
+		"monitor_id": mid,
+		"host_id":    hid,
+		"timestamp":  time.Now().Unix(),
+	}
+	BroadcastMessage(msg)
 }
 
 func syncSeverity(result SyncResult) int {

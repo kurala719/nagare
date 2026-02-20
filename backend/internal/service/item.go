@@ -676,12 +676,12 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			}
 		} else {
 			// Item exists with same ID, update it
-			fmt.Printf("Service Debug: Updating existing item %s for host %d\n", mItem.Name, hid)
-			item.Name = mItem.Name
+			fmt.Printf("Service Debug: Updating existing item %s (ID: %d) for host %d\n", mItem.Name, item.ID, hid)
+			item.Name = mItem.Name // FORCE UPDATE NAME
 			item.ExternalHostID = mItem.HostID
 			item.ValueType = mItem.ValueType
 			item.LastValue = mItem.Value
-			item.Units = mItem.Units
+			item.Units = mItem.Units // FORCE UPDATE UNITS
 			item.Enabled = enabled
 			item.Status = status
 			item.LastSyncAt = &now
