@@ -9,7 +9,6 @@ Nagare is built as a robust, decoupled, clean-architecture application. It acts 
 ### Backend: Go (Golang)
 - **Framework**: `gin-gonic` for HTTP routing, middleware (CORS, JWT auth, logging, audit).
 - **ORM**: `gorm` handling database operations and schema migrations.
-- **Task Queue**: Redis-backed asynchronous job processing (`queue.go`).
 - **Communication**: WebSocket hubs (`hub.go`, `qq_ws.go`, `webssh.go`) for real-time bidirectional messaging.
 - **Integrations**: Standardized Provider interfaces for AI (`ai.go`), Email (`gmail.go`), and Webhooks (`webhook.go`).
 

@@ -62,14 +62,6 @@ If Nagare isn't working as expected, follow these steps to diagnose and resolve 
    OPTIMIZE TABLE item_histories;
    ```
 
-### Q: Redis Queue is stuck.
-**Cause**: Worker process crashed or Redis is full.
-**Fix**:
-1. Restart the Nagare backend service: `systemctl restart nagare-backend`.
-2. Flush Redis (warning: clears pending tasks): `redis-cli FLUSHALL`.
-
----
-
 ## 5. 📧 Email Notifications Not Sending
 
 ### Q: "SMTP Connection Timeout"

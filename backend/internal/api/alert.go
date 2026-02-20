@@ -381,3 +381,40 @@ func UpdateAlertCtrl(c *gin.Context) {
 	}
 	respondSuccessMessage(c, http.StatusOK, "alert updated")
 }
+
+// GenerateTestAlertsCtrl handles POST /api/v1/alerts/generate-test
+func GenerateTestAlertsCtrl(c *gin.Context) {
+	count := 5
+	if c, ok := c.GetQuery("count"); ok {
+		if parsedCount, err := strconv.Atoi(c); err == nil {
+			count = parsedCount
+		}
+	}
+
+	if count <= 0 || count > 100 {
+		count = 5
+	}
+
+	if err := service.GenerateTestAlerts(count); err != nil {
+		respondError(c, err)
+		return
+	}
+
+	respondSuccess(c, http.StatusCreated, gin.H{
+		"message": "Test alerts generated",
+		"count":   count,
+	})
+}
+
+// GetAlertScoreCtrl handles GET /api/v1/alerts/score
+func GetAlertScoreCtrl(c *gin.Context) {
+	score, err := service.CalculateAlertScore()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	respondSuccess(c, http.StatusOK, gin.H{
+		"score": score,
+	})
+}

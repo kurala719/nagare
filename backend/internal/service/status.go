@@ -56,17 +56,17 @@ func determineHostStatus(h model.Host, monitor model.Monitor) int {
 	if monitor.Enabled == 0 {
 		return 2
 	}
-	
+
 	// SNMP hosts can rely on IP address if Hostid is missing
 	if h.Hostid == "" && (monitor.Type != 4 || h.IPAddr == "") {
 		return 2
 	}
-	
+
 	// If the host was successfully polled (status 1) or is currently syncing (status 3)
 	if h.Status == 1 || h.Status == 3 {
 		return h.Status
 	}
-	
+
 	return 1
 }
 
@@ -112,7 +112,7 @@ func determineTriggerStatus(t model.Trigger, action model.Action) int {
 	if t.Enabled == 0 {
 		return 0
 	}
-	if t.Entity != "" && t.Entity != "alert" && t.Entity != "log" {
+	if t.Entity != "" && t.Entity != "alert" && t.Entity != "log" && t.Entity != "item" {
 		return 2
 	}
 	if t.ActionID == 0 || action.ID == 0 {
@@ -220,7 +220,7 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 	} else {
 		_ = repository.UpdateMonitorStatusAndDescriptionDAO(mid, status, "")
 	}
-	
+
 	// Compute health score based on hosts
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	score := 100
@@ -244,7 +244,7 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 		score = 50
 	}
 	_ = repository.UpdateMonitorHealthScoreDAO(mid, score)
-	
+
 	return status, nil
 }
 
@@ -271,7 +271,7 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	}
 	status := determineGroupStatus(group, hosts)
 	_ = repository.UpdateGroupStatusDAO(gid, status)
-	
+
 	// Compute health score based on hosts
 	score := 100
 	if len(hosts) > 0 {
@@ -290,7 +290,7 @@ func recomputeGroupStatus(gid uint) (int, error) {
 		score = 0
 	}
 	_ = repository.UpdateGroupHealthScoreDAO(gid, score)
-	
+
 	return status, nil
 }
 
@@ -418,7 +418,7 @@ func recomputeMonitorRelated(mid uint) error {
 
 	// 3. Recompute Monitor
 	_, _ = recomputeMonitorStatus(mid)
-	
+
 	return nil
 }
 

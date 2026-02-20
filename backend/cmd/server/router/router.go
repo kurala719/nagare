@@ -103,7 +103,6 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupGroupRoutes(rg)
 	setupHostRoutes(rg)
 	setupAlertRoutes(rg)
-	setupQueueRoutes(rg)
 	setupSystemRoutes(rg)
 	setupPublicRoutes(rg)
 	setupIMRoutes(rg)
@@ -126,4 +125,3 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupAnsibleRoutes(rg)
 	setupRetentionRoutes(rg)
 }
-

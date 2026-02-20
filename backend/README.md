@@ -8,7 +8,6 @@ The backend server for the Nagare monitoring platform, built with **Go (Golang)*
 - **Web Framework**: [Gin](https://gin-gonic.com/)
 - **ORM**: [GORM](https://gorm.io/)
 - **Database**: MySQL (default), SQLite, Postgres (supported by GORM)
-- **Task Queue**: [Redis](https://redis.io/) (via go-redis)
 - **Configuration**: [Viper](https://github.com/spf13/viper)
 - **AI Integration**: Google GenAI SDK
 
@@ -18,7 +17,6 @@ The backend server for the Nagare monitoring platform, built with **Go (Golang)*
 
 - **Go**: Version 1.24 or higher.
 - **Database**: A running SQL database instance (e.g., MySQL).
-- **Redis**: (Optional) For asynchronous task processing.
 
 ### Configuration
 
@@ -33,9 +31,6 @@ The application uses a JSON configuration file located at `configs/nagare_config
   },
   "database": {
     "dsn": "user:password@tcp(127.0.0.1:3306)/nagare?charset=utf8mb4&parseTime=True&loc=Local"
-  },
-  "redis": {
-    "addr": "localhost:6379"
   }
 }
 ```
@@ -79,7 +74,7 @@ The binary will be output to `bin/nagare-web-server`.
     - **`repository/`**: Data access layer.
     - **`model/`**: Data entities and structs.
     - **`mcp/`**: Model Context Protocol server implementation.
-- **`pkg/`**: Public libraries (e.g., `queue`).
+- **`pkg/`**: Public libraries.
 - **`configs/`**: Configuration files.
 
 ## 🧪 Testing

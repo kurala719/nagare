@@ -1,8 +1,9 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"nagare/internal/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupGroupRoutes(rg *gin.RouterGroup) {
@@ -133,10 +134,4 @@ func setupAlertRoutes(rg *gin.RouterGroup) {
 	alertsWrite.DELETE("/:id", api.DeleteAlertByIDCtrl)
 	alertsWrite.PUT("/:id", api.UpdateAlertCtrl)
 	alertsWrite.POST("/generate-test", api.GenerateTestAlertsCtrl)
-}
-
-func setupQueueRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 2
-	queue := rg.Group("/queue", api.PrivilegesMiddleware(2))
-	queue.GET("/stats", api.QueueStatsCtrl)
 }

@@ -28,9 +28,6 @@
     "media_type_interval_seconds": 30,
     "media_interval_seconds": 30
   },
-  "redis": {
-    "addr": "localhost:6379"
-  },
   "status_check": {
     "enabled": true,
     "provider_enabled": false,

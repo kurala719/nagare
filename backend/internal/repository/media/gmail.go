@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -51,28 +50,17 @@ func (p *GmailProvider) SendMessage(ctx context.Context, target, message string)
 	}
 	subject := "Nagare Monitoring Alert"
 
-	rawMsg := fmt.Sprintf("From: %s
-"+
-		"To: %s
-"+
-		"Subject: %s
-"+
-		"MIME-Version: 1.0
-"+
-		"Content-Type: multipart/alternative; boundary=%s
-"+
-		"
-"+
-		"--%s
-"+
-		"Content-Type: text/plain; charset="UTF-8"
-"+
-		"Content-Transfer-Encoding: base64
-"+
-		"
-"+
-		"%s
-"+
+	rawMsg := fmt.Sprintf("From: %s\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: multipart/alternative; boundary=%s\r\n"+
+		"\r\n"+
+		"--%s\r\n"+
+		"Content-Type: text/plain; charset=\"UTF-8\"\r\n"+
+		"Content-Transfer-Encoding: base64\r\n"+
+		"\r\n"+
+		"%s\r\n"+
 		"--%s--",
 		from, target, subject, boundary, boundary,
 		base64.StdEncoding.EncodeToString([]byte(message)),
@@ -151,28 +139,17 @@ func SendGmailServ(ctx context.Context, to, subject, body string) error {
 
 	from := viper.GetString("gmail.from")
 	boundary := "nagare-boundary"
-	rawMsg := fmt.Sprintf("From: %s
-"+
-		"To: %s
-"+
-		"Subject: %s
-"+
-		"MIME-Version: 1.0
-"+
-		"Content-Type: multipart/alternative; boundary=%s
-"+
-		"
-"+
-		"--%s
-"+
-		"Content-Type: text/plain; charset="UTF-8"
-"+
-		"Content-Transfer-Encoding: base64
-"+
-		"
-"+
-		"%s
-"+
+	rawMsg := fmt.Sprintf("From: %s\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: multipart/alternative; boundary=%s\r\n"+
+		"\r\n"+
+		"--%s\r\n"+
+		"Content-Type: text/plain; charset=\"UTF-8\"\r\n"+
+		"Content-Transfer-Encoding: base64\r\n"+
+		"\r\n"+
+		"%s\r\n"+
 		"--%s--",
 		from, to, subject, boundary, boundary,
 		base64.StdEncoding.EncodeToString([]byte(body)),
@@ -204,28 +181,17 @@ func SendGmailHTMLServ(ctx context.Context, to, subject, htmlBody string) error 
 
 	from := viper.GetString("gmail.from")
 	boundary := "nagare-boundary"
-	rawMsg := fmt.Sprintf("From: %s
-"+
-		"To: %s
-"+
-		"Subject: %s
-"+
-		"MIME-Version: 1.0
-"+
-		"Content-Type: multipart/alternative; boundary=%s
-"+
-		"
-"+
-		"--%s
-"+
-		"Content-Type: text/html; charset="UTF-8"
-"+
-		"Content-Transfer-Encoding: base64
-"+
-		"
-"+
-		"%s
-"+
+	rawMsg := fmt.Sprintf("From: %s\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: multipart/alternative; boundary=%s\r\n"+
+		"\r\n"+
+		"--%s\r\n"+
+		"Content-Type: text/html; charset=\"UTF-8\"\r\n"+
+		"Content-Transfer-Encoding: base64\r\n"+
+		"\r\n"+
+		"%s\r\n"+
 		"--%s--",
 		from, to, subject, boundary, boundary,
 		base64.StdEncoding.EncodeToString([]byte(htmlBody)),

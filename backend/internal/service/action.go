@@ -152,6 +152,17 @@ func ExecuteLogAction(action model.Action, media model.Media, replacements map[s
 	return sendMediaMessage(media, msg)
 }
 
+// ExecuteItemAction sends an item update message via the action's media
+func ExecuteItemAction(action model.Action, media model.Media, replacements map[string]string) error {
+	msg := action.Template
+	if msg == "" {
+		msg = "Item: {{name}} = {{value}}{{units}}"
+	}
+	msg = renderMessageTemplate(msg, replacements)
+	msg = appendItemDetails(msg, replacements)
+	return sendMediaMessage(media, msg)
+}
+
 func renderMessageTemplate(template string, replacements map[string]string) string {
 	result := template
 	for k, v := range replacements {
@@ -187,6 +198,22 @@ func appendLogDetails(message string, replacements map[string]string) string {
 		"severity={{severity}} ({{severity_label}})",
 		"created_at={{created_at}}",
 		"context={{context}}",
+	}, "\n")
+	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))
+}
+
+func appendItemDetails(message string, replacements map[string]string) string {
+	detailsTemplate := strings.Join([]string{
+		"",
+		"Details:",
+		"item_id={{item_id}}",
+		"name={{name}}",
+		"value={{value}}",
+		"units={{units}}",
+		"status={{status}}",
+		"host_id={{host_id}}",
+		"host_name={{host_name}}",
+		"created_at={{created_at}}",
 	}, "\n")
 	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))
 }

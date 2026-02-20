@@ -9,7 +9,6 @@ import (
 	"nagare/internal/migration"
 	"nagare/internal/repository"
 	"nagare/internal/service"
-	"nagare/pkg/queue"
 
 	"github.com/spf13/viper"
 )
@@ -46,22 +45,6 @@ func run() error {
 	}
 	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
 		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
-	}
-
-	// Initialize task queue
-	redisAddr := viper.GetString("redis.addr")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-	tq, err := queue.New(redisAddr)
-	if err != nil {
-		service.LogSystem("warn", "failed to initialize task queue", map[string]interface{}{"error": err.Error(), "redis_addr": redisAddr}, nil, "")
-	} else {
-		service.SetTaskQueue(tq)
-		defer tq.Close()
-		// Start task workers
-		go service.StartTaskWorkers()
-		service.LogSystem("info", "task queue initialized", map[string]interface{}{"redis_addr": redisAddr}, nil, "")
 	}
 
 	service.StartAutoSync()

@@ -6,7 +6,7 @@ Moving from local development to a production environment requires specific secu
 
 ## 🏗️ Deployment Architectures
 1. **Single Node (Recommended)**: Both Backend and Frontend on one server. Use Nginx as a reverse proxy.
-2. **Distributed Node**: Backend, Frontend, MySQL, and Redis on separate servers for high availability.
+2. **Distributed Node**: Backend, Frontend, and MySQL on separate servers for high availability.
 
 ---
 
@@ -24,11 +24,6 @@ Nagare looks for its configuration in `configs/nagare_config.json`. Below are th
   },
   "database": {
     "dsn": "user:pass@tcp(localhost:3306)/nagare?charset=utf8mb4&parseTime=True&loc=Local"
-  },
-  "redis": {
-    "addr": "localhost:6379",
-    "password": "",
-    "db": 0
   },
   "ai": {
     "gemini_api_key": "YOUR_GEMINI_KEY",
@@ -64,18 +59,13 @@ npm run build
 ```
 Copy the contents of `frontend/dist` to your Nginx web root.
 
-### 3. Setup Redis (Recommended)
-Redis is used for the asynchronous task queue (e.g., generating PDF reports and processing large host syncs). Without Redis, Nagare uses an in-memory queue which may lose tasks if the server restarts.
-
----
-
 ## 🚀 Running as a System Service (systemd)
 Create `/etc/systemd/system/nagare-backend.service`:
 
 ```ini
 [Unit]
 Description=Nagare Backend Service
-After=network.target mysql.service redis.service
+After=network.target mysql.service
 
 [Service]
 Type=simple

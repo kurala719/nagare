@@ -141,6 +141,7 @@
         <el-select v-model="newTrigger.entity" style="width: 100%;">
           <el-option :label="$t('triggers.entityAlert')" value="alert" />
           <el-option :label="$t('triggers.entityLog')" value="log" />
+          <el-option :label="$t('triggers.entityItem')" value="item" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('triggers.severityMin')">
@@ -187,6 +188,37 @@
       <el-form-item v-if="isLogTrigger(newTrigger)" :label="$t('triggers.logQuery')">
         <el-input v-model="newTrigger.log_query" :placeholder="$t('triggers.logQuery')" />
       </el-form-item>
+      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemStatus')">
+        <el-select v-model="newTrigger.item_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemHostId')">
+        <el-input-number v-model="newTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemId')">
+        <el-input-number v-model="newTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemValueOperator')">
+        <el-select v-model="newTrigger.item_value_operator" clearable :placeholder="$t('triggers.itemValueOperatorHint')" style="width: 100%;">
+          <el-option v-for="op in itemOperators" :key="op.value" :label="op.label" :value="op.value" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemValueThreshold')">
+        <div class="threshold-row">
+          <el-input-number v-model="newTrigger.item_value_threshold" :min="0" :controls="false" style="width: 100%;" />
+          <el-input-number
+            v-if="isBetweenOperator(newTrigger.item_value_operator)"
+            v-model="newTrigger.item_value_threshold_max"
+            :min="0"
+            :controls="false"
+            style="width: 100%;"
+          />
+        </div>
+      </el-form-item>
       <el-form-item :label="$t('triggers.action')" required>
         <el-select v-model="newTrigger.action_id" style="width: 100%;">
           <el-option v-for="action in actionOptions" :key="action.id" :label="action.name" :value="action.id" />
@@ -219,6 +251,7 @@
         <el-select v-model="selectedTrigger.entity" style="width: 100%;">
           <el-option :label="$t('triggers.entityAlert')" value="alert" />
           <el-option :label="$t('triggers.entityLog')" value="log" />
+          <el-option :label="$t('triggers.entityItem')" value="item" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('triggers.severityMin')">
@@ -264,6 +297,37 @@
       </el-form-item>
       <el-form-item v-if="isLogTrigger(selectedTrigger)" :label="$t('triggers.logQuery')">
         <el-input v-model="selectedTrigger.log_query" :placeholder="$t('triggers.logQuery')" />
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemStatus')">
+        <el-select v-model="selectedTrigger.item_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
+          <el-option :label="$t('common.statusInactive')" :value="0" />
+          <el-option :label="$t('common.statusActive')" :value="1" />
+          <el-option :label="$t('common.statusError')" :value="2" />
+          <el-option :label="$t('common.statusSyncing')" :value="3" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemHostId')">
+        <el-input-number v-model="selectedTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemId')">
+        <el-input-number v-model="selectedTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemValueOperator')">
+        <el-select v-model="selectedTrigger.item_value_operator" clearable :placeholder="$t('triggers.itemValueOperatorHint')" style="width: 100%;">
+          <el-option v-for="op in itemOperators" :key="op.value" :label="op.label" :value="op.value" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemValueThreshold')">
+        <div class="threshold-row">
+          <el-input-number v-model="selectedTrigger.item_value_threshold" :min="0" :controls="false" style="width: 100%;" />
+          <el-input-number
+            v-if="isBetweenOperator(selectedTrigger.item_value_operator)"
+            v-model="selectedTrigger.item_value_threshold_max"
+            :min="0"
+            :controls="false"
+            style="width: 100%;"
+          />
+        </div>
       </el-form-item>
       <el-form-item :label="$t('triggers.action')" required>
         <el-select v-model="selectedTrigger.action_id" style="width: 100%;">
@@ -378,6 +442,10 @@ export default {
         log_type: '',
         log_severity: null,
         log_query: '',
+        item_status: null,
+        item_value_threshold: null,
+        item_value_threshold_max: null,
+        item_value_operator: '',
         enabled: 1,
         status: 1,
       },
@@ -397,6 +465,10 @@ export default {
         log_type: '',
         log_severity: null,
         log_query: '',
+        item_status: null,
+        item_value_threshold: null,
+        item_value_threshold_max: null,
+        item_value_operator: '',
         enabled: 1,
         status: 1,
       },
@@ -420,6 +492,18 @@ export default {
     },
     selectedCount() {
       return this.selectedTriggers.length;
+    },
+    itemOperators() {
+      return [
+        { label: '>', value: '>' },
+        { label: '>=', value: '>=' },
+        { label: '<', value: '<' },
+        { label: '<=', value: '<=' },
+        { label: '==', value: '==' },
+        { label: '!=', value: '!=' },
+        { label: this.$t('triggers.operatorBetween'), value: 'between' },
+        { label: this.$t('triggers.operatorOutside'), value: 'outside' },
+      ];
     },
   },
   created() {
@@ -571,6 +655,10 @@ export default {
           log_type: t.LogType || t.log_type || '',
           log_severity: this.coerceLogSeverity(t.LogSeverity ?? t.log_severity),
           log_query: t.LogQuery || t.log_query || '',
+          item_status: t.ItemStatus ?? t.item_status ?? null,
+          item_value_threshold: t.ItemValueThreshold ?? t.item_value_threshold ?? null,
+          item_value_threshold_max: t.ItemValueThresholdMax ?? t.item_value_threshold_max ?? null,
+          item_value_operator: t.ItemValueOperator || t.item_value_operator || '',
           enabled: t.Enabled ?? t.enabled ?? 1,
           status: t.Status ?? t.status ?? 0,
           status_reason: t.Reason || t.reason || t.Error || t.error || t.ErrorMessage || t.error_message || t.LastError || t.last_error || '',
@@ -614,6 +702,10 @@ export default {
         log_type: '',
         log_severity: null,
         log_query: '',
+        item_status: null,
+        item_value_threshold: null,
+        item_value_threshold_max: null,
+        item_value_operator: '',
         enabled: 1,
         status: 1,
       };
@@ -646,6 +738,10 @@ export default {
           log_type: '',
           log_severity: null,
           log_query: '',
+          item_status: null,
+          item_value_threshold: null,
+          item_value_threshold_max: null,
+          item_value_operator: '',
           enabled: 1,
           status: 1,
         };
@@ -723,6 +819,10 @@ export default {
         log_type: trigger.log_type,
         log_severity: this.coerceLogSeverity(trigger.log_severity),
         log_query: trigger.log_query,
+        item_status: trigger.item_status,
+        item_value_threshold: trigger.item_value_threshold,
+        item_value_threshold_max: trigger.item_value_threshold_max,
+        item_value_operator: trigger.item_value_operator,
         ...overrides,
       };
       if (payload.entity === 'log') {
@@ -733,8 +833,26 @@ export default {
         delete payload.alert_group_id;
         delete payload.alert_host_id;
         delete payload.alert_item_id;
+        delete payload.item_status;
+        delete payload.item_value_threshold;
+        delete payload.item_value_threshold_max;
+        delete payload.item_value_operator;
       }
       if (payload.entity === 'alert') {
+        delete payload.log_type;
+        delete payload.log_severity;
+        delete payload.log_query;
+        delete payload.item_status;
+        delete payload.item_value_threshold;
+        delete payload.item_value_threshold_max;
+        delete payload.item_value_operator;
+      }
+      if (payload.entity === 'item') {
+        delete payload.alert_status;
+        delete payload.alert_query;
+        delete payload.alert_id;
+        delete payload.alert_monitor_id;
+        delete payload.alert_group_id;
         delete payload.log_type;
         delete payload.log_severity;
         delete payload.log_query;
@@ -764,8 +882,15 @@ export default {
     isLogTrigger(trigger) {
       return trigger?.entity === 'log';
     },
+    isItemTrigger(trigger) {
+      return trigger?.entity === 'item';
+    },
+    isBetweenOperator(operator) {
+      return operator === 'between' || operator === 'outside';
+    },
     entityLabel(entity) {
       if (entity === 'log') return this.$t('triggers.entityLog');
+      if (entity === 'item') return this.$t('triggers.entityItem');
       return this.$t('triggers.entityAlert');
     },
     coerceLogSeverity(value) {
@@ -796,6 +921,12 @@ export default {
 .loading-state {
   text-align: center;
   padding: 60px;
+}
+
+.threshold-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 :deep(.el-table__row) {

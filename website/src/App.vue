@@ -105,7 +105,6 @@
             <div class="arrow">↓</div>
             <div class="db-grid">
               <div class="node small">MySQL (Core)</div>
-              <div class="node small">Redis (Queue)</div>
             </div>
           </div>
           <div class="tech-stack">
@@ -114,7 +113,7 @@
               <li><strong>Backend:</strong> Golang, Gin, GORM, Viper</li>
               <li><strong>Frontend:</strong> Vue 3, Element Plus, xterm.js, Vue-i18n</li>
               <li><strong>AI:</strong> LangChain-style RAG, WebSocket-based Chat</li>
-              <li><strong>Database:</strong> MySQL 8.0, Redis</li>
+              <li><strong>Database:</strong> MySQL 8.0</li>
             </ul>
           </div>
         </div>

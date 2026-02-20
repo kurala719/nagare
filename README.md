@@ -21,7 +21,7 @@ If you are a developer or an engineer, explore our deep-dive manuals:
 
 | Manual | Concept | Technical Focus |
 | :--- | :--- | :--- |
-| [**Architecture**](./doc/ARCHITECTURE.md) | The Nervous System | Go 1.24, Gin, Redis, High-Concurrency. |
+| [**Architecture**](./doc/ARCHITECTURE.md) | The Nervous System | Go 1.24, Gin, High-Concurrency. |
 | [**Database Schema**](./doc/DATABASE_SCHEMA.md) | The Storage Engine | MySQL/GORM, ERD, History Tracking. |
 | [**Deployment Guide**](./doc/DEPLOYMENT_GUIDE.md) | Production & Staging | Nginx, systemd, JWT Secrets, HTTPS. |
 | [**Developer Guide**](./doc/DEVELOPER_GUIDE.md) | Code Standards | DDD Layering, Vue 3 Composition API. |

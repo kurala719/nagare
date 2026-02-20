@@ -9,7 +9,6 @@ require (
 	github.com/gosnmp/gosnmp v1.43.2
 	github.com/johnfercher/maroto/v2 v2.3.3
 	github.com/json-iterator/go v1.1.12
-	github.com/redis/go-redis/v9 v9.17.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.21.0
 	github.com/wcharczuk/go-chart/v2 v2.1.2

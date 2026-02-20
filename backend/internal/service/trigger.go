@@ -12,48 +12,50 @@ import (
 
 // TriggerReq represents a trigger request
 type TriggerReq struct {
-	Name           string `json:"name" binding:"required"`
-	Entity         string `json:"entity"`
-	SeverityMin    int    `json:"severity_min"`
-	ActionID       uint   `json:"action_id"`
-	AlertID        *uint  `json:"alert_id"`
-	AlertStatus    *int   `json:"alert_status"`
-	AlertGroupID   *uint  `json:"alert_group_id"`
-	AlertMonitorID *uint  `json:"alert_monitor_id"`
-	AlertHostID    *uint  `json:"alert_host_id"`
-	AlertItemID    *uint  `json:"alert_item_id"`
-	AlertQuery     string `json:"alert_query"`
-	LogType        string `json:"log_type"`
-	LogSeverity    *int   `json:"log_severity"`
-	LogQuery       string `json:"log_query"`
-	ItemStatus     *int   `json:"item_status"`
-	ItemValueThreshold *float64 `json:"item_value_threshold"`
-	ItemValueOperator  string `json:"item_value_operator"`
-	Enabled        int    `json:"enabled"`
+	Name                  string   `json:"name" binding:"required"`
+	Entity                string   `json:"entity"`
+	SeverityMin           int      `json:"severity_min"`
+	ActionID              uint     `json:"action_id"`
+	AlertID               *uint    `json:"alert_id"`
+	AlertStatus           *int     `json:"alert_status"`
+	AlertGroupID          *uint    `json:"alert_group_id"`
+	AlertMonitorID        *uint    `json:"alert_monitor_id"`
+	AlertHostID           *uint    `json:"alert_host_id"`
+	AlertItemID           *uint    `json:"alert_item_id"`
+	AlertQuery            string   `json:"alert_query"`
+	LogType               string   `json:"log_type"`
+	LogSeverity           *int     `json:"log_severity"`
+	LogQuery              string   `json:"log_query"`
+	ItemStatus            *int     `json:"item_status"`
+	ItemValueThreshold    *float64 `json:"item_value_threshold"`
+	ItemValueThresholdMax *float64 `json:"item_value_threshold_max"`
+	ItemValueOperator     string   `json:"item_value_operator"`
+	Enabled               int      `json:"enabled"`
 }
 
 // TriggerResp represents a trigger response
 type TriggerResp struct {
-	ID             int    `json:"id"`
-	Name           string `json:"name"`
-	Entity         string `json:"entity"`
-	SeverityMin    int    `json:"severity_min"`
-	ActionID       uint   `json:"action_id"`
-	AlertID        *uint  `json:"alert_id"`
-	AlertStatus    *int   `json:"alert_status"`
-	AlertGroupID   *uint  `json:"alert_group_id"`
-	AlertMonitorID *uint  `json:"alert_monitor_id"`
-	AlertHostID    *uint  `json:"alert_host_id"`
-	AlertItemID    *uint  `json:"alert_item_id"`
-	AlertQuery     string `json:"alert_query"`
-	LogType        string `json:"log_type"`
-	LogSeverity    *int   `json:"log_severity"`
-	LogQuery       string `json:"log_query"`
-	ItemStatus     *int   `json:"item_status"`
-	ItemValueThreshold *float64 `json:"item_value_threshold"`
-	ItemValueOperator  string `json:"item_value_operator"`
-	Enabled        int    `json:"enabled"`
-	Status         int    `json:"status"`
+	ID                    int      `json:"id"`
+	Name                  string   `json:"name"`
+	Entity                string   `json:"entity"`
+	SeverityMin           int      `json:"severity_min"`
+	ActionID              uint     `json:"action_id"`
+	AlertID               *uint    `json:"alert_id"`
+	AlertStatus           *int     `json:"alert_status"`
+	AlertGroupID          *uint    `json:"alert_group_id"`
+	AlertMonitorID        *uint    `json:"alert_monitor_id"`
+	AlertHostID           *uint    `json:"alert_host_id"`
+	AlertItemID           *uint    `json:"alert_item_id"`
+	AlertQuery            string   `json:"alert_query"`
+	LogType               string   `json:"log_type"`
+	LogSeverity           *int     `json:"log_severity"`
+	LogQuery              string   `json:"log_query"`
+	ItemStatus            *int     `json:"item_status"`
+	ItemValueThreshold    *float64 `json:"item_value_threshold"`
+	ItemValueThresholdMax *float64 `json:"item_value_threshold_max"`
+	ItemValueOperator     string   `json:"item_value_operator"`
+	Enabled               int      `json:"enabled"`
+	Status                int      `json:"status"`
 }
 
 func GetAllTriggersServ() ([]TriggerResp, error) {
@@ -98,24 +100,25 @@ func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 		return TriggerResp{}, fmt.Errorf("action_id is required")
 	}
 	trigger := model.Trigger{
-		Name:           req.Name,
-		Entity:         normalizeTriggerEntity(req.Entity),
-		SeverityMin:    req.SeverityMin,
-		ActionID:       req.ActionID,
-		AlertID:        req.AlertID,
-		AlertStatus:    req.AlertStatus,
-		AlertGroupID:   req.AlertGroupID,
-		AlertMonitorID: req.AlertMonitorID,
-		AlertHostID:    req.AlertHostID,
-		AlertItemID:    req.AlertItemID,
-		AlertQuery:     req.AlertQuery,
-		LogType:        req.LogType,
-		LogSeverity:    req.LogSeverity,
-		LogQuery:       req.LogQuery,
-		ItemStatus:     req.ItemStatus,
-		ItemValueThreshold: req.ItemValueThreshold,
-		ItemValueOperator:  req.ItemValueOperator,
-		Enabled:        req.Enabled,
+		Name:                  req.Name,
+		Entity:                normalizeTriggerEntity(req.Entity),
+		SeverityMin:           req.SeverityMin,
+		ActionID:              req.ActionID,
+		AlertID:               req.AlertID,
+		AlertStatus:           req.AlertStatus,
+		AlertGroupID:          req.AlertGroupID,
+		AlertMonitorID:        req.AlertMonitorID,
+		AlertHostID:           req.AlertHostID,
+		AlertItemID:           req.AlertItemID,
+		AlertQuery:            req.AlertQuery,
+		LogType:               req.LogType,
+		LogSeverity:           req.LogSeverity,
+		LogQuery:              req.LogQuery,
+		ItemStatus:            req.ItemStatus,
+		ItemValueThreshold:    req.ItemValueThreshold,
+		ItemValueThresholdMax: req.ItemValueThresholdMax,
+		ItemValueOperator:     req.ItemValueOperator,
+		Enabled:               req.Enabled,
 	}
 	if action, err := repository.GetActionByIDDAO(req.ActionID); err == nil {
 		trigger.Status = determineTriggerStatus(trigger, action)
@@ -137,25 +140,26 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 		return err
 	}
 	updated := model.Trigger{
-		Name:           req.Name,
-		Entity:         normalizeTriggerEntity(req.Entity),
-		SeverityMin:    req.SeverityMin,
-		ActionID:       req.ActionID,
-		AlertID:        req.AlertID,
-		AlertStatus:    req.AlertStatus,
-		AlertGroupID:   req.AlertGroupID,
-		AlertMonitorID: req.AlertMonitorID,
-		AlertHostID:    req.AlertHostID,
-		AlertItemID:    req.AlertItemID,
-		AlertQuery:     req.AlertQuery,
-		LogType:        req.LogType,
-		LogSeverity:    req.LogSeverity,
-		LogQuery:       req.LogQuery,
-		ItemStatus:     req.ItemStatus,
-		ItemValueThreshold: req.ItemValueThreshold,
-		ItemValueOperator:  req.ItemValueOperator,
-		Enabled:        req.Enabled,
-		Status:         existing.Status,
+		Name:                  req.Name,
+		Entity:                normalizeTriggerEntity(req.Entity),
+		SeverityMin:           req.SeverityMin,
+		ActionID:              req.ActionID,
+		AlertID:               req.AlertID,
+		AlertStatus:           req.AlertStatus,
+		AlertGroupID:          req.AlertGroupID,
+		AlertMonitorID:        req.AlertMonitorID,
+		AlertHostID:           req.AlertHostID,
+		AlertItemID:           req.AlertItemID,
+		AlertQuery:            req.AlertQuery,
+		LogType:               req.LogType,
+		LogSeverity:           req.LogSeverity,
+		LogQuery:              req.LogQuery,
+		ItemStatus:            req.ItemStatus,
+		ItemValueThreshold:    req.ItemValueThreshold,
+		ItemValueThresholdMax: req.ItemValueThresholdMax,
+		ItemValueOperator:     req.ItemValueOperator,
+		Enabled:               req.Enabled,
+		Status:                existing.Status,
 	}
 	// Preserve status unless enabled state or action changed
 	if req.Enabled != existing.Enabled || req.ActionID != existing.ActionID {
@@ -178,26 +182,27 @@ func DeleteTriggerByIDServ(id uint) error {
 
 func triggerToResp(trigger model.Trigger) TriggerResp {
 	return TriggerResp{
-		ID:             int(trigger.ID),
-		Name:           trigger.Name,
-		Entity:         trigger.Entity,
-		SeverityMin:    trigger.SeverityMin,
-		ActionID:       trigger.ActionID,
-		AlertID:        trigger.AlertID,
-		AlertStatus:    trigger.AlertStatus,
-		AlertGroupID:   trigger.AlertGroupID,
-		AlertMonitorID: trigger.AlertMonitorID,
-		AlertHostID:    trigger.AlertHostID,
-		AlertItemID:    trigger.AlertItemID,
-		AlertQuery:     trigger.AlertQuery,
-		LogType:        trigger.LogType,
-		LogSeverity:    trigger.LogSeverity,
-		LogQuery:       trigger.LogQuery,
-		ItemStatus:     trigger.ItemStatus,
-		ItemValueThreshold: trigger.ItemValueThreshold,
-		ItemValueOperator:  trigger.ItemValueOperator,
-		Enabled:        trigger.Enabled,
-		Status:         trigger.Status,
+		ID:                    int(trigger.ID),
+		Name:                  trigger.Name,
+		Entity:                trigger.Entity,
+		SeverityMin:           trigger.SeverityMin,
+		ActionID:              trigger.ActionID,
+		AlertID:               trigger.AlertID,
+		AlertStatus:           trigger.AlertStatus,
+		AlertGroupID:          trigger.AlertGroupID,
+		AlertMonitorID:        trigger.AlertMonitorID,
+		AlertHostID:           trigger.AlertHostID,
+		AlertItemID:           trigger.AlertItemID,
+		AlertQuery:            trigger.AlertQuery,
+		LogType:               trigger.LogType,
+		LogSeverity:           trigger.LogSeverity,
+		LogQuery:              trigger.LogQuery,
+		ItemStatus:            trigger.ItemStatus,
+		ItemValueThreshold:    trigger.ItemValueThreshold,
+		ItemValueThresholdMax: trigger.ItemValueThresholdMax,
+		ItemValueOperator:     trigger.ItemValueOperator,
+		Enabled:               trigger.Enabled,
+		Status:                trigger.Status,
 	}
 }
 
@@ -394,7 +399,7 @@ func invokeItemTriggerAction(trigger model.Trigger, replacements map[string]stri
 	if err != nil || media.Enabled == 0 {
 		return
 	}
-	_ = ExecuteAction(action, media, replacements)
+	_ = ExecuteItemAction(action, media, replacements)
 }
 
 type alertMatchContext struct {
@@ -506,7 +511,8 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 			return false
 		}
 		threshold := *trigger.ItemValueThreshold
-		switch trigger.ItemValueOperator {
+		operator := strings.TrimSpace(trigger.ItemValueOperator)
+		switch operator {
 		case ">":
 			if !(val > threshold) {
 				return false
@@ -523,13 +529,31 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 			if !(val <= threshold) {
 				return false
 			}
-		case "=":
+		case "=", "==":
 			if !(val == threshold) {
 				return false
 			}
 		case "!=":
 			if !(val != threshold) {
 				return false
+			}
+		case "between", "outside":
+			if trigger.ItemValueThresholdMax == nil {
+				return false
+			}
+			maxThreshold := *trigger.ItemValueThresholdMax
+			minThreshold := threshold
+			if minThreshold > maxThreshold {
+				minThreshold, maxThreshold = maxThreshold, minThreshold
+			}
+			if operator == "between" {
+				if val < minThreshold || val > maxThreshold {
+					return false
+				}
+			} else {
+				if val >= minThreshold && val <= maxThreshold {
+					return false
+				}
 			}
 		default:
 			return false

@@ -181,25 +181,26 @@ type Action struct {
 // Trigger represents a rule that filters alerts or logs to invoke an action
 type Trigger struct {
 	gorm.Model
-	Name               string
-	Entity             string // "alert" or "log"
-	SeverityMin        int
-	ActionID           uint
-	AlertID            *uint `gorm:"column:alert_id"`
-	AlertStatus        *int  `gorm:"column:alert_status"`
-	AlertGroupID       *uint `gorm:"column:alert_group_id"`
-	AlertMonitorID     *uint `gorm:"column:alert_monitor_id"`
-	AlertHostID        *uint `gorm:"column:alert_host_id"`
-	AlertItemID        *uint `gorm:"column:alert_item_id"`
-	AlertQuery         string
-	LogType            string   `gorm:"column:log_type"`
-	LogSeverity        *int     `gorm:"column:log_level"`
-	LogQuery           string   `gorm:"column:log_query"`
-	ItemStatus         *int     `gorm:"column:item_status"`
-	ItemValueThreshold *float64 `gorm:"column:item_value_threshold"`
-	ItemValueOperator  string   `gorm:"column:item_value_operator"`
-	Enabled            int      `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status             int      // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	Name                  string
+	Entity                string // "alert" or "log"
+	SeverityMin           int
+	ActionID              uint
+	AlertID               *uint `gorm:"column:alert_id"`
+	AlertStatus           *int  `gorm:"column:alert_status"`
+	AlertGroupID          *uint `gorm:"column:alert_group_id"`
+	AlertMonitorID        *uint `gorm:"column:alert_monitor_id"`
+	AlertHostID           *uint `gorm:"column:alert_host_id"`
+	AlertItemID           *uint `gorm:"column:alert_item_id"`
+	AlertQuery            string
+	LogType               string   `gorm:"column:log_type"`
+	LogSeverity           *int     `gorm:"column:log_level"`
+	LogQuery              string   `gorm:"column:log_query"`
+	ItemStatus            *int     `gorm:"column:item_status"`
+	ItemValueThreshold    *float64 `gorm:"column:item_value_threshold"`
+	ItemValueThresholdMax *float64 `gorm:"column:item_value_threshold_max"`
+	ItemValueOperator     string   `gorm:"column:item_value_operator"`
+	Enabled               int      `gorm:"default:1"` // 0 = disabled, 1 = enabled
+	Status                int      // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 }
 
 // Provider represents an AI provider (e.g., Google Gemini)
