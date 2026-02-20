@@ -11,7 +11,6 @@ import * as alerts from './alerts';
 import * as alarms from './alarms';
 import * as actions from './actions';
 import * as media from './media';
-import * as mediaTypes from './mediaTypes';
 import * as providers from './providers';
 import * as reports from './reports';
 import * as ansible from './ansible';
@@ -33,7 +32,6 @@ export default {
     alarms,
     actions,
     media,
-    mediaTypes,
     providers,
     reports,
     ansible,

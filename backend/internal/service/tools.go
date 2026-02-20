@@ -1,4 +1,4 @@
-package service
+﻿package service
 
 import (
 	"encoding/json"
@@ -123,19 +123,9 @@ func ListTools() []ToolDefinition {
 			Name:        "get_media",
 			Description: "List media with optional filters.",
 			InputSchema: schemaObject(map[string]interface{}{
-				"q":             schemaString("Search by name, type, target, description."),
-				"status":        schemaInt("Media status."),
-				"media_type_id": schemaInt("Media type id."),
-				"limit":         schemaInt("Max results (default 100)."),
-				"offset":        schemaInt("Offset for pagination."),
-			}),
-		},
-		{
-			Name:        "get_media_types",
-			Description: "List media types with optional filters.",
-			InputSchema: schemaObject(map[string]interface{}{
-				"q":      schemaString("Search by name, key, description."),
-				"status": schemaInt("Media type status."),
+				"q":      schemaString("Search by name, type, target, description."),
+				"status": schemaInt("Media status."),
+				"type":   schemaString("Media type (email, webhook, etc.)."),
 				"limit":  schemaInt("Max results (default 100)."),
 				"offset": schemaInt("Offset for pagination."),
 			}),
@@ -385,34 +375,14 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			return GetAllMediaServ()
 		}
 		limit, offset := withDefaultLimitOffset(args.Limit, args.Offset)
-		mediaTypeID, err := toUintPtr(args.MediaTypeID)
-		if err != nil {
-			return nil, err
-		}
 		filter := model.MediaFilter{
 			Query:  args.Query,
 			Status: args.Status,
-			TypeID: mediaTypeID,
+			Type:   args.Type,
 			Limit:  limit,
 			Offset: offset,
 		}
 		return SearchMediaServ(filter)
-	case "get_media_types":
-		var args mediaTypeArgs
-		if err := decodeParams(rawArgs, &args); err != nil {
-			return nil, err
-		}
-		if isEmptyArgs(rawArgs) {
-			return GetAllMediaTypesServ()
-		}
-		limit, offset := withDefaultLimitOffset(args.Limit, args.Offset)
-		filter := model.MediaTypeFilter{
-			Query:  args.Query,
-			Status: args.Status,
-			Limit:  limit,
-			Offset: offset,
-		}
-		return SearchMediaTypesServ(filter)
 	case "get_logs":
 		var args logArgs
 		if err := decodeParams(rawArgs, &args); err != nil {
@@ -565,18 +535,11 @@ type triggerArgs struct {
 }
 
 type mediaArgs struct {
-	Query       string `json:"q"`
-	Status      *int   `json:"status"`
-	MediaTypeID *int   `json:"media_type_id"`
-	Limit       *int   `json:"limit"`
-	Offset      *int   `json:"offset"`
-}
-
-type mediaTypeArgs struct {
-	Query  string `json:"q"`
-	Status *int   `json:"status"`
-	Limit  *int   `json:"limit"`
-	Offset *int   `json:"offset"`
+	Query  string  `json:"q"`
+	Status *int    `json:"status"`
+	Type   *string `json:"type"`
+	Limit  *int    `json:"limit"`
+	Offset *int    `json:"offset"`
 }
 
 type logArgs struct {

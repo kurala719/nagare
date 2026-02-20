@@ -120,7 +120,6 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupSystemRoutes(rg)
 	setupPublicRoutes(rg)
 	setupIMRoutes(rg)
-	setupMediaTypeRoutes(rg)
 	setupMediaRoutes(rg)
 	setupActionRoutes(rg)
 	setupTriggerRoutes(rg)

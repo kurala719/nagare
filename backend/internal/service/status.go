@@ -95,16 +95,6 @@ func determineMediaStatus(m model.Media) int {
 	return 1
 }
 
-func determineMediaTypeStatus(mt model.MediaType) int {
-	if mt.Enabled == 0 {
-		return 0
-	}
-	if mt.Name == "" || mt.Key == "" {
-		return 2
-	}
-	return 1
-}
-
 func determineActionStatus(a model.Action, media model.Media) int {
 	if a.Enabled == 0 {
 		return 0
@@ -439,34 +429,8 @@ func recomputeMediaStatus(id uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if media.MediaTypeID > 0 {
-		if mediaType, err := repository.GetMediaTypeByIDDAO(media.MediaTypeID); err == nil {
-			if mediaType.Status == 2 || mediaType.Enabled == 0 {
-				status := 2
-				if media.Enabled == 0 {
-					status = 0
-				}
-				if err := repository.UpdateMediaStatusDAO(id, status); err != nil {
-					return status, err
-				}
-				return status, nil
-			}
-		}
-	}
 	status := determineMediaStatus(media)
 	if err := repository.UpdateMediaStatusDAO(id, status); err != nil {
-		return status, err
-	}
-	return status, nil
-}
-
-func recomputeMediaTypeStatus(id uint) (int, error) {
-	mediaType, err := repository.GetMediaTypeByIDDAO(id)
-	if err != nil {
-		return 0, err
-	}
-	status := determineMediaTypeStatus(mediaType)
-	if err := repository.UpdateMediaTypeStatusDAO(id, status); err != nil {
 		return status, err
 	}
 	return status, nil

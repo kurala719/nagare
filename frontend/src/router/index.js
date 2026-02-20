@@ -127,12 +127,6 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 2 }
   },
   {
-    path: '/media-type',
-    name: 'MediaType',
-    component: () => import('@/views/MediaType.vue'),
-    meta: { requiresAuth: true, minPrivilege: 2 }
-  },
-  {
     path: '/action',
     name: 'Action',
     component: () => import('@/views/Action.vue'),

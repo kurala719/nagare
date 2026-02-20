@@ -57,8 +57,8 @@ func mediaRateLimitKeys(media model.Media) []rateLimitKey {
 	if globalInterval > 0 {
 		keys = append(keys, rateLimitKey{key: "global", interval: globalInterval})
 	}
-	if mediaTypeInterval > 0 && media.MediaTypeID > 0 {
-		keys = append(keys, rateLimitKey{key: fmt.Sprintf("type:%d", media.MediaTypeID), interval: mediaTypeInterval})
+	if mediaTypeInterval > 0 && media.Type != "" {
+		keys = append(keys, rateLimitKey{key: fmt.Sprintf("type:%s", media.Type), interval: mediaTypeInterval})
 	}
 	if mediaInterval > 0 && media.ID > 0 {
 		keys = append(keys, rateLimitKey{key: fmt.Sprintf("media:%d", media.ID), interval: mediaInterval})

@@ -29,11 +29,6 @@ func SearchMediaCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid status")
 		return
 	}
-	mediaTypeID, err := parseOptionalUint(c, "media_type_id")
-	if err != nil {
-		respondBadRequest(c, "invalid media_type_id")
-		return
-	}
 	withTotal, _ := parseOptionalBool(c, "with_total")
 	limit := 100
 	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
@@ -46,7 +41,7 @@ func SearchMediaCtrl(c *gin.Context) {
 	filter := model.MediaFilter{
 		Query:     c.Query("q"),
 		Status:    status,
-		TypeID:    mediaTypeID,
+		Type:      parseOptionalString(c, "type"),
 		Limit:     limit,
 		Offset:    offset,
 		SortBy:    c.Query("sort"),

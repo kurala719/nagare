@@ -218,12 +218,11 @@ func sendMediaMessage(media model.Media, msg string) error {
 
 	if ok, wait := allowMediaSend(media); !ok {
 		LogService("info", "send message skipped (rate limit)", map[string]interface{}{
-			"media":         media.Type,
-			"media_id":      media.ID,
-			"media_type_id": media.MediaTypeID,
-			"target":        media.Target,
-			"wait_seconds":  int(wait.Seconds()),
-			"skip_trigger":  true,
+			"media":        media.Type,
+			"media_id":     media.ID,
+			"target":       media.Target,
+			"wait_seconds": int(wait.Seconds()),
+			"skip_trigger": true,
 		}, nil, "")
 		return nil
 	}
@@ -266,15 +265,5 @@ func parseQQTarget(target string) (string, bool) {
 }
 
 func resolveMediaTypeKeyForSend(media model.Media) string {
-	if strings.TrimSpace(media.Type) != "" {
-		return media.Type
-	}
-	if media.MediaTypeID == 0 {
-		return ""
-	}
-	mediaType, err := repository.GetMediaTypeByIDDAO(media.MediaTypeID)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(mediaType.Key)
+	return strings.TrimSpace(media.Type)
 }

@@ -20,18 +20,7 @@ type AlertFilter struct {
 type MediaFilter struct {
 	Query     string
 	Status    *int
-	TypeID    *uint
-	Limit     int
-	Offset    int
-	SortBy    string
-	SortOrder string
-}
-
-// MediaTypeFilter represents search and filter options for media types
-// Query matches name/key/description (LIKE)
-type MediaTypeFilter struct {
-	Query     string
-	Status    *int
+	Type      *string
 	Limit     int
 	Offset    int
 	SortBy    string

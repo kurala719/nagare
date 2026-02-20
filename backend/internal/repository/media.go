@@ -26,18 +26,18 @@ func SearchMediaDAO(filter model.MediaFilter) ([]model.Media, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
-	if filter.TypeID != nil {
-		query = query.Where("media_type_id = ?", *filter.TypeID)
+	if filter.Type != nil {
+		query = query.Where("type = ?", *filter.Type)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":          "name",
-		"status":         "status",
-		"enabled":        "enabled",
-		"media_type_id": "media_type_id",
-		"target":         "target",
-		"created_at":    "created_at",
-		"updated_at":    "updated_at",
-		"id":            "id",
+		"name":       "name",
+		"status":     "status",
+		"enabled":    "enabled",
+		"type":       "type",
+		"target":     "target",
+		"created_at": "created_at",
+		"updated_at": "updated_at",
+		"id":         "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
@@ -61,8 +61,8 @@ func CountMediaDAO(filter model.MediaFilter) (int64, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
-	if filter.TypeID != nil {
-		query = query.Where("media_type_id = ?", *filter.TypeID)
+	if filter.Type != nil {
+		query = query.Where("type = ?", *filter.Type)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -81,15 +81,6 @@ func GetMediaByIDDAO(id uint) (model.Media, error) {
 	return media, err
 }
 
-// GetMediaByTypeIDDAO retrieves media by media type ID
-func GetMediaByTypeIDDAO(typeID uint) ([]model.Media, error) {
-	var media []model.Media
-	if err := database.DB.Where("media_type_id = ?", typeID).Find(&media).Error; err != nil {
-		return nil, err
-	}
-	return media, nil
-}
-
 // AddMediaDAO creates a new media
 func AddMediaDAO(media model.Media) error {
 	return database.DB.Create(&media).Error
@@ -98,14 +89,13 @@ func AddMediaDAO(media model.Media) error {
 // UpdateMediaDAO updates media by ID
 func UpdateMediaDAO(id uint, media model.Media) error {
 	return database.DB.Model(&model.Media{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":          media.Name,
-		"type":          media.Type,
-		"media_type_id": media.MediaTypeID,
-		"target":        media.Target,
-		"params":        media.Params,
-		"enabled":       media.Enabled,
-		"status":        media.Status,
-		"description":   media.Description,
+		"name":        media.Name,
+		"type":        media.Type,
+		"target":      media.Target,
+		"params":      media.Params,
+		"enabled":     media.Enabled,
+		"status":      media.Status,
+		"description": media.Description,
 	}).Error
 }
 
@@ -117,11 +107,6 @@ func DeleteMediaByIDDAO(id uint) error {
 // UpdateMediaStatusDAO updates only status for media
 func UpdateMediaStatusDAO(id uint, status int) error {
 	return database.DB.Model(&model.Media{}).Where("id = ?", id).Update("status", status).Error
-}
-
-// UpdateMediaTypeKeyForMediaDAO updates cached type key for media by media type ID
-func UpdateMediaTypeKeyForMediaDAO(typeID uint, key string) error {
-	return database.DB.Model(&model.Media{}).Where("media_type_id = ?", typeID).Update("type", key).Error
 }
 
 // UpdateMediaParamsDAO updates media params by ID

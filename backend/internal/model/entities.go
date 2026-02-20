@@ -159,34 +159,12 @@ type Alert struct {
 type Media struct {
 	gorm.Model
 	Name        string
-	Type        string            // "email", "webhook", "sms", etc. (cached from media type)
-	MediaTypeID uint              `gorm:"column:media_type_id"`
+	Type        string            // "email", "webhook", "sms", etc.
 	Target      string            // address/endpoint/number
 	Params      map[string]string `gorm:"type:json;serializer:json"`
 	Enabled     int               `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status      int               // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	Description string
-}
-
-// MediaParamField defines a parameter expected by a media type template
-type MediaParamField struct {
-	Key      string `json:"key"`
-	Label    string `json:"label"`
-	Required bool   `json:"required"`
-	Default  string `json:"default"`
-	Pattern  string `json:"pattern"`
-}
-
-// MediaType represents a supported media delivery type
-type MediaType struct {
-	gorm.Model
-	Name        string
-	Key         string // "email", "webhook", "sms", etc.
-	Enabled     int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	Description string
-	Template    string            `gorm:"type:text"`
-	Fields      []MediaParamField `gorm:"type:json;serializer:json"`
 }
 
 // Action represents an action executed for alerts

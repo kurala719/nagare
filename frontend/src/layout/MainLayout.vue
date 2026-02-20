@@ -210,7 +210,6 @@ export default defineComponent({
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
         { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
-        { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
         { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },

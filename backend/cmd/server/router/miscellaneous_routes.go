@@ -112,19 +112,6 @@ func setupMediaRoutes(rg *gin.RouterGroup) {
 	mediaWrite.DELETE("/:id", api.DeleteMediaByIDCtrl)
 }
 
-func setupMediaTypeRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	mediaTypesRead := rg.Group("/media-types", api.PrivilegesMiddleware(1))
-	mediaTypesRead.GET("", api.SearchMediaTypesCtrl)
-	mediaTypesRead.GET("/:id", api.GetMediaTypeByIDCtrl)
-
-	// Routes with privilege level 2
-	mediaTypesWrite := rg.Group("/media-types", api.PrivilegesMiddleware(2))
-	mediaTypesWrite.POST("", api.AddMediaTypeCtrl)
-	mediaTypesWrite.PUT("/:id", api.UpdateMediaTypeCtrl)
-	mediaTypesWrite.DELETE("/:id", api.DeleteMediaTypeByIDCtrl)
-}
-
 func setupAlertRoutes(rg *gin.RouterGroup) {
 	// Webhook endpoints - public, no auth required
 	alerts := rg.Group("/alerts")

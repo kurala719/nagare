@@ -25,7 +25,6 @@ func InitDBTables() error {
 		&model.HostHistory{},
 		&model.NetworkStatusHistory{},
 		&model.Alert{},
-		&model.MediaType{},
 		&model.Media{},
 		&model.Action{},
 		&model.Trigger{},

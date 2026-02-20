@@ -66,12 +66,6 @@
     style="margin: 40px;"
   />
 
-  <el-empty
-    v-if="!loading && !error && mediaList.length > 0 && filteredMedia.length === 0"
-    :description="$t('media.noResults')"
-    style="margin: 40px;"
-  />
-
   <div v-if="!loading && !error" class="media-content">
     <el-table
       v-if="filteredMedia.length > 0"
@@ -84,9 +78,9 @@
     >
       <el-table-column type="selection" width="50" align="center" />
       <el-table-column prop="name" :label="$t('media.name')" min-width="160" sortable="custom" />
-      <el-table-column :label="$t('media.type')" width="140" prop="media_type_id" sortable="custom">
+      <el-table-column prop="type" :label="$t('media.type')" width="140" sortable="custom">
         <template #default="{ row }">
-          {{ mediaTypeName(row.media_type_id) }}
+          <el-tag size="small">{{ row.type.toUpperCase() }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="target" :label="$t('media.target')" min-width="200" show-overflow-tooltip sortable="custom" />
@@ -100,7 +94,7 @@
       <el-table-column :label="$t('media.status')" width="160" align="center" prop="status" sortable="custom">
         <template #default="{ row }">
           <el-tooltip :content="row.status_reason || getStatusInfo(row.status).reason" placement="top">
-            <el-tag :type="getStatusInfo(row.status).type" size="small">
+            <el-tag :type="getStatusInfo(row.status).type" size="small" effect="dark">
               {{ getStatusInfo(row.status).label }}
             </el-tag>
           </el-tooltip>
@@ -133,24 +127,18 @@
         <el-input v-model="newMedia.name" :placeholder="$t('media.name')" />
       </el-form-item>
       <el-form-item :label="$t('media.type')">
-        <el-select v-model="newMedia.media_type_id" style="width: 100%;">
-          <el-option v-for="mediaType in mediaTypeOptions" :key="mediaType.id" :label="mediaType.name" :value="mediaType.id" />
+        <el-select v-model="newMedia.type" style="width: 100%;">
+          <el-option label="Email" value="email" />
+          <el-option label="Webhook" value="webhook" />
+          <el-option label="SMS" value="sms" />
+          <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('media.target')">
         <el-input
           v-model="newMedia.target"
           :placeholder="$t('media.targetHint')"
-          :disabled="newMediaTypeHasTemplate"
         />
-      </el-form-item>
-      <el-form-item
-        v-for="field in newMediaFields"
-        :key="field.key"
-        :label="fieldLabel(field)"
-        :required="field.required"
-      >
-        <el-input v-model="newMedia.params[field.key]" :placeholder="fieldPlaceholder(field)" />
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newMedia.enabled" :active-value="1" :inactive-value="0" />
@@ -179,24 +167,18 @@
         <el-input v-model="selectedMedia.name" />
       </el-form-item>
       <el-form-item :label="$t('media.type')">
-        <el-select v-model="selectedMedia.media_type_id" style="width: 100%;">
-          <el-option v-for="mediaType in mediaTypeOptions" :key="mediaType.id" :label="mediaType.name" :value="mediaType.id" />
+        <el-select v-model="selectedMedia.type" style="width: 100%;">
+          <el-option label="Email" value="email" />
+          <el-option label="Webhook" value="webhook" />
+          <el-option label="SMS" value="sms" />
+          <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('media.target')">
         <el-input
           v-model="selectedMedia.target"
           :placeholder="$t('media.targetHint')"
-          :disabled="selectedMediaTypeHasTemplate"
         />
-      </el-form-item>
-      <el-form-item
-        v-for="field in selectedMediaFields"
-        :key="field.key"
-        :label="fieldLabel(field)"
-        :required="field.required"
-      >
-        <el-input v-model="selectedMedia.params[field.key]" :placeholder="fieldPlaceholder(field)" />
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedMedia.enabled" :active-value="1" :inactive-value="0" />
@@ -261,7 +243,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchMediaData, addMedia, updateMedia, deleteMedia } from '@/api/media';
-import { fetchMediaTypeData } from '@/api/mediaTypes';
 
 export default {
   name: 'Media',
@@ -277,7 +258,6 @@ export default {
   data() {
     return {
       mediaList: [],
-      mediaTypeOptions: [],
       loading: false,
       error: null,
       search: '',
@@ -294,13 +274,12 @@ export default {
       bulkUpdating: false,
       bulkDeleting: false,
       selectedMediaRows: [],
-      newMedia: { name: '', media_type_id: 0, target: '', params: {}, enabled: 1, status: 1, description: '' },
-      selectedMedia: { id: 0, name: '', media_type_id: 0, target: '', params: {}, enabled: 1, status: 1, description: '' },
+      newMedia: { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' },
+      selectedMedia: { id: 0, name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' },
       bulkForm: {
         enabled: 'nochange',
         status: 'nochange',
       },
-      // Icons for template usage
       Plus: markRaw(Plus),
       Search: markRaw(Search),
       Edit: markRaw(Edit),
@@ -317,32 +296,8 @@ export default {
     selectedCount() {
       return this.selectedMediaRows.length;
     },
-    newMediaType() {
-      return this.mediaTypeOptions.find((t) => t.id === this.newMedia.media_type_id) || null;
-    },
-    selectedMediaType() {
-      return this.mediaTypeOptions.find((t) => t.id === this.selectedMedia.media_type_id) || null;
-    },
-    newMediaFields() {
-      return this.normalizeFields(this.newMediaType?.fields || []);
-    },
-    selectedMediaFields() {
-      return this.normalizeFields(this.selectedMediaType?.fields || []);
-    },
-    newMediaTypeHasTemplate() {
-      return Boolean(this.newMediaType && String(this.newMediaType.template || '').trim());
-    },
-    selectedMediaTypeHasTemplate() {
-      return Boolean(this.selectedMediaType && String(this.selectedMediaType.template || '').trim());
-    },
   },
   watch: {
-    'newMedia.media_type_id'(value) {
-      this.applyMediaTypeDefaults(this.newMedia, value, false);
-    },
-    'selectedMedia.media_type_id'(value) {
-      this.applyMediaTypeDefaults(this.selectedMedia, value, true);
-    },
     search() {
       this.currentPage = 1;
       this.loadMedia(true);
@@ -360,7 +315,6 @@ export default {
     },
   },
   created() {
-    this.loadMediaTypes();
     this.loadMedia(true);
   },
   methods: {
@@ -433,7 +387,7 @@ export default {
         await Promise.all(this.selectedMediaRows.map((media) => {
           const payload = {
             name: media.name,
-            media_type_id: media.media_type_id,
+            type: media.type,
             target: media.target,
             enabled: enabledOverride === 'nochange' ? media.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? media.status : statusOverride,
@@ -456,22 +410,6 @@ export default {
         this.$refs.mediaTableRef.clearSelection();
       }
       this.selectedMediaRows = [];
-    },
-    async loadMediaTypes() {
-      try {
-        const mediaTypeResp = await fetchMediaTypeData({ limit: 100, offset: 0 });
-        const typeData = Array.isArray(mediaTypeResp) ? mediaTypeResp : (mediaTypeResp.data || mediaTypeResp.mediaTypes || []);
-        this.mediaTypeOptions = typeData.map((t) => ({
-          id: t.ID || t.id || 0,
-          name: t.Name || t.name || '',
-          type: t.Type || t.type || '',
-          description: t.Description || t.description || '',
-          template: t.Template || t.template || '',
-          fields: t.Fields || t.fields || [],
-        }));
-      } catch (err) {
-        console.error('Error loading media types:', err);
-      }
     },
     async loadMedia(reset = false) {
       if (reset) {
@@ -496,7 +434,7 @@ export default {
         const mapped = data.map((m) => ({
           id: m.ID || m.id || 0,
           name: m.Name || m.name || '',
-          media_type_id: m.MediaTypeID || m.media_type_id || 0,
+          type: m.Type || m.type || 'email',
           target: m.Target || m.target || '',
           enabled: m.Enabled ?? m.enabled ?? 1,
           status: m.Status ?? m.status ?? 0,
@@ -515,25 +453,21 @@ export default {
     },
     openCreate() {
       this.createDialogVisible = true;
-      this.newMedia = { name: '', media_type_id: 0, target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newMedia = { name: '', media_type_id: 0, target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     async onCreate() {
       if (!this.newMedia.name) {
         ElMessage.warning(this.$t('media.validationName'));
         return;
       }
-      if (!this.newMedia.media_type_id) {
-        ElMessage.warning(this.$t('media.validationType'));
-        return;
-      }
       try {
         await addMedia({
           name: this.newMedia.name,
-          media_type_id: this.newMedia.media_type_id,
+          type: this.newMedia.type,
           target: this.newMedia.target,
           params: this.newMedia.params || {},
           enabled: this.newMedia.enabled,
@@ -542,7 +476,7 @@ export default {
         });
         await this.loadMedia(true);
         this.createDialogVisible = false;
-        this.newMedia = { name: '', media_type_id: 0, target: '', params: {}, enabled: 1, status: 1, description: '' };
+        this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
         ElMessage.success(this.$t('media.created'));
       } catch (err) {
         ElMessage.error(this.$t('media.createFailed') + ': ' + (err.message || ''));
@@ -553,7 +487,6 @@ export default {
         ...media,
         params: media.params || {},
       };
-      this.applyMediaTypeDefaults(this.selectedMedia, this.selectedMedia.media_type_id, true);
       this.propertiesDialogVisible = true;
     },
     cancelProperties() {
@@ -563,7 +496,7 @@ export default {
       try {
         await updateMedia(this.selectedMedia.id, {
           name: this.selectedMedia.name,
-          media_type_id: this.selectedMedia.media_type_id,
+          type: this.selectedMedia.type,
           target: this.selectedMedia.target,
           params: this.selectedMedia.params || {},
           enabled: this.selectedMedia.enabled,
@@ -576,39 +509,6 @@ export default {
       } catch (err) {
         ElMessage.error(this.$t('media.updateFailed') + ': ' + (err.message || ''));
       }
-    },
-    normalizeFields(fields) {
-      return (fields || []).filter((field) => field && String(field.key || '').trim() !== '');
-    },
-    fieldLabel(field) {
-      return field.label || field.key;
-    },
-    fieldPlaceholder(field) {
-      if (field.default) return `${this.$t('media.paramsHint')}: ${field.default}`;
-      return this.$t('media.paramsHint');
-    },
-    applyMediaTypeDefaults(model, mediaTypeId, preserveExisting) {
-      const mediaType = this.mediaTypeOptions.find((t) => t.id === mediaTypeId);
-      const fields = this.normalizeFields(mediaType?.fields || []);
-      const nextParams = {};
-      fields.forEach((field) => {
-        const key = field.key;
-        const existing = model.params ? model.params[key] : undefined;
-        if (preserveExisting && existing !== undefined && existing !== '') {
-          nextParams[key] = existing;
-          return;
-        }
-        if (field.default !== undefined && field.default !== null && field.default !== '') {
-          nextParams[key] = field.default;
-          return;
-        }
-        nextParams[key] = '';
-      });
-      model.params = nextParams;
-    },
-    mediaTypeName(id) {
-      const found = this.mediaTypeOptions.find((t) => t.id === id);
-      return found ? found.name : id;
     },
     onDelete(media) {
       ElMessageBox.confirm(
