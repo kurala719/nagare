@@ -26,6 +26,16 @@ type Host struct {
 	SSHUser           string `gorm:"column:ssh_user"`
 	SSHPassword       string `gorm:"column:ssh_password"`
 	SSHPort           int    `gorm:"column:ssh_port;default:22"`
+	// SNMP Configuration
+	SNMPCommunity       string `gorm:"column:snmp_community"`
+	SNMPVersion         string `gorm:"column:snmp_version"` // "v1", "v2c", "v3"
+	SNMPPort            int    `gorm:"column:snmp_port;default:161"`
+	SNMPV3User          string `gorm:"column:snmp_v3_user"`
+	SNMPV3AuthPass      string `gorm:"column:snmp_v3_auth_pass"`
+	SNMPV3PrivPass      string `gorm:"column:snmp_v3_priv_pass"`
+	SNMPV3AuthProtocol  string `gorm:"column:snmp_v3_auth_protocol"`  // "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512"
+	SNMPV3PrivProtocol  string `gorm:"column:snmp_v3_priv_protocol"`  // "DES", "AES", "AES128", "AES192", "AES256"
+	SNMPV3SecurityLevel string `gorm:"column:snmp_v3_security_level"` // "NoAuthNoPriv", "AuthNoPriv", "AuthPriv"
 	LastSyncAt        *time.Time
 	ExternalSource    string `gorm:"column:external_source"`
 }

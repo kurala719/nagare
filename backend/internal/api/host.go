@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -257,4 +258,24 @@ func PushHostsFromMonitorCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccess(c, http.StatusOK, results)
+}
+
+func TestSNMPCtrl(c *gin.Context) {
+	fmt.Printf("API Debug: TestSNMPCtrl handler entered for ID %s\n", c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		fmt.Printf("API Debug: TestSNMPCtrl failed to parse ID: %v\n", err)
+		respondBadRequest(c, "invalid host ID")
+		return
+	}
+
+	result, err := service.TestSNMPServ(uint(id))
+	if err != nil {
+		fmt.Printf("API Debug: TestSNMPCtrl service call failed: %v\n", err)
+		respondError(c, err)
+		return
+	}
+	fmt.Printf("API Debug: TestSNMPCtrl success: %+v\n", result)
+	fmt.Printf("API Debug: Sending response to client for ID %d\n", id)
+	respondSuccess(c, http.StatusOK, result)
 }

@@ -6,64 +6,65 @@ import (
 )
 
 func setupMonitorRoutes(rg *gin.RouterGroup) {
-	// Public event token refresh - no auth required, uses event token
-	monitorsPublic := rg.Group("/monitors")
-	monitorsPublic.POST("/:id/event-token/refresh", api.RefreshMonitorEventTokenCtrl)
+	monitors := rg.Group("/monitors")
+	{
+		// Public event token refresh - no auth required, uses event token
+		monitors.POST("/:id/event-token/refresh", api.RefreshMonitorEventTokenCtrl)
 
-	// Routes with privilege level 1
-	monitorsRead := rg.Group("/monitors", api.PrivilegesMiddleware(1))
-	monitorsRead.GET("", api.SearchMonitorsCtrl)
-	monitorsRead.GET("/:id", api.GetMonitorByIDCtrl)
+		// Privilege level 1
+		monitors.GET("", api.PrivilegesMiddleware(1), api.SearchMonitorsCtrl)
+		monitors.GET("/:id", api.PrivilegesMiddleware(1), api.GetMonitorByIDCtrl)
 
-	// Routes with privilege level 2
-	monitorsWrite := rg.Group("/monitors", api.PrivilegesMiddleware(2))
-	monitorsWrite.POST("", api.AddMonitorCtrl)
-	monitorsWrite.DELETE("/:id", api.DeleteMonitorByIDCtrl)
-	monitorsWrite.PUT("/:id", api.UpdateMonitorCtrl)
-	monitorsWrite.POST("/:id/login", api.LoginMonitorCtrl)
-	monitorsWrite.POST("/:id/event-token", api.RegenerateMonitorEventTokenCtrl)
-	monitorsWrite.POST("/check", api.CheckAllMonitorsStatusCtrl)
-	monitorsWrite.POST("/:id/check", api.CheckMonitorStatusCtrl)
+		// Privilege level 2
+		monitors.POST("", api.PrivilegesMiddleware(2), api.AddMonitorCtrl)
+		monitors.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteMonitorByIDCtrl)
+		monitors.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateMonitorCtrl)
+		monitors.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginMonitorCtrl)
+		monitors.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateMonitorEventTokenCtrl)
+		monitors.POST("/check", api.PrivilegesMiddleware(2), api.CheckAllMonitorsStatusCtrl)
+		monitors.POST("/:id/check", api.PrivilegesMiddleware(2), api.CheckMonitorStatusCtrl)
+	}
 }
 
 func setupAlarmRoutes(rg *gin.RouterGroup) {
-	// Public event token refresh - no auth required, uses event token
-	alarmsPublic := rg.Group("/alarms")
-	alarmsPublic.POST("/:id/event-token/refresh", api.RefreshAlarmEventTokenCtrl)
+	alarms := rg.Group("/alarms")
+	{
+		// Public event token refresh - no auth required, uses event token
+		alarms.POST("/:id/event-token/refresh", api.RefreshAlarmEventTokenCtrl)
 
-	// Routes with privilege level 1
-	alarmsRead := rg.Group("/alarms", api.PrivilegesMiddleware(1))
-	alarmsRead.GET("", api.SearchAlarmsCtrl)
-	alarmsRead.GET("/:id", api.GetAlarmByIDCtrl)
+		// Privilege level 1
+		alarms.GET("", api.PrivilegesMiddleware(1), api.SearchAlarmsCtrl)
+		alarms.GET("/:id", api.PrivilegesMiddleware(1), api.GetAlarmByIDCtrl)
 
-	// Routes with privilege level 2
-	alarmsWrite := rg.Group("/alarms", api.PrivilegesMiddleware(2))
-	alarmsWrite.POST("", api.AddAlarmCtrl)
-	alarmsWrite.DELETE("/:id", api.DeleteAlarmByIDCtrl)
-	alarmsWrite.PUT("/:id", api.UpdateAlarmCtrl)
-	alarmsWrite.POST("/:id/login", api.LoginAlarmCtrl)
-	alarmsWrite.POST("/:id/event-token", api.RegenerateAlarmEventTokenCtrl)
-	alarmsWrite.POST("/:id/setup-media", api.SetupAlarmMediaTypeCtrl)
+		// Privilege level 2
+		alarms.POST("", api.PrivilegesMiddleware(2), api.AddAlarmCtrl)
+		alarms.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteAlarmByIDCtrl)
+		alarms.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateAlarmCtrl)
+		alarms.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
+		alarms.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
+		alarms.POST("/:id/setup-media", api.PrivilegesMiddleware(2), api.SetupAlarmMediaTypeCtrl)
+	}
 }
 
 func setupHostRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	hostsRead := rg.Group("/hosts", api.PrivilegesMiddleware(1))
-	hostsRead.GET("", api.SearchHostsCtrl)
-	hostsRead.GET("/:id", api.GetHostByIDCtrl)
-	hostsRead.GET("/:id/history", api.GetHostHistoryCtrl)
-	hostsRead.POST("/:id/consult", api.ConsultHostCtrl)
-	hostsRead.GET("/:id/ssh", api.HandleWebSSH)
+	hosts := rg.Group("/hosts")
+	{
+		// Privilege level 1
+		hosts.GET("", api.PrivilegesMiddleware(1), api.SearchHostsCtrl)
+		hosts.GET("/:id", api.PrivilegesMiddleware(1), api.GetHostByIDCtrl)
+		hosts.GET("/:id/history", api.PrivilegesMiddleware(1), api.GetHostHistoryCtrl)
+		hosts.POST("/:id/consult", api.PrivilegesMiddleware(1), api.ConsultHostCtrl)
+		hosts.GET("/:id/ssh", api.PrivilegesMiddleware(1), api.HandleWebSSH)
+
+		// Privilege level 2
+		hosts.POST("", api.PrivilegesMiddleware(2), api.AddHostCtrl)
+		hosts.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateHostCtrl)
+		hosts.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteHostByIDCtrl)
+	}
 
 	// Generic terminal route
 	terminal := rg.Group("/terminal", api.PrivilegesMiddleware(1))
 	terminal.GET("/ssh", api.HandleWebSSH)
-
-	// Routes with privilege level 2
-	hostsWrite := rg.Group("/hosts", api.PrivilegesMiddleware(2))
-	hostsWrite.POST("", api.AddHostCtrl)
-	hostsWrite.PUT("/:id", api.UpdateHostCtrl)
-	hostsWrite.DELETE("/:id", api.DeleteHostByIDCtrl)
 
 	// Monitor hosts routes with privilege level 2
 	monitorHosts := rg.Group("/monitors/:id/hosts", api.PrivilegesMiddleware(2))

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"nagare/internal/service/utils"
@@ -459,10 +460,17 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
-		setMonitorStatusError(mid)
-		setHostStatusErrorWithReason(hid, err.Error())
-		LogService("error", "pull items failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
-		return result, fmt.Errorf("failed to get monitor: %w", err)
+		// Fallback: If mid is 0 or not found, try to find the "Nagare Internal" monitor
+		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})
+		if sErr == nil && len(internalMonitors) > 0 {
+			monitor = internalMonitors[0]
+			mid = monitor.ID
+		} else {
+			setMonitorStatusError(mid)
+			setHostStatusErrorWithReason(hid, err.Error())
+			LogService("error", "pull items failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
+			return result, fmt.Errorf("failed to get monitor: %w", err)
+		}
 	}
 
 	if monitor.Status == 0 || monitor.Status == 2 {
@@ -534,13 +542,62 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 	}
 
-	monitorItems, err := client.GetItems(context.Background(), host.Hostid)
+	ctx := context.Background()
+	targetID := host.Hostid
+	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
+		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
+		authPass := host.SNMPV3AuthPass
+		if authPass != "" {
+			if decrypted, err := utils.Decrypt(authPass); err == nil {
+				authPass = decrypted
+			}
+		}
+		privPass := host.SNMPV3PrivPass
+		if privPass != "" {
+			if decrypted, err := utils.Decrypt(privPass); err == nil {
+				privPass = decrypted
+			}
+		}
+
+		snmpCfg := monitors.SnmpConfig{
+			Community:           host.SNMPCommunity,
+			Version:             host.SNMPVersion,
+			Port:                host.SNMPPort,
+			V3User:              host.SNMPV3User,
+			V3AuthPass:          authPass,
+			V3PrivPass:          privPass,
+			V3AuthProtocol:      host.SNMPV3AuthProtocol,
+			V3PrivProtocol:      host.SNMPV3PrivProtocol,
+			V3SecurityLevel:     host.SNMPV3SecurityLevel,
+		}
+		// Use IP address as target for SNMP
+		targetID = host.IPAddr
+		if targetID == "" {
+			targetID = host.Hostid
+		}
+		
+		// Load existing items to pick up custom OIDs
+		items, err := repository.GetItemsByHIDDAO(host.ID)
+		if err == nil && len(items) > 0 {
+			snmpCfg.CustomOIDs = make(map[string]string)
+			for _, it := range items {
+				// If ItemID looks like an OID, add it to poller
+				if strings.HasPrefix(it.ItemID, "1.3.6") || strings.HasPrefix(it.ItemID, ".") {
+					snmpCfg.CustomOIDs[it.ItemID] = it.Name
+				}
+			}
+		}
+		ctx = context.WithValue(ctx, "snmp_config", snmpCfg)
+	}
+
+	monitorItems, err := client.GetItems(ctx, targetID)
 	if err != nil {
+		LogService("error", "poller.GetItems failed", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error(), "target": targetID}, nil, "")
 		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(hid, err.Error())
-		LogService("error", "pull items failed to fetch items", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
+	LogService("info", "poller retrieved items", map[string]interface{}{"host": host.Name, "count": len(monitorItems)}, nil, "")
 	monitorItemIDs := make(map[string]struct{}, len(monitorItems))
 	for _, mItem := range monitorItems {
 		monitorItemIDs[mItem.ID] = struct{}{}
@@ -571,6 +628,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 				result.Failed++
 				continue
 			}
+			fmt.Printf("Service Debug: Added new item %s for host %d\n", mItem.Name, hid)
 			if recordHistory {
 				if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
 					sampledAt := time.Now().UTC()
@@ -583,6 +641,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			result.Added++
 		} else {
 			// Item exists, update it
+			fmt.Printf("Service Debug: Updating existing item %s for host %d\n", mItem.Name, hid)
 			item.Name = mItem.Name
 			item.ExternalHostID = mItem.HostID
 			item.ValueType = mItem.ValueType
@@ -609,6 +668,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 		result.Total++
 	}
+	fmt.Printf("Service Debug: Pull completed for host %d. Results: %+v\n", hid, result)
 
 	localItems, err := repository.GetItemsByHIDDAO(hid)
 	if err == nil {
@@ -623,6 +683,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 
 	_ = recomputeMonitorRelated(mid)
 	SyncEvent("items", mid, hid, result)
+	fmt.Printf("Service Debug: pullItemsFromHostServ finished for host %d\n", hid)
 	return result, nil
 }
 

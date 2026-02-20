@@ -6,21 +6,24 @@ import (
 )
 
 func setupGroupRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	groupsRead := rg.Group("/groups", api.PrivilegesMiddleware(1))
-	groupsRead.GET("", api.SearchGroupsCtrl)
-	groupsRead.GET("/:id", api.GetGroupByIDCtrl)
-	groupsRead.GET("/:id/detail", api.GetGroupDetailCtrl)
+	groups := rg.Group("/groups")
+	{
+		// Routes with privilege level 1
+		groupsRead := groups.Group("", api.PrivilegesMiddleware(1))
+		groupsRead.GET("", api.SearchGroupsCtrl)
+		groupsRead.GET("/:id", api.GetGroupByIDCtrl)
+		groupsRead.GET("/:id/detail", api.GetGroupDetailCtrl)
 
-	// Routes with privilege level 2
-	groupsWrite := rg.Group("/groups", api.PrivilegesMiddleware(2))
-	groupsWrite.POST("", api.AddGroupCtrl)
-	groupsWrite.PUT("/:id", api.UpdateGroupCtrl)
-	groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
-	groupsWrite.POST("/:id/pull", api.PullGroupFromMonitorsCtrl)
-	groupsWrite.POST("/:id/push", api.PushGroupToMonitorsCtrl)
-	groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
-	groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
+		// Routes with privilege level 2
+		groupsWrite := groups.Group("", api.PrivilegesMiddleware(2))
+		groupsWrite.POST("", api.AddGroupCtrl)
+		groupsWrite.PUT("/:id", api.UpdateGroupCtrl)
+		groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
+		groupsWrite.POST("/:id/pull", api.PullGroupFromMonitorsCtrl)
+		groupsWrite.POST("/:id/push", api.PushGroupToMonitorsCtrl)
+		groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
+		groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
+	}
 
 	// Monitor groups routes with privilege level 2
 	monitorGroups := rg.Group("/monitors/:id/groups", api.PrivilegesMiddleware(2))
@@ -29,29 +32,35 @@ func setupGroupRoutes(rg *gin.RouterGroup) {
 }
 
 func setupTriggerRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	triggersRead := rg.Group("/triggers", api.PrivilegesMiddleware(1))
-	triggersRead.GET("", api.SearchTriggersCtrl)
-	triggersRead.GET("/:id", api.GetTriggerByIDCtrl)
+	triggers := rg.Group("/triggers")
+	{
+		// Routes with privilege level 1
+		triggersRead := triggers.Group("", api.PrivilegesMiddleware(1))
+		triggersRead.GET("", api.SearchTriggersCtrl)
+		triggersRead.GET("/:id", api.GetTriggerByIDCtrl)
 
-	// Routes with privilege level 2
-	triggersWrite := rg.Group("/triggers", api.PrivilegesMiddleware(2))
-	triggersWrite.POST("", api.AddTriggerCtrl)
-	triggersWrite.PUT("/:id", api.UpdateTriggerCtrl)
-	triggersWrite.DELETE("/:id", api.DeleteTriggerByIDCtrl)
+		// Routes with privilege level 2
+		triggersWrite := triggers.Group("", api.PrivilegesMiddleware(2))
+		triggersWrite.POST("", api.AddTriggerCtrl)
+		triggersWrite.PUT("/:id", api.UpdateTriggerCtrl)
+		triggersWrite.DELETE("/:id", api.DeleteTriggerByIDCtrl)
+	}
 }
 
 func setupActionRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	actionsRead := rg.Group("/actions", api.PrivilegesMiddleware(1))
-	actionsRead.GET("", api.SearchActionsCtrl)
-	actionsRead.GET("/:id", api.GetActionByIDCtrl)
+	actions := rg.Group("/actions")
+	{
+		// Routes with privilege level 1
+		actionsRead := actions.Group("", api.PrivilegesMiddleware(1))
+		actionsRead.GET("", api.SearchActionsCtrl)
+		actionsRead.GET("/:id", api.GetActionByIDCtrl)
 
-	// Routes with privilege level 2
-	actionsWrite := rg.Group("/actions", api.PrivilegesMiddleware(2))
-	actionsWrite.POST("", api.AddActionCtrl)
-	actionsWrite.PUT("/:id", api.UpdateActionCtrl)
-	actionsWrite.DELETE("/:id", api.DeleteActionByIDCtrl)
+		// Routes with privilege level 2
+		actionsWrite := actions.Group("", api.PrivilegesMiddleware(2))
+		actionsWrite.POST("", api.AddActionCtrl)
+		actionsWrite.PUT("/:id", api.UpdateActionCtrl)
+		actionsWrite.DELETE("/:id", api.DeleteActionByIDCtrl)
+	}
 }
 
 func setupChaosRoutes(rg *gin.RouterGroup) {

@@ -45,7 +45,29 @@ func InitDBTables() error {
 	); err != nil {
 		return err
 	}
-	return applySchemaUpdates()
+	if err := applySchemaUpdates(); err != nil {
+		return err
+	}
+	return ensureDefaultMonitor()
+}
+
+func ensureDefaultMonitor() error {
+	var count int64
+	if err := database.DB.Model(&model.Monitor{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		defaultMonitor := model.Monitor{
+			Name:        "Nagare Internal",
+			URL:         "localhost",
+			Type:        4, // SNMP
+			Enabled:     1,
+			Status:      1,
+			Description: "System default internal monitoring engine",
+		}
+		return database.DB.Create(&defaultMonitor).Error
+	}
+	return nil
 }
 
 func preSchemaUpdates() error {

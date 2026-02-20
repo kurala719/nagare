@@ -14,6 +14,7 @@ const (
 	MonitorZabbix     MonitorType = iota + 1 // 1 = zabbix
 	MonitorPrometheus                        // 2 = prometheus
 	MonitorOther                             // 3 = other
+	MonitorSNMP                              // 4 = snmp
 )
 
 // String returns the string representation of the monitor type
@@ -25,6 +26,8 @@ func (m MonitorType) String() string {
 		return "prometheus"
 	case MonitorOther:
 		return "other"
+	case MonitorSNMP:
+		return "snmp"
 	default:
 		return "unknown"
 	}
@@ -39,6 +42,8 @@ func ParseMonitorType(s int) MonitorType {
 		return MonitorPrometheus
 	case 3:
 		return MonitorOther
+	case 4:
+		return MonitorSNMP
 	default:
 		return MonitorZabbix
 	}
@@ -182,6 +187,8 @@ func NewClient(cfg Config) (*Client, error) {
 		provider, err = NewZabbixProvider(cfg)
 	case MonitorPrometheus:
 		provider, err = NewPrometheusProvider(cfg)
+	case MonitorSNMP:
+		provider, err = NewSnmpProvider(cfg)
 	default:
 		return nil, errors.New("unsupported monitor type")
 	}

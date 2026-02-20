@@ -8,12 +8,14 @@ import (
 func setupUserRoutes(rg *gin.RouterGroup) {
 	// Public auth routes - no authentication required
 	auth := rg.Group("/auth")
-	auth.POST("/login", api.LoginUserCtrl)
-	auth.POST("/register", api.RegisterUserCtrl)
+	{
+		auth.POST("/login", api.LoginUserCtrl)
+		auth.POST("/register", api.RegisterUserCtrl)
 
-	// Reset password - requires privilege 1
-	authProtected := rg.Group("/auth", api.PrivilegesMiddleware(1))
-	authProtected.POST("/reset", api.ResetPasswordCtrl)
+		// Reset password - requires privilege 1
+		authProtected := auth.Group("", api.PrivilegesMiddleware(1))
+		authProtected.POST("/reset", api.ResetPasswordCtrl)
+	}
 
 	// Register applications - requires privilege 3
 	registerApps := rg.Group("/register-applications", api.PrivilegesMiddleware(3))
@@ -27,15 +29,20 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 	registerAppsLegacy.PUT("/:id/approve", api.ApproveRegisterApplicationCtrl)
 	registerAppsLegacy.PUT("/:id/reject", api.RejectRegisterApplicationCtrl)
 
-	// Users routes - requires privilege 2 for read, privilege 3 for write
-	usersRead := rg.Group("/users", api.PrivilegesMiddleware(2))
-	usersRead.GET("", api.SearchUsersCtrl)
-	usersRead.GET("/:id", api.GetUserByIDCtrl)
+	// Users routes
+	users := rg.Group("/users")
+	{
+		// requires privilege 2 for read
+		usersRead := users.Group("", api.PrivilegesMiddleware(2))
+		usersRead.GET("", api.SearchUsersCtrl)
+		usersRead.GET("/:id", api.GetUserByIDCtrl)
 
-	usersWrite := rg.Group("/users", api.PrivilegesMiddleware(3))
-	usersWrite.POST("", api.AddUserCtrl)
-	usersWrite.DELETE("/:id", api.DeleteUserByIDCtrl)
-	usersWrite.PUT("/:id", api.UpdateUserCtrl)
+		// requires privilege 3 for write
+		usersWrite := users.Group("", api.PrivilegesMiddleware(3))
+		usersWrite.POST("", api.AddUserCtrl)
+		usersWrite.DELETE("/:id", api.DeleteUserByIDCtrl)
+		usersWrite.PUT("/:id", api.UpdateUserCtrl)
+	}
 }
 
 func setupUserInformationRoutes(rg *gin.RouterGroup) {

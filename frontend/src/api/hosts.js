@@ -84,3 +84,10 @@ export function pushHostsToMonitor(monitorId) {
     method: 'post'
   })
 }
+
+export function testSNMP(id) {
+  return request({
+    url: `/snmp-poll-direct/${id}`,
+    method: 'post'
+  })
+}

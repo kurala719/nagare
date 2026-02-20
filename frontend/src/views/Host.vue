@@ -30,7 +30,7 @@
       </div>
 
       <div class="action-group">
-        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('hosts.create') }}
         </el-button>
         <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
@@ -62,6 +62,11 @@
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="newHost.hostid" :placeholder="$t('hosts.hostId')" />
       </el-form-item>
+      <el-form-item :label="$t('hosts.monitor')">
+        <el-select v-model="newHost.mid" style="width: 100%;" clearable placeholder="Select Monitor">
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item :label="$t('groups.title')">
           <el-select v-model="newHost.group_id" style="width: 100%;" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
@@ -91,6 +96,58 @@
       </el-form-item>
       <el-form-item :label="$t('hosts.sshPort') || 'SSH Port'">
         <el-input-number v-model="newHost.ssh_port" :min="1" :max="65535" />
+      </el-form-item>
+      <el-divider content-position="left">SNMP Configuration</el-divider>
+      <el-form-item label="SNMP Version">
+        <el-select v-model="newHost.snmp_version" style="width: 100%;">
+          <el-option label="v1" value="v1" />
+          <el-option label="v2c" value="v2c" />
+          <el-option label="v3" value="v3" />
+        </el-select>
+      </el-form-item>
+      <template v-if="newHost.snmp_version !== 'v3'">
+        <el-form-item label="SNMP Community">
+          <el-input v-model="newHost.snmp_community" placeholder="public" />
+        </el-form-item>
+      </template>
+      <template v-else>
+        <el-form-item label="Security Level">
+          <el-select v-model="newHost.snmp_v3_security_level" style="width: 100%;">
+            <el-option label="NoAuthNoPriv" value="NoAuthNoPriv" />
+            <el-option label="AuthNoPriv" value="AuthNoPriv" />
+            <el-option label="AuthPriv" value="AuthPriv" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="v3 User">
+          <el-input v-model="newHost.snmp_v3_user" />
+        </el-form-item>
+        <template v-if="newHost.snmp_v3_security_level !== 'NoAuthNoPriv'">
+          <el-form-item label="Auth Password">
+            <el-input v-model="newHost.snmp_v3_auth_pass" type="password" show-password />
+          </el-form-item>
+          <el-form-item label="Auth Protocol">
+            <el-select v-model="newHost.snmp_v3_auth_protocol" style="width: 100%;">
+              <el-option label="MD5" value="MD5" />
+              <el-option label="SHA" value="SHA" />
+              <el-option label="SHA256" value="SHA256" />
+            </el-select>
+          </el-form-item>
+        </template>
+        <template v-if="newHost.snmp_v3_security_level === 'AuthPriv'">
+          <el-form-item label="Priv Password">
+            <el-input v-model="newHost.snmp_v3_priv_pass" type="password" show-password />
+          </el-form-item>
+          <el-form-item label="Priv Protocol">
+            <el-select v-model="newHost.snmp_v3_priv_protocol" style="width: 100%;">
+              <el-option label="DES" value="DES" />
+              <el-option label="AES" value="AES" />
+              <el-option label="AES128" value="AES128" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </template>
+      <el-form-item label="SNMP Port">
+        <el-input-number v-model="newHost.snmp_port" :min="1" :max="65535" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -238,6 +295,11 @@
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="selectedHost.hostid" />
       </el-form-item>
+      <el-form-item :label="$t('hosts.monitor')">
+        <el-select v-model="selectedHost.mid" style="width: 100%;" clearable placeholder="Select Monitor">
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item :label="$t('groups.title')">
         <el-select v-model="selectedHost.group_id" style="width: 100%;" clearable>
           <el-option :label="$t('hosts.filterAll')" :value="0" />
@@ -268,9 +330,62 @@
       <el-form-item :label="$t('hosts.sshPort') || 'SSH Port'">
         <el-input-number v-model="selectedHost.ssh_port" :min="1" :max="65535" />
       </el-form-item>
+      <el-divider content-position="left">SNMP Configuration</el-divider>
+      <el-form-item label="SNMP Version">
+        <el-select v-model="selectedHost.snmp_version" style="width: 100%;">
+          <el-option label="v1" value="v1" />
+          <el-option label="v2c" value="v2c" />
+          <el-option label="v3" value="v3" />
+        </el-select>
+      </el-form-item>
+      <template v-if="selectedHost.snmp_version !== 'v3'">
+        <el-form-item label="SNMP Community">
+          <el-input v-model="selectedHost.snmp_community" placeholder="public" />
+        </el-form-item>
+      </template>
+      <template v-else>
+        <el-form-item label="Security Level">
+          <el-select v-model="selectedHost.snmp_v3_security_level" style="width: 100%;">
+            <el-option label="NoAuthNoPriv" value="NoAuthNoPriv" />
+            <el-option label="AuthNoPriv" value="AuthNoPriv" />
+            <el-option label="AuthPriv" value="AuthPriv" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="v3 User">
+          <el-input v-model="selectedHost.snmp_v3_user" />
+        </el-form-item>
+        <template v-if="selectedHost.snmp_v3_security_level !== 'NoAuthNoPriv'">
+          <el-form-item label="Auth Password">
+            <el-input v-model="selectedHost.snmp_v3_auth_pass" type="password" show-password :placeholder="$t('hosts.passwordPlaceholder')" />
+          </el-form-item>
+          <el-form-item label="Auth Protocol">
+            <el-select v-model="selectedHost.snmp_v3_auth_protocol" style="width: 100%;">
+              <el-option label="MD5" value="MD5" />
+              <el-option label="SHA" value="SHA" />
+              <el-option label="SHA256" value="SHA256" />
+            </el-select>
+          </el-form-item>
+        </template>
+        <template v-if="selectedHost.snmp_v3_security_level === 'AuthPriv'">
+          <el-form-item label="Priv Password">
+            <el-input v-model="selectedHost.snmp_v3_priv_pass" type="password" show-password :placeholder="$t('hosts.passwordPlaceholder')" />
+          </el-form-item>
+          <el-form-item label="Priv Protocol">
+            <el-select v-model="selectedHost.snmp_v3_priv_protocol" style="width: 100%;">
+              <el-option label="DES" value="DES" />
+              <el-option label="AES" value="AES" />
+              <el-option label="AES128" value="AES128" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </template>
+      <el-form-item label="SNMP Port">
+        <el-input-number v-model="selectedHost.snmp_port" :min="1" :max="65535" />
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="cancelProperties">{{ $t('hosts.cancel') }}</el-button>
+      <el-button type="warning" plain @click="onTestSNMP" :loading="testingSNMP">Test SNMP</el-button>
       <el-button type="primary" @click="saveProperties">{{ $t('hosts.save') }}</el-button>
     </template>
   </el-dialog>
@@ -338,7 +453,7 @@
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor } from '@/api/hosts';
+import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor, testSNMP } from '@/api/hosts';
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
@@ -356,6 +471,16 @@ interface Host {
   ip_addr: string;
   status_reason?: string;
   monitor_name?: string;
+  // SNMP Fields
+  snmp_community?: string;
+  snmp_version?: string;
+  snmp_port?: number;
+  snmp_v3_user?: string;
+  snmp_v3_auth_pass?: string;
+  snmp_v3_priv_pass?: string;
+  snmp_v3_auth_protocol?: string;
+  snmp_v3_priv_protocol?: string;
+  snmp_v3_security_level?: string;
 }
 
 export default {
@@ -396,8 +521,53 @@ export default {
       bulkDeleting: false,
       pullingHosts: false,
       pushingHosts: false,
-      newHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 },
-      selectedHost: { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 },
+      testingSNMP: false,
+      newHost: { 
+        id: 0, 
+        name: '', 
+        ip_addr: '', 
+        hostid: '', 
+        group_id: 0, 
+        description: '', 
+        enabled: 1, 
+        status: 1, 
+        mid: 0, 
+        ssh_user: '', 
+        ssh_password: '', 
+        ssh_port: 22,
+        snmp_community: 'public',
+        snmp_version: 'v2c',
+        snmp_port: 161,
+        snmp_v3_user: '',
+        snmp_v3_auth_pass: '',
+        snmp_v3_priv_pass: '',
+        snmp_v3_auth_protocol: 'SHA',
+        snmp_v3_priv_protocol: 'AES',
+        snmp_v3_security_level: 'NoAuthNoPriv'
+      },
+      selectedHost: { 
+        id: 0, 
+        name: '', 
+        ip_addr: '', 
+        hostid: '', 
+        group_id: 0, 
+        description: '', 
+        enabled: 1, 
+        status: 1, 
+        mid: 0, 
+        ssh_user: '', 
+        ssh_password: '', 
+        ssh_port: 22,
+        snmp_community: '',
+        snmp_version: '',
+        snmp_port: 161,
+        snmp_v3_user: '',
+        snmp_v3_auth_pass: '',
+        snmp_v3_priv_pass: '',
+        snmp_v3_auth_protocol: '',
+        snmp_v3_priv_protocol: '',
+        snmp_v3_security_level: ''
+      },
       loading: false,
       error: null,
       search: '',
@@ -496,6 +666,10 @@ export default {
         }
       }
     },
+    openCreateDialog() {
+      this.resetNewHost();
+      this.createDialogVisible = true;
+    },
     async loadMonitors() {
       try {
         console.log('Host page loading monitors...')
@@ -517,6 +691,17 @@ export default {
           ),
           name: m.Name || m.name || m.MonitorName || m.monitor_name || m.monitorName || m.Monitor?.Name || m.Monitor?.name || '',
         }));
+        
+        // Default new host to 'Nagare Internal' if it exists, otherwise the first monitor
+        if (this.monitors.length > 0 && (this.newHost.mid === 0 || !this.newHost.mid)) {
+          const internal = this.monitors.find(m => m.name.includes('Nagare Internal'));
+          if (internal) {
+            this.newHost.mid = internal.id;
+          } else {
+            this.newHost.mid = this.monitors[0].id;
+          }
+        }
+        
         console.log('Host page monitors loaded:', this.monitors.length)
       } catch (err) {
         console.error('Error loading monitors:', err);
@@ -624,7 +809,18 @@ export default {
       }
     },
     openProperties(host: Host) {
-      this.selectedHost = { ...host };
+      this.selectedHost = { 
+        ...host,
+        snmp_community: host.snmp_community || 'public',
+        snmp_version: host.snmp_version || 'v2c',
+        snmp_port: host.snmp_port || 161,
+        snmp_v3_user: host.snmp_v3_user || '',
+        snmp_v3_auth_pass: '',
+        snmp_v3_priv_pass: '',
+        snmp_v3_auth_protocol: host.snmp_v3_auth_protocol || 'SHA',
+        snmp_v3_priv_protocol: host.snmp_v3_priv_protocol || 'AES',
+        snmp_v3_security_level: host.snmp_v3_security_level || 'NoAuthNoPriv'
+      };
       this.propertiesDialogVisible = true;
     },
     viewItems(host: Host) {
@@ -854,6 +1050,7 @@ export default {
       try {
         const updateData = {
           name: this.selectedHost.name,
+          m_id: this.selectedHost.mid,
           ip_addr: this.selectedHost.ip_addr,
           hostid: this.selectedHost.hostid,
           group_id: this.selectedHost.group_id,
@@ -863,11 +1060,20 @@ export default {
           ssh_user: this.selectedHost.ssh_user,
           ssh_password: this.selectedHost.ssh_password,
           ssh_port: this.selectedHost.ssh_port,
+          snmp_community: this.selectedHost.snmp_community,
+          snmp_version: this.selectedHost.snmp_version,
+          snmp_port: this.selectedHost.snmp_port,
+          snmp_v3_user: this.selectedHost.snmp_v3_user,
+          snmp_v3_auth_pass: this.selectedHost.snmp_v3_auth_pass,
+          snmp_v3_priv_pass: this.selectedHost.snmp_v3_priv_pass,
+          snmp_v3_auth_protocol: this.selectedHost.snmp_v3_auth_protocol,
+          snmp_v3_priv_protocol: this.selectedHost.snmp_v3_priv_protocol,
+          snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
         };
         await updateHost(this.selectedHost.id, updateData);
         const idx = this.hosts.findIndex((h: Host) => h.id === this.selectedHost.id);
         if (idx !== -1) {
-          this.hosts.splice(idx, 1, { ...this.selectedHost, ssh_password: '' });
+          this.hosts.splice(idx, 1, { ...this.selectedHost, ssh_password: '', snmp_v3_auth_pass: '', snmp_v3_priv_pass: '' });
         }
         this.propertiesDialogVisible = false;
         ElMessage({
@@ -880,6 +1086,50 @@ export default {
           message: this.$t('hosts.updateFailed') + ': ' + (err.message || this.$t('hosts.unknownError')),
         });
         console.error('Error updating host:', err);
+      }
+    },
+    async onTestSNMP() {
+      if (!this.selectedHost.id) return;
+      this.testingSNMP = true;
+      try {
+        // First save properties to ensure backend has latest config
+        const updateData = {
+          name: this.selectedHost.name,
+          m_id: this.selectedHost.mid,
+          ip_addr: this.selectedHost.ip_addr,
+          hostid: this.selectedHost.hostid,
+          group_id: this.selectedHost.group_id,
+          description: this.selectedHost.description,
+          enabled: this.selectedHost.enabled,
+          status: this.selectedHost.status,
+          ssh_user: this.selectedHost.ssh_user,
+          ssh_password: this.selectedHost.ssh_password,
+          ssh_port: this.selectedHost.ssh_port,
+          snmp_community: this.selectedHost.snmp_community,
+          snmp_version: this.selectedHost.snmp_version,
+          snmp_port: this.selectedHost.snmp_port,
+          snmp_v3_user: this.selectedHost.snmp_v3_user,
+          snmp_v3_auth_pass: this.selectedHost.snmp_v3_auth_pass,
+          snmp_v3_priv_pass: this.selectedHost.snmp_v3_priv_pass,
+          snmp_v3_auth_protocol: this.selectedHost.snmp_v3_auth_protocol,
+          snmp_v3_priv_protocol: this.selectedHost.snmp_v3_priv_protocol,
+          snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
+        };
+        await updateHost(this.selectedHost.id, updateData);
+        
+        const res = await testSNMP(this.selectedHost.id);
+        if (res.success) {
+          ElMessage.success('SNMP Test Successful: Metrics retrieved');
+          await this.loadHosts();
+        } else {
+          ElMessage.error('SNMP Test Failed: ' + (res.error || 'The device did not return a valid response. Check OIDs and Community string.'));
+        }
+      } catch (err) {
+        console.error('SNMP Test Exception:', err);
+        const detail = err.response?.data?.error || err.message || 'Request timed out or network error';
+        ElMessage.error('SNMP Test Error: ' + detail);
+      } finally {
+        this.testingSNMP = false;
       }
     },
     onDelete(host: Host) {
@@ -928,6 +1178,7 @@ export default {
       try {
         const hostData = {
           name: this.newHost.name,
+          m_id: this.newHost.mid,
           ip_addr: this.newHost.ip_addr,
           hostid: this.newHost.hostid,
           group_id: this.newHost.group_id,
@@ -937,6 +1188,15 @@ export default {
           ssh_user: this.newHost.ssh_user,
           ssh_password: this.newHost.ssh_password,
           ssh_port: this.newHost.ssh_port,
+          snmp_community: this.newHost.snmp_community,
+          snmp_version: this.newHost.snmp_version,
+          snmp_port: this.newHost.snmp_port,
+          snmp_v3_user: this.newHost.snmp_v3_user,
+          snmp_v3_auth_pass: this.newHost.snmp_v3_auth_pass,
+          snmp_v3_priv_pass: this.newHost.snmp_v3_priv_pass,
+          snmp_v3_auth_protocol: this.newHost.snmp_v3_auth_protocol,
+          snmp_v3_priv_protocol: this.newHost.snmp_v3_priv_protocol,
+          snmp_v3_security_level: this.newHost.snmp_v3_security_level,
         };
         
         // Call API to add host to database
@@ -945,7 +1205,7 @@ export default {
         // Reload hosts from database to get the updated list
         await this.loadHosts(true);
         
-        this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0, ssh_user: '', ssh_password: '', ssh_port: 22 };
+        this.resetNewHost();
         this.createDialogVisible = false;
         ElMessage({
           type: 'success',
@@ -961,7 +1221,39 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newHost = { id: 0, name: '', ip_addr: '', hostid: '', group_id: 0, description: '', enabled: 1, status: 1, mid: 0 };
+      this.resetNewHost();
+    },
+    resetNewHost() {
+      let defaultMid = (this.monitors && this.monitors.length > 0) ? this.monitors[0].id : 0;
+      if (this.monitors && this.monitors.length > 0) {
+        const internal = this.monitors.find(m => m.name.includes('Nagare Internal'));
+        if (internal) {
+          defaultMid = internal.id;
+        }
+      }
+      this.newHost = { 
+        id: 0, 
+        name: '', 
+        ip_addr: '', 
+        hostid: '', 
+        group_id: 0, 
+        description: '', 
+        enabled: 1, 
+        status: 1, 
+        mid: defaultMid, 
+        ssh_user: '', 
+        ssh_password: '', 
+        ssh_port: 22,
+        snmp_community: 'public', 
+        snmp_version: 'v2c', 
+        snmp_port: 161, 
+        snmp_v3_user: '', 
+        snmp_v3_auth_pass: '', 
+        snmp_v3_priv_pass: '',
+        snmp_v3_auth_protocol: 'SHA', 
+        snmp_v3_priv_protocol: 'AES', 
+        snmp_v3_security_level: 'NoAuthNoPriv'
+      };
     },
     async consultAI(host: Host) {
       this.currentHostForAI = host;

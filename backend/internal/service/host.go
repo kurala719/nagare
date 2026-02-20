@@ -25,6 +25,16 @@ type HostReq struct {
 	SSHUser     string `json:"ssh_user"`
 	SSHPassword string `json:"ssh_password"`
 	SSHPort     int    `json:"ssh_port"`
+	// SNMP Configuration
+	SNMPCommunity       string `json:"snmp_community"`
+	SNMPVersion         string `json:"snmp_version"`
+	SNMPPort            int    `json:"snmp_port"`
+	SNMPV3User          string `json:"snmp_v3_user"`
+	SNMPV3AuthPass      string `json:"snmp_v3_auth_pass"`
+	SNMPV3PrivPass      string `json:"snmp_v3_priv_pass"`
+	SNMPV3AuthProtocol  string `json:"snmp_v3_auth_protocol"`
+	SNMPV3PrivProtocol  string `json:"snmp_v3_priv_protocol"`
+	SNMPV3SecurityLevel string `json:"snmp_v3_security_level"`
 	LastSyncAt  *time.Time `json:"last_sync_at,omitempty"`
 	ExternalSource string `json:"external_source,omitempty"`
 }
@@ -44,6 +54,14 @@ type HostResp struct {
 	Comment     string `json:"comment"`
 	SSHUser     string `json:"ssh_user"`
 	SSHPort     int    `json:"ssh_port"`
+	// SNMP Configuration
+	SNMPCommunity       string `json:"snmp_community"`
+	SNMPVersion         string `json:"snmp_version"`
+	SNMPPort            int    `json:"snmp_port"`
+	SNMPV3User          string `json:"snmp_v3_user"`
+	SNMPV3AuthProtocol  string `json:"snmp_v3_auth_protocol"`
+	SNMPV3PrivProtocol  string `json:"snmp_v3_priv_protocol"`
+	SNMPV3SecurityLevel string `json:"snmp_v3_security_level"`
 	LastSyncAt  *time.Time `json:"last_sync_at"`
 	ExternalSource string `json:"external_source"`
 }
@@ -107,6 +125,24 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		Comment:     h.Comment,
 		SSHUser:     h.SSHUser,
 		SSHPort:     h.SSHPort,
+		SNMPCommunity:       h.SNMPCommunity,
+		SNMPVersion:         h.SNMPVersion,
+		SNMPPort:            h.SNMPPort,
+		SNMPV3User:          h.SNMPV3User,
+		SNMPV3AuthPass:      h.SNMPV3AuthPass,
+		SNMPV3PrivPass:      h.SNMPV3PrivPass,
+		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
+		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
+		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
+	}
+	if h.SNMPPort == 0 {
+		newHost.SNMPPort = 161
+	}
+	if h.SNMPVersion == "" {
+		newHost.SNMPVersion = "v2c"
+	}
+	if h.SNMPCommunity == "" {
+		newHost.SNMPCommunity = "public"
 	}
 	if h.SSHPort == 0 {
 		newHost.SSHPort = 22
@@ -117,8 +153,27 @@ func AddHostServ(h HostReq) (HostResp, error) {
 			newHost.SSHPassword = encrypted
 		}
 	}
-	if h.MID > 0 {
-		if monitor, err := repository.GetMonitorByIDDAO(h.MID); err == nil {
+	if h.SNMPV3AuthPass != "" {
+		encrypted, err := utils.Encrypt(h.SNMPV3AuthPass)
+		if err == nil {
+			newHost.SNMPV3AuthPass = encrypted
+		}
+	}
+	if h.SNMPV3PrivPass != "" {
+		encrypted, err := utils.Encrypt(h.SNMPV3PrivPass)
+		if err == nil {
+			newHost.SNMPV3PrivPass = encrypted
+		}
+	}
+	if h.MID == 0 {
+		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})
+		if sErr == nil && len(internalMonitors) > 0 {
+			newHost.MonitorID = internalMonitors[0].ID
+		}
+	}
+
+	if newHost.MonitorID > 0 {
+		if monitor, err := repository.GetMonitorByIDDAO(newHost.MonitorID); err == nil {
 			newHost.Status = determineHostStatus(newHost, monitor)
 		}
 	} else {
@@ -171,6 +226,15 @@ func UpdateHostServ(id uint, h HostReq) error {
 		Comment:     h.Comment,
 		SSHUser:     h.SSHUser,
 		SSHPort:     h.SSHPort,
+		SNMPCommunity:       h.SNMPCommunity,
+		SNMPVersion:         h.SNMPVersion,
+		SNMPPort:            h.SNMPPort,
+		SNMPV3User:          h.SNMPV3User,
+		SNMPV3AuthPass:      h.SNMPV3AuthPass,
+		SNMPV3PrivPass:      h.SNMPV3PrivPass,
+		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
+		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
+		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
 		LastSyncAt:  existing.LastSyncAt,
 		ExternalSource: existing.ExternalSource,
 	}
@@ -190,6 +254,22 @@ func UpdateHostServ(id uint, h HostReq) error {
 		}
 	} else {
 		updated.SSHPassword = existing.SSHPassword
+	}
+	if h.SNMPV3AuthPass != "" {
+		encrypted, err := utils.Encrypt(h.SNMPV3AuthPass)
+		if err == nil {
+			updated.SNMPV3AuthPass = encrypted
+		}
+	} else {
+		updated.SNMPV3AuthPass = existing.SNMPV3AuthPass
+	}
+	if h.SNMPV3PrivPass != "" {
+		encrypted, err := utils.Encrypt(h.SNMPV3PrivPass)
+		if err == nil {
+			updated.SNMPV3PrivPass = encrypted
+		}
+	} else {
+		updated.SNMPV3PrivPass = existing.SNMPV3PrivPass
 	}
 	if monitorID > 0 {
 		if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
@@ -338,6 +418,13 @@ func hostToResp(h model.Host) HostResp {
 		Comment:     h.Comment,
 		SSHUser:     h.SSHUser,
 		SSHPort:     h.SSHPort,
+		SNMPCommunity:       h.SNMPCommunity,
+		SNMPVersion:         h.SNMPVersion,
+		SNMPPort:            h.SNMPPort,
+		SNMPV3User:          h.SNMPV3User,
+		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
+		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
+		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
 		LastSyncAt:  h.LastSyncAt,
 		ExternalSource: h.ExternalSource,
 	}
@@ -909,6 +996,44 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 }
 
 // PushHostsFromMonitorServ pushes all hosts from local database to remote monitor
+// TestSNMPServ tests SNMP connectivity for a host
+func TestSNMPServ(hid uint) (SyncResult, error) {
+	fmt.Printf("Service Debug: TestSNMPServ started for Host ID %d\n", hid)
+	host, err := repository.GetHostByIDDAO(hid)
+	if err != nil {
+		fmt.Printf("Service Debug: Host ID %d not found in DB: %v\n", hid, err)
+		return SyncResult{}, err
+	}
+
+	fmt.Printf("Service Debug: Host found: %s, MonitorID: %d\n", host.Name, host.MonitorID)
+	if host.MonitorID == 0 {
+		fmt.Printf("Service Debug: Host %d has no MonitorID assigned\n", hid)
+		return SyncResult{}, fmt.Errorf("host has no monitor assigned")
+	}
+
+	monitor, err := repository.GetMonitorByIDDAO(host.MonitorID)
+	if err != nil {
+		// Fallback: If no monitor assigned, try to find "Nagare Internal"
+		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})
+		if sErr == nil && len(internalMonitors) > 0 {
+			monitor = internalMonitors[0]
+		} else {
+			fmt.Printf("Service Debug: Monitor ID %d not found for Host %d: %v\n", host.MonitorID, hid, err)
+			return SyncResult{}, err
+		}
+	}
+
+	fmt.Printf("Service Debug: Monitor found: %s, Type: %d\n", monitor.Name, monitor.Type)
+	if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
+		fmt.Printf("Service Debug: Monitor %d is type %d, not SNMP (4)\n", monitor.ID, monitor.Type)
+		return SyncResult{}, fmt.Errorf("host is not monitored via SNMP (monitor type: %d)", monitor.Type)
+	}
+
+	// Re-use pullItemsFromHostServ but with recordHistory=false
+	fmt.Printf("Service Debug: Triggering pullItemsFromHostServ for Host %d\n", hid)
+	return pullItemsFromHostServ(monitor.ID, host.ID, false)
+}
+
 func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
