@@ -62,7 +62,7 @@
           <div class="feature-card">
             <div class="feature-icon">🤖</div>
             <h3>AI Alert Diagnosis</h3>
-            <p>Integrated with Gemini, OpenAI, and Ollama to provide real-time analysis of monitoring alerts and logs.</p>
+            <p>Integrated with Gemini and OpenAI to provide real-time analysis of monitoring alerts and logs.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">📚</div>
@@ -87,7 +87,7 @@
           <div class="feature-card">
             <div class="feature-icon">🔔</div>
             <h3>Multi-Channel Alerts</h3>
-            <p>Configurable triggers for Email, Webhooks, SMS, and QQ integration with whitelist management.</p>
+            <p>Configurable triggers for Email, Webhooks, and QQ integration with whitelist management.</p>
           </div>
         </div>
       </div>

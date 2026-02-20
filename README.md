@@ -26,7 +26,7 @@ If you are a developer or an engineer, explore our deep-dive manuals:
 | [**Deployment Guide**](./doc/DEPLOYMENT_GUIDE.md) | Production & Staging | Nginx, systemd, JWT Secrets, HTTPS. |
 | [**Developer Guide**](./doc/DEVELOPER_GUIDE.md) | Code Standards | DDD Layering, Vue 3 Composition API. |
 | [**Integrations**](./doc/INTEGRATIONS.md) | Connecting Monitors | Zabbix Webhooks, Prometheus Alertmanager. |
-| [**AI Configuration**](./doc/AI_CONFIGURATION.md) | The Brain Setup | Gemini, Ollama, RAG Tuning. |
+| [**AI Configuration**](./doc/AI_CONFIGURATION.md) | The Brain Setup | Gemini, OpenAI, RAG Tuning. |
 | [**Playbook Authoring**](./doc/PLAYBOOK_AUTHORING.md) | Robot Scripts | Ansible YAML, Dynamic Inventory. |
 | [**Security & RBAC**](./doc/RBAC_SECURITY_MODEL.md) | Access Control | Privilege Levels, JWT, WebSSH Security. |
 | [**Troubleshooting**](./doc/TROUBLESHOOTING.md) | Fixing Issues | Common Errors, Performance Tuning. |

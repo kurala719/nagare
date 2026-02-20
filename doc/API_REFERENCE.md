@@ -1,6 +1,8 @@
 # Nagare API Technical Reference
 
-All Nagare API endpoints are versioned and follow a standardized REST pattern with JWT authentication.
+All Nagare API endpoints are versioned and follow a standardized REST pattern with JWT authentication. The system relies on Go (`gin-gonic`) and follows a clean MVC-style architecture.
+
+---
 
 ## 1. Global Standards
 
@@ -15,47 +17,71 @@ Every response from Nagare is wrapped in a consistent JSON structure:
 }
 ```
 
-### RBAC Model
-Nagare uses a numeric `Privilege` level system:
-- **Level 1 (User)**: Analytical read-only access + AI Chat.
-- **Level 2 (Manager)**: Monitor/Host configuration + Automated Reporting.
-- **Level 3 (Admin)**: System configuration + Audit logs + RBAC management.
+### RBAC Privilege Model
+Nagare uses a numeric `Privilege` level system handled by `PrivilegesMiddleware`:
+- **Level 1 (User)**: Analytical read-only access, site messages, and AI Chat.
+- **Level 2 (Manager)**: Monitor, Host configuration, automated reporting, playbook execution, triggering chaos storms.
+- **Level 3 (Admin)**: System configuration, audit logs, and full user management.
 
 ---
 
-## 2. API Response Codes & Meanings
-Beyond standard HTTP status codes, Nagare provides specific error strings in the `error` field of the JSON wrapper.
+## 2. API Endpoints & Function Routes
 
-| Error Code | HTTP Status | Description |
-| :--- | :--- | :--- |
-| `invalid_auth_token` | 401 | The JWT token is missing, expired, or tampered with. |
-| `insufficient_privileges` | 403 | You are trying to perform an action above your level. |
-| `resource_not_found` | 404 | The requested host, group, or monitor does not exist. |
-| `ai_provider_timeout` | 504 | The AI took too long to answer. Check your network or provider. |
-| `llm_quota_exceeded` | 429 | You have hit your AI API rate limits (e.g. Gemini/OpenAI). |
-| `database_connection_fail` | 500 | Nagare's Brain lost contact with its MySQL heart. |
-| `ansible_runtime_error` | 500 | A playbook execution failed during the startup phase. |
+Below are the primary API endpoint groups defined in `router.go` and their underlying descriptions. All routes are prefixed with `/api/v1` except public system routes.
+
+### 2.1 Public Authentication (`/auth`)
+- `POST /login`: Generate JWT token for users.
+- `POST /register`: Request system access.
+- `POST /send-code`: Send email verification for registration.
+- `POST /reset-request`: Submit a password reset application.
+- `POST /reset` *(Privilege 1)*: Reset password via authenticated request.
+
+### 2.2 Intelligence & AI (`/chats`, `/mcp`, `/providers`)
+- `POST /chats`: Send a message to the active AI (Gemini/OpenAI) for RAG or general queries.
+- `GET /mcp/sse`: Connect to the Model Context Protocol (MCP) server event stream.
+- `GET /providers`: List all registered AI providers.
+- `POST /providers`: Add a new AI model provider (e.g. Gemini, OpenAI API compatible).
+- `POST /alerts/:id/consult`: Request AI analysis for a specific alert incident.
+
+### 2.3 Monitoring Configuration (`/monitors`, `/alarms`)
+- `GET /monitors`: List external inventory sources (Zabbix/Prometheus).
+- `POST /monitors/:id/login`: Authenticate source node.
+- `POST /monitors/:id/sync/hosts`: Pull all hosts and groups from the external monitoring tool.
+- `GET /alarms`: List external alerting sources.
+
+### 2.4 Infrastructure & Endpoints (`/hosts`, `/groups`, `/items`)
+- `GET /hosts`: Search endpoint assets.
+- `POST /hosts`: Add a new server endpoint.
+- `GET /hosts/:id/ssh`: Open a WebSSH terminal connection over WebSocket.
+- `GET /items`: List all metrics, logs, and checks.
+- `POST /hosts/:id/sync`: Force item state synchronization for a specific host.
+
+### 2.5 Alerts, Actions & Media (`/alerts`, `/media`, `/actions`, `/triggers`)
+- `POST /alerts/webhook`: Universal unauthenticated ingest point for external monitoring tool pushes.
+- `GET /media`: List notification targets (Gmail, Webhook, QQ).
+- `POST /media/:id/test`: Trigger a dummy notification to verify target configuration.
+- `GET /media/qq/ws`: Connect NapCat OneBot 11 Reverse WebSocket for IM bot integration.
+- `POST /actions`: Create notification templates bound to specific media.
+- `POST /triggers`: Define conditions under which alerts execute actions.
+
+### 2.6 Operations & Automation (`/ansible`, `/reports`, `/chaos`)
+- `GET /ansible/playbooks`: Retrieve YAML automation scripts.
+- `POST /ansible/playbooks/:id/run`: Trigger a playbook execution on a specific host or group.
+- `POST /chaos/alert-storm`: Simulate a massive incoming alert event to test resilience.
+- `POST /reports/generate/weekly`: Manually trigger weekly PDF generation.
+- `GET /reports/:id/download`: Retrieve generated PDF document.
+
+### 2.7 Identity & Audit (`/users`, `/audit-logs`, `/register-applications`)
+- `GET /users` *(Privilege 2)*: Search active directory users.
+- `PUT /register-applications/:id/approve` *(Privilege 3)*: Grant a new user access.
+- `GET /audit-logs` *(Privilege 3)*: View internal API mutations, logins, and settings changes.
+
+### 2.8 System Configuration (`/config`, `/retention`)
+- `GET /config`: Load current application runtime variables.
+- `PUT /config`: Update settings and optionally persist to disk (`configs/nagare_config.json`).
+- `GET /retention`: List active data pruning policies (e.g. clean logs older than 30 days).
 
 ---
-
-## 3. Key Endpoint Categories
-
-### 2.1 Intelligence
-- `POST /api/v1/alerts/:id/consult`: Run RAG-augmented diagnostic.
-- `POST /api/v1/hosts/:id/consult`: Summarize host health based on metrics.
-- `GET /api/v1/mcp/sse`: Connect to MCP agent event stream (Server-Sent Events).
-- `POST /api/v1/chats`: Send a message to the AI Chat with `mode: "roast"` for audit.
-
-### 2.2 Monitoring
-- `GET /api/v1/monitors/`: List all monitoring sources.
-- `POST /api/v1/monitors/:id/login`: Authenticate source node.
-- `POST /api/v1/alerts/webhook`: Universal unauthenticated ingest point.
-- `POST /api/v1/monitors/:id/push`: Push local config changes back to Zabbix.
-
-### 2.3 Operations
-- `GET /api/v1/hosts/:id/ssh`: Bridge to WebSSH WebSocket.
-- `POST /api/v1/ansible/playbooks/:id/run`: Trigger a robot script on a host or group.
-- `GET /api/v1/reports/:id/download`: Retrieve generated PDF.
 
 ## 3. Remote Access Interop
 All endpoints support the `X-Tunnel-Skip-AntiPhishing-Page: true` header for Microsoft Dev Tunnel bypass.

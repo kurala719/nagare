@@ -16,19 +16,17 @@ type Config struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
-	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
+	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
 
-// SMTPConfig holds email server settings
-type SMTPConfig struct {
-	Host     string `yaml:"host" json:"host" mapstructure:"host"`
-	Port     int    `yaml:"port" json:"port" mapstructure:"port"`
-	Username string `yaml:"username" json:"username" mapstructure:"username"`
-	Password string `yaml:"password" json:"password" mapstructure:"password"`
-	From     string `yaml:"from" json:"from" mapstructure:"from"`
-	Enabled  bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
+// GmailConfig holds Gmail API settings
+type GmailConfig struct {
+	Enabled         bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
+	CredentialsFile string `yaml:"credentials_file" json:"credentials_file" mapstructure:"credentials_file"`
+	TokenFile       string `yaml:"token_file" json:"token_file" mapstructure:"token_file"`
+	From            string `yaml:"from" json:"from" mapstructure:"from"`
 }
 
 // ExternalItemConfig defines external infrastructure items
@@ -111,7 +109,7 @@ type ConfigRequest struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
-	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
+	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -124,7 +122,7 @@ type ConfigResponse struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
-	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
+	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -200,12 +198,10 @@ func ResetConfig() error {
 	viper.Set("ai.analysis_timeout_seconds", 60)
 	viper.Set("ai.analysis_min_severity", 2)
 
-	viper.Set("smtp.enabled", false)
-	viper.Set("smtp.host", "")
-	viper.Set("smtp.port", 587)
-	viper.Set("smtp.username", "")
-	viper.Set("smtp.password", "")
-	viper.Set("smtp.from", "")
+	viper.Set("gmail.enabled", false)
+	viper.Set("gmail.credentials_file", "configs/gmail_credentials.json")
+	viper.Set("gmail.token_file", "configs/gmail_token.json")
+	viper.Set("gmail.from", "")
 
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
 	viper.Set("media_rate_limit.protocol_interval_seconds", 30)
@@ -220,13 +216,9 @@ func ResetConfig() error {
 		{"type": "alarm", "key": "other", "name": "Other", "id": 3},
 		{"type": "provider", "key": "gemini", "name": "Gemini", "id": 1},
 		{"type": "provider", "key": "openai", "name": "OpenAI", "id": 2},
-		{"type": "provider", "key": "ollama", "name": "Ollama", "id": 3},
-		{"type": "provider", "key": "other_openai", "name": "Other (OpenAI API)", "id": 4},
-		{"type": "provider", "key": "other", "name": "Other", "id": 5},
-		{"type": "media", "key": "email", "name": "Email", "id": 1},
+		{"type": "media", "key": "gmail", "name": "Gmail", "id": 1},
 		{"type": "media", "key": "webhook", "name": "Webhook", "id": 2},
-		{"type": "media", "key": "sms", "name": "SMS", "id": 3},
-		{"type": "media", "key": "qq", "name": "QQ", "id": 4},
+		{"type": "media", "key": "qq", "name": "QQ", "id": 3},
 	})
 
 	return SaveConfig()

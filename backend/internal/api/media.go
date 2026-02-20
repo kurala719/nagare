@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"nagare/internal/model"
+	"nagare/internal/repository/media"
 	"nagare/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -125,6 +126,20 @@ func DeleteMediaByIDCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccessMessage(c, http.StatusOK, "media deleted")
+}
+
+// TestMediaCtrl handles POST /media/:id/test
+func TestMediaCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid media ID")
+		return
+	}
+	if err := service.TestMediaServ(uint(id)); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "test message sent successfully")
 }
 
 // OneBotMessageEvent represents an incoming OneBot 11 message event (from QQ via NapCat)
@@ -270,6 +285,11 @@ func HandleQQMessageCtrl(c *gin.Context) {
 		resp.Data = &OneBotMessageResponseData{Reply: result.Reply}
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// HandleQQWebSocket handles Reverse WebSocket connections from NapCat (OneBot 11)
+func HandleQQWebSocket(c *gin.Context) {
+	media.GlobalQQWSManager.HandleReverseWS(c)
 }
 
 type oneBotMessageSegment struct {

@@ -99,6 +99,7 @@ func setupMediaRoutes(rg *gin.RouterGroup) {
 	// Webhook endpoint MUST be first, before any authenticated routes
 	media := rg.Group("/media")
 	media.POST("/qq/message", api.HandleQQMessageCtrl)
+	media.GET("/qq/ws", api.HandleQQWebSocket)
 
 	// Routes with privilege level 1
 	mediaRead := rg.Group("/media", api.PrivilegesMiddleware(1))
@@ -110,6 +111,7 @@ func setupMediaRoutes(rg *gin.RouterGroup) {
 	mediaWrite.POST("", api.AddMediaCtrl)
 	mediaWrite.PUT("/:id", api.UpdateMediaCtrl)
 	mediaWrite.DELETE("/:id", api.DeleteMediaByIDCtrl)
+	mediaWrite.POST("/:id/test", api.TestMediaCtrl)
 }
 
 func setupAlertRoutes(rg *gin.RouterGroup) {

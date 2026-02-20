@@ -23,9 +23,6 @@
           <el-option :label="$t('providers.filterAll')" value="all" />
           <el-option :label="$t('providers.typeGemini')" :value="1" />
           <el-option :label="$t('providers.typeOpenAI')" :value="2" />
-          <el-option :label="$t('providers.typeOllama')" :value="3" />
-          <el-option :label="$t('providers.typeOtherOpenAI')" :value="4" />
-          <el-option :label="$t('providers.typeOther')" :value="5" />
         </el-select>
 
         <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
@@ -156,7 +153,6 @@
                         <el-select v-model="dialogItem.type" style="width: 100%;">
                             <el-option :label="$t('providers.typeGemini')" :value="1" />
                             <el-option :label="$t('providers.typeOpenAI')" :value="2" />
-                            <el-option :label="$t('providers.typeOther')" :value="3" />
                         </el-select>
                     </el-form-item>
                     <el-form-item :label="$t('providers.url')">
@@ -191,9 +187,6 @@
                         <el-select v-model="selectedProvider.type" style="width: 100%;">
                             <el-option :label="$t('providers.typeGemini')" :value="1" />
                             <el-option :label="$t('providers.typeOpenAI')" :value="2" />
-                            <el-option :label="$t('providers.typeOllama')" :value="3" />
-                            <el-option :label="$t('providers.typeOtherOpenAI')" :value="4" />
-                            <el-option :label="$t('providers.typeOther')" :value="5" />
                         </el-select>
                     </el-form-item>
                     <el-form-item :label="$t('providers.url')">
@@ -673,11 +666,8 @@ export default {
             const map: Record<number, string> = {
                 1: this.$t('providers.typeGemini'),
                 2: this.$t('providers.typeOpenAI'),
-                3: this.$t('providers.typeOllama'),
-                4: this.$t('providers.typeOtherOpenAI'),
-                5: this.$t('providers.typeOther'),
             };
-            return map[type] || this.$t('providers.typeOther');
+            return map[type] || this.$t('providers.typeOpenAI');
         },
         syncQueryParams() {
             const query: Record<string, string> = {};

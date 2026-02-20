@@ -40,27 +40,31 @@
   "sync": {
     "enabled": true,
     "interval_seconds": 60,
-    "concurrency": 2
-  },
-  "system": {
-    "system_name": "Nagare System",
-    "ip_address": "192.168.32.1",
-    "port": 8080,
-    "availability": true
-  },
-  "external": [
-    { "type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1 },
-    { "type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2 },
-    { "type": "monitor", "key": "other", "name": "Other", "id": 3 },
-    { "type": "alarm", "key": "zabbix", "name": "Zabbix", "id": 1 },
-    { "type": "alarm", "key": "prometheus", "name": "Prometheus", "id": 2 },
-    { "type": "alarm", "key": "other", "name": "Other", "id": 3 },
-    { "type": "provider", "key": "gemini", "name": "Gemini", "id": 1 },
-    { "type": "provider", "key": "openai", "name": "OpenAI", "id": 2 },
-    { "type": "provider", "key": "other", "name": "Other", "id": 3 },
-    { "type": "media", "key": "email", "name": "Email", "id": 1 },
-    { "type": "media", "key": "webhook", "name": "Webhook", "id": 2 },
-    { "type": "media", "key": "sms", "name": "SMS", "id": 3 },
-    { "type": "media", "key": "qq", "name": "QQ", "id": 4 }
-  ]
-}
+        "concurrency": 2
+      },
+      "system": {
+        "system_name": "Nagare System",
+        "ip_address": "192.168.32.1",
+        "port": 8080,
+        "availability": true
+      },
+      "gmail": {
+        "enabled": false,
+        "credentials_file": "configs/gmail_credentials.json",
+        "token_file": "configs/gmail_token.json",
+        "from": ""
+      },
+        "external": [
+          { "type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1 },
+          { "type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2 },
+          { "type": "monitor", "key": "other", "name": "Other", "id": 3 },
+          { "type": "alarm", "key": "zabbix", "name": "Zabbix", "id": 1 },
+          { "type": "alarm", "key": "prometheus", "name": "Prometheus", "id": 2 },
+          { "type": "alarm", "key": "other", "name": "Other", "id": 3 },
+          { "type": "provider", "key": "gemini", "name": "Gemini", "id": 1 },
+          { "type": "provider", "key": "openai", "name": "OpenAI", "id": 2 },
+          { "type": "media", "key": "gmail", "name": "Gmail", "id": 1 },
+          { "type": "media", "key": "webhook", "name": "Webhook", "id": 2 },
+          { "type": "media", "key": "qq", "name": "QQ", "id": 3 }
+        ]
+      }    

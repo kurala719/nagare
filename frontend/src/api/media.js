@@ -35,6 +35,13 @@ export function deleteMedia(id) {
   })
 }
 
+export function testMedia(id) {
+  return request({
+    url: `/media/${id}/test`,
+    method: 'post'
+  })
+}
+
 export function getMediaById(id) {
   return request({
     url: `/media/${id}`,

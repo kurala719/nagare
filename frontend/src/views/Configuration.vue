@@ -184,25 +184,19 @@
               </el-form-item>
             </el-form>
 
-            <div class="section-divider">SMTP Configuration</div>
-            <el-form :model="editableConfig.smtp" label-width="180px" label-position="left">
+            <div class="section-divider">Gmail API Configuration</div>
+            <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
               <el-form-item label="Enabled">
-                <el-switch v-model="editableConfig.smtp.enabled" />
+                <el-switch v-model="editableConfig.gmail.enabled" />
               </el-form-item>
-              <el-form-item label="SMTP Host">
-                <el-input v-model="editableConfig.smtp.host" placeholder="smtp.gmail.com" />
+              <el-form-item label="Credentials File">
+                <el-input v-model="editableConfig.gmail.credentials_file" placeholder="configs/gmail_credentials.json" />
               </el-form-item>
-              <el-form-item label="SMTP Port">
-                <el-input-number v-model="editableConfig.smtp.port" :min="1" :max="65535" />
-              </el-form-item>
-              <el-form-item label="Username">
-                <el-input v-model="editableConfig.smtp.username" />
-              </el-form-item>
-              <el-form-item label="Password">
-                <el-input v-model="editableConfig.smtp.password" type="password" show-password />
+              <el-form-item label="Token File">
+                <el-input v-model="editableConfig.gmail.token_file" placeholder="configs/gmail_token.json" />
               </el-form-item>
               <el-form-item label="From Address">
-                <el-input v-model="editableConfig.smtp.from" placeholder="noreply@example.com" />
+                <el-input v-model="editableConfig.gmail.from" placeholder="your-email@gmail.com" />
               </el-form-item>
             </el-form>
 
@@ -375,12 +369,10 @@ export default {
         analysis_timeout_seconds: 60,
         analysis_min_severity: 2,
       },
-      smtp: {
+      gmail: {
         enabled: false,
-        host: '',
-        port: 587,
-        username: '',
-        password: '',
+        credentials_file: '',
+        token_file: '',
         from: '',
       },
       media_rate_limit: {

@@ -36,21 +36,21 @@ type Host struct {
 	SNMPV3AuthProtocol  string `gorm:"column:snmp_v3_auth_protocol"`  // "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512"
 	SNMPV3PrivProtocol  string `gorm:"column:snmp_v3_priv_protocol"`  // "DES", "AES", "AES128", "AES192", "AES256"
 	SNMPV3SecurityLevel string `gorm:"column:snmp_v3_security_level"` // "NoAuthNoPriv", "AuthNoPriv", "AuthPriv"
-	LastSyncAt        *time.Time
-	ExternalSource    string `gorm:"column:external_source"`
-	HealthScore       int    `gorm:"column:health_score;default:100"`
+	LastSyncAt          *time.Time
+	ExternalSource      string `gorm:"column:external_source"`
+	HealthScore         int    `gorm:"column:health_score;default:100"`
 }
 
 // Group represents a logical group of hosts
 type Group struct {
 	gorm.Model
-	Name        string
-	Description string
-	MonitorID   uint   `gorm:"column:m_id"`
-	ExternalID  string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
-	Enabled     int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
-	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	LastSyncAt  *time.Time
+	Name           string
+	Description    string
+	MonitorID      uint   `gorm:"column:m_id"`
+	ExternalID     string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
+	Enabled        int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
+	Status         int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	LastSyncAt     *time.Time
 	ExternalSource string `gorm:"column:external_source"`
 	HealthScore    int    `gorm:"column:health_score;default:100"`
 }
@@ -159,7 +159,7 @@ type Alert struct {
 type Media struct {
 	gorm.Model
 	Name        string
-	Type        string            // "email", "webhook", "sms", etc.
+	Type        string            // "email", "webhook", "qq", etc.
 	Target      string            // address/endpoint/number
 	Params      map[string]string `gorm:"type:json;serializer:json"`
 	Enabled     int               `gorm:"default:1"` // 0 = disabled, 1 = enabled
@@ -181,25 +181,25 @@ type Action struct {
 // Trigger represents a rule that filters alerts or logs to invoke an action
 type Trigger struct {
 	gorm.Model
-	Name           string
-	Entity         string // "alert" or "log"
-	SeverityMin    int
-	ActionID       uint
-	AlertID        *uint `gorm:"column:alert_id"`
-	AlertStatus    *int  `gorm:"column:alert_status"`
-	AlertGroupID   *uint `gorm:"column:alert_group_id"`
-	AlertMonitorID *uint `gorm:"column:alert_monitor_id"`
-	AlertHostID    *uint `gorm:"column:alert_host_id"`
-	AlertItemID    *uint `gorm:"column:alert_item_id"`
-	AlertQuery     string
-	LogType        string `gorm:"column:log_type"`
-	LogSeverity    *int   `gorm:"column:log_level"`
-	LogQuery       string `gorm:"column:log_query"`
-	ItemStatus     *int   `gorm:"column:item_status"`
+	Name               string
+	Entity             string // "alert" or "log"
+	SeverityMin        int
+	ActionID           uint
+	AlertID            *uint `gorm:"column:alert_id"`
+	AlertStatus        *int  `gorm:"column:alert_status"`
+	AlertGroupID       *uint `gorm:"column:alert_group_id"`
+	AlertMonitorID     *uint `gorm:"column:alert_monitor_id"`
+	AlertHostID        *uint `gorm:"column:alert_host_id"`
+	AlertItemID        *uint `gorm:"column:alert_item_id"`
+	AlertQuery         string
+	LogType            string   `gorm:"column:log_type"`
+	LogSeverity        *int     `gorm:"column:log_level"`
+	LogQuery           string   `gorm:"column:log_query"`
+	ItemStatus         *int     `gorm:"column:item_status"`
 	ItemValueThreshold *float64 `gorm:"column:item_value_threshold"`
 	ItemValueOperator  string   `gorm:"column:item_value_operator"`
-	Enabled        int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status         int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	Enabled            int      `gorm:"default:1"` // 0 = disabled, 1 = enabled
+	Status             int      // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 }
 
 // Provider represents an AI provider (e.g., Google Gemini)
@@ -210,7 +210,7 @@ type Provider struct {
 	APIKey       string
 	DefaultModel string
 	Models       []string `gorm:"type:json;serializer:json"` // List of available models
-	Type         int      // Provider type: 1 = Gemini, 2 = OpenAI, 3 = Ollama
+	Type         int      // Provider type: 1 = Gemini, 2 = OpenAI
 	Description  string
 	Enabled      int `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status       int // 0 = inactive, 1 = active, 2 = error, 3 = syncing
@@ -262,7 +262,7 @@ type AuditLog struct {
 type User struct {
 	gorm.Model
 	Username     string `gorm:"uniqueIndex;size:100"`
-	Password     string `json:"-"` // Hashed password, excluded from JSON by default
+	Password     string `json:"-"`         // Hashed password, excluded from JSON by default
 	Privileges   int    `gorm:"default:1"` // 0=unauthorized, 1=user, 2=admin, 3=superadmin
 	Status       int    `gorm:"default:1"` // 0=inactive, 1=active
 	Email        string `gorm:"size:255"`
@@ -368,7 +368,7 @@ type Report struct {
 	Title       string
 	FilePath    string
 	DownloadURL string
-	Status      int    // 0=generating, 1=completed, 2=failed
+	Status      int // 0=generating, 1=completed, 2=failed
 	GeneratedAt time.Time
 	ContentData string `gorm:"type:longtext"` // JSON content for preview
 }
@@ -376,12 +376,12 @@ type Report struct {
 // SiteMessage represents an internal system notification for users
 type SiteMessage struct {
 	gorm.Model
-	Title     string `gorm:"size:255"`
-	Content   string `gorm:"type:text"`
-	Type      string `gorm:"size:50"` // "alert", "sync", "system", "report"
-	Severity  int    // 0=info, 1=success, 2=warn, 3=error
-	IsRead    int    `gorm:"default:0"` // 0=unread, 1=read
-	UserID    *uint  `gorm:"index"`     // Optional: target specific user, null for all
+	Title    string `gorm:"size:255"`
+	Content  string `gorm:"type:text"`
+	Type     string `gorm:"size:50"` // "alert", "sync", "system", "report"
+	Severity int    // 0=info, 1=success, 2=warn, 3=error
+	IsRead   int    `gorm:"default:0"` // 0=unread, 1=read
+	UserID   *uint  `gorm:"index"`     // Optional: target specific user, null for all
 }
 
 type UserWithInfo struct {
@@ -392,7 +392,7 @@ type UserWithInfo struct {
 type RetentionPolicy struct {
 	gorm.Model
 	DataType      string `gorm:"size:50;uniqueIndex"` // e.g., 'logs', 'alerts', 'audit_logs', 'item_history', 'host_history'
-	RetentionDays int    `gorm:"default:30"`         // 0 means keep forever
-	Enabled       *int   `gorm:"default:1"`          // 0 = disabled, 1 = enabled
+	RetentionDays int    `gorm:"default:30"`          // 0 means keep forever
+	Enabled       *int   `gorm:"default:1"`           // 0 = disabled, 1 = enabled
 	Description   string `gorm:"size:255"`
 }

@@ -36,8 +36,7 @@ func GetService() *Service {
 		globalService.RegisterProvider("qq", NewQQProvider(DefaultQQBaseURL))
 		globalService.RegisterProvider("webhook", NewWebhookProvider())
 		globalService.RegisterProvider("wechat", NewWebhookProvider())
-		globalService.RegisterProvider("email", NewEmailProvider())
-		globalService.RegisterProvider("sms", NoopProvider("sms"))
+		globalService.RegisterProvider("gmail", NewGmailProvider())
 	})
 	return globalService
 }

@@ -11,6 +11,23 @@ import (
 	mediaSvc "nagare/internal/repository/media"
 )
 
+func init() {
+	mediaSvc.GlobalQQWSManager.CommandHandler = func(message string, qqID string, isGroup bool) (string, error) {
+		// Whitelist check
+		if strings.HasPrefix(strings.TrimSpace(message), "/") {
+			if !CheckQQWhitelistForCommand(qqID, isGroup) {
+				return "You are not authorized to execute commands.", nil
+			}
+		}
+
+		result, err := HandleIMCommand(message)
+		if err != nil {
+			return "", err
+		}
+		return result.Reply, nil
+	}
+}
+
 type IMCommandResult struct {
 	Reply string `json:"reply"`
 }

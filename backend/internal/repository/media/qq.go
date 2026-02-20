@@ -44,6 +44,12 @@ func (p *QQProvider) SendMessage(ctx context.Context, target, message string) er
 	if err != nil {
 		return err
 	}
+
+	// Try WebSocket first if connected and no specific baseURL is provided in target
+	if strings.TrimSpace(baseURL) == "" && GlobalQQWSManager.IsConnected() {
+		return GlobalQQWSManager.SendMessage(ctx, messageType, userID, groupID, message)
+	}
+
 	if strings.TrimSpace(baseURL) == "" {
 		baseURL = p.BaseURL
 	}

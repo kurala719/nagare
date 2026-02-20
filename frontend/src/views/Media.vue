@@ -100,9 +100,10 @@
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('media.actions')" width="200" fixed="right" align="center">
+      <el-table-column :label="$t('media.actions')" width="260" fixed="right" align="center">
         <template #default="{ row }">
           <el-button-group>
+            <el-button size="small" type="primary" :icon="ChatDotRound" @click="onTest(row)" :loading="row.testing">{{ $t('media.test') || 'Test' }}</el-button>
             <el-button size="small" :icon="Setting" @click="openProperties(row)">{{ $t('media.properties') }}</el-button>
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)">{{ $t('media.delete') }}</el-button>
           </el-button-group>
@@ -128,9 +129,8 @@
       </el-form-item>
       <el-form-item :label="$t('media.type')">
         <el-select v-model="newMedia.type" style="width: 100%;">
-          <el-option label="Email" value="email" />
+          <el-option label="Gmail" value="gmail" />
           <el-option label="Webhook" value="webhook" />
-          <el-option label="SMS" value="sms" />
           <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>
@@ -168,9 +168,8 @@
       </el-form-item>
       <el-form-item :label="$t('media.type')">
         <el-select v-model="selectedMedia.type" style="width: 100%;">
-          <el-option label="Email" value="email" />
+          <el-option label="Gmail" value="gmail" />
           <el-option label="Webhook" value="webhook" />
-          <el-option label="SMS" value="sms" />
           <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>
@@ -241,8 +240,8 @@
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
-import { fetchMediaData, addMedia, updateMedia, deleteMedia } from '@/api/media';
+import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting, ChatDotRound } from '@element-plus/icons-vue';
+import { fetchMediaData, addMedia, updateMedia, deleteMedia, testMedia } from '@/api/media';
 
 export default {
   name: 'Media',
@@ -253,7 +252,8 @@ export default {
     Edit,
     Delete,
     ArrowDown,
-    Setting
+    Setting,
+    ChatDotRound
   },
   data() {
     return {
@@ -274,8 +274,8 @@ export default {
       bulkUpdating: false,
       bulkDeleting: false,
       selectedMediaRows: [],
-      newMedia: { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' },
-      selectedMedia: { id: 0, name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' },
+      newMedia: { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' },
+      selectedMedia: { id: 0, name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' },
       bulkForm: {
         enabled: 'nochange',
         status: 'nochange',
@@ -286,7 +286,8 @@ export default {
       Delete: markRaw(Delete),
       ArrowDown: markRaw(ArrowDown),
       Setting: markRaw(Setting),
-      Loading: markRaw(Loading)
+      Loading: markRaw(Loading),
+      ChatDotRound: markRaw(ChatDotRound)
     };
   },
   computed: {
@@ -434,7 +435,7 @@ export default {
         const mapped = data.map((m) => ({
           id: m.ID || m.id || 0,
           name: m.Name || m.name || '',
-          type: m.Type || m.type || 'email',
+          type: m.Type || m.type || 'gmail',
           target: m.Target || m.target || '',
           enabled: m.Enabled ?? m.enabled ?? 1,
           status: m.Status ?? m.status ?? 0,
@@ -453,11 +454,11 @@ export default {
     },
     openCreate() {
       this.createDialogVisible = true;
-      this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     async onCreate() {
       if (!this.newMedia.name) {
@@ -476,7 +477,7 @@ export default {
         });
         await this.loadMedia(true);
         this.createDialogVisible = false;
-        this.newMedia = { name: '', type: 'email', target: '', params: {}, enabled: 1, status: 1, description: '' };
+        this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
         ElMessage.success(this.$t('media.created'));
       } catch (err) {
         ElMessage.error(this.$t('media.createFailed') + ': ' + (err.message || ''));
@@ -508,6 +509,19 @@ export default {
         ElMessage.success(this.$t('media.updated'));
       } catch (err) {
         ElMessage.error(this.$t('media.updateFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async onTest(media) {
+      if (media.testing) return;
+      
+      media.testing = true;
+      try {
+        await testMedia(media.id);
+        ElMessage.success(this.$t('media.testSuccess') || 'Test message sent successfully');
+      } catch (err) {
+        ElMessage.error((this.$t('media.testFailed') || 'Test failed') + ': ' + (err.message || ''));
+      } finally {
+        media.testing = false;
       }
     },
     onDelete(media) {

@@ -67,6 +67,19 @@ func GetMediaByIDServ(id uint) (MediaResp, error) {
 	return mediaToResp(media), nil
 }
 
+func TestMediaServ(id uint) error {
+	media, err := repository.GetMediaByIDDAO(id)
+	if err != nil {
+		return err
+	}
+	if media.Enabled == 0 {
+		return fmt.Errorf("media is disabled")
+	}
+
+	testMessage := "Nagare Media Test Connection: Your notification system is working correctly."
+	return SendIMReply(media.Type, media.Target, testMessage)
+}
+
 func AddMediaServ(req MediaReq) (MediaResp, error) {
 	params := coerceMediaParams(req.Params)
 	media := model.Media{

@@ -12,8 +12,6 @@ Nagare currently supports the following AI backends:
 | :--- | :--- | :--- |
 | **1** | **Google Gemini** | (Recommended) Best balance of speed and reasoning. Uses `gemini-1.5-pro` or `gemini-2.0-flash`. |
 | **2** | **OpenAI** | Standard GPT-4o or GPT-3.5-Turbo models. |
-| **3** | **Ollama** | Local LLMs (e.g., Llama 3, Mistral) for privacy-focused, offline setups. |
-| **4** | **Azure OpenAI** | Enterprise-grade OpenAI hosting. |
 
 ---
 
@@ -33,18 +31,14 @@ POST /api/v1/providers
 }
 ```
 
-### Adding a Local Ollama Provider
-If you want to run Nagare completely offline:
-1. Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh`
-2. Pull a model: `ollama pull llama3`
-3. Add to Nagare:
+### Adding an OpenAI Provider
 ```json
 POST /api/v1/providers
 {
-  "name": "Local Llama 3",
-  "type": 3,
-  "url": "http://localhost:11434",
-  "default_model": "llama3",
+  "name": "OpenAI GPT-4",
+  "type": 2,
+  "api_key": "sk-...",
+  "default_model": "gpt-4o-mini",
   "enabled": 1
 }
 ```
@@ -85,4 +79,3 @@ When chatting, you can select a "Mode":
 
 ## 5. Privacy & Data Safety
 - **Sanitization**: Before sending data to the AI, Nagare attempts to mask sensitive patterns (like passwords) using regex.
-- **Local AI**: Use **Ollama** (Type 3) if your security policy forbids sending server logs to the cloud.

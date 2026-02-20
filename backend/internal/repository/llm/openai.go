@@ -172,9 +172,7 @@ func (p *OpenAIProvider) Name() string {
 
 // Models returns available OpenAI models
 func (p *OpenAIProvider) Models() []string {
-	if p.providerType == ProviderOtherOpenAI {
-		return []string{}
-	}
+
 	return []string{
 		"gpt-4o",
 		"gpt-4o-mini",

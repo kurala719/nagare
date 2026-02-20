@@ -30,13 +30,21 @@ Marks all messages for the current user as read.
 
 Integration with the OneBot 11 protocol (e.g., NapCat/Gocqhttp).
 
-### **POST** `/api/v1/media/qq/message`
-**Public Ingest Point** for QQ messages.
+### **GET** `/api/v1/media/qq/ws`
+**Reverse WebSocket Endpoint** for OneBot 11 (e.g., NapCat).
+- **Protocol**: OneBot 11 Reverse WebSocket.
 - **Logic**: 
-  1. Receives a message from the QQ Bot.
+  1. Receives a connection from the QQ Bot (NapCat).
+  2. Handles incoming events (messages) and outgoing actions (API calls).
+  3. Provides faster, two-way communication and is the preferred method for QQ integration.
+
+### **POST** `/api/v1/media/qq/message`
+**HTTP Webhook Ingest Point** for QQ messages (Legacy/Alternative).
+- **Logic**: 
+  1. Receives a message from the QQ Bot via HTTP POST.
   2. Checks if the sender (User or Group) is in the **QQ Whitelist**.
   3. If authorized and message starts with `/`, it executes as a command.
-  4. Sends a reply back to QQ.
+  4. Sends a reply back to QQ via HTTP API.
 
 ### **POST** `/api/v1/im/command`
 Directly triggers an IM command (used for testing).
@@ -61,7 +69,7 @@ Adds a new ID to the whitelist.
 Defines *how* and *where* alerts are sent.
 
 ### **GET** `/api/v1/media-types`
-Lists supported notification protocols (e.g., `email`, `webhook`, `qq`, `sms`).
+Lists supported notification protocols (e.g., `email`, `webhook`, `qq`).
 
 ### **POST** `/api/v1/media`
 Creates a specific destination (e.g., "SRE Team Email").

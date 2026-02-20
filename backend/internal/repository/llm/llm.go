@@ -11,11 +11,8 @@ import (
 type ProviderType int
 
 const (
-	ProviderGemini      ProviderType = iota + 1 // 1 = gemini
-	ProviderOpenAI                              // 2 = openai
-	ProviderOllama                              // 3 = ollama
-	ProviderOtherOpenAI                         // 4 = other (openai compatible)
-	ProviderOther                               // 5 = other
+	ProviderGemini ProviderType = iota + 1 // 1 = gemini
+	ProviderOpenAI                         // 2 = openai
 )
 
 // Message represents a chat message
@@ -73,10 +70,8 @@ func NewClient(cfg Config) (*Client, error) {
 	switch cfg.Type {
 	case ProviderGemini:
 		provider, err = NewGeminiProvider(cfg)
-	case ProviderOpenAI, ProviderOtherOpenAI:
+	case ProviderOpenAI:
 		provider, err = NewOpenAIProvider(cfg)
-	case ProviderOllama, ProviderOther:
-		provider, err = NewOllamaProvider(cfg)
 	default:
 		return nil, errors.New("unsupported provider type")
 	}
