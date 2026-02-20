@@ -391,8 +391,6 @@ func recomputeItemsForHost(hid uint) error {
 }
 
 func recomputeMonitorRelated(mid uint) error {
-	fmt.Printf("Service Debug: recomputeMonitorRelated started for monitor %d\n", mid)
-	
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	if err != nil {
 		return err
@@ -472,8 +470,6 @@ func recomputeTriggerStatus(id uint) (int, error) {
 
 // RecomputeAllStatuses refreshes stored status values for all entities.
 func RecomputeAllStatuses() error {
-	fmt.Println("Service Debug: Recomputing all entity statuses...")
-	
 	monitorsList, err := repository.GetAllMonitorsDAO()
 	if err == nil {
 		for _, m := range monitorsList {

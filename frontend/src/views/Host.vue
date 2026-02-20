@@ -673,9 +673,9 @@ export default {
     },
     async loadMonitors() {
       try {
-        console.log('Host page loading monitors...')
+        
         const response = await fetchMonitorData();
-        console.log('Host page monitors response:', response)
+        
         // Backend returns {success: true, data: [...]}
         let data = []
         if (response?.success && response?.data !== undefined) {
@@ -703,16 +703,16 @@ export default {
           }
         }
         
-        console.log('Host page monitors loaded:', this.monitors.length)
+        
       } catch (err) {
         console.error('Error loading monitors:', err);
       }
     },
     async loadGroups() {
       try {
-        console.log('Host page loading groups...')
+        
         const response = await fetchGroupData();
-        console.log('Host page groups response:', response)
+        
         // Backend returns {success: true, data: [...]}
         let data = []
         if (response?.success && response?.data !== undefined) {
@@ -725,7 +725,7 @@ export default {
           id: g.ID || g.id || 0,
           name: g.Name || g.name || '',
         }));
-        console.log('Host page groups loaded:', this.groups.length)
+        
       } catch (err) {
         console.error('Error loading groups:', err);
       }
@@ -760,7 +760,7 @@ export default {
           order: this.sortOrder || undefined,
           with_total: 1,
         });
-        console.log('Host page hosts response:', response)
+        
         // Backend returns {success: true, data: [...]} or {success: true, data: {items: [...], total: N}}
         let payload = []
         let total = 0
@@ -777,7 +777,7 @@ export default {
           payload = response
           total = response.length
         }
-        console.log('Host page extracted payload:', { count: payload.length, total })
+        
         const mapped = payload.map((h: any) => {
           const monitorId = h.m_id || h.MID || h.Mid || h.mid || h.MonitorID || h.MonitorId || h.monitorId || h.monitor_id || h.Monitorid || h.monitorID || h.Monitor?.ID || h.Monitor?.Id || h.monitor?.id || h.monitor?.ID || 0;
           return {
@@ -802,7 +802,7 @@ export default {
         });
         this.hosts = mapped;
         this.totalHosts = Number.isFinite(total) ? total : mapped.length;
-        console.log('Host page hosts loaded:', this.hosts.length)
+        
       } catch (err) {
         this.error = err.message || this.$t('hosts.loadFailed') || 'Failed to load hosts';
         console.error('Error loading hosts:', err);
@@ -1272,7 +1272,7 @@ export default {
       
       try {
         const response = await consultHostAI(host.id);
-        console.log('AI response:', response);
+        
         // Handle different response formats
         if (typeof response === 'string') {
           this.aiResponse = response;

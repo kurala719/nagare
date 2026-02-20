@@ -495,9 +495,6 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		return nil, fmt.Errorf("failed to parse host: %w", err)
 	}
 
-	// Debug logging
-	fmt.Printf("DEBUG: Zabbix Host Response: %+v\n", zabbixHosts)
-
 	if len(zabbixHosts) == 0 {
 		return nil, fmt.Errorf("host not found: %s", hostID)
 	}

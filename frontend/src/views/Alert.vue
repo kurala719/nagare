@@ -576,7 +576,7 @@ export default {
             
             try {
                 const response = await consultAlertAI(alert.id);
-                console.log('AI response:', response);
+                
                 // Handle different response formats
                 if (typeof response === 'string') {
                     this.aiResponse = response;

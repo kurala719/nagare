@@ -19,29 +19,21 @@ import (
 
 // InitRouter initializes and starts the HTTP router
 func InitRouter() {
-	r := gin.Default()
-	
-	// Add global logger to see every request reaching the backend
-	r.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		duration := time.Since(start)
-		fmt.Printf("HTTP Debug: %s %s %d (%v)\n", c.Request.Method, c.Request.URL.Path, c.Writer.Status(), duration)
-	})
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	r.RedirectTrailingSlash = true
 	r.Use(api.RequestIDMiddleware())
 	r.Use(api.AccessLogMiddleware())
 
 	r.NoRoute(func(c *gin.Context) {
-		fmt.Printf("HTTP Debug: 404 Not Found: %s %s\n", c.Request.Method, c.Request.URL.Path)
 		c.JSON(http.StatusNotFound, api.APIResponse{
 			Success: false,
 			Error:   "resource not found",
 		})
 	})
 	r.NoMethod(func(c *gin.Context) {
-		fmt.Printf("HTTP Debug: 405 Method Not Allowed: %s %s\n", c.Request.Method, c.Request.URL.Path)
 		c.JSON(http.StatusMethodNotAllowed, api.APIResponse{
 			Success: false,
 			Error:   "method not allowed",
@@ -51,7 +43,7 @@ func InitRouter() {
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
-			"message": "Nagare Backend is running (DEBUG VERSION)",
+			"message": "Nagare Backend is running",
 			"version": "1.0.1",
 		})
 	})
@@ -60,8 +52,7 @@ func InitRouter() {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})
 
-	// Direct SNMP test route for debugging
-	fmt.Println("[Router] Registering direct SNMP test route...")
+	// Direct SNMP poll route
 	r.POST("/api/v1/snmp-poll-direct/:id", api.TestSNMPCtrl)
 
 	// Setup all routes
@@ -70,12 +61,8 @@ func InitRouter() {
 	setupAllRoutes(apiGroup)
 	setupMcpRoutes(apiGroup)
 
-	// Debug: print all routes
-	for _, rt := range r.Routes() {
-		fmt.Printf("Route Registered: %s %s\n", rt.Method, rt.Path)
-	}
-
-	// Start WebSocket Hub	go service.GlobalHub.Run()
+	// Start WebSocket Hub
+	go service.GlobalHub.Run()
 
 	port := viper.GetInt("system.port")
 	if port == 0 {

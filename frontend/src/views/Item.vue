@@ -790,7 +790,7 @@ export default {
             
             try {
                 const response = await consultItemAI(item.id);
-                console.log('AI response:', response);
+                
                 // Handle different response formats
                 if (typeof response === 'string') {
                     this.aiResponse = response;

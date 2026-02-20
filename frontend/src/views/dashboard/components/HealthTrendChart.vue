@@ -152,11 +152,11 @@ export default defineComponent({
         const from = Math.floor(start.getTime() / 1000)
         const to = Math.floor(end.getTime() / 1000)
         
-        console.log('HealthTrendChart fetching data:', { from, to })
+        
         
         const response = await fetchNetworkStatusHistory({ from, to, limit: 500 })
         
-        console.log('HealthTrendChart raw response:', response)
+        
         
         // Backend returns {success: true, data: [...]}
         const extractData = (res) => {
@@ -169,7 +169,7 @@ export default defineComponent({
         }
         const rows = extractData(response)
         
-        console.log('HealthTrendChart extracted rows:', rows.length)
+        
         
         if (rows.length === 0) {
           empty.value = true
@@ -205,7 +205,7 @@ export default defineComponent({
           }
         }
         
-        console.log('HealthTrendChart series:', { points: series.length, prevPoints: prevSeries.length })
+        
         
         empty.value = series.length === 0
         loading.value = false

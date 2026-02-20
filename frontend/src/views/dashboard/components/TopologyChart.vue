@@ -225,7 +225,7 @@ export default defineComponent({
         t('dashboard.topologyHost')
       ]
 
-      console.log('Topology Rendering:', { nodes: nodes.length, links: links.length })
+      
 
       // Final validation of links to prevent ECharts crashes
       const validLinks = links.filter(l => {

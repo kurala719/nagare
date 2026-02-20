@@ -234,7 +234,7 @@ const submitForm = async () => {
           content: form.value.content,
           tags: String(form.value.tags || '')
         }
-        console.log('Sending playbook payload:', payload)
+        
         
         let res
         if (isEdit.value) {

@@ -166,7 +166,7 @@ const connectWebSocket = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const url = `${protocol}//${window.location.host}/api/v1/site-messages/ws?token=${token}`
 
-  console.log('Connecting to notification WebSocket:', url)
+  
   ws = new WebSocket(url)
 
   ws.onmessage = (event) => {

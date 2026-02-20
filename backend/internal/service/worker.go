@@ -82,7 +82,6 @@ func schedulePeriodicTasks() {
 }
 
 func scheduleMetricPolling() {
-	fmt.Printf("[Scheduler] Starting metric polling cycle...\n")
 	ctx := context.Background()
 	monitors, err := GetAllMonitorsServ()
 	if err != nil {
@@ -94,7 +93,6 @@ func scheduleMetricPolling() {
 			continue
 		}
 
-		fmt.Printf("[Scheduler] Enqueuing poll items task for monitor %d (%s)\n", monitor.ID, monitor.Name)
 		// Schedule Item Poll (The actual data collection)
 		if _, err := TaskQueue.Enqueue(ctx, queue.TaskTypePullItemsFromMonitor, map[string]interface{}{
 			"monitor_id": float64(monitor.ID),

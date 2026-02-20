@@ -1015,16 +1015,12 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 // PushHostsFromMonitorServ pushes all hosts from local database to remote monitor
 // TestSNMPServ tests SNMP connectivity for a host
 func TestSNMPServ(hid uint) (SyncResult, error) {
-	fmt.Printf("Service Debug: TestSNMPServ started for Host ID %d\n", hid)
 	host, err := repository.GetHostByIDDAO(hid)
 	if err != nil {
-		fmt.Printf("Service Debug: Host ID %d not found in DB: %v\n", hid, err)
 		return SyncResult{}, err
 	}
 
-	fmt.Printf("Service Debug: Host found: %s, MonitorID: %d\n", host.Name, host.MonitorID)
 	if host.MonitorID == 0 {
-		fmt.Printf("Service Debug: Host %d has no MonitorID assigned\n", hid)
 		return SyncResult{}, fmt.Errorf("host has no monitor assigned")
 	}
 
@@ -1035,19 +1031,15 @@ func TestSNMPServ(hid uint) (SyncResult, error) {
 		if sErr == nil && len(internalMonitors) > 0 {
 			monitor = internalMonitors[0]
 		} else {
-			fmt.Printf("Service Debug: Monitor ID %d not found for Host %d: %v\n", host.MonitorID, hid, err)
 			return SyncResult{}, err
 		}
 	}
 
-	fmt.Printf("Service Debug: Monitor found: %s, Type: %d\n", monitor.Name, monitor.Type)
 	if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
-		fmt.Printf("Service Debug: Monitor %d is type %d, not SNMP (4)\n", monitor.ID, monitor.Type)
 		return SyncResult{}, fmt.Errorf("host is not monitored via SNMP (monitor type: %d)", monitor.Type)
 	}
 
 	// Re-use pullItemsFromHostServ but with recordHistory=false
-	fmt.Printf("Service Debug: Triggering pullItemsFromHostServ for Host %d\n", hid)
 	return pullItemsFromHostServ(monitor.ID, host.ID, false)
 }
 

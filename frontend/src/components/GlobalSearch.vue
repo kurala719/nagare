@@ -243,7 +243,7 @@ export default {
         });
 
         results.value = foundResults;
-        console.log('Global Search results:', foundResults);
+        
       } catch (err) {
         console.error('Global Search failed:', err);
       } finally {

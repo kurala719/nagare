@@ -55,8 +55,6 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	if config.Community == "" { config.Community = "public" }
 	if config.Version == "" { config.Version = "v2c" }
 
-	fmt.Printf("SNMP Debug: Starting Smart-Probe forensic poll for %s\n", hostID)
-
 	oidNames := make(map[string]string)
 	
 	// MANDATORY NAMING MAP (Forces professional English names in Frontend)
@@ -165,7 +163,6 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	}
 
 	// ENFORCED DEEP forensic DISCOVERY
-	fmt.Printf("SNMP Debug: Running enforced Forensic Deep Discovery for %s...\n", hostID)
 	
 	ifaceItems, _ := p.discoverInterfaces(gs)
 	routingItems, _ := p.discoverRoutingMetrics(gs)

@@ -537,7 +537,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
-	fmt.Printf("Service Debug: Authenticating with monitor %d for host %d\n", mid, hid)
 	// Use existing auth token if available
 	if monitor.AuthToken != "" {
 		client.SetAuthToken(monitor.AuthToken)
@@ -552,7 +551,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	ctx := context.Background()
 	targetID := host.Hostid
 	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
-		fmt.Printf("Service Debug: Preparing SNMP poll for host %s (%s)\n", host.Name, host.IPAddr)
 		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
 		authPass := host.SNMPV3AuthPass
 		if authPass != "" {
@@ -598,15 +596,12 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		ctx = context.WithValue(ctx, "snmp_config", snmpCfg)
 	}
 
-	fmt.Printf("Service Debug: Calling client.GetItems for target %s\n", targetID)
 	monitorItems, err := client.GetItems(ctx, targetID)
 	if err != nil {
-		fmt.Printf("Service Debug: client.GetItems failed for target %s: %v\n", targetID, err)
 		LogService("error", "poller.GetItems failed", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error(), "target": targetID}, nil, "")
 		setHostStatusErrorWithReason(hid, err.Error())
 		return result, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
-	fmt.Printf("Service Debug: client.GetItems returned %d items\n", len(monitorItems))
 	monitorItemIDs := make(map[string]struct{}, len(monitorItems))
 	for _, mItem := range monitorItems {
 		monitorItemIDs[mItem.ID] = struct{}{}
@@ -624,11 +619,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			for _, ex := range existingItems {
 				// Case-insensitive name matching for robustness
 				if strings.EqualFold(strings.TrimSpace(ex.Name), strings.TrimSpace(mItem.Name)) && ex.ItemID != mItem.ID {
-					fmt.Printf("Service Debug: [MIGRATION] Matching item found by name: %s. Transitioning OID from %s to %s for host %d\n", ex.Name, ex.ItemID, mItem.ID, hid)
-					
 					// Delete old item if it has a legacy OID to prevent duplicates
 					if strings.Contains(ex.ItemID, ".2011.5.25.31.1.1.1.1") {
-						fmt.Printf("Service Debug: [MIGRATION] Deleting legacy V600 record for %s to finalize migration\n", ex.Name)
 						_ = repository.DeleteItemByIDDAO(ex.ID)
 						foundByName = false // Trigger creation of fresh V200 record
 						break
@@ -639,7 +631,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 					ex.Status = status
 					ex.LastSyncAt = &now
 					if err := repository.UpdateItemDAO(ex.ID, ex); err != nil {
-						fmt.Printf("Service Debug: [MIGRATION] Update failed for %s: %v\n", ex.Name, err)
+						// Error handled by logging if needed, but removing debug print
 					}
 					item = ex
 					foundByName = true
@@ -670,7 +662,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 					result.Failed++
 					continue
 				}
-				fmt.Printf("Service Debug: Added new item %s for host %d\n", mItem.Name, hid)
 				if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
 					if recordHistory {
 						sampledAt := time.Now().UTC()
@@ -686,7 +677,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			}
 		} else {
 			// Item exists with same ID, update it
-			fmt.Printf("Service Debug: Updating existing item %s (ID: %d) for host %d\n", mItem.Name, item.ID, hid)
 			item.Name = mItem.Name // FORCE UPDATE NAME
 			item.ExternalHostID = mItem.HostID
 			item.ValueType = mItem.ValueType
@@ -714,7 +704,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 		result.Total++
 	}
-	fmt.Printf("Service Debug: Pull completed for host %d. Results: %+v\n", hid, result)
 
 	localItems, err := repository.GetItemsByHIDDAO(hid)
 	if err == nil && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
@@ -745,9 +734,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			for _, it := range allLocal {
 				nameToItems[it.Name] = append(nameToItems[it.Name], it)
 			}
-			for name, its := range nameToItems {
+			for _, its := range nameToItems {
 				if len(its) > 1 {
-					fmt.Printf("Service Debug: [CLEANUP] Found %d duplicate items for %s on host %d\n", len(its), name, hid)
 					hasWorking := false
 					for _, it := range its {
 						// Item is working if it has a real value and status is Normal
@@ -759,7 +747,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 					if hasWorking {
 						for _, it := range its {
 							if it.LastValue == "N/A" || it.LastValue == "" || it.Status != 1 {
-								fmt.Printf("Service Debug: [CLEANUP] Purging redundant error item %d (%s) with OID %s\n", it.ID, it.Name, it.ItemID)
 								_ = repository.DeleteItemByIDDAO(it.ID)
 							}
 						}
@@ -784,7 +771,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	go CheckItemThresholds(hid)
 	
 	SyncEvent("items", mid, hid, result)
-	fmt.Printf("Service Debug: pullItemsFromHostServ finished for host %d\n", hid)
 	return result, nil
 }
 

@@ -450,7 +450,7 @@ export default {
       try {
         const response = await getMainConfig();
         const data = response.data?.data || response.data || response;
-        console.log('Loaded config data:', data);
+        
         config.value = data;
         performMapping(data);
       } catch (err) {
