@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -40,8 +41,10 @@ func StartAutoSync() {
 		ticker := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
 		defer ticker.Stop()
 
+		fmt.Printf("[AutoSync] Service started with interval %d seconds\n", intervalSeconds)
 		pullAllMonitors()
 		for range ticker.C {
+			fmt.Printf("[AutoSync] Ticker fired, starting sync...\n")
 			pullAllMonitors()
 		}
 	}()

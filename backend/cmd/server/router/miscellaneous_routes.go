@@ -19,16 +19,9 @@ func setupGroupRoutes(rg *gin.RouterGroup) {
 		groupsWrite.POST("", api.AddGroupCtrl)
 		groupsWrite.PUT("/:id", api.UpdateGroupCtrl)
 		groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
-		groupsWrite.POST("/:id/pull", api.PullGroupFromMonitorsCtrl)
-		groupsWrite.POST("/:id/push", api.PushGroupToMonitorsCtrl)
 		groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
 		groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
 	}
-
-	// Monitor groups routes with privilege level 2
-	monitorGroups := rg.Group("/monitors/:id/groups", api.PrivilegesMiddleware(2))
-	monitorGroups.POST("/pull", api.PullGroupsFromMonitorCtrl)
-	monitorGroups.POST("/:gid/push", api.PushGroupToMonitorCtrl)
 }
 
 func setupTriggerRoutes(rg *gin.RouterGroup) {

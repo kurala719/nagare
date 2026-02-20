@@ -248,13 +248,16 @@ func LoginMonitorServ(id uint) (MonitorResp, error) {
 	}
 
 	authToken := client.GetAuthToken()
-	if authToken == "" {
+	// SNMP and some other monitor types might not return a central auth token
+	if authToken == "" && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
 		return MonitorResp{}, fmt.Errorf("authentication succeeded but no token received")
 	}
 
-	// Update the auth token in the database
-	if err := repository.UpdateMonitorAuthTokenDAO(id, authToken); err != nil {
-		return MonitorResp{}, fmt.Errorf("failed to save auth token: %w", err)
+	// Update the auth token in the database if received
+	if authToken != "" {
+		if err := repository.UpdateMonitorAuthTokenDAO(id, authToken); err != nil {
+			return MonitorResp{}, fmt.Errorf("failed to save auth token: %w", err)
+		}
 	}
 	_ = repository.UpdateMonitorStatusDAO(id, 1)
 

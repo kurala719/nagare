@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"time"
 
 	"nagare/internal/database"
 	"nagare/internal/model"
@@ -185,6 +186,11 @@ func UpdateHostStatusAndDescriptionDAO(id uint, status int, statusDesc string) e
 		"status":             status,
 		"status_description": statusDesc,
 	}).Error
+}
+
+// UpdateHostLastSyncAtDAO updates only the last_sync_at for a host
+func UpdateHostLastSyncAtDAO(id uint, lastSyncAt *time.Time) error {
+	return database.DB.Model(&model.Host{}).Where("id = ?", id).Update("last_sync_at", lastSyncAt).Error
 }
 
 // GetHostWithItemsByIDDAO retrieves a specific host with its items

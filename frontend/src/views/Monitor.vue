@@ -65,6 +65,7 @@
         <el-select v-model="newMonitor.type" style="width: 100%;">
           <el-option label="Zabbix" :value="1" />
           <el-option label="Prometheus" :value="2" />
+          <el-option label="SNMP" :value="4" />
           <el-option label="Other" :value="3" />
         </el-select>
       </el-form-item>
@@ -150,10 +151,7 @@
               <el-tooltip :content="$t('monitors.properties')" placement="bottom">
                 <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
               </el-tooltip>
-              <el-tooltip :content="$t('monitors.syncGroups')" placement="bottom">
-                <el-button size="small" type="primary" plain :icon="Refresh" @click="onSyncGroups(monitor)" :loading="monitor.syncing_groups" />
-              </el-tooltip>
-              <el-tooltip :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
+              <el-tooltip v-if="monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
                 <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
               </el-tooltip>
               <el-tooltip :content="$t('monitors.delete')" placement="bottom">
@@ -201,6 +199,7 @@
         <el-select v-model="selectedMonitor.type" style="width: 100%;">
           <el-option label="Zabbix" :value="1" />
           <el-option label="Prometheus" :value="2" />
+          <el-option label="SNMP" :value="4" />
           <el-option label="Other" :value="3" />
         </el-select>
       </el-form-item>

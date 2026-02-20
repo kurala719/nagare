@@ -558,7 +558,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	monitor, err := GetMonitorByIDServ(mid)
 	if err != nil {
-		setMonitorStatusError(mid)
 		LogService("error", "pull hosts failed to load monitor", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get monitor: %w", err)
 	}
@@ -592,7 +591,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	client, err := createMonitorClient(monitor)
 	if err != nil {
-		setMonitorStatusError(mid)
 		LogService("error", "pull hosts failed to create monitor client", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
@@ -601,7 +599,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		client.SetAuthToken(monitor.AuthToken)
 	} else {
 		if err := client.Authenticate(context.Background()); err != nil {
-			setMonitorStatusError(mid)
 			LogService("error", "pull hosts failed to authenticate", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 			return result, fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
@@ -609,7 +606,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	monitorHosts, err := client.GetHosts(context.Background())
 	if err != nil {
-		setMonitorStatusError(mid)
 		LogService("error", "pull hosts failed to fetch hosts", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get hosts from monitor: %w", err)
 	}
@@ -709,16 +705,19 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	localHosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	if err == nil {
-		for _, localHost := range localHosts {
-			if _, ok := monitorHostIDs[localHost.Hostid]; ok {
-				continue
-			}
-			reason := "host not found on monitor"
-			setHostStatusErrorWithReason(localHost.ID, reason)
-			items, err := repository.GetItemsByHIDDAO(localHost.ID)
-			if err == nil {
-				for _, item := range items {
-					_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+		// Skip 'not found' check for SNMP monitors as they don't provide a master host list
+		if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
+			for _, localHost := range localHosts {
+				if _, ok := monitorHostIDs[localHost.Hostid]; ok {
+					continue
+				}
+				reason := "host not found on monitor"
+				setHostStatusErrorWithReason(localHost.ID, reason)
+				items, err := repository.GetItemsByHIDDAO(localHost.ID)
+				if err == nil {
+					for _, item := range items {
+						_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+					}
 				}
 			}
 		}
@@ -778,6 +777,10 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		setHostStatusErrorWithReason(id, err.Error())
 		LogService("error", "pull host failed to fetch host", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get host from monitor: %w", err)
+	}
+
+	if h == nil {
+		return SyncResult{}, fmt.Errorf("host %s not found on monitor", host.Hostid)
 	}
 
 	// Get active_available from metadata
@@ -950,7 +953,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 	}
 	if host.Hostid == "" {
 		// Try to find host by name first to avoid duplicates
-		if existing, err := client.GetHostByName(context.Background(), host.Name); err == nil && existing.ID != "" {
+		if existing, err := client.GetHostByName(context.Background(), host.Name); err == nil && existing != nil && existing.ID != "" {
 			host.Hostid = existing.ID
 			_ = repository.UpdateHostDAO(host.ID, host)
 			monitorHost.ID = existing.ID

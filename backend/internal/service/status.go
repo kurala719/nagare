@@ -11,6 +11,11 @@ func determineMonitorStatus(m model.Monitor) int {
 	if m.Enabled == 0 {
 		return 0
 	}
+	// SNMP monitors are active if enabled, as polling is per-host
+	if m.Type == 4 { // SNMP
+		return 1
+	}
+	// Monitor status is independent - based on its own connectivity/token
 	if m.AuthToken != "" {
 		return 1
 	}
@@ -47,46 +52,35 @@ func determineHostStatus(h model.Host, monitor model.Monitor) int {
 	if h.Enabled == 0 {
 		return 0
 	}
+	// Host status is independent of monitor's overall health status
 	if monitor.Enabled == 0 {
 		return 2
 	}
-	if monitor.Status == 2 {
+	
+	// SNMP hosts can rely on IP address if Hostid is missing
+	if h.Hostid == "" && (monitor.Type != 4 || h.IPAddr == "") {
 		return 2
 	}
-	if h.Status == 2 {
-		return 2
+	
+	// If the host was successfully polled (status 1) or is currently syncing (status 3)
+	if h.Status == 1 || h.Status == 3 {
+		return h.Status
 	}
-	if monitor.Status == 3 {
-		return 1
-	}
-	if h.Hostid == "" {
-		return 2
-	}
-	if monitor.Status == 1 {
-		return 1
-	}
-	return 0
+	
+	return 1
 }
 
 func determineItemStatus(i model.Item, host model.Host) int {
 	if i.Enabled == 0 {
 		return 0
 	}
-	if host.Enabled == 0 {
-		return 0
-	}
-	// Item status depends on host status - propagate host errors and active state
-	if host.Status == 2 {
-		return 2
-	}
-	if host.Status == 0 {
-		return 0
-	}
+	// Item status is independent of host's overall health status
 	if i.ItemID == "" {
 		return 2
 	}
-	if i.LastValue == "" {
-		return 0
+	// 'N/A' indicates a polling failure or missing instance for this specific device
+	if i.LastValue == "" || i.LastValue == "N/A" {
+		return 2
 	}
 	return 1
 }
@@ -144,25 +138,8 @@ func determineGroupStatus(group model.Group, hosts []model.Host) int {
 	if group.Enabled == 0 {
 		return 0
 	}
-	hasActive := false
-	hasSyncing := false
-	for _, host := range hosts {
-		switch host.Status {
-		case 2:
-			return 2
-		case 3:
-			hasSyncing = true
-		case 1:
-			hasActive = true
-		}
-	}
-	if hasSyncing {
-		return 3
-	}
-	if hasActive {
-		return 1
-	}
-	return 0
+	// Group status is independent of individual host statuses
+	return 1
 }
 
 func setMonitorStatusSyncing(mid uint) {
@@ -354,6 +331,7 @@ func recomputeItemsForHost(hid uint) error {
 }
 
 func recomputeMonitorRelated(mid uint) error {
+	fmt.Printf("Service Debug: recomputeMonitorRelated started for monitor %d\n", mid)
 	if _, err := recomputeMonitorStatus(mid); err != nil {
 		return err
 	}
@@ -457,8 +435,32 @@ func recomputeTriggerStatus(id uint) (int, error) {
 	return status, nil
 }
 
-// RecomputeActionAndTriggerStatuses refreshes stored status values for actions and triggers.
-func RecomputeActionAndTriggerStatuses() error {
+// RecomputeAllStatuses refreshes stored status values for all entities.
+func RecomputeAllStatuses() error {
+	fmt.Println("Service Debug: Recomputing all entity statuses...")
+	
+	monitorsList, err := repository.GetAllMonitorsDAO()
+	if err == nil {
+		for _, m := range monitorsList {
+			_, _ = recomputeMonitorStatus(m.ID)
+		}
+	}
+
+	groups, err := repository.GetAllGroupsDAO()
+	if err == nil {
+		for _, g := range groups {
+			_, _ = recomputeGroupStatus(g.ID)
+		}
+	}
+
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{})
+	if err == nil {
+		for _, h := range hosts {
+			_, _ = recomputeHostStatus(h.ID)
+			_ = recomputeItemsForHost(h.ID)
+		}
+	}
+
 	actions, err := repository.GetAllActionsDAO()
 	if err != nil {
 		return err
@@ -478,4 +480,9 @@ func RecomputeActionAndTriggerStatuses() error {
 		}
 	}
 	return nil
+}
+
+// RecomputeActionAndTriggerStatuses refreshes stored status values for actions and triggers.
+func RecomputeActionAndTriggerStatuses() error {
+	return RecomputeAllStatuses()
 }

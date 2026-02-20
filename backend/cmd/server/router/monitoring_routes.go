@@ -65,14 +65,6 @@ func setupHostRoutes(rg *gin.RouterGroup) {
 	// Generic terminal route
 	terminal := rg.Group("/terminal", api.PrivilegesMiddleware(1))
 	terminal.GET("/ssh", api.HandleWebSSH)
-
-	// Monitor hosts routes with privilege level 2
-	monitorHosts := rg.Group("/monitors/:id/hosts", api.PrivilegesMiddleware(2))
-	monitorHosts.POST("/pull", api.PullHostsFromMonitorCtrl)
-	monitorHosts.POST("/pull-async", api.PullHostsAsyncCtrl)
-	monitorHosts.POST("/:hid/pull", api.PullHostFromMonitorCtrl)
-	monitorHosts.POST("/push", api.PushHostsFromMonitorCtrl)
-	monitorHosts.POST("/:hid/push", api.PushHostToMonitorCtrl)
 }
 
 func setupItemRoutes(rg *gin.RouterGroup) {
@@ -89,17 +81,4 @@ func setupItemRoutes(rg *gin.RouterGroup) {
 	itemsWrite.PUT("/:id", api.UpdateItemCtrl)
 	itemsWrite.DELETE("/:id", api.DeleteItemByIDCtrl)
 	itemsWrite.POST("/hosts/:hid/import", api.AddItemsByHostIDFromMonitorCtrl)
-
-	// Monitor items routes with privilege level 2
-	monitorItems := rg.Group("/monitors/:id/items", api.PrivilegesMiddleware(2))
-	monitorItems.POST("/pull", api.PullItemsFromMonitorCtrl)
-	monitorItems.POST("/push", api.PushItemsFromMonitorCtrl)
-
-	// Monitor host items routes with privilege level 2
-	monitorHostItems := rg.Group("/monitors/:id/hosts/:hid/items", api.PrivilegesMiddleware(2))
-	monitorHostItems.POST("/pull", api.PullItemsOfHostFromMonitorCtrl)
-	monitorHostItems.POST("/pull-async", api.PullItemsAsyncCtrl)
-	monitorHostItems.POST("/:item_id/pull", api.PullItemOfHostFromMonitorCtrl)
-	monitorHostItems.POST("/push", api.PushItemsFromHostCtrl)
-	monitorHostItems.POST("/:item_id/push", api.PushItemToMonitorCtrl)
 }

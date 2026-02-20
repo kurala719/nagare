@@ -30,11 +30,25 @@ func StartTaskWorkers() {
 }
 
 func startScheduler() {
-	ticker := time.NewTicker(5 * time.Minute) // Sync every 5 minutes
-	defer ticker.Stop()
+	// Periodic heavy tasks (Discovery/Sync) every 5 minutes
+	discoveryTicker := time.NewTicker(5 * time.Minute)
+	// Metric polling every 1 minute
+	pollTicker := time.NewTicker(1 * time.Minute)
+	
+	defer discoveryTicker.Stop()
+	defer pollTicker.Stop()
 
-	for range ticker.C {
-		schedulePeriodicTasks()
+	// Initial run
+	go schedulePeriodicTasks()
+	go scheduleMetricPolling()
+
+	for {
+		select {
+		case <-discoveryTicker.C:
+			schedulePeriodicTasks()
+		case <-pollTicker.C:
+			scheduleMetricPolling()
+		}
 	}
 }
 
@@ -47,7 +61,7 @@ func schedulePeriodicTasks() {
 	}
 
 	for _, monitor := range monitors {
-		if monitor.Status != 1 { // Only sync active monitors
+		if monitor.Status != 1 && monitor.Status != 3 { // Only sync active or syncing monitors
 			continue
 		}
 
@@ -58,11 +72,34 @@ func schedulePeriodicTasks() {
 			LogService("error", "failed to enqueue pull groups task", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "scheduler")
 		}
 
-		// Schedule Host Sync
+		// Schedule Host Discovery/Sync
 		if _, err := TaskQueue.Enqueue(ctx, queue.TaskTypePullHostsFromMonitor, map[string]interface{}{
 			"monitor_id": float64(monitor.ID),
 		}); err != nil {
 			LogService("error", "failed to enqueue pull hosts task", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "scheduler")
+		}
+	}
+}
+
+func scheduleMetricPolling() {
+	fmt.Printf("[Scheduler] Starting metric polling cycle...\n")
+	ctx := context.Background()
+	monitors, err := GetAllMonitorsServ()
+	if err != nil {
+		return
+	}
+
+	for _, monitor := range monitors {
+		if monitor.Status != 1 && monitor.Status != 3 {
+			continue
+		}
+
+		fmt.Printf("[Scheduler] Enqueuing poll items task for monitor %d (%s)\n", monitor.ID, monitor.Name)
+		// Schedule Item Poll (The actual data collection)
+		if _, err := TaskQueue.Enqueue(ctx, queue.TaskTypePullItemsFromMonitor, map[string]interface{}{
+			"monitor_id": float64(monitor.ID),
+		}); err != nil {
+			LogService("error", "failed to enqueue pull items task", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "scheduler")
 		}
 	}
 }

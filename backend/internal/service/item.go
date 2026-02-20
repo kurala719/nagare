@@ -419,10 +419,10 @@ func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 	for _, host := range hosts {
 		hostResult, err := pullItemsFromHostServ(mid, host.ID, recordHistory)
 		if err != nil {
-			setMonitorStatusError(mid)
 			setHostStatusErrorWithReason(host.ID, err.Error())
 			LogService("error", "pull items failed for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "error": err.Error()}, nil, "")
-			return result, fmt.Errorf("failed to pull items for host %s: %w", host.Name, err)
+			// Continue with other hosts
+			continue
 		}
 		result.Added += hostResult.Added
 		result.Updated += hostResult.Updated
@@ -466,7 +466,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			monitor = internalMonitors[0]
 			mid = monitor.ID
 		} else {
-			setMonitorStatusError(mid)
 			setHostStatusErrorWithReason(hid, err.Error())
 			LogService("error", "pull items failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
 			return result, fmt.Errorf("failed to get monitor: %w", err)
@@ -478,7 +477,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
 		}
-		setMonitorStatusErrorWithReason(mid, reason)
 		setHostStatusErrorWithReason(hid, reason)
 		items, err := repository.GetItemsByHIDDAO(hid)
 		if err == nil {
@@ -506,7 +504,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		LogService("warn", "pull items skipped due to host error", map[string]interface{}{"host_id": hid, "host_status": currentStatus}, nil, "")
 		return result, fmt.Errorf("host is not active (status: %d)", currentStatus)
 	}
-	if currentStatus != 1 {
+	// Allow status 1 (Active) or 3 (Syncing) to proceed
+	if currentStatus != 1 && currentStatus != 3 {
 		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, currentStatus, "")
 		items, err := repository.GetItemsByHIDDAO(hid)
 		if err == nil {
@@ -524,18 +523,17 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 
 	client, err := createMonitorClientFromDomain(monitor)
 	if err != nil {
-		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(hid, err.Error())
 		LogService("error", "pull items failed to create monitor client", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
+	fmt.Printf("Service Debug: Authenticating with monitor %d for host %d\n", mid, hid)
 	// Use existing auth token if available
 	if monitor.AuthToken != "" {
 		client.SetAuthToken(monitor.AuthToken)
 	} else {
 		if err := client.Authenticate(context.Background()); err != nil {
-			setMonitorStatusError(mid)
 			setHostStatusErrorWithReason(hid, err.Error())
 			LogService("error", "pull items failed to authenticate", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
 			return result, fmt.Errorf("failed to authenticate with monitor: %w", err)
@@ -545,6 +543,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	ctx := context.Background()
 	targetID := host.Hostid
 	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
+		fmt.Printf("Service Debug: Preparing SNMP poll for host %s (%s)\n", host.Name, host.IPAddr)
 		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
 		authPass := host.SNMPV3AuthPass
 		if authPass != "" {
@@ -590,14 +589,15 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		ctx = context.WithValue(ctx, "snmp_config", snmpCfg)
 	}
 
+	fmt.Printf("Service Debug: Calling client.GetItems for target %s\n", targetID)
 	monitorItems, err := client.GetItems(ctx, targetID)
 	if err != nil {
+		fmt.Printf("Service Debug: client.GetItems failed for target %s: %v\n", targetID, err)
 		LogService("error", "poller.GetItems failed", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error(), "target": targetID}, nil, "")
-		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(hid, err.Error())
 		return result, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
-	LogService("info", "poller retrieved items", map[string]interface{}{"host": host.Name, "count": len(monitorItems)}, nil, "")
+	fmt.Printf("Service Debug: client.GetItems returned %d items\n", len(monitorItems))
 	monitorItemIDs := make(map[string]struct{}, len(monitorItems))
 	for _, mItem := range monitorItems {
 		monitorItemIDs[mItem.ID] = struct{}{}
@@ -607,40 +607,75 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	for _, mItem := range monitorItems {
 		enabled, status := mapMonitorItemStatus(mItem.Status)
 		item, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID)
+		
 		if err != nil {
-			// Item does not exist, add it
-			newItem := model.Item{
-				Name:           mItem.Name,
-				HID:            hid,
-				ItemID:         mItem.ID,
-				ExternalHostID: mItem.HostID,
-				ValueType:      mItem.ValueType,
-				LastValue:      mItem.Value,
-				Units:          mItem.Units,
-				Enabled:        enabled,
-				Status:         status,
-				LastSyncAt:     &now,
-				ExternalSource: monitor.Name,
-			}
-			if err := repository.AddItemDAO(newItem); err != nil {
-				setHostStatusErrorWithReason(hid, err.Error())
-				LogService("error", "pull items failed to add item", map[string]interface{}{"monitor_id": mid, "host_id": hid, "item_name": mItem.Name, "error": err.Error()}, nil, "")
-				result.Failed++
-				continue
-			}
-			fmt.Printf("Service Debug: Added new item %s for host %d\n", mItem.Name, hid)
-			if recordHistory {
-				if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
-					sampledAt := time.Now().UTC()
-					if mItem.Timestamp > 0 {
-						sampledAt = time.Unix(mItem.Timestamp, 0).UTC()
+			// Check if item exists with same NAME but different ID (OID Migration case)
+			existingItems, _ := repository.GetItemsByHIDDAO(hid)
+			foundByName := false
+			for _, ex := range existingItems {
+				// Case-insensitive name matching for robustness
+				if strings.EqualFold(strings.TrimSpace(ex.Name), strings.TrimSpace(mItem.Name)) && ex.ItemID != mItem.ID {
+					fmt.Printf("Service Debug: [MIGRATION] Matching item found by name: %s. Transitioning OID from %s to %s for host %d\n", ex.Name, ex.ItemID, mItem.ID, hid)
+					
+					// Delete old item if it has a legacy OID to prevent duplicates
+					if strings.Contains(ex.ItemID, ".2011.5.25.31.1.1.1.1") {
+						fmt.Printf("Service Debug: [MIGRATION] Deleting legacy V600 record for %s to finalize migration\n", ex.Name)
+						_ = repository.DeleteItemByIDDAO(ex.ID)
+						foundByName = false // Trigger creation of fresh V200 record
+						break
 					}
-					recordItemHistory(created, sampledAt)
+
+					ex.ItemID = mItem.ID
+					ex.LastValue = mItem.Value
+					ex.Status = status
+					ex.LastSyncAt = &now
+					if err := repository.UpdateItemDAO(ex.ID, ex); err != nil {
+						fmt.Printf("Service Debug: [MIGRATION] Update failed for %s: %v\n", ex.Name, err)
+					}
+					item = ex
+					foundByName = true
+					// Mark as found in the current poll to prevent cleanup
+					monitorItemIDs[mItem.ID] = struct{}{}
+					break
 				}
 			}
-			result.Added++
+
+			if !foundByName {
+				// Item does not exist at all, add it
+				newItem := model.Item{
+					Name:           mItem.Name,
+					HID:            hid,
+					ItemID:         mItem.ID,
+					ExternalHostID: mItem.HostID,
+					ValueType:      mItem.ValueType,
+					LastValue:      mItem.Value,
+					Units:          mItem.Units,
+					Enabled:        enabled,
+					Status:         status,
+					LastSyncAt:     &now,
+					ExternalSource: monitor.Name,
+				}
+				if err := repository.AddItemDAO(newItem); err != nil {
+					setHostStatusErrorWithReason(hid, err.Error())
+					LogService("error", "pull items failed to add item", map[string]interface{}{"monitor_id": mid, "host_id": hid, "item_name": mItem.Name, "error": err.Error()}, nil, "")
+					result.Failed++
+					continue
+				}
+				fmt.Printf("Service Debug: Added new item %s for host %d\n", mItem.Name, hid)
+				if recordHistory {
+					if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
+						sampledAt := time.Now().UTC()
+						if mItem.Timestamp > 0 {
+							sampledAt = time.Unix(mItem.Timestamp, 0).UTC()
+						}
+						recordItemHistory(created, sampledAt)
+					}
+				}
+				result.Added++
+				continue
+			}
 		} else {
-			// Item exists, update it
+			// Item exists with same ID, update it
 			fmt.Printf("Service Debug: Updating existing item %s for host %d\n", mItem.Name, hid)
 			item.Name = mItem.Name
 			item.ExternalHostID = mItem.HostID
@@ -671,9 +706,19 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	fmt.Printf("Service Debug: Pull completed for host %d. Results: %+v\n", hid, result)
 
 	localItems, err := repository.GetItemsByHIDDAO(hid)
-	if err == nil {
+	if err == nil && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
 		for _, localItem := range localItems {
-			if _, ok := monitorItemIDs[localItem.ItemID]; ok {
+			// Normalize local ItemID for comparison with monitorItemIDs (which are already normalized)
+			normalizedLocalID := localItem.ItemID
+			if len(normalizedLocalID) > 0 && normalizedLocalID[0] == '.' {
+				normalizedLocalID = normalizedLocalID[1:]
+			}
+			
+			if _, ok := monitorItemIDs[normalizedLocalID]; ok {
+				continue
+			}
+			// Only mark as missing if it's not a special calculated item
+			if strings.HasPrefix(localItem.ItemID, "calculated.") {
 				continue
 			}
 			reason := "item not found on monitor"
@@ -681,7 +726,52 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 	}
 
-	_ = recomputeMonitorRelated(mid)
+	// Deduplication and Cleanup for SNMP
+	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
+		allLocal, err := repository.GetItemsByHIDDAO(hid)
+		if err == nil {
+			nameToItems := make(map[string][]model.Item)
+			for _, it := range allLocal {
+				nameToItems[it.Name] = append(nameToItems[it.Name], it)
+			}
+			for name, its := range nameToItems {
+				if len(its) > 1 {
+					fmt.Printf("Service Debug: [CLEANUP] Found %d duplicate items for %s on host %d\n", len(its), name, hid)
+					hasWorking := false
+					for _, it := range its {
+						// Item is working if it has a real value and status is Normal
+						if it.LastValue != "N/A" && it.LastValue != "" && it.Status == 1 {
+							hasWorking = true
+							break
+						}
+					}
+					if hasWorking {
+						for _, it := range its {
+							if it.LastValue == "N/A" || it.LastValue == "" || it.Status != 1 {
+								fmt.Printf("Service Debug: [CLEANUP] Purging redundant error item %d (%s) with OID %s\n", it.ID, it.Name, it.ItemID)
+								_ = repository.DeleteItemByIDDAO(it.ID)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	_, _ = recomputeHostStatus(hid)
+	
+	// Update host LastSyncAt after successful poll
+	nowHost := time.Now().UTC()
+	_ = repository.UpdateHostLastSyncAtDAO(hid, &nowHost)
+
+	if host.GroupID > 0 {
+		_, _ = recomputeGroupStatus(host.GroupID)
+	}
+	_, _ = recomputeMonitorStatus(mid)
+	
+	// Trigger automatic threshold checks for this host
+	go CheckItemThresholds(hid)
+	
 	SyncEvent("items", mid, hid, result)
 	fmt.Printf("Service Debug: pullItemsFromHostServ finished for host %d\n", hid)
 	return result, nil
@@ -745,6 +835,10 @@ func PullItemOfHostFromMonitorServ(mid, hid, id uint) (SyncResult, error) {
 		setItemStatusErrorWithReason(id, err.Error())
 		LogService("error", "pull item failed to fetch item", map[string]interface{}{"monitor_id": mid, "item_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get item from monitor: %w", err)
+	}
+
+	if monitorItem == nil {
+		return SyncResult{}, fmt.Errorf("item %s not found on monitor", item.ItemID)
 	}
 
 	item.Name = monitorItem.Name
@@ -1017,10 +1111,13 @@ func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 func mapMonitorItemStatus(status string) (enabled int, itemStatus int) {
 	enabled = 1
 	itemStatus = 1
-	if status == "1" || status == "disabled" {
+	
+	// Convention: '0' = Enabled/Active, '1' = Disabled/Inactive
+	if status == "1" || strings.ToLower(status) == "disabled" {
 		enabled = 0
 		itemStatus = 0
 	}
+	
 	return enabled, itemStatus
 }
 

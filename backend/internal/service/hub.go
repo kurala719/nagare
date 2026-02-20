@@ -35,7 +35,7 @@ type Hub struct {
 }
 
 var GlobalHub = &Hub{
-	broadcast:  make(chan []byte),
+	broadcast:  make(chan []byte, 1024),
 	register:   make(chan *Client),
 	unregister: make(chan *Client),
 	clients:    make(map[*Client]bool),
@@ -117,5 +117,10 @@ func BroadcastMessage(msg interface{}) {
 		log.Printf("broadcast marshal error: %v", err)
 		return
 	}
-	GlobalHub.broadcast <- data
+	
+	select {
+	case GlobalHub.broadcast <- data:
+	default:
+		log.Printf("hub broadcast channel full, message dropped")
+	}
 }

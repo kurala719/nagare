@@ -33,9 +33,6 @@
         <el-button type="primary" :icon="Plus" @click="createDialogVisible = true">
           {{ $t('groups.create') }}
         </el-button>
-        <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingGroups" :loading="pullingGroups" @click="pullGroups">
-          {{ $t('groups.pull') }}
-        </el-button>
         <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
@@ -130,12 +127,6 @@
           </el-tooltip>
           <el-tooltip :content="$t('groups.properties')" placement="top">
             <el-button size="small" :icon="Setting" @click="openProperties(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('groups.pull')" placement="top">
-            <el-button size="small" type="warning" :icon="Download" @click="onPull(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('groups.push')" placement="top">
-            <el-button size="small" type="success" :icon="Upload" @click="onPush(row)" />
           </el-tooltip>
           <el-tooltip :content="$t('groups.delete')" placement="top">
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />

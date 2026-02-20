@@ -33,9 +33,6 @@
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('hosts.create') }}
         </el-button>
-        <el-button type="warning" :icon="Download" :disabled="(!syncMonitorId && !monitorFilter && selectedCount === 0) || pullingHosts" :loading="pullingHosts" @click="pullHosts">
-          {{ $t('hosts.pullHosts') }}
-        </el-button>
         <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
@@ -254,12 +251,6 @@
           </el-tooltip>
           <el-tooltip :content="$t('hosts.items')" placement="top">
             <el-button size="small" type="info" :icon="Setting" @click="viewItems(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('hosts.pullItems')" placement="top">
-            <el-button size="small" type="warning" plain :icon="Download" @click="pullHostItems(row)" />
-          </el-tooltip>
-          <el-tooltip :content="$t('hosts.pushItems')" placement="top">
-            <el-button size="small" type="success" plain :icon="Upload" @click="pushHostItems(row)" />
           </el-tooltip>
           <el-tooltip :content="$t('hosts.properties')" placement="top">
             <el-button size="small" :icon="Edit" @click="openProperties(row)" />
