@@ -1,35 +1,47 @@
-# Nagare (流) - Enterprise AIOps & Infrastructure Orchestration
+# Nagare (流) - The AI-Powered Brain for Your IT Infrastructure
 
-Nagare is a high-performance, AI-native operations platform designed to bridge the gap between traditional monitoring (Zabbix/Prometheus) and autonomous system diagnosis. Built on a Go 1.24+ backend and a Vue 3 + Vite frontend, Nagare leverages Large Language Models (LLM) and a custom Retrieval-Augmented Generation (RAG) engine to provide context-aware troubleshooting and automated remediation.
+**Nagare** (Japanese for "Flow") is a smart platform that watches over your servers and applications. Unlike traditional systems that just "beep" when something breaks, Nagare uses Artificial Intelligence to understand **why** it broke and tells you **how** to fix it.
 
-## 📂 Technical Documentation Manuals
-
-| Manual | Description |
-| :--- | :--- |
-| [**Architecture**](./doc/ARCHITECTURE.md) | System design, high-concurrency Go patterns, and `jsoniter` optimization. |
-| [**AI & RAG Engine**](./doc/AI_RAG_ENGINE.md) | Precision scoring algorithms, tokenization, and prompt engineering. |
-| [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) | WebSocket-PTY proxying, XSS prevention, and terminal protocols. |
-| [**Reporting & Async Tasks**](./doc/REPORTING_SYSTEM.md) | Redis workers, Maroto PDF generation, and Go-chart rendering. |
-| [**Automation & Chaos**](./doc/AUTOMATION_CHAOS.md) | Ansible dynamic inventory and Alert Storm simulation logic. |
-| [**Frontend Engineering**](./doc/FRONTEND_GUIDE.md) | UX skeleton screens, manual chunking, and tunnel interoperability. |
-| [**API Reference**](./doc/API_REFERENCE.md) | RESTful specifications, RBAC levels, and MCP agent support. |
+## 🌟 What makes Nagare special? (The Layman's View)
+- **It Listens**: It connects to your existing tools (Zabbix, Prometheus) to hear every "heartbeat" of your system.
+- **It Remembers**: It has a "Knowledge Base" (RAG). When a problem occurs, it looks up your past notes and manuals to find a solution.
+- **It Thinks**: It uses advanced AI (Google Gemini) to analyze errors. It acts like a senior engineer who is awake 24/7.
+- **It Acts**: You can fix problems directly from your browser using a built-in "Command Center" (WebSSH) or automated "Robot Scripts" (Ansible).
 
 ---
 
-## ⚡ Engineering Highlights
+## 📖 The "Human-Friendly" Manual
+New to Nagare? Check out our **[Nagare User Manual (A Guide for Everyone)](./NAGARE_USER_MANUAL.md)**. 
+It explains every part of the system in plain English.
 
-### 1. High-Performance Serialization
-Nagare replaces the standard library with `jsoniter` across all high-load paths.
-- **Backend Build**: `go build -tags=jsoniter -o server ./cmd/server`
-- **Result**: 20-30% reduction in CPU overhead during Zabbix/Prometheus webhook ingestion.
+---
 
-### 2. Autonomous RAG Scoring
-Context retrieval uses a precise keyword relevance algorithm:
-$$S = \sum_{t \in T} \mathbb{1}(t \in KB_{entry}) \times 2$$
-This ensures AI diagnostics are grounded in your specific infrastructure runbooks.
+## 📂 Technical Navigation
+If you are a developer or an engineer, explore our deep-dive manuals:
 
-### 3. Dev-Tunnel Interoperability
-Native bypass for Microsoft Dev Tunnels using automated header injection (`X-Tunnel-Skip-AntiPhishing-Page`), enabling seamless remote testing and webhook delivery.
+| Manual | Concept | Technical Focus |
+| :--- | :--- | :--- |
+| [**Architecture**](./doc/ARCHITECTURE.md) | The Nervous System | Go 1.24, Gin, Redis, High-Concurrency. |
+| [**Database Schema**](./doc/DATABASE_SCHEMA.md) | The Storage Engine | MySQL/GORM, ERD, History Tracking. |
+| [**Deployment Guide**](./doc/DEPLOYMENT_GUIDE.md) | Production & Staging | Nginx, systemd, JWT Secrets, HTTPS. |
+| [**Developer Guide**](./doc/DEVELOPER_GUIDE.md) | Code Standards | DDD Layering, Vue 3 Composition API. |
+| [**Integrations**](./doc/INTEGRATIONS.md) | Connecting Monitors | Zabbix Webhooks, Prometheus Alertmanager. |
+| [**AI Configuration**](./doc/AI_CONFIGURATION.md) | The Brain Setup | Gemini, Ollama, RAG Tuning. |
+| [**Playbook Authoring**](./doc/PLAYBOOK_AUTHORING.md) | Robot Scripts | Ansible YAML, Dynamic Inventory. |
+| [**Security & RBAC**](./doc/RBAC_SECURITY_MODEL.md) | Access Control | Privilege Levels, JWT, WebSSH Security. |
+| [**Troubleshooting**](./doc/TROUBLESHOOTING.md) | Fixing Issues | Common Errors, Performance Tuning. |
+| [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) | The Command Center | WebSocket Proxy, xterm.js, XSS Defense. |
+| [**Reporting System**](./doc/REPORTING_SYSTEM.md) | The Weekly Checkup | PDF Rendering, Go-Charts, Cron Tasks. |
+| [**Frontend Guide**](./doc/FRONTEND_GUIDE.md) | The Interface | Vue 3, Vite, Perceived Speed Optimization. |
+| [**Communication**](./doc/COMMUNICATION_NOTIFICATIONS.md) | Notifications | WebSockets, QQ Bot, Whitelist Security. |
+| [**API Reference**](./doc/API_REFERENCE.md) | The Language | RESTful Endpoints, RBAC, MCP Protocol. |
+
+---
+
+## ⚡ Engineering Benchmarks
+- **High Speed**: Optimized JSON processing (`jsoniter`) makes it 30% faster than standard tools.
+- **Remote Ready**: Works perfectly with Microsoft Dev Tunnels (no "Anti-Phishing" blocks).
+- **Future Proof**: Supports the **MCP Protocol**, allowing other AI agents to talk to Nagare.
 
 ## 📄 License
 Apache License 2.0
