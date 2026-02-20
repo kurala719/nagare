@@ -26,9 +26,10 @@
           </template>
         </el-dropdown>
         
-        <el-button v-if="items.length > 0" @click="toggleSelectAll">
-          {{ isAllSelected ? $t('common.deselectAll') : $t('common.selectAll') }}
-        </el-button>
+        <el-button-group v-if="items.length > 0" style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
 
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('kb.create') }}
@@ -137,12 +138,12 @@ const toggleSelection = (id) => {
   }
 }
 
-const toggleSelectAll = () => {
-  if (isAllSelected.value) {
-    selectedIds.value = []
-  } else {
-    selectedIds.value = items.value.map(item => item.ID)
-  }
+const selectAll = () => {
+  selectedIds.value = items.value.map(item => item.ID)
+}
+
+const clearSelection = () => {
+  selectedIds.value = []
 }
 
 const form = ref({

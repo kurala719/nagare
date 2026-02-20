@@ -147,6 +147,9 @@ func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 		"log_type":         trigger.LogType,
 		"log_level":        trigger.LogSeverity,
 		"log_query":        trigger.LogQuery,
+		"item_status":      trigger.ItemStatus,
+		"item_value_threshold": trigger.ItemValueThreshold,
+		"item_value_operator":  trigger.ItemValueOperator,
 		"enabled":          trigger.Enabled,
 		"status":           trigger.Status,
 	}).Error

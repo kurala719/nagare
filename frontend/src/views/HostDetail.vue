@@ -17,25 +17,33 @@
     </div>
 
     <el-row :gutter="16" class="stats-row">
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="4">
+        <el-card>
+          <div class="stat-label">Health</div>
+          <div class="stat-value">
+            <el-progress type="circle" :percentage="host.health_score || 0" :width="40" :stroke-width="4" :status="getHealthStatus(host.health_score)" />
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('items.total') }}</div>
           <div class="stat-value">{{ stats.totalItems }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('common.statusActive') }}</div>
           <div class="stat-value">{{ stats.active }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('common.statusError') }}</div>
           <div class="stat-value">{{ stats.error }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('common.statusSyncing') }}</div>
           <div class="stat-value">{{ stats.syncing }}</div>
@@ -339,6 +347,12 @@ const statusTag = (status) => {
   }
 }
 
+const getHealthStatus = (score) => {
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'warning'
+  return 'exception'
+}
+
 const resolveRangeWindow = () => {
   const range = historyRange.value
   if (Array.isArray(range) && range.length === 2 && range[0] && range[1]) {
@@ -520,6 +534,7 @@ const loadData = async () => {
     name: hostData.name || hostData.Name || '',
     ip_addr: hostData.ip_addr || hostData.IPAddr || '',
     hostid: hostData.hostid || hostData.Hostid || '',
+    health_score: hostData.health_score || hostData.HealthScore || 100,
   }
   const itemsResp = await fetchItemsByHost(hostId)
   const itemsData = Array.isArray(itemsResp) ? itemsResp : (itemsResp.data || itemsResp.items || [])

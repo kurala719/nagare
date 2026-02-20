@@ -30,6 +30,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Plus" @click="openAddDialog">
           {{ $t('items.add') }}
         </el-button>
@@ -683,6 +687,13 @@ export default {
         },
         onSelectionChange(selection: ItemRecord[]) {
             this.selectedItems = selection || [];
+        },
+        selectAll() {
+            if (this.$refs.itemsTableRef) {
+                this.items.forEach((row) => {
+                    this.$refs.itemsTableRef.toggleRowSelection(row, true);
+                });
+            }
         },
         onSortChange({ prop, order }) {
             if (!prop || !order) {

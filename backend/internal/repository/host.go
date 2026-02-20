@@ -158,13 +158,19 @@ func UpdateHostDAO(id uint, h model.Host) error {
 		Update("ssh_user", h.SSHUser).
 		Update("ssh_port", h.SSHPort).
 		Update("last_sync_at", h.LastSyncAt).
-		Update("external_source", h.ExternalSource)
+		Update("external_source", h.ExternalSource).
+		Update("health_score", h.HealthScore)
 
 	if h.SSHPassword != "" {
 		db = db.Update("ssh_password", h.SSHPassword)
 	}
 
 	return db.Error
+}
+
+// UpdateHostHealthScoreDAO updates only the health score for a host
+func UpdateHostHealthScoreDAO(id uint, score int) error {
+	return database.DB.Model(&model.Host{}).Where("id = ?", id).Update("health_score", score).Error
 }
 
 // UpdateHostStatusDAO updates only the status for a host

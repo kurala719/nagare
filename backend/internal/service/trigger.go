@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,9 @@ type TriggerReq struct {
 	LogType        string `json:"log_type"`
 	LogSeverity    *int   `json:"log_severity"`
 	LogQuery       string `json:"log_query"`
+	ItemStatus     *int   `json:"item_status"`
+	ItemValueThreshold *float64 `json:"item_value_threshold"`
+	ItemValueOperator  string `json:"item_value_operator"`
 	Enabled        int    `json:"enabled"`
 }
 
@@ -45,6 +49,9 @@ type TriggerResp struct {
 	LogType        string `json:"log_type"`
 	LogSeverity    *int   `json:"log_severity"`
 	LogQuery       string `json:"log_query"`
+	ItemStatus     *int   `json:"item_status"`
+	ItemValueThreshold *float64 `json:"item_value_threshold"`
+	ItemValueOperator  string `json:"item_value_operator"`
 	Enabled        int    `json:"enabled"`
 	Status         int    `json:"status"`
 }
@@ -105,6 +112,9 @@ func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 		LogType:        req.LogType,
 		LogSeverity:    req.LogSeverity,
 		LogQuery:       req.LogQuery,
+		ItemStatus:     req.ItemStatus,
+		ItemValueThreshold: req.ItemValueThreshold,
+		ItemValueOperator:  req.ItemValueOperator,
 		Enabled:        req.Enabled,
 	}
 	if action, err := repository.GetActionByIDDAO(req.ActionID); err == nil {
@@ -122,6 +132,10 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 	if req.ActionID == 0 {
 		return fmt.Errorf("action_id is required")
 	}
+	existing, err := repository.GetTriggerByIDDAO(id)
+	if err != nil {
+		return err
+	}
 	updated := model.Trigger{
 		Name:           req.Name,
 		Entity:         normalizeTriggerEntity(req.Entity),
@@ -137,12 +151,19 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 		LogType:        req.LogType,
 		LogSeverity:    req.LogSeverity,
 		LogQuery:       req.LogQuery,
+		ItemStatus:     req.ItemStatus,
+		ItemValueThreshold: req.ItemValueThreshold,
+		ItemValueOperator:  req.ItemValueOperator,
 		Enabled:        req.Enabled,
+		Status:         existing.Status,
 	}
-	if action, err := repository.GetActionByIDDAO(req.ActionID); err == nil {
-		updated.Status = determineTriggerStatus(updated, action)
-	} else {
-		updated.Status = determineTriggerStatus(updated, model.Action{})
+	// Preserve status unless enabled state or action changed
+	if req.Enabled != existing.Enabled || req.ActionID != existing.ActionID {
+		if action, err := repository.GetActionByIDDAO(req.ActionID); err == nil {
+			updated.Status = determineTriggerStatus(updated, action)
+		} else {
+			updated.Status = determineTriggerStatus(updated, model.Action{})
+		}
 	}
 	if err := repository.UpdateTriggerDAO(id, updated); err != nil {
 		return err
@@ -172,6 +193,9 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 		LogType:        trigger.LogType,
 		LogSeverity:    trigger.LogSeverity,
 		LogQuery:       trigger.LogQuery,
+		ItemStatus:     trigger.ItemStatus,
+		ItemValueThreshold: trigger.ItemValueThreshold,
+		ItemValueOperator:  trigger.ItemValueOperator,
 		Enabled:        trigger.Enabled,
 		Status:         trigger.Status,
 	}
@@ -223,6 +247,12 @@ func ExecuteTriggersForLog(entry model.LogEntry) {
 	execTriggersForLog(entry, replacements)
 }
 
+// ExecuteTriggersForItem runs matching triggers for an item update
+func ExecuteTriggersForItem(item model.Item) {
+	replacements := buildItemReplacements(item)
+	execTriggersForItem(item, replacements)
+}
+
 func buildAlertReplacements(ctx alertMatchContext) map[string]string {
 	alert := ctx.alert
 	return map[string]string{
@@ -250,6 +280,23 @@ func buildLogReplacements(entry model.LogEntry) map[string]string {
 		"{{type}}":           entry.Type,
 		"{{context}}":        entry.Context,
 		"{{created_at}}":     entry.CreatedAt.Format(time.RFC3339),
+	}
+}
+
+func buildItemReplacements(item model.Item) map[string]string {
+	hostName := ""
+	if host, err := repository.GetHostByIDDAO(item.HID); err == nil {
+		hostName = host.Name
+	}
+	return map[string]string{
+		"{{item_id}}":    fmt.Sprintf("%d", item.ID),
+		"{{name}}":       item.Name,
+		"{{value}}":      item.LastValue,
+		"{{units}}":      item.Units,
+		"{{status}}":     fmt.Sprintf("%d", item.Status),
+		"{{host_id}}":    fmt.Sprintf("%d", item.HID),
+		"{{host_name}}":  hostName,
+		"{{created_at}}": time.Now().UTC().Format(time.RFC3339),
 	}
 }
 
@@ -292,6 +339,19 @@ func execTriggersForLog(entry model.LogEntry, replacements map[string]string) {
 	}
 }
 
+func execTriggersForItem(item model.Item, replacements map[string]string) {
+	triggers, err := repository.GetActiveTriggersForEntityDAO("item")
+	if err != nil {
+		return
+	}
+	for _, trigger := range triggers {
+		if !matchItemTrigger(trigger, item) {
+			continue
+		}
+		invokeItemTriggerAction(trigger, replacements)
+	}
+}
+
 func invokeAlertTriggerAction(trigger model.Trigger, replacements map[string]string) {
 	if trigger.Enabled == 0 {
 		return
@@ -320,6 +380,21 @@ func invokeLogTriggerAction(trigger model.Trigger, replacements map[string]strin
 		return
 	}
 	_ = ExecuteLogAction(action, media, replacements)
+}
+
+func invokeItemTriggerAction(trigger model.Trigger, replacements map[string]string) {
+	if trigger.Enabled == 0 {
+		return
+	}
+	action, err := repository.GetActionByIDDAO(trigger.ActionID)
+	if err != nil || action.Enabled == 0 {
+		return
+	}
+	media, err := repository.GetMediaByIDDAO(action.MediaID)
+	if err != nil || media.Enabled == 0 {
+		return
+	}
+	_ = ExecuteAction(action, media, replacements)
 }
 
 type alertMatchContext struct {
@@ -411,12 +486,64 @@ func matchLogTrigger(trigger model.Trigger, entry model.LogEntry) bool {
 	return true
 }
 
+func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
+	entity := normalizeTriggerEntity(trigger.Entity)
+	if entity != "item" {
+		return false
+	}
+	if trigger.AlertItemID != nil && item.ID != *trigger.AlertItemID {
+		return false
+	}
+	if trigger.AlertHostID != nil && item.HID != *trigger.AlertHostID {
+		return false
+	}
+	if trigger.ItemStatus != nil && item.Status != *trigger.ItemStatus {
+		return false
+	}
+	if trigger.ItemValueThreshold != nil {
+		val, err := strconv.ParseFloat(item.LastValue, 64)
+		if err != nil {
+			return false
+		}
+		threshold := *trigger.ItemValueThreshold
+		switch trigger.ItemValueOperator {
+		case ">":
+			if !(val > threshold) {
+				return false
+			}
+		case ">=":
+			if !(val >= threshold) {
+				return false
+			}
+		case "<":
+			if !(val < threshold) {
+				return false
+			}
+		case "<=":
+			if !(val <= threshold) {
+				return false
+			}
+		case "=":
+			if !(val == threshold) {
+				return false
+			}
+		case "!=":
+			if !(val != threshold) {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func normalizeTriggerEntity(entity string) string {
 	value := strings.ToLower(strings.TrimSpace(entity))
 	if value == "" {
 		return "alert"
 	}
-	if value != "alert" && value != "log" {
+	if value != "alert" && value != "log" && value != "item" {
 		return "alert"
 	}
 	return value

@@ -38,6 +38,7 @@ type Host struct {
 	SNMPV3SecurityLevel string `gorm:"column:snmp_v3_security_level"` // "NoAuthNoPriv", "AuthNoPriv", "AuthPriv"
 	LastSyncAt        *time.Time
 	ExternalSource    string `gorm:"column:external_source"`
+	HealthScore       int    `gorm:"column:health_score;default:100"`
 }
 
 // Group represents a logical group of hosts
@@ -51,6 +52,7 @@ type Group struct {
 	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	LastSyncAt  *time.Time
 	ExternalSource string `gorm:"column:external_source"`
+	HealthScore    int    `gorm:"column:health_score;default:100"`
 }
 
 // Monitor represents a monitoring system (e.g., Zabbix)
@@ -67,6 +69,7 @@ type Monitor struct {
 	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
+	HealthScore       int    `gorm:"column:health_score;default:100"`
 }
 
 // Alarm represents an external alert source (e.g., Zabbix)
@@ -214,6 +217,9 @@ type Trigger struct {
 	LogType        string `gorm:"column:log_type"`
 	LogSeverity    *int   `gorm:"column:log_level"`
 	LogQuery       string `gorm:"column:log_query"`
+	ItemStatus     *int   `gorm:"column:item_status"`
+	ItemValueThreshold *float64 `gorm:"column:item_value_threshold"`
+	ItemValueOperator  string   `gorm:"column:item_value_operator"`
 	Enabled        int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status         int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 }
@@ -389,4 +395,13 @@ type SiteMessage struct {
 type UserWithInfo struct {
 	User
 	UserInformation UserInformation `gorm:"foreignKey:UserID"`
+}
+
+// RetentionPolicy defines how long data for a specific part of the system should be kept.
+type RetentionPolicy struct {
+	gorm.Model
+	DataType      string `gorm:"size:50;uniqueIndex"` // e.g., 'logs', 'alerts', 'audit_logs', 'item_history', 'host_history'
+	RetentionDays int    `gorm:"default:30"`         // 0 means keep forever
+	Enabled       *int   `gorm:"default:1"`          // 0 = disabled, 1 = enabled
+	Description   string `gorm:"size:255"`
 }

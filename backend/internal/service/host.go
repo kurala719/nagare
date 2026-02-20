@@ -64,6 +64,7 @@ type HostResp struct {
 	SNMPV3SecurityLevel string `json:"snmp_v3_security_level"`
 	LastSyncAt  *time.Time `json:"last_sync_at"`
 	ExternalSource string `json:"external_source"`
+	HealthScore int    `json:"health_score"`
 }
 
 // GetAllHostsServ retrieves all hosts
@@ -190,6 +191,10 @@ func AddHostServ(h HostReq) (HostResp, error) {
 			}
 		}
 	}
+	_, _ = recomputeHostStatus(newHost.ID)
+	if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
+		newHost = refreshed
+	}
 	return HostResp{
 		ID:          int(newHost.ID),
 		Name:        newHost.Name,
@@ -237,6 +242,8 @@ func UpdateHostServ(id uint, h HostReq) error {
 		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
 		LastSyncAt:  existing.LastSyncAt,
 		ExternalSource: existing.ExternalSource,
+		Status:      existing.Status,
+		StatusDescription: existing.StatusDescription,
 	}
 	if h.LastSyncAt != nil {
 		updated.LastSyncAt = h.LastSyncAt
@@ -271,12 +278,16 @@ func UpdateHostServ(id uint, h HostReq) error {
 	} else {
 		updated.SNMPV3PrivPass = existing.SNMPV3PrivPass
 	}
-	if monitorID > 0 {
-		if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
-			updated.Status = determineHostStatus(updated, monitor)
+	// Preserve status and description unless enabled state changed
+	if h.Enabled != existing.Enabled {
+		if monitorID > 0 {
+			if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
+				updated.Status = determineHostStatus(updated, monitor)
+			}
+		} else {
+			updated.Status = determineHostStatus(updated, model.Monitor{Enabled: 1, Status: 1})
 		}
-	} else {
-		updated.Status = determineHostStatus(updated, model.Monitor{Enabled: 1, Status: 1})
+		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateHostDAO(id, updated); err != nil {
 		return err
@@ -284,7 +295,9 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if refreshed, err := repository.GetHostByIDDAO(id); err == nil {
 		recordHostHistory(refreshed, time.Now().UTC())
 	}
-	return recomputeItemsForHost(id)
+	_ = recomputeItemsForHost(id)
+	_, _ = recomputeHostStatus(id)
+	return nil
 }
 
 // GetHostConnectionDetails retrieves host connection details including decrypted password
@@ -427,6 +440,7 @@ func hostToResp(h model.Host) HostResp {
 		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
 		LastSyncAt:  h.LastSyncAt,
 		ExternalSource: h.ExternalSource,
+		HealthScore: h.HealthScore,
 	}
 }
 

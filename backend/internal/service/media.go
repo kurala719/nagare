@@ -96,6 +96,10 @@ func AddMediaServ(req MediaReq) (MediaResp, error) {
 }
 
 func UpdateMediaServ(id uint, req MediaReq) error {
+	existing, err := repository.GetMediaByIDDAO(id)
+	if err != nil {
+		return err
+	}
 	_, mediaTypeKey, mediaTypeStatus, params, target, err := resolveMediaTypeAndTarget(req)
 	if err != nil {
 		return err
@@ -107,8 +111,12 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 		Target:      target,
 		Params:      params,
 		Enabled:     req.Enabled,
-		Status:      determineMediaStatus(model.Media{Enabled: req.Enabled, Type: mediaTypeKey, Target: target}),
+		Status:      existing.Status,
 		Description: req.Description,
+	}
+	// Preserve status unless enabled state, type or target changed
+	if req.Enabled != existing.Enabled || mediaTypeKey != existing.Type || target != existing.Target {
+		updated.Status = determineMediaStatus(model.Media{Enabled: req.Enabled, Type: mediaTypeKey, Target: target})
 	}
 	if mediaTypeStatus == 2 && req.Enabled != 0 {
 		updated.Status = 2

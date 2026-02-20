@@ -87,17 +87,25 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 }
 
 func UpdateActionServ(id uint, req ActionReq) error {
+	existing, err := repository.GetActionByIDDAO(id)
+	if err != nil {
+		return err
+	}
 	updated := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
 		Template:    req.Template,
 		Enabled:     req.Enabled,
 		Description: req.Description,
+		Status:      existing.Status,
 	}
-	if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
-		updated.Status = determineActionStatus(updated, media)
-	} else {
-		updated.Status = determineActionStatus(updated, model.Media{})
+	// Preserve status unless enabled state or media changed
+	if req.Enabled != existing.Enabled || req.MediaID != existing.MediaID {
+		if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
+			updated.Status = determineActionStatus(updated, media)
+		} else {
+			updated.Status = determineActionStatus(updated, model.Media{})
+		}
 	}
 	if err := repository.UpdateActionDAO(id, updated); err != nil {
 		return err

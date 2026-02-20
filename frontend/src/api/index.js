@@ -1,4 +1,4 @@
-import chats from './chats';
+import * as chats from './chats';
 import * as users from './users';
 import * as userInformation from './userInformation';
 import * as system from './system';
@@ -17,6 +17,7 @@ import * as reports from './reports';
 import * as ansible from './ansible';
 import * as siteMessages from './siteMessage';
 import * as knowledgeBase from './knowledgeBase';
+import * as retention from './retention';
  
 export default {
     chats,
@@ -38,4 +39,5 @@ export default {
     ansible,
     siteMessages,
     knowledgeBase,
+    retention,
 }

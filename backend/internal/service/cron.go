@@ -59,6 +59,15 @@ func InitCronScheduler() error {
 		}
 	}
 
+	// Add daily data retention cleanup job (2:00 AM)
+	if _, err := cronScheduler.AddFunc("0 2 * * *", func() {
+		PerformDataRetentionCleanupServ()
+	}); err != nil {
+		LogService("warn", "failed to schedule data retention cleanup job", map[string]interface{}{
+			"error": err.Error(),
+		}, nil, "")
+	}
+
 	cronScheduler.Start()
 	LogService("info", "cron scheduler started", map[string]interface{}{
 		"jobs": len(cronScheduler.Entries()),

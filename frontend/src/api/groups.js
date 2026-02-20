@@ -19,7 +19,7 @@ export function getGroupById(id) {
   })
 }
 
-export function getGroupDetail(id) {
+export function fetchGroupDetail(id) {
   return request({
     url: `/groups/${id}/detail`,
     method: 'get'

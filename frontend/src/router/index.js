@@ -193,6 +193,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 3 }
   },
   {
+    path: '/retention',
+    name: 'Retention',
+    component: () => import('@/views/Retention.vue'),
+    meta: { requiresAuth: true, minPrivilege: 3 }
+  },
+  {
     path: '/status',
     name: 'StatusPage',
     component: () => import('@/views/StatusPage.vue'),

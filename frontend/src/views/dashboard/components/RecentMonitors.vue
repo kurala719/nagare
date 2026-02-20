@@ -20,6 +20,18 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="Health" width="80">
+        <template #default="{ row }">
+          <el-progress 
+            type="circle" 
+            :percentage="row.health_score ?? row.HealthScore ?? 100" 
+            :width="24" 
+            :stroke-width="3" 
+            :show-text="false"
+            :status="getHealthStatus(row.health_score ?? row.HealthScore ?? 100)" 
+          />
+        </template>
+      </el-table-column>
     </el-table>
   </el-card>
 </template>
@@ -50,10 +62,17 @@ export default defineComponent({
     const getStatusLabel = (status) => {
       return status === 1 ? t('dashboard.activeLabel') : t('dashboard.inactiveLabel')
     }
+
+    const getHealthStatus = (score) => {
+      if (score >= 90) return 'success'
+      if (score >= 70) return 'warning'
+      return 'exception'
+    }
     
     return {
       getStatusType,
-      getStatusLabel
+      getStatusLabel,
+      getHealthStatus
     }
   }
 })

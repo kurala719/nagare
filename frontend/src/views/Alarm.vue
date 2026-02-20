@@ -30,6 +30,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button @click="loadAlarms" :loading="loading" :icon="Refresh" circle />
         <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
           {{ $t('alarms.create') }}
@@ -409,6 +413,12 @@ export default {
       } else {
         this.selectedAlarmIds = this.selectedAlarmIds.filter((itemId) => itemId !== id);
       }
+    },
+    selectAll() {
+      this.selectedAlarmIds = this.alarms.map(a => a.id);
+    },
+    clearSelection() {
+      this.selectedAlarmIds = [];
     },
     openBulkDeleteDialog() {
       if (this.selectedCount === 0) {

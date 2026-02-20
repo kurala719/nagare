@@ -49,3 +49,11 @@ func setupMcpRoutes(rg *gin.RouterGroup) {
 	mcpGroup.GET("/sse", mcp.SSEHandler)
 	mcpGroup.POST("/message", mcp.MessageHandler)
 }
+
+func setupRetentionRoutes(rg *gin.RouterGroup) {
+	// Routes with privilege level 3 - admin only
+	retention := rg.Group("/retention", api.PrivilegesMiddleware(3))
+	retention.GET("/policies", api.GetRetentionPoliciesCtrl)
+	retention.POST("/policies", api.UpdateRetentionPolicyCtrl)
+	retention.POST("/cleanup", api.PerformCleanupCtrl)
+}

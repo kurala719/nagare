@@ -22,10 +22,10 @@
           <el-divider direction="vertical" />
           <el-dropdown @command="setLanguage">
             <span class="toolbar-link">
-              <el-icon style="margin-right: 8px; margin-top: 1px">
-                <setting />
+              <el-icon>
+                <Setting />
               </el-icon>
-              {{ t('common.language') }}
+              <span style="margin-left: 8px">{{ t('common.language') }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -36,16 +36,16 @@
           </el-dropdown>
           <el-divider direction="vertical" />
           <div class="toolbar-link" @click="toggleTheme">
-            <el-icon style="margin-right: 6px; margin-top: 1px">
-              <moon v-if="isDarkMode" />
-              <sunny v-else />
+            <el-icon>
+              <Moon v-if="isDarkMode" />
+              <Sunny v-else />
             </el-icon>
-            {{ isDarkMode ? t('common.night') : t('common.day') }}
+            <span style="margin-left: 8px">{{ isDarkMode ? t('common.night') : t('common.day') }}</span>
           </div>
           <el-divider direction="vertical" />
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="toolbar-link">
-              <el-avatar :size="28" />
+              <el-avatar :size="24" />
               <span class="toolbar-username">{{ currentUserLabel }}</span>
             </span>
             <template #dropdown>
@@ -187,35 +187,42 @@ export default defineComponent({
       { key: 'insights_group', label: 'menu.insights', minPrivilege: 1, icon: 'PieChart', children: [
         { key: 'systemStatus', path: '/system-status', label: 'menu.systemStatus', minPrivilege: 1 },
         { key: 'analytics', path: '/analytics', label: 'menu.analytics', minPrivilege: 1 },
-      ]},
-      { key: 'monitor_group', label: 'menu.monitor', minPrivilege: 1, icon: 'Monitor', children: [
-        { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
-        { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
-        { key: 'group', path: '/group', label: 'menu.group', minPrivilege: 1 },
-        { key: 'item', path: '/item', label: 'menu.item', minPrivilege: 1 },
-      ]},
-      { key: 'alert_group', label: 'menu.alert', minPrivilege: 1, icon: 'Bell', children: [
-        { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
-        { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
-        { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
-        { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
-      ]},
-      { key: 'media_group', label: 'menu.media', minPrivilege: 2, icon: 'Message', children: [
-        { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
-        { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
-        { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
-      ]},
-      { key: 'maintenance_group', label: 'menu.maintenance', minPrivilege: 1, icon: 'Tools', children: [
-        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
-        { key: 'ansible', path: '/ansible/playbooks', label: 'menu.ansible', minPrivilege: 2 },
+      ]},
+      { key: 'inventory_group', label: 'menu.inventory', minPrivilege: 1, icon: 'Box', children: [
+        { key: 'group', path: '/group', label: 'menu.group', minPrivilege: 1 },
+        { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
+      ]},
+      { key: 'observability_group', label: 'menu.observability', minPrivilege: 1, icon: 'Odometer', children: [
+        { key: 'metrics', path: '/item', label: 'menu.item', minPrivilege: 1 },
+        { key: 'sources', label: 'menu.sources', minPrivilege: 1, children: [
+          { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
+          { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
+        ]},
+      ]},
+      { key: 'alerting_group', label: 'menu.alerting', minPrivilege: 1, icon: 'Bell', children: [
+        { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
+        { key: 'automation', label: 'menu.automation', minPrivilege: 2, children: [
+          { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
+          { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
+        ]},
+      ]},
+      { key: 'tooling_group', label: 'menu.tooling', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
+        { key: 'ansible', path: '/ansible/playbooks', label: 'menu.ansible', minPrivilege: 2 },
+        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
+        { key: 'communication', label: 'menu.communication', minPrivilege: 2, children: [
+          { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
+          { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
+        ]},
+        { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
         { key: 'auditLog', path: '/audit-log', label: 'menu.auditLog', minPrivilege: 2 },
         { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
+        { key: 'retention', path: '/retention', label: 'retention.title', minPrivilege: 3 },
         { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},
       { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1, icon: 'User' },
@@ -568,36 +575,47 @@ export default defineComponent({
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .toolbar-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: var(--text-strong);
-  padding: 10px 16px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  padding: 0 12px;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 14px;
-  font-weight: 600;
-  border: 1px solid transparent;
-  background: var(--surface-2);
+  font-weight: 500;
+  height: 40px;
+  box-sizing: border-box;
 }
 
 .toolbar-link:hover {
-  background: var(--surface-3);
-  border-color: var(--brand-200);
-  transform: translateY(-2px);
+  background: var(--surface-2);
   color: var(--brand-600);
 }
 
+.toolbar-link .el-icon {
+  font-size: 18px;
+}
+
 .toolbar-username {
-  margin-left: 8px;
-  font-size: 13px;
-  font-weight: 500;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 :deep(.el-divider--vertical) {
-  background: rgba(15, 23, 42, 0.12);
-  height: 20px;
-  margin: 0;
+  border-color: var(--border-1);
+  height: 16px;
+  margin: 0 8px;
+  opacity: 0.6;
 }
 </style>

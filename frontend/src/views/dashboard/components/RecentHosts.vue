@@ -19,6 +19,18 @@
           </el-tooltip>
         </template>
       </el-table-column>
+      <el-table-column label="Health" width="80">
+        <template #default="{ row }">
+          <el-progress 
+            type="circle" 
+            :percentage="row.health_score ?? row.HealthScore ?? 100" 
+            :width="24" 
+            :stroke-width="3" 
+            :show-text="false"
+            :status="getHealthStatus(row.health_score ?? row.HealthScore ?? 100)" 
+          />
+        </template>
+      </el-table-column>
     </el-table>
     <el-empty v-if="!loading && hosts.length === 0" :description="$t('dashboard.noHosts')" />
   </el-card>
@@ -52,7 +64,14 @@ export default defineComponent({
       }
       return map[status] || map[0]
     }
-    return { getStatusInfo }
+
+    const getHealthStatus = (score) => {
+      if (score >= 90) return 'success'
+      if (score >= 70) return 'warning'
+      return 'exception'
+    }
+
+    return { getStatusInfo, getHealthStatus }
   }
 })
 </script>

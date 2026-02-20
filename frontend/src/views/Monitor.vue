@@ -30,6 +30,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button @click="loadMonitors" :loading="loading" :icon="Refresh" circle />
         <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
           {{ $t('monitors.create') }}
@@ -143,6 +147,10 @@
                   {{ getStatusInfo(monitor.status).label }}
                 </el-tag>
               </el-tooltip>
+            </div>
+            <div style="margin-top: 12px">
+              <span style="font-size: 12px; color: var(--text-muted)">Health</span>
+              <el-progress :percentage="monitor.health_score" :status="getHealthStatus(monitor.health_score)" :stroke-width="4" />
             </div>
           </div>
 
@@ -420,6 +428,12 @@ export default {
           this.selectedMonitorIds = this.selectedMonitorIds.filter((itemId) => itemId !== id);
         }
       },
+      selectAll() {
+        this.selectedMonitorIds = this.monitors.map(m => m.id);
+      },
+      clearSelection() {
+        this.selectedMonitorIds = [];
+      },
       openBulkDeleteDialog() {
         if (this.selectedCount === 0) {
           ElMessage.warning(this.$t('common.selectAtLeastOne'));
@@ -514,6 +528,7 @@ export default {
             event_token: m.EventToken || m.event_token || '',
             enabled: m.Enabled ?? m.enabled ?? 1,
             status: m.Status ?? m.status ?? 0,
+            health_score: m.health_score ?? m.HealthScore ?? 100,
             status_reason: m.Reason || m.reason || m.Error || m.error || m.ErrorMessage || m.error_message || m.LastError || m.last_error || '',
             description: m.Description || m.description || '',
             type: m.Type || m.type || '',
@@ -781,6 +796,11 @@ export default {
           3: { label: this.$t('common.statusSyncing'), reason: this.$t('common.reasonSyncing'), type: 'warning' },
         };
         return map[status] || map[0];
+      },
+      getHealthStatus(score: number) {
+        if (score >= 90) return 'success';
+        if (score >= 70) return 'warning';
+        return 'exception';
       }
     }
   };

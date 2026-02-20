@@ -13,6 +13,10 @@
         </el-select>
       </div>
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-dropdown v-if="selectedRows.length > 0" class="batch-actions">
           <el-button type="warning">
             {{ $t('common.selectedCount', { count: selectedRows.length }) }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
@@ -38,7 +42,7 @@
       </div>
     </div>
 
-    <el-table :data="reports" border style="width: 100%" v-loading="loading" @selection-change="handleSelectionChange">
+    <el-table :data="reports" ref="reportsTableRef" border style="width: 100%" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="title" :label="$t('reports.reportTitle')" min-width="200" />
@@ -128,6 +132,23 @@ const selectedRows = ref([])
 
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection
+}
+
+const reportsTableRef = ref(null)
+
+const selectAll = () => {
+  if (reportsTableRef.value) {
+    reports.value.forEach((row) => {
+      reportsTableRef.value.toggleRowSelection(row, true)
+    })
+  }
+}
+
+const clearSelection = () => {
+  if (reportsTableRef.value) {
+    reportsTableRef.value.clearSelection()
+  }
+  selectedRows.value = []
 }
 
 const handleBulkDelete = () => {

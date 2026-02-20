@@ -96,6 +96,10 @@ func DeleteProviderByIDServ(id uint) error {
 
 // UpdateProviderServ updates an existing provider
 func UpdateProviderServ(id uint, req ProviderReq) error {
+	existing, err := repository.GetProviderByIDDAO(id)
+	if err != nil {
+		return err
+	}
 	updated := model.Provider{
 		Name:         req.Name,
 		URL:          req.URL,
@@ -105,7 +109,11 @@ func UpdateProviderServ(id uint, req ProviderReq) error {
 		Type:         req.Type,
 		Description:  req.Description,
 		Enabled:      req.Enabled,
-		Status:       determineProviderStatus(model.Provider{Enabled: req.Enabled, APIKey: req.APIKey}),
+		Status:       existing.Status,
+	}
+	// Preserve status unless enabled state or API key changed
+	if req.Enabled != existing.Enabled || req.APIKey != existing.APIKey {
+		updated.Status = determineProviderStatus(model.Provider{Enabled: req.Enabled, APIKey: req.APIKey})
 	}
 	if err := repository.UpdateProviderDAO(id, updated); err != nil {
 		return err

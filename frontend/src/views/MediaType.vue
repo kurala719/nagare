@@ -21,6 +21,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Plus" @click="openCreate">
           {{ $t('mediaTypes.create') }}
         </el-button>
@@ -324,6 +328,13 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedMediaTypeRows = selection || [];
+    },
+    selectAll() {
+      if (this.$refs.mediaTypesTableRef) {
+        this.mediaTypes.forEach((row) => {
+          this.$refs.mediaTypesTableRef.toggleRowSelection(row, true);
+        });
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {

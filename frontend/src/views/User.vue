@@ -13,6 +13,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button v-if="isSuperAdmin" type="primary" :icon="Plus" @click="openCreate">
           {{ $t('users.create') }}
         </el-button>
@@ -296,6 +300,13 @@ export default {
     },
     onSelectionChange(selection) {
       this.selectedUserRows = selection || []
+    },
+    selectAll() {
+      if (this.$refs.usersTableRef) {
+        this.users.forEach((row) => {
+          this.$refs.usersTableRef.toggleRowSelection(row, true)
+        })
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {

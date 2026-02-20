@@ -156,6 +156,8 @@ func UpdateItemServ(id uint, req ItemReq) error {
 		Comment:        req.Comment,
 		LastSyncAt:     existing.LastSyncAt,
 		ExternalSource: existing.ExternalSource,
+		Status:         existing.Status,
+		StatusDescription: existing.StatusDescription,
 	}
 	if req.LastSyncAt != nil {
 		updated.LastSyncAt = req.LastSyncAt
@@ -163,16 +165,21 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	if req.ExternalSource != "" {
 		updated.ExternalSource = req.ExternalSource
 	}
-	if host, err := repository.GetHostByIDDAO(hid); err == nil {
-		updated.Status = determineItemStatus(updated, host)
-	} else {
-		updated.Status = determineItemStatus(updated, model.Host{Enabled: 0, Status: 2})
+	// Preserve status and description unless enabled state changed
+	if req.Enabled != existing.Enabled {
+		if host, err := repository.GetHostByIDDAO(hid); err == nil {
+			updated.Status = determineItemStatus(updated, host)
+		} else {
+			updated.Status = determineItemStatus(updated, model.Host{Enabled: 0, Status: 2})
+		}
+		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateItemDAO(id, updated); err != nil {
 		return err
 	}
 	if refreshed, err := repository.GetItemByIDDAO(id); err == nil {
 		recordItemHistory(refreshed, time.Now().UTC())
+		ExecuteTriggersForItem(refreshed)
 	}
 	_, _ = recomputeItemStatus(id)
 	return nil
@@ -662,14 +669,15 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 					continue
 				}
 				fmt.Printf("Service Debug: Added new item %s for host %d\n", mItem.Name, hid)
-				if recordHistory {
-					if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
+				if created, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID); err == nil {
+					if recordHistory {
 						sampledAt := time.Now().UTC()
 						if mItem.Timestamp > 0 {
 							sampledAt = time.Unix(mItem.Timestamp, 0).UTC()
 						}
 						recordItemHistory(created, sampledAt)
 					}
+					ExecuteTriggersForItem(created)
 				}
 				result.Added++
 				continue
@@ -699,6 +707,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 				}
 				recordItemHistory(item, sampledAt)
 			}
+			ExecuteTriggersForItem(item)
 			result.Updated++
 		}
 		result.Total++
@@ -859,6 +868,7 @@ func PullItemOfHostFromMonitorServ(mid, hid, id uint) (SyncResult, error) {
 		sampledAt = time.Unix(monitorItem.Timestamp, 0).UTC()
 	}
 	recordItemHistory(item, sampledAt)
+	ExecuteTriggersForItem(item)
 	_ = recomputeMonitorRelated(mid)
 	recordNetworkStatusSnapshot(time.Now().UTC())
 	result := SyncResult{

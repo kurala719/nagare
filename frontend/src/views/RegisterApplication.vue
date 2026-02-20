@@ -20,6 +20,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Refresh" @click="loadApplications(true)">
           {{ $t('registerApplications.refresh') }}
         </el-button>
@@ -193,6 +197,13 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedApplicationRows = selection || []
+    },
+    selectAll() {
+      if (this.$refs.applicationsTableRef) {
+        this.applications.forEach((row) => {
+          this.$refs.applicationsTableRef.toggleRowSelection(row, true)
+        })
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {

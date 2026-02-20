@@ -30,6 +30,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('hosts.create') }}
         </el-button>
@@ -228,6 +232,11 @@
             {{ getStatusInfo(row.status).label }}
           </el-tag>
         </el-tooltip>
+      </template>
+    </el-table-column>
+    <el-table-column v-if="isColumnVisible('health_score')" label="Health" min-width="100" prop="health_score" sortable="custom">
+      <template #default="{ row }">
+        <el-progress :percentage="row.health_score" :status="getHealthStatus(row.health_score)" />
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('lastSync')" :label="$t('hosts.lastSync')" min-width="180" prop="last_sync_at" sortable="custom">
@@ -563,7 +572,7 @@ export default {
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
+      selectedColumns: ['name', 'monitor', 'group', 'ip_addr', 'hostid', 'enabled', 'status', 'health_score', 'lastSync', 'externalSource', 'description'],
       statusFilter: 'all',
       monitorFilter: 0,
       groupFilter: 0,
@@ -600,6 +609,7 @@ export default {
         { key: 'hostid', label: this.$t('hosts.hostId') },
         { key: 'enabled', label: this.$t('common.enabled') },
         { key: 'status', label: this.$t('hosts.status') },
+        { key: 'health_score', label: 'Health' },
         { key: 'lastSync', label: this.$t('hosts.lastSync') },
         { key: 'externalSource', label: this.$t('hosts.externalSource') },
         { key: 'description', label: this.$t('hosts.description') },
@@ -779,6 +789,7 @@ export default {
             description: h.Description || h.description || '',
             enabled: this.normalizeEnabled(h.Enabled ?? h.enabled ?? h.ENABLED),
             status: this.normalizeStatus(h.Status ?? h.status ?? h.STATUS),
+            health_score: h.health_score ?? h.HealthScore ?? 100,
             status_reason: h.Reason || h.reason || h.Error || h.error || h.ErrorMessage || h.error_message || h.LastError || h.last_error || '',
             mid: Number(monitorId || 0),
             monitor_name: h.MonitorName || h.monitor_name || h.monitorName || h.Monitor?.Name || h.Monitor?.name || h.monitor?.Name || h.monitor?.name || '',
@@ -949,6 +960,13 @@ export default {
     },
     onSelectionChange(selection) {
       this.selectedHosts = selection || [];
+    },
+    selectAll() {
+      if (this.$refs.hostsTableRef) {
+        this.hosts.forEach((row) => {
+          this.$refs.hostsTableRef.toggleRowSelection(row, true);
+        });
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {
@@ -1296,6 +1314,11 @@ export default {
         3: { label: this.$t('common.statusSyncing'), reason: this.$t('common.reasonSyncing'), type: 'warning' },
       };
       return map[status] || map[0];
+    },
+    getHealthStatus(score: number) {
+      if (score >= 90) return 'success';
+      if (score >= 70) return 'warning';
+      return 'exception';
     },
     normalizeStatus(value: any) {
       if (value === null || value === undefined || value === '') return 0;

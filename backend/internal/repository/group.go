@@ -106,7 +106,13 @@ func UpdateGroupDAO(id uint, group model.Group) error {
 		"external_id":     group.ExternalID,
 		"last_sync_at":    group.LastSyncAt,
 		"external_source": group.ExternalSource,
+		"health_score":    group.HealthScore,
 	}).Error
+}
+
+// UpdateGroupHealthScoreDAO updates only the health score for a group
+func UpdateGroupHealthScoreDAO(id uint, score int) error {
+	return database.DB.Model(&model.Group{}).Where("id = ?", id).Update("health_score", score).Error
 }
 
 // UpdateGroupStatusDAO updates only the status for a group

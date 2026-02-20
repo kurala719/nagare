@@ -155,12 +155,12 @@ func DeleteAlarmServByID(id int) error {
 
 // UpdateAlarmServ updates an existing alarm
 func UpdateAlarmServ(id int, a AlarmReq) error {
+	existing, err := GetAlarmByIDServ(uint(id))
+	if err != nil {
+		return err
+	}
 	eventToken := strings.TrimSpace(a.EventToken)
 	if eventToken == "" {
-		existing, err := GetAlarmByIDServ(uint(id))
-		if err != nil {
-			return err
-		}
 		eventToken = existing.EventToken
 	}
 	updated := model.Alarm{
@@ -173,7 +173,13 @@ func UpdateAlarmServ(id int, a AlarmReq) error {
 		Description: a.Description,
 		Type:        a.Type,
 		Enabled:     a.Enabled,
-		Status:      determineAlarmStatus(model.Alarm{Enabled: a.Enabled, AuthToken: a.AuthToken, Username: a.Username, Password: a.Password}),
+		Status:      existing.Status,
+		StatusDescription: existing.StatusDesc,
+	}
+	// Preserve status and description unless enabled state changed
+	if a.Enabled != existing.Enabled {
+		updated.Status = determineAlarmStatus(model.Alarm{Enabled: a.Enabled, AuthToken: a.AuthToken, Username: a.Username, Password: a.Password})
+		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateAlarmDAO(id, updated); err != nil {
 		return err

@@ -21,6 +21,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Plus" @click="openCreate">
           {{ $t('actions.create') }}
         </el-button>
@@ -297,6 +301,13 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedActions = selection || [];
+    },
+    selectAll() {
+      if (this.$refs.actionsTableRef) {
+        this.actions.forEach((row) => {
+          this.$refs.actionsTableRef.toggleRowSelection(row, true);
+        });
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {

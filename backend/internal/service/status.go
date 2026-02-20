@@ -226,14 +226,35 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 	}
 	status := determineMonitorStatus(monitor)
 	if status == 2 {
-		if err := repository.UpdateMonitorStatusDAO(mid, status); err != nil {
-			return status, err
-		}
+		_ = repository.UpdateMonitorStatusDAO(mid, status)
 	} else {
-		if err := repository.UpdateMonitorStatusAndDescriptionDAO(mid, status, ""); err != nil {
-			return status, err
-		}
+		_ = repository.UpdateMonitorStatusAndDescriptionDAO(mid, status, "")
 	}
+	
+	// Compute health score based on hosts
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
+	score := 100
+	if err == nil && len(hosts) > 0 {
+		sum := 0
+		count := 0
+		for _, h := range hosts {
+			if h.Enabled != 0 {
+				sum += h.HealthScore
+				count++
+			}
+		}
+		if count > 0 {
+			score = sum / count
+		}
+	} else if monitor.Enabled == 0 {
+		score = 0
+	} else if status == 2 {
+		score = 0
+	} else if status == 3 {
+		score = 50
+	}
+	_ = repository.UpdateMonitorHealthScoreDAO(mid, score)
+	
 	return status, nil
 }
 
@@ -259,9 +280,27 @@ func recomputeGroupStatus(gid uint) (int, error) {
 		return 0, err
 	}
 	status := determineGroupStatus(group, hosts)
-	if err := repository.UpdateGroupStatusDAO(gid, status); err != nil {
-		return status, err
+	_ = repository.UpdateGroupStatusDAO(gid, status)
+	
+	// Compute health score based on hosts
+	score := 100
+	if len(hosts) > 0 {
+		sum := 0
+		count := 0
+		for _, h := range hosts {
+			if h.Enabled != 0 {
+				sum += h.HealthScore
+				count++
+			}
+		}
+		if count > 0 {
+			score = sum / count
+		}
+	} else if group.Enabled == 0 {
+		score = 0
 	}
+	_ = repository.UpdateGroupHealthScoreDAO(gid, score)
+	
 	return status, nil
 }
 
@@ -271,23 +310,54 @@ func recomputeHostStatus(hid uint) (int, error) {
 		return 0, err
 	}
 	monitor, err := repository.GetMonitorByIDDAO(host.MonitorID)
+	status := 0
 	if err != nil {
-		status := determineHostStatus(host, model.Monitor{Enabled: 0, Status: 2})
+		status = determineHostStatus(host, model.Monitor{Enabled: 0, Status: 2})
 		if status == 2 {
-			return status, repository.UpdateHostStatusDAO(hid, status)
-		}
-		return status, repository.UpdateHostStatusAndDescriptionDAO(hid, status, "")
-	}
-	status := determineHostStatus(host, monitor)
-	if status == 2 {
-		if err := repository.UpdateHostStatusDAO(hid, status); err != nil {
-			return status, err
+			_ = repository.UpdateHostStatusDAO(hid, status)
+		} else {
+			_ = repository.UpdateHostStatusAndDescriptionDAO(hid, status, "")
 		}
 	} else {
-		if err := repository.UpdateHostStatusAndDescriptionDAO(hid, status, ""); err != nil {
-			return status, err
+		status = determineHostStatus(host, monitor)
+		if status == 2 {
+			_ = repository.UpdateHostStatusDAO(hid, status)
+		} else {
+			_ = repository.UpdateHostStatusAndDescriptionDAO(hid, status, "")
 		}
 	}
+
+	// Compute health score based on items
+	items, err := repository.GetItemsByHIDDAO(hid)
+	score := 100
+	if err == nil && len(items) > 0 {
+		sum := 0
+		count := 0
+		for _, it := range items {
+			if it.Enabled != 0 {
+				itemScore := 0
+				switch it.Status {
+				case 1:
+					itemScore = 100
+				case 3:
+					itemScore = 50
+				}
+				sum += itemScore
+				count++
+			}
+		}
+		if count > 0 {
+			score = sum / count
+		}
+	} else if host.Enabled == 0 {
+		score = 0
+	} else if status == 2 {
+		score = 0
+	} else if status == 3 {
+		score = 50
+	}
+	_ = repository.UpdateHostHealthScoreDAO(hid, score)
+
 	return status, nil
 }
 
@@ -332,34 +402,35 @@ func recomputeItemsForHost(hid uint) error {
 
 func recomputeMonitorRelated(mid uint) error {
 	fmt.Printf("Service Debug: recomputeMonitorRelated started for monitor %d\n", mid)
-	if _, err := recomputeMonitorStatus(mid); err != nil {
-		return err
-	}
-
-	// Recompute groups for this monitor
-	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
-	if err == nil {
-		for _, group := range groups {
-			_, _ = recomputeGroupStatus(group.ID) // Ignore error to continue
-		}
-	}
-
+	
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	if err != nil {
 		return err
 	}
+
+	// 1. Recompute Items and Hosts
 	for _, host := range hosts {
-		if _, err := recomputeHostStatus(host.ID); err != nil {
-			return err
+		_ = recomputeItemsForHost(host.ID)
+		_, _ = recomputeHostStatus(host.ID)
+	}
+
+	// 2. Recompute Groups
+	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
+	if err == nil {
+		for _, group := range groups {
+			_, _ = recomputeGroupStatus(group.ID)
 		}
-		if err := recomputeItemsForHost(host.ID); err != nil {
-			return err
-		}
-		// Also recompute group status if host belongs to one (in case it wasn't caught by monitor filter)
+	}
+	// Catch any groups not directly under monitor but used by its hosts
+	for _, host := range hosts {
 		if host.GroupID > 0 {
 			_, _ = recomputeGroupStatus(host.GroupID)
 		}
 	}
+
+	// 3. Recompute Monitor
+	_, _ = recomputeMonitorStatus(mid)
+	
 	return nil
 }
 

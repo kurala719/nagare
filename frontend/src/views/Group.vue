@@ -30,6 +30,10 @@
       </div>
 
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button type="primary" :icon="Plus" @click="createDialogVisible = true">
           {{ $t('groups.create') }}
         </el-button>
@@ -110,6 +114,11 @@
             {{ getStatusInfo(row.status).label }}
           </el-tag>
         </el-tooltip>
+      </template>
+    </el-table-column>
+    <el-table-column v-if="isColumnVisible('health_score')" label="Health" width="100" prop="health_score" sortable="custom">
+      <template #default="{ row }">
+        <el-progress :percentage="row.health_score" :status="getHealthStatus(row.health_score)" />
       </template>
     </el-table-column>
     <el-table-column v-if="isColumnVisible('lastSync')" :label="$t('hosts.lastSync')" min-width="180" prop="last_sync_at" sortable="custom">
@@ -316,7 +325,7 @@ export default {
       error: null,
       search: '',
       searchField: 'all',
-      selectedColumns: ['name', 'monitor', 'enabled', 'status', 'lastSync', 'externalSource', 'description'],
+      selectedColumns: ['name', 'monitor', 'enabled', 'status', 'health_score', 'lastSync', 'externalSource', 'description'],
       statusFilter: 'all',
       monitorFilter: 0,
       syncMonitorId: 0,
@@ -362,6 +371,7 @@ export default {
         { key: 'monitor', label: this.$t('hosts.monitor') },
         { key: 'enabled', label: this.$t('common.enabled') },
         { key: 'status', label: this.$t('groups.status') },
+        { key: 'health_score', label: 'Health' },
         { key: 'lastSync', label: this.$t('hosts.lastSync') },
         { key: 'externalSource', label: this.$t('hosts.externalSource') },
         { key: 'description', label: this.$t('groups.description') },
@@ -402,6 +412,13 @@ export default {
   methods: {
     onSelectionChange(selection) {
       this.selectedGroupRows = selection || [];
+    },
+    selectAll() {
+      if (this.$refs.groupsTableRef) {
+        this.groups.forEach((row) => {
+          this.$refs.groupsTableRef.toggleRowSelection(row, true);
+        });
+      }
     },
     onSortChange({ prop, order }) {
       if (!prop || !order) {
@@ -534,6 +551,7 @@ export default {
           description: g.Description || g.description || '',
           enabled: g.Enabled ?? g.enabled ?? 1,
           status: g.Status ?? g.status ?? 0,
+          health_score: g.health_score ?? g.HealthScore ?? 100,
           monitor_id: g.MonitorID || g.monitor_id || g.monitorId || 0,
           status_reason: g.Reason || g.reason || g.Error || g.error || g.ErrorMessage || g.error_message || g.LastError || g.last_error || '',
           last_sync_at: g.last_sync_at,
@@ -702,6 +720,11 @@ export default {
         3: { label: this.$t('common.statusSyncing'), reason: this.$t('common.reasonSyncing'), type: 'warning' },
       };
       return map[status] || map[0];
+    },
+    getHealthStatus(score: number) {
+      if (score >= 90) return 'success';
+      if (score >= 70) return 'warning';
+      return 'exception';
     },
     isColumnVisible(key) {
       return this.selectedColumns.includes(key);

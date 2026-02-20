@@ -83,14 +83,22 @@ func AddMediaTypeServ(req MediaTypeReq) (MediaTypeResp, error) {
 }
 
 func UpdateMediaTypeServ(id uint, req MediaTypeReq) error {
+	existing, err := repository.GetMediaTypeByIDDAO(id)
+	if err != nil {
+		return err
+	}
 	updated := model.MediaType{
 		Name:        req.Name,
 		Key:         req.Key,
 		Enabled:     req.Enabled,
-		Status:      determineMediaTypeStatus(model.MediaType{Enabled: req.Enabled, Name: req.Name, Key: req.Key}),
+		Status:      existing.Status,
 		Description: req.Description,
 		Template:    req.Template,
 		Fields:      req.Fields,
+	}
+	// Preserve status unless enabled state, name or key changed
+	if req.Enabled != existing.Enabled || req.Name != existing.Name || req.Key != existing.Key {
+		updated.Status = determineMediaTypeStatus(model.MediaType{Enabled: req.Enabled, Name: req.Name, Key: req.Key})
 	}
 	if err := repository.UpdateMediaTypeDAO(id, updated); err != nil {
 		return err

@@ -9,25 +9,33 @@
     </div>
 
     <el-row :gutter="16" class="stats-row">
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="4">
+        <el-card>
+          <div class="stat-label">Health</div>
+          <div class="stat-value">
+            <el-progress type="circle" :percentage="group.health_score || 0" :width="40" :stroke-width="4" :status="getHealthStatus(group.health_score)" />
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('groups.totalHosts') }}</div>
           <div class="stat-value">{{ summary.total_hosts }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('groups.activeHosts') }}</div>
           <div class="stat-value">{{ summary.active_hosts }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('groups.errorHosts') }}</div>
           <div class="stat-value">{{ summary.error_hosts }}</div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :md="6">
+      <el-col :xs="12" :md="5">
         <el-card>
           <div class="stat-label">{{ $t('groups.totalItems') }}</div>
           <div class="stat-value">{{ summary.total_items }}</div>
@@ -143,6 +151,12 @@ const statusTag = (status) => {
   }
 }
 
+const getHealthStatus = (score) => {
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'warning'
+  return 'exception'
+}
+
 const buildStatusChart = () => {
   if (!statusChartRef.value) return
   if (!statusChart) {
@@ -171,13 +185,17 @@ const loadData = async () => {
   if (!groupId) return
   const resp = await fetchGroupDetail(groupId)
   const data = resp.data || resp
-  group.value = data.group || data.Group || {}
+  group.value = {
+    ...(data.group || data.Group || {}),
+    health_score: (data.group || data.Group)?.health_score ?? (data.group || data.Group)?.HealthScore ?? 100
+  }
   summary.value = data.summary || data.Summary || summary.value
   hosts.value = (data.hosts || data.Hosts || []).map((h) => ({
     id: h.id || h.ID,
     name: h.name || h.Name || '',
     ip_addr: h.ip_addr || h.IPAddr || '',
     status: h.status ?? h.Status ?? 0,
+    health_score: h.health_score ?? h.HealthScore ?? 100,
     status_reason: h.Reason || h.reason || h.Error || h.error || h.ErrorMessage || h.error_message || h.LastError || h.last_error || '',
   }))
   buildStatusChart()

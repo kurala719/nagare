@@ -112,7 +112,13 @@ func UpdateMonitorDAO(id int, m model.Monitor) error {
 		"enabled":            m.Enabled,
 		"status":             m.Status,
 		"status_description": m.StatusDescription,
+		"health_score":       m.HealthScore,
 	}).Error
+}
+
+// UpdateMonitorHealthScoreDAO updates only the health score for a monitor
+func UpdateMonitorHealthScoreDAO(id uint, score int) error {
+	return database.DB.Model(&model.Monitor{}).Where("id = ?", id).Update("health_score", score).Error
 }
 
 // UpdateMonitorStatusDAO updates only the status for a monitor

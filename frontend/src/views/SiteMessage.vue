@@ -13,6 +13,10 @@
         </el-radio-group>
       </div>
       <div class="action-group">
+        <el-button-group style="margin-right: 8px">
+          <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
+          <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
+        </el-button-group>
         <el-button @click="handleMarkAllRead" :disabled="messages.every(m => m.is_read === 1)">
           {{ $t('message.markAllRead') }}
         </el-button>
@@ -23,7 +27,8 @@
     </div>
 
     <el-card v-loading="loading" class="history-card">
-      <el-table :data="messages" style="width: 100%" @row-click="handleMessageClick">
+      <el-table :data="messages" ref="messagesTableRef" style="width: 100%" @row-click="handleMessageClick" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column width="40">
           <template #default="{ row }">
             <div v-if="row.is_read === 0" class="unread-dot"></div>
@@ -84,6 +89,27 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const filterStatus = ref('all')
+const selectedRows = ref([])
+const messagesTableRef = ref(null)
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const selectAll = () => {
+  if (messagesTableRef.value) {
+    messages.value.forEach((row) => {
+      messagesTableRef.value.toggleRowSelection(row, true)
+    })
+  }
+}
+
+const clearSelection = () => {
+  if (messagesTableRef.value) {
+    messagesTableRef.value.clearSelection()
+  }
+  selectedRows.value = []
+}
 
 const loadMessages = async () => {
   loading.value = true

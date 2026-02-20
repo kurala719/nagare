@@ -40,6 +40,7 @@ type MonitorResp struct {
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
 	StatusDesc  string `json:"status_description"`
+	HealthScore int    `json:"health_score"`
 }
 
 func generateMonitorEventToken() (string, error) {
@@ -139,6 +140,8 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 	}
 
 	createdMonitor := monitors[len(monitors)-1] // Get the most recent one
+	_, _ = recomputeMonitorStatus(createdMonitor.ID)
+	createdMonitor, _ = repository.GetMonitorByIDDAO(createdMonitor.ID)
 	result := monitorToResp(createdMonitor)
 
 	// If credentials are provided, attempt to login automatically
@@ -162,12 +165,12 @@ func DeleteMonitorServByID(id int) error {
 
 // UpdateMonitorServ updates an existing monitor
 func UpdateMonitorServ(id int, m MonitorReq) error {
+	existing, err := GetMonitorByIDServ(uint(id))
+	if err != nil {
+		return err
+	}
 	eventToken := strings.TrimSpace(m.EventToken)
 	if eventToken == "" {
-		existing, err := GetMonitorByIDServ(uint(id))
-		if err != nil {
-			return err
-		}
 		eventToken = existing.EventToken
 	}
 	updated := model.Monitor{
@@ -180,11 +183,19 @@ func UpdateMonitorServ(id int, m MonitorReq) error {
 		Description: m.Description,
 		Type:        m.Type,
 		Enabled:     m.Enabled,
-		Status:      determineMonitorStatus(model.Monitor{Enabled: m.Enabled, AuthToken: m.AuthToken, Username: m.Username, Password: m.Password}),
+		Status:      existing.Status,
+		StatusDescription: existing.StatusDesc,
+		HealthScore: existing.HealthScore,
+	}
+	// Preserve status and description unless enabled state changed
+	if m.Enabled != existing.Enabled {
+		updated.Status = determineMonitorStatus(model.Monitor{Enabled: m.Enabled, AuthToken: m.AuthToken, Username: m.Username, Password: m.Password})
+		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateMonitorDAO(id, updated); err != nil {
 		return err
 	}
+	_, _ = recomputeMonitorStatus(uint(id))
 	return recomputeMonitorRelated(uint(id))
 }
 
@@ -285,5 +296,6 @@ func monitorToResp(m model.Monitor) MonitorResp {
 		Enabled:     m.Enabled,
 		Status:      m.Status,
 		StatusDesc:  m.StatusDescription,
+		HealthScore: m.HealthScore,
 	}
 }

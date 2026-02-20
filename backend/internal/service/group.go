@@ -31,6 +31,7 @@ type GroupResp struct {
 	ExternalID  string `json:"external_id"`
 	LastSyncAt  *time.Time `json:"last_sync_at"`
 	ExternalSource string `json:"external_source"`
+	HealthScore int    `json:"health_score"`
 }
 
 // GroupSummary represents aggregated group data
@@ -122,6 +123,13 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
 	}
+	// Fetch ID and recompute
+	groups, err := repository.SearchGroupsDAO(model.GroupFilter{Query: group.Name})
+	if err == nil && len(groups) > 0 {
+		created := groups[len(groups)-1]
+		_, _ = recomputeGroupStatus(created.ID)
+		group, _ = repository.GetGroupByIDDAO(created.ID)
+	}
 	return groupToResp(group), nil
 }
 
@@ -147,6 +155,8 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		ExternalID:  existing.ExternalID, // Preserve existing value
 		LastSyncAt:  existing.LastSyncAt, // Preserve existing value
 		ExternalSource: existing.ExternalSource, // Preserve existing value
+		Status:      existing.Status,
+		HealthScore: existing.HealthScore,
 	}
 
 	// Only update if provided in request
@@ -163,10 +173,14 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		updated.ExternalSource = *req.ExternalSource
 	}
 
-	updated.Status = determineGroupStatus(updated, hosts)
+	// Preserve status unless enabled state changed
+	if req.Enabled != existing.Enabled {
+		updated.Status = determineGroupStatus(updated, hosts)
+	}
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
 	}
+	_, _ = recomputeGroupStatus(id)
 	return nil
 }
 
@@ -310,5 +324,6 @@ func groupToResp(group model.Group) GroupResp {
 		ExternalID:  group.ExternalID,
 		LastSyncAt:  group.LastSyncAt,
 		ExternalSource: group.ExternalSource,
+		HealthScore: group.HealthScore,
 	}
 }

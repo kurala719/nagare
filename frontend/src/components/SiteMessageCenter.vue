@@ -9,7 +9,7 @@
       <template #reference>
         <div class="notification-badge">
           <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="item">
-            <el-icon :size="20"><Bell /></el-icon>
+            <el-icon :size="18"><Bell /></el-icon>
           </el-badge>
         </div>
       </template>
@@ -230,19 +230,21 @@ onUnmounted(() => {
 
 <style scoped>
 .notification-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
+  padding: 0 10px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
   color: var(--text-strong);
+  box-sizing: border-box;
 }
 
 .notification-badge:hover {
   background-color: var(--surface-2);
+  color: var(--brand-600);
 }
 
 .message-header {
