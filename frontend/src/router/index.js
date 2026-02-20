@@ -20,7 +20,7 @@ const routes = [
     path: '/reset-password',
     name: 'ResetPassword',
     component: () => import('@/views/ResetPassword.vue'),
-    meta: { requiresAuth: true, minPrivilege: 1, layout: 'auth' }
+    meta: { requiresAuth: false, layout: 'auth' }
   },
   {
     path: '/dashboard',

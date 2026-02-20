@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -64,6 +65,13 @@ func ApproveRegisterApplicationServ(id uint, approverUsername string) error {
 		return err
 	}
 	
+	// Send notification email
+	userObj, _ := repository.GetUserByUsernameDAO(app.Username)
+	if userObj.Email != "" {
+		_ = SendEmailServ(userObj.Email, "Account Approved - Nagare", 
+			fmt.Sprintf("Hello %s,\n\nYour registration application for Nagare has been approved. You can now log in with your credentials.\n\nWelcome aboard!", app.Username))
+	}
+
 	// Create welcome message for new user
 	_ = CreateSiteMessageServ("Welcome to Nagare", "Your registration has been approved. Welcome aboard!", "system", 1, &user.ID)
 
@@ -87,5 +95,15 @@ func RejectRegisterApplicationServ(id uint, approverUsername, reason string) err
 	if err != nil {
 		return err
 	}
+
+	// Send notification email
+	user, _ := repository.GetUserByUsernameDAO(app.Username)
+	if user.ID != 0 {
+		if user.Email != "" {
+			msg := fmt.Sprintf("Hello %s,\n\nYour registration application for Nagare has been rejected.\nReason: %s", app.Username, reason)
+			_ = SendEmailServ(user.Email, "Account Application Rejected - Nagare", msg)
+		}
+	}
+
 	return repository.UpdateRegisterApplicationStatusDAO(app.ID, 2, &approverID, reason)
 }

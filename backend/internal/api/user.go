@@ -41,6 +41,21 @@ func RegisterUserCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusCreated, "registration application submitted")
 }
 
+func SendRegistrationCodeCtrl(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, err.Error())
+		return
+	}
+	if err := service.SendRegistrationCodeServ(req.Email); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "verification code sent")
+}
+
 func ResetPasswordCtrl(c *gin.Context) {
 	requesterPrivileges := getRequesterPrivileges(c)
 	if requesterPrivileges >= 3 {
@@ -76,23 +91,11 @@ func GetAllUsersCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, filtered)
 }
 
-// SearchUsersCtrl handles GET /user/search
+// SearchUsersCtrl handles GET /users
 func SearchUsersCtrl(c *gin.Context) {
 	requesterPrivileges := getRequesterPrivileges(c)
-	privileges, err := parseOptionalInt(c, "privileges")
-	if err != nil {
-		respondBadRequest(c, "invalid privileges")
-		return
-	}
-	status, err := parseOptionalInt(c, "status")
-	if err != nil {
-		respondBadRequest(c, "invalid status")
-		return
-	}
-	if privileges != nil && *privileges >= requesterPrivileges {
-		respondError(c, model.ErrForbidden)
-		return
-	}
+	privileges, _ := parseOptionalInt(c, "privileges")
+	status, _ := parseOptionalInt(c, "status")
 	withTotal, _ := parseOptionalBool(c, "with_total")
 
 	limit := 100
@@ -119,7 +122,7 @@ func SearchUsersCtrl(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	// Filter logic moved to database query to support correct pagination
+	
 	if withTotal != nil && *withTotal {
 		total, err := service.CountUsersServ(filter)
 		if err != nil {
@@ -173,6 +176,38 @@ func AddUserCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusCreated, "user created")
 }
 
+func UpdateUserCtrl(c *gin.Context) {
+	requesterPrivileges := getRequesterPrivileges(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid user ID")
+		return
+	}
+	user, err := service.GetUserByIDServ(id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if !canManageUser(requesterPrivileges, user.Privileges) {
+		respondError(c, model.ErrForbidden)
+		return
+	}
+	var req service.UserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, err.Error())
+		return
+	}
+	if req.Privileges >= requesterPrivileges {
+		respondError(c, model.ErrForbidden)
+		return
+	}
+	if err := service.UpdateUserServ(id, req); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "user updated")
+}
+
 func DeleteUserByIDCtrl(c *gin.Context) {
 	requesterPrivileges := getRequesterPrivileges(c)
 	id, err := strconv.Atoi(c.Param("id"))
@@ -195,24 +230,29 @@ func DeleteUserByIDCtrl(c *gin.Context) {
 	}
 	respondSuccessMessage(c, http.StatusOK, "user deleted")
 }
-func UpdateUserCtrl(c *gin.Context) {
-	requesterPrivileges := getRequesterPrivileges(c)
-	if requesterPrivileges < 3 {
-		respondError(c, model.ErrForbidden)
+
+// ============= Unified Profile Controllers =============
+
+// GetMyProfileCtrl handles GET /user-info/me (or /profile)
+func GetMyProfileCtrl(c *gin.Context) {
+	username, ok := c.Get("username")
+	if !ok {
+		respondError(c, model.ErrUnauthorized)
 		return
 	}
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		respondBadRequest(c, "invalid user ID")
-		return
-	}
-	user, err := service.GetUserByIDServ(id)
+	user, err := service.GetUserByUsernameServ(username.(string))
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	if !canManageUser(requesterPrivileges, user.Privileges) {
-		respondError(c, model.ErrForbidden)
+	respondSuccess(c, http.StatusOK, user)
+}
+
+// UpdateMyProfileCtrl handles PUT /user-info/me (or /profile)
+func UpdateMyProfileCtrl(c *gin.Context) {
+	username, ok := c.Get("username")
+	if !ok {
+		respondError(c, model.ErrUnauthorized)
 		return
 	}
 	var req service.UserRequest
@@ -220,19 +260,11 @@ func UpdateUserCtrl(c *gin.Context) {
 		respondBadRequest(c, err.Error())
 		return
 	}
-	if req.Password != "" {
-		respondError(c, model.ErrForbidden)
-		return
-	}
-	if req.Privileges >= requesterPrivileges {
-		respondError(c, model.ErrForbidden)
-		return
-	}
-	if err := service.UpdateUserServ(id, req); err != nil {
+	if err := service.UpdateUserProfileServ(username.(string), req); err != nil {
 		respondError(c, err)
 		return
 	}
-	respondSuccessMessage(c, http.StatusOK, "user updated")
+	respondSuccessMessage(c, http.StatusOK, "profile updated")
 }
 
 func getRequesterPrivileges(c *gin.Context) int {

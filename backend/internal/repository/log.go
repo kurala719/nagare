@@ -63,3 +63,9 @@ func CountLogsDAO(filter model.LogFilter) (int64, error) {
 	}
 	return total, nil
 }
+
+// ClearLogsDAO deletes all logs of a specific type
+func ClearLogsDAO(logType string) (int64, error) {
+	res := database.DB.Unscoped().Where("type = ?", logType).Delete(&model.LogEntry{})
+	return res.RowsAffected, res.Error
+}

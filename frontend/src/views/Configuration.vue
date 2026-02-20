@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="nagare-container">
     <div class="page-header config-header">
       <div class="title-section">
@@ -163,14 +163,14 @@
           </template>
           <div class="tab-pane-content">
             <div class="section-divider">{{ $t('configuration.aiAnalysis') }}</div>
-            <el-form :model=\"editableConfig.ai\" label-width=\"180px\" label-position=\"left\">
-              <el-form-item :label=\"$t('system.aiEnabled')\">
-                <el-switch v-model=\"editableConfig.ai.analysis_enabled\" />
+            <el-form :model="editableConfig.ai" label-width="180px" label-position="left">
+              <el-form-item :label="$t('system.aiEnabled')">
+                <el-switch v-model="editableConfig.ai.analysis_enabled" />
               </el-form-item>
-              <el-form-item :label=\"$t('system.aiNotificationGuard')\">
-                <el-switch v-model=\"editableConfig.ai.notification_guard_enabled\" />
+              <el-form-item :label="$t('system.aiNotificationGuard')">
+                <el-switch v-model="editableConfig.ai.notification_guard_enabled" />
               </el-form-item>
-              <el-form-item :label=\"$t('system.aiProviderId')\">
+              <el-form-item :label="$t('system.aiProviderId')">
                 <el-input-number v-model="editableConfig.ai.provider_id" :min="0" />
               </el-form-item>
               <el-form-item :label="$t('system.aiModel')">
@@ -181,6 +181,28 @@
               </el-form-item>
               <el-form-item :label="$t('system.aiMinSeverity')">
                 <el-input-number v-model="editableConfig.ai.analysis_min_severity" :min="0" :max="4" />
+              </el-form-item>
+            </el-form>
+
+            <div class="section-divider">SMTP Configuration</div>
+            <el-form :model="editableConfig.smtp" label-width="180px" label-position="left">
+              <el-form-item label="Enabled">
+                <el-switch v-model="editableConfig.smtp.enabled" />
+              </el-form-item>
+              <el-form-item label="SMTP Host">
+                <el-input v-model="editableConfig.smtp.host" placeholder="smtp.gmail.com" />
+              </el-form-item>
+              <el-form-item label="SMTP Port">
+                <el-input-number v-model="editableConfig.smtp.port" :min="1" :max="65535" />
+              </el-form-item>
+              <el-form-item label="Username">
+                <el-input v-model="editableConfig.smtp.username" />
+              </el-form-item>
+              <el-form-item label="Password">
+                <el-input v-model="editableConfig.smtp.password" type="password" show-password />
+              </el-form-item>
+              <el-form-item label="From Address">
+                <el-input v-model="editableConfig.smtp.from" placeholder="noreply@example.com" />
               </el-form-item>
             </el-form>
 
@@ -266,8 +288,8 @@
               <el-form-item label="Global Interval (s)">
                 <el-input-number v-model="editableConfig.media_rate_limit.global_interval_seconds" :min="0" />
               </el-form-item>
-              <el-form-item label="Media Type Interval (s)">
-                <el-input-number v-model="editableConfig.media_rate_limit.media_type_interval_seconds" :min="0" />
+              <el-form-item label="Protocol Interval (s)">
+                <el-input-number v-model="editableConfig.media_rate_limit.protocol_interval_seconds" :min="0" />
               </el-form-item>
               <el-form-item label="Media Interval (s)">
                 <el-input-number v-model="editableConfig.media_rate_limit.media_interval_seconds" :min="0" />
@@ -353,9 +375,17 @@ export default {
         analysis_timeout_seconds: 60,
         analysis_min_severity: 2,
       },
+      smtp: {
+        enabled: false,
+        host: '',
+        port: 587,
+        username: '',
+        password: '',
+        from: '',
+      },
       media_rate_limit: {
         global_interval_seconds: 30,
-        media_type_interval_seconds: 30,
+        protocol_interval_seconds: 30,
         media_interval_seconds: 30,
       },
       external: [],
@@ -430,10 +460,20 @@ export default {
         analysis_min_severity: ['analysis_min_severity', 'AnalysisMinSeverity']
       });
 
+      const smtpSource = data.smtp || data.SMTP || {};
+      mapData(smtpSource, editableConfig.smtp, {
+        enabled: ['enabled', 'Enabled'],
+        host: ['host', 'Host'],
+        port: ['port', 'Port'],
+        username: ['username', 'Username'],
+        password: ['password', 'Password'],
+        from: ['from', 'From']
+      });
+
       const mediaSource = data.media_rate_limit || data.MediaRateLimit || {};
       mapData(mediaSource, editableConfig.media_rate_limit, {
         global_interval_seconds: ['global_interval_seconds', 'GlobalIntervalSeconds'],
-        media_type_interval_seconds: ['media_type_interval_seconds', 'MediaTypeIntervalSeconds'],
+        protocol_interval_seconds: ['protocol_interval_seconds', 'ProtocolIntervalSeconds'],
         media_interval_seconds: ['media_interval_seconds', 'MediaIntervalSeconds']
       });
 

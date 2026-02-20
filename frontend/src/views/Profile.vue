@@ -76,7 +76,7 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Edit, Message, Phone, Link, Location } from '@element-plus/icons-vue'
-import { getUserInformation, updateUserInformation, createUserInformation } from '@/api/userInformation'
+import { getUserProfile, updateUserProfile } from '@/api/users'
 import { getUserClaims, getUserPrivileges } from '@/utils/auth'
 
 const saving = ref(false)
@@ -118,7 +118,7 @@ const setDefaultsFromClaims = () => {
 
 const loadProfile = async () => {
   try {
-    const { data } = await getUserInformation()
+    const { data } = await getUserProfile()
     const payload = data?.data || data
     Object.assign(profile, payload)
     Object.assign(form, {
@@ -141,19 +141,8 @@ const loadProfile = async () => {
 const onSave = async () => {
   saving.value = true
   try {
-    // Try to update first
-    try {
-      await updateUserInformation({ ...form })
-      ElMessage.success(t('profile.updated'))
-    } catch (err) {
-      // If update fails (404), create new profile
-      if (err?.response?.status === 404) {
-        await createUserInformation({ ...form })
-        ElMessage.success(t('profile.created'))
-      } else {
-        throw err
-      }
-    }
+    await updateUserProfile({ ...form })
+    ElMessage.success(t('profile.updated'))
     await loadProfile()
   } catch (err) {
     ElMessage.error(err?.response?.data?.error || err.message || t('profile.saveFailed'))

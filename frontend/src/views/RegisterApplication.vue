@@ -7,6 +7,11 @@
 
     <div class="standard-toolbar">
       <div class="filter-group">
+        <el-tabs v-model="activeTab" @tab-change="handleTabChange" style="margin-right: 20px">
+          <el-tab-pane label="Registration" name="register" />
+          <el-tab-pane label="Password Reset" name="reset" />
+        </el-tabs>
+        
         <el-input v-model="search" :placeholder="$t('registerApplications.search')" clearable style="width: 240px">
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
@@ -135,7 +140,10 @@
 import { ElMessage } from 'element-plus'
 import { markRaw } from 'vue'
 import { Loading, Search, Refresh, Check, Close, ArrowDown } from '@element-plus/icons-vue'
-import { searchRegisterApplications, approveRegisterApplication, rejectRegisterApplication } from '@/api/users'
+import { 
+  searchRegisterApplications, approveRegisterApplication, rejectRegisterApplication,
+  searchResetApplications, approveResetApplication, rejectResetApplication 
+} from '@/api/users'
 
 export default {
   name: 'RegisterApplication',
@@ -149,6 +157,7 @@ export default {
   },
   data() {
     return {
+      activeTab: 'register',
       applications: [],
       loading: false,
       error: null,
@@ -195,6 +204,9 @@ export default {
     this.loadApplications(true)
   },
   methods: {
+    handleTabChange() {
+      this.loadApplications(true)
+    },
     onSelectionChange(selection) {
       this.selectedApplicationRows = selection || []
     },
@@ -234,8 +246,12 @@ export default {
           offset: this.pageOffset,
           sort: this.sortBy || undefined,
           order: this.sortOrder || undefined,
+          with_total: false
         }
-        const response = await searchRegisterApplications(params)
+        
+        const fetchFn = this.activeTab === 'reset' ? searchResetApplications : searchRegisterApplications
+        const response = await fetchFn(params)
+        
         const data = Array.isArray(response.data) ? response.data : (response.data?.data || [])
         const mapped = data.map((a) => ({
           id: a.ID || a.id || 0,
@@ -283,7 +299,11 @@ export default {
     async approve(row) {
       this.submitting = true
       try {
-        await approveRegisterApplication(row.id)
+        if (this.activeTab === 'reset') {
+          await approveResetApplication(row.id)
+        } else {
+          await approveRegisterApplication(row.id)
+        }
         ElMessage.success(this.$t('registerApplications.approved'))
         await this.loadApplications(true)
       } catch (err) {
@@ -299,7 +319,8 @@ export default {
       }
       this.bulkApproving = true
       try {
-        await Promise.all(this.selectedApplicationRows.map((app) => approveRegisterApplication(app.id)))
+        const approveFn = this.activeTab === 'reset' ? approveResetApplication : approveRegisterApplication
+        await Promise.all(this.selectedApplicationRows.map((app) => approveFn(app.id)))
         ElMessage.success(this.$t('registerApplications.approved'))
         this.clearSelection()
         await this.loadApplications(true)
@@ -327,7 +348,8 @@ export default {
       if (!this.rejectForm.ids.length) return
       this.submitting = true
       try {
-        await Promise.all(this.rejectForm.ids.map((id) => rejectRegisterApplication(id, { reason: this.rejectForm.reason })))
+        const rejectFn = this.activeTab === 'reset' ? rejectResetApplication : rejectRegisterApplication
+        await Promise.all(this.rejectForm.ids.map((id) => rejectFn(id, { reason: this.rejectForm.reason })))
         ElMessage.success(this.$t('registerApplications.rejected'))
         this.rejectDialogVisible = false
         this.clearSelection()

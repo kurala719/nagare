@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"nagare/internal/database"
@@ -21,13 +22,13 @@ func GetAllUsersDAO() ([]model.User, error) {
 func SearchUsersDAO(filter model.UserFilter) ([]model.User, error) {
 	query := database.DB.Model(&model.User{})
 	if filter.Query != "" {
-		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
+		q := "%" + filter.Query + "%"
+		query = query.Where("username LIKE ? OR email LIKE ? OR nickname LIKE ? OR phone LIKE ?", q, q, q, q)
 	}
 	// Security filter based on requester privileges
 	if filter.RequesterPrivileges > 0 && filter.RequesterPrivileges < 3 {
 		query = query.Where("privileges < ?", filter.RequesterPrivileges)
 	} else if filter.RequesterPrivileges == 0 {
-		// Should not happen for authenticated routes, but safety check
 		return []model.User{}, nil
 	}
 
@@ -66,7 +67,8 @@ func SearchUsersDAO(filter model.UserFilter) ([]model.User, error) {
 func CountUsersDAO(filter model.UserFilter) (int64, error) {
 	query := database.DB.Model(&model.User{})
 	if filter.Query != "" {
-		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
+		q := "%" + filter.Query + "%"
+		query = query.Where("username LIKE ? OR email LIKE ? OR nickname LIKE ? OR phone LIKE ?", q, q, q, q)
 	}
 	// Security filter based on requester privileges
 	if filter.RequesterPrivileges > 0 && filter.RequesterPrivileges < 3 {
@@ -118,12 +120,18 @@ func DeleteUserByIDDAO(id int) error {
 	return database.DB.Delete(&model.User{}, id).Error
 }
 
-// UpdateUserDAO updates a user by ID (only auth fields)
+// UpdateUserDAO updates a user by ID (all fields)
 func UpdateUserDAO(id int, user model.User) error {
 	updates := map[string]interface{}{
-		"username":   user.Username,
-		"privileges": user.Privileges,
-		"status":     user.Status,
+		"username":     user.Username,
+		"privileges":   user.Privileges,
+		"status":       user.Status,
+		"email":        user.Email,
+		"phone":        user.Phone,
+		"avatar":       user.Avatar,
+		"address":      user.Address,
+		"introduction": user.Introduction,
+		"nickname":     user.Nickname,
 	}
 	if user.Password != "" {
 		updates["password"] = user.Password
@@ -146,44 +154,19 @@ func GetUserIDByUsernameDAO(username string) (uint, error) {
 	return user.ID, err
 }
 
-// ============= UserInformation DAO Functions =============
+// SaveEmailVerificationDAO saves or updates an email verification code
+func SaveEmailVerificationDAO(ev model.EmailVerification) error {
+	// Remove existing codes for this email first
+	database.DB.Where("email = ?", ev.Email).Delete(&model.EmailVerification{})
+	return database.DB.Create(&ev).Error
+}
 
-// GetUserInformationByUserIDDAO retrieves user information by user ID
-func GetUserInformationByUserIDDAO(userID uint) (model.UserInformation, error) {
-	var userInfo model.UserInformation
-	err := database.DB.Where("user_id = ?", userID).First(&userInfo).Error
+// FindEmailVerificationDAO retrieves a verification code by email and code
+func FindEmailVerificationDAO(email, code string) (model.EmailVerification, error) {
+	var ev model.EmailVerification
+	err := database.DB.Where("email = ? AND code = ? AND expires_at > ?", email, code, time.Now()).First(&ev).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return userInfo, model.ErrNotFound
+		return ev, model.ErrNotFound
 	}
-	return userInfo, err
-}
-
-// CreateUserInformationDAO creates new user information
-func CreateUserInformationDAO(userInfo model.UserInformation) error {
-	return database.DB.Create(&userInfo).Error
-}
-
-// UpdateUserInformationDAO updates user information by user ID
-func UpdateUserInformationDAO(userID uint, userInfo model.UserInformation) error {
-	updates := map[string]interface{}{
-		"email":        userInfo.Email,
-		"phone":        userInfo.Phone,
-		"avatar":       userInfo.Avatar,
-		"address":      userInfo.Address,
-		"introduction": userInfo.Introduction,
-		"nickname":     userInfo.Nickname,
-	}
-	result := database.DB.Model(&model.UserInformation{}).Where("user_id = ?", userID).Updates(updates)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return model.ErrNotFound
-	}
-	return nil
-}
-
-// DeleteUserInformationByUserIDDAO deletes user information by user ID
-func DeleteUserInformationByUserIDDAO(userID uint) error {
-	return database.DB.Where("user_id = ?", userID).Delete(&model.UserInformation{}).Error
+	return ev, err
 }

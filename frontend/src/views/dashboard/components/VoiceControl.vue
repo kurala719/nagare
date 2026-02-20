@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-card class="detail-card voice-card" shadow="hover">
     <template #header>
       <div class="card-header">
@@ -109,7 +109,7 @@ export default defineComponent({
     const executeVoiceAction = async (text) => {
       const normalized = String(text || '').toLowerCase()
       if (!normalized) return
-      if (normalized.includes('health') || normalized.includes('健康') || normalized.includes('状�?)) {
+      if (normalized.includes('health') || normalized.includes('健康') || normalized.includes('状态')) {
         voiceLastAction.value = t('dashboard.voiceActionHealth')
         await fetchQuickHealth()
         return
@@ -119,7 +119,7 @@ export default defineComponent({
         router.push('/alert')
         return
       }
-      if (normalized.includes('switch') || normalized.includes('交换�?)) {
+      if (normalized.includes('switch') || normalized.includes('交换机')) {
         voiceLastAction.value = t('dashboard.voiceActionSwitch')
         router.push({ path: '/host', query: { q: 'switch' } })
         return
@@ -230,3 +230,4 @@ export default defineComponent({
   align-items: center;
 }
 </style>
+

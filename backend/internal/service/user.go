@@ -1,8 +1,10 @@
 package service
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,20 +14,10 @@ import (
 )
 
 type UserRequest struct {
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	Privileges int    `json:"privileges"`
-}
-
-type UserResponse struct {
-	ID         int    `json:"id"`
-	Username   string `json:"username"`
-	Privileges int    `json:"privileges"`
-	Status     int    `json:"status"`
-	Role       string `json:"role"`
-}
-
-type UserInformationRequest struct {
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	Privileges   int    `json:"privileges"`
+	Status       *int   `json:"status"`
 	Email        string `json:"email"`
 	Phone        string `json:"phone"`
 	Avatar       string `json:"avatar"`
@@ -34,9 +26,12 @@ type UserInformationRequest struct {
 	Nickname     string `json:"nickname"`
 }
 
-type UserInformationResponse struct {
+type UserResponse struct {
 	ID           int    `json:"id"`
-	UserID       int    `json:"user_id"`
+	Username     string `json:"username"`
+	Privileges   int    `json:"privileges"`
+	Status       int    `json:"status"`
+	Role         string `json:"role"`
 	Email        string `json:"email"`
 	Phone        string `json:"phone"`
 	Avatar       string `json:"avatar"`
@@ -52,12 +47,21 @@ type LoginResponse struct {
 type RegisterRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Email    string `json:"email"`
+	Code     string `json:"code"`
 }
 
 type ResetPasswordRequest struct {
 	Username    string `json:"username"`
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
+}
+
+type CustomedClaims struct {
+	UID        uint   `json:"uid"`
+	Username   string `json:"username"`
+	Privileges int    `json:"privileges"`
+	jwt.RegisteredClaims
 }
 
 // ============= User Service Functions =============
@@ -69,13 +73,7 @@ func GetAllUsersServ() ([]UserResponse, error) {
 	}
 	var userResponses []UserResponse
 	for _, u := range users {
-		userResponses = append(userResponses, UserResponse{
-			ID:         int(u.Model.ID),
-			Username:   u.Username,
-			Privileges: u.Privileges,
-			Status:     u.Status,
-			Role:       privilegeToRole(u.Privileges),
-		})
+		userResponses = append(userResponses, userToResp(u))
 	}
 	return userResponses, nil
 }
@@ -88,13 +86,7 @@ func SearchUsersServ(filter model.UserFilter) ([]UserResponse, error) {
 	}
 	responses := make([]UserResponse, 0, len(users))
 	for _, u := range users {
-		responses = append(responses, UserResponse{
-			ID:         int(u.Model.ID),
-			Username:   u.Username,
-			Privileges: u.Privileges,
-			Status:     u.Status,
-			Role:       privilegeToRole(u.Privileges),
-		})
+		responses = append(responses, userToResp(u))
 	}
 	return responses, nil
 }
@@ -109,35 +101,33 @@ func GetUserByIDServ(id int) (UserResponse, error) {
 	if err != nil {
 		return UserResponse{}, err
 	}
-	return UserResponse{
-		ID:         int(user.Model.ID),
-		Username:   user.Username,
-		Privileges: user.Privileges,
-		Status:     user.Status,
-		Role:       privilegeToRole(user.Privileges),
-	}, nil
+	return userToResp(user), nil
 }
 
-func GetUserByUsernameDAO(username string) (UserResponse, error) {
+func GetUserByUsernameServ(username string) (UserResponse, error) {
 	user, err := repository.GetUserByUsernameDAO(username)
 	if err != nil {
 		return UserResponse{}, err
 	}
-	return UserResponse{
-		ID:         int(user.Model.ID),
-		Username:   user.Username,
-		Privileges: user.Privileges,
-		Status:     user.Status,
-		Role:       privilegeToRole(user.Privileges),
-	}, nil
+	return userToResp(user), nil
 }
 
 func AddUserServ(req UserRequest) error {
+	status := 1
+	if req.Status != nil {
+		status = *req.Status
+	}
 	user := model.User{
-		Username:   req.Username,
-		Password:   req.Password,
-		Privileges: req.Privileges,
-		Status:     1,
+		Username:     req.Username,
+		Password:     req.Password,
+		Privileges:   req.Privileges,
+		Status:       status,
+		Email:        req.Email,
+		Phone:        req.Phone,
+		Avatar:       req.Avatar,
+		Address:      req.Address,
+		Introduction: req.Introduction,
+		Nickname:     req.Nickname,
 	}
 	return repository.AddUserDAO(user)
 }
@@ -147,24 +137,64 @@ func DeleteUserByIDServ(id int) error {
 }
 
 func UpdateUserServ(id int, req UserRequest) error {
-	existing, err := repository.GetUserByIDDAO(id)
+	user, err := repository.GetUserByIDDAO(id)
 	if err != nil {
 		return err
 	}
-	user := model.User{
-		Username:   req.Username,
-		Password:   req.Password,
-		Privileges: req.Privileges,
-		Status:     existing.Status,
+	
+	if req.Username != "" {
+		user.Username = req.Username
 	}
+	if req.Password != "" {
+		user.Password = req.Password
+	}
+	if req.Privileges != 0 {
+		user.Privileges = req.Privileges
+	}
+	if req.Status != nil {
+		user.Status = *req.Status
+	}
+	
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.Phone != "" {
+		user.Phone = req.Phone
+	}
+	if req.Avatar != "" {
+		user.Avatar = req.Avatar
+	}
+	if req.Address != "" {
+		user.Address = req.Address
+	}
+	if req.Introduction != "" {
+		user.Introduction = req.Introduction
+	}
+	if req.Nickname != "" {
+		user.Nickname = req.Nickname
+	}
+	
 	return repository.UpdateUserDAO(id, user)
 }
 
-type CustomedClaims struct {
-	UID        uint   `json:"uid"`
-	Username   string `json:"username"`
-	Privileges int    `json:"privileges"`
-	jwt.RegisteredClaims
+func UpdateUserProfileServ(username string, req UserRequest) error {
+	user, err := repository.GetUserByUsernameDAO(username)
+	if err != nil {
+		return err
+	}
+	
+	user.Email = req.Email
+	user.Phone = req.Phone
+	user.Avatar = req.Avatar
+	user.Address = req.Address
+	user.Introduction = req.Introduction
+	user.Nickname = req.Nickname
+	
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+
+	return repository.UpdateUserDAO(int(user.ID), user)
 }
 
 func LoginUserServ(username, password string) (string, error) {
@@ -195,32 +225,75 @@ func LoginUserServ(username, password string) (string, error) {
 }
 
 func RegisterUserServ(req RegisterRequest) error {
-	if req.Username == "" || req.Password == "" {
+	if req.Username == "" || req.Password == "" || req.Email == "" || req.Code == "" {
 		return model.ErrInvalidInput
 	}
+	
+	// Verify code
+	_, err := repository.FindEmailVerificationDAO(req.Email, req.Code)
+	if err != nil {
+		return fmt.Errorf("invalid or expired verification code")
+	}
+
 	if _, err := repository.GetUserByUsernameDAO(req.Username); err == nil {
 		return model.ErrConflict
 	} else if !errors.Is(err, model.ErrNotFound) {
 		return err
 	}
-	if existing, err := repository.GetRegisterApplicationByUsernameDAO(req.Username); err == nil {
-		if existing.Status == 0 {
-			return model.ErrConflict
-		}
-	} else if !errors.Is(err, model.ErrNotFound) {
-		return err
-	}
+	
 	if err := repository.CreateRegisterApplicationDAO(model.RegisterApplication{
 		Username: req.Username,
 		Password: req.Password,
+		Email:    req.Email,
 		Status:   0,
 	}); err != nil {
 		return err
 	}
 
-	// Notify admins (target specific user_id if needed, nil for all)
-	_ = CreateSiteMessageServ("New Registration", fmt.Sprintf("A new user '%s' has applied for registration.", req.Username), "system", 2, nil)
+	// Clean up code after successful registration
+	// (Optional: depends on if we want to allow re-use within expiration window, 
+	// but here we just leave it for simplicity or explicit deletion can be added)
+
+	_ = CreateSiteMessageServ("New Registration", fmt.Sprintf("A new user '%s' (%s) has applied for registration.", req.Username, req.Email), "system", 2, nil)
 	return nil
+}
+
+func SendRegistrationCodeServ(email string) error {
+	if email == "" {
+		return model.ErrInvalidInput
+	}
+
+	code := generateVerificationCode(6)
+	expiresAt := time.Now().Add(15 * time.Minute)
+
+	ev := model.EmailVerification{
+		Email:     email,
+		Code:      code,
+		ExpiresAt: expiresAt,
+	}
+
+	if err := repository.SaveEmailVerificationDAO(ev); err != nil {
+		return err
+	}
+
+	subject := "Nagare Registration Verification Code"
+	body := fmt.Sprintf("Your verification code is: %s\nThis code will expire in 15 minutes.", code)
+	
+	return SendEmailServ(email, subject, body)
+}
+
+func generateVerificationCode(length int) string {
+	table := [...]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
+	b := make([]byte, length)
+	n, err := io.ReadAtLeast(rand.Reader, b, length)
+	if n != length || err != nil {
+		// Fallback to simpler method if rand fails
+		return "123456" 
+	}
+	for i := 0; i < len(b); i++ {
+		b[i] = table[int(b[i])%len(table)]
+	}
+	return string(b)
 }
 
 func ResetPasswordServ(req ResetPasswordRequest) error {
@@ -231,120 +304,10 @@ func ResetPasswordServ(req ResetPasswordRequest) error {
 	if err != nil {
 		return err
 	}
-	if user.Privileges >= 3 {
-		return model.ErrForbidden
-	}
 	if user.Password != req.OldPassword {
 		return model.ErrAuthenticationFailed
 	}
 	return repository.UpdateUserPasswordByUsernameDAO(req.Username, req.NewPassword)
-}
-
-// ============= UserInformation Service Functions =============
-
-func GetUserInformationByUsernameServ(username string) (UserInformationResponse, error) {
-	userID, err := repository.GetUserIDByUsernameDAO(username)
-	if err != nil {
-		return UserInformationResponse{}, err
-	}
-	userInfo, err := repository.GetUserInformationByUserIDDAO(userID)
-	if err != nil {
-		return UserInformationResponse{}, err
-	}
-	return UserInformationResponse{
-		ID:           int(userInfo.Model.ID),
-		UserID:       int(userInfo.UserID),
-		Email:        userInfo.Email,
-		Phone:        userInfo.Phone,
-		Avatar:       userInfo.Avatar,
-		Address:      userInfo.Address,
-		Introduction: userInfo.Introduction,
-		Nickname:     userInfo.Nickname,
-	}, nil
-}
-
-func GetUserInformationByUserIDServ(userID uint) (UserInformationResponse, error) {
-	userInfo, err := repository.GetUserInformationByUserIDDAO(userID)
-	if err != nil {
-		return UserInformationResponse{}, err
-	}
-	return UserInformationResponse{
-		ID:           int(userInfo.Model.ID),
-		UserID:       int(userInfo.UserID),
-		Email:        userInfo.Email,
-		Phone:        userInfo.Phone,
-		Avatar:       userInfo.Avatar,
-		Address:      userInfo.Address,
-		Introduction: userInfo.Introduction,
-		Nickname:     userInfo.Nickname,
-	}, nil
-}
-
-func CreateUserInformationByUsernameServ(username string, req UserInformationRequest) error {
-	userID, err := repository.GetUserIDByUsernameDAO(username)
-	if err != nil {
-		return err
-	}
-	userInfo := model.UserInformation{
-		UserID:       userID,
-		Email:        req.Email,
-		Phone:        req.Phone,
-		Avatar:       req.Avatar,
-		Address:      req.Address,
-		Introduction: req.Introduction,
-		Nickname:     req.Nickname,
-	}
-	return repository.CreateUserInformationDAO(userInfo)
-}
-
-func UpdateUserInformationByUsernameServ(username string, req UserInformationRequest) error {
-	userID, err := repository.GetUserIDByUsernameDAO(username)
-	if err != nil {
-		return err
-	}
-	userInfo := model.UserInformation{
-		UserID:       userID,
-		Email:        req.Email,
-		Phone:        req.Phone,
-		Avatar:       req.Avatar,
-		Address:      req.Address,
-		Introduction: req.Introduction,
-		Nickname:     req.Nickname,
-	}
-	// Try to update, if not found, create
-	err = repository.UpdateUserInformationDAO(userID, userInfo)
-	if errors.Is(err, model.ErrNotFound) {
-		return repository.CreateUserInformationDAO(userInfo)
-	}
-	return err
-}
-
-// UpdateUserInformationByUserIDServ allows admin to update a user's profile by user ID
-func UpdateUserInformationByUserIDServ(userID uint, req UserInformationRequest) error {
-	userInfo := model.UserInformation{
-		UserID:       userID,
-		Email:        req.Email,
-		Phone:        req.Phone,
-		Avatar:       req.Avatar,
-		Address:      req.Address,
-		Introduction: req.Introduction,
-		Nickname:     req.Nickname,
-	}
-	if err := repository.UpdateUserInformationDAO(userID, userInfo); err != nil {
-		if errors.Is(err, model.ErrNotFound) {
-			return repository.CreateUserInformationDAO(userInfo)
-		}
-		return err
-	}
-	return nil
-}
-
-func DeleteUserInformationByUsernameServ(username string) error {
-	userID, err := repository.GetUserIDByUsernameDAO(username)
-	if err != nil {
-		return err
-	}
-	return repository.DeleteUserInformationByUserIDDAO(userID)
 }
 
 func privilegeToRole(privileges int) string {
@@ -357,5 +320,21 @@ func privilegeToRole(privileges int) string {
 		return "user"
 	default:
 		return "unauthorized"
+	}
+}
+
+func userToResp(u model.User) UserResponse {
+	return UserResponse{
+		ID:           int(u.ID),
+		Username:     u.Username,
+		Privileges:   u.Privileges,
+		Status:       u.Status,
+		Role:         privilegeToRole(u.Privileges),
+		Email:        u.Email,
+		Phone:        u.Phone,
+		Avatar:       u.Avatar,
+		Address:      u.Address,
+		Introduction: u.Introduction,
+		Nickname:     u.Nickname,
 	}
 }

@@ -50,15 +50,15 @@ func allowMediaSend(media model.Media) (bool, time.Duration) {
 
 func mediaRateLimitKeys(media model.Media) []rateLimitKey {
 	globalInterval := time.Duration(viper.GetInt("media_rate_limit.global_interval_seconds")) * time.Second
-	mediaTypeInterval := time.Duration(viper.GetInt("media_rate_limit.media_type_interval_seconds")) * time.Second
+	protocolInterval := time.Duration(viper.GetInt("media_rate_limit.protocol_interval_seconds")) * time.Second
 	mediaInterval := time.Duration(viper.GetInt("media_rate_limit.media_interval_seconds")) * time.Second
 
 	keys := make([]rateLimitKey, 0, 3)
 	if globalInterval > 0 {
 		keys = append(keys, rateLimitKey{key: "global", interval: globalInterval})
 	}
-	if mediaTypeInterval > 0 && media.Type != "" {
-		keys = append(keys, rateLimitKey{key: fmt.Sprintf("type:%s", media.Type), interval: mediaTypeInterval})
+	if protocolInterval > 0 && media.Type != "" {
+		keys = append(keys, rateLimitKey{key: fmt.Sprintf("type:%s", media.Type), interval: protocolInterval})
 	}
 	if mediaInterval > 0 && media.ID > 0 {
 		keys = append(keys, rateLimitKey{key: fmt.Sprintf("media:%d", media.ID), interval: mediaInterval})

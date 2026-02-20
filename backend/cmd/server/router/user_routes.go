@@ -11,6 +11,8 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 	{
 		auth.POST("/login", api.LoginUserCtrl)
 		auth.POST("/register", api.RegisterUserCtrl)
+		auth.POST("/send-code", api.SendRegistrationCodeCtrl)
+		auth.POST("/reset-request", api.SubmitPasswordResetApplicationCtrl)
 
 		// Reset password - requires privilege 1
 		authProtected := auth.Group("", api.PrivilegesMiddleware(1))
@@ -22,6 +24,12 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 	registerApps.GET("", api.ListRegisterApplicationsCtrl)
 	registerApps.PUT("/:id/approve", api.ApproveRegisterApplicationCtrl)
 	registerApps.PUT("/:id/reject", api.RejectRegisterApplicationCtrl)
+
+	// Password reset applications - requires privilege 3
+	resetApps := rg.Group("/reset-applications", api.PrivilegesMiddleware(3))
+	resetApps.GET("", api.ListPasswordResetApplicationsCtrl)
+	resetApps.PUT("/:id/approve", api.ApprovePasswordResetApplicationCtrl)
+	resetApps.PUT("/:id/reject", api.RejectPasswordResetApplicationCtrl)
 
 	// Legacy register applications - requires privilege 3
 	registerAppsLegacy := rg.Group("/register-application", api.PrivilegesMiddleware(3))
@@ -46,15 +54,18 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 }
 
 func setupUserInformationRoutes(rg *gin.RouterGroup) {
-	// Authenticated user routes - manage their own information (privilege 1)
+	// Authenticated user routes - manage their own profile (privilege 1)
 	authenticated := rg.Group("/user-info", api.PrivilegesMiddleware(1))
-	authenticated.GET("/me", api.GetUserInformationCtrl)
-	authenticated.POST("/me", api.CreateUserInformationCtrl)
-	authenticated.PUT("/me", api.UpdateUserInformationCtrl)
-	authenticated.DELETE("/me", api.DeleteUserInformationCtrl)
+	{
+		authenticated.GET("/me", api.GetMyProfileCtrl)
+		authenticated.PUT("/me", api.UpdateMyProfileCtrl)
+		authenticated.POST("/me", api.UpdateMyProfileCtrl) // Map POST to update for compatibility
+	}
 
 	// Admin routes - manage other users' information (privilege 3)
 	admin := rg.Group("/user-info", api.PrivilegesMiddleware(3))
-	admin.GET("/users/:user_id", api.GetUserInformationByUserIDCtrl)
-	admin.PUT("/users/:user_id", api.UpdateUserInformationByUserIDCtrl)
+	{
+		admin.GET("/users/:id", api.GetUserByIDCtrl)
+		admin.PUT("/users/:id", api.UpdateUserCtrl)
+	}
 }

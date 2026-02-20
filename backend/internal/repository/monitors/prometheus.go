@@ -171,23 +171,3 @@ func (p *PrometheusProvider) DeleteHostGroup(ctx context.Context, id string) err
 func (p *PrometheusProvider) GetHostGroupByName(ctx context.Context, name string) (string, error) {
 	return "", fmt.Errorf("prometheus: GetHostGroupByName not implemented yet")
 }
-
-func (p *PrometheusProvider) CreateMediaType(ctx context.Context, name string, script string, params map[string]string) error {
-	return fmt.Errorf("prometheus: CreateMediaType not implemented yet")
-}
-
-func (p *PrometheusProvider) GetMediaTypeIDByName(ctx context.Context, name string) (string, error) {
-	return "", fmt.Errorf("prometheus: GetMediaTypeIDByName not implemented yet")
-}
-
-func (p *PrometheusProvider) GetUserIDByUsername(ctx context.Context, username string) (string, error) {
-	return "", fmt.Errorf("prometheus: GetUserIDByUsername not implemented yet")
-}
-
-func (p *PrometheusProvider) EnsureUserMedia(ctx context.Context, userID string, mediaTypeID string, sendTo string) error {
-	return fmt.Errorf("prometheus: EnsureUserMedia not implemented yet")
-}
-
-func (p *PrometheusProvider) EnsureActionWithMedia(ctx context.Context, name string, userID string, mediaTypeID string) error {
-	return fmt.Errorf("prometheus: EnsureActionWithMedia not implemented yet")
-}

@@ -439,10 +439,5 @@ func (p *SnmpProvider) GetHostGroupByName(ctx context.Context, name string) (str
 func (p *SnmpProvider) CreateHostGroup(ctx context.Context, name string) (string, error) { return "", nil }
 func (p *SnmpProvider) UpdateHostGroup(ctx context.Context, id, name string) error { return nil }
 func (p *SnmpProvider) DeleteHostGroup(ctx context.Context, id string) error { return nil }
-func (p *SnmpProvider) CreateMediaType(ctx context.Context, name string, script string, params map[string]string) error { return nil }
-func (p *SnmpProvider) GetMediaTypeIDByName(ctx context.Context, name string) (string, error) { return "", nil }
-func (p *SnmpProvider) GetUserIDByUsername(ctx context.Context, username string) (string, error) { return "", nil }
-func (p *SnmpProvider) EnsureUserMedia(ctx context.Context, userID string, mediaTypeID string, sendTo string) error { return nil }
-func (p *SnmpProvider) EnsureActionWithMedia(ctx context.Context, name string, userID string, mediaTypeID string) error { return nil }
 func (p *SnmpProvider) Name() string { return p.config.Name }
 func (p *SnmpProvider) Type() MonitorType { return MonitorSNMP }

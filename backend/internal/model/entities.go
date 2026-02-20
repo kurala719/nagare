@@ -1,4 +1,4 @@
-// package model contains the core business entities and interfaces for the Nagare system.
+﻿// package model contains the core business entities and interfaces for the Nagare system.
 // This package follows clean architecture principles, keeping business logic
 // independent of frameworks and external dependencies.
 package model
@@ -258,25 +258,19 @@ type AuditLog struct {
 	UserAgent string `gorm:"size:255"`
 }
 
-// User represents the authentication and authorization information
+// User represents the unified authentication and profile information
 type User struct {
 	gorm.Model
-	Username   string
-	Password   string // Hashed password
-	Privileges int    // 0 = unauthorized, 1 = user, 2 = admin, 3 = superadmin
-	Status     int    // 0 = inactive, 1 = active
-}
-
-// UserInformation represents the user profile and personal information
-type UserInformation struct {
-	gorm.Model
-	UserID       uint `gorm:"column:user_id"` // Foreign key to User
-	Email        string
-	Phone        string
-	Avatar       string
-	Address      string
-	Introduction string
-	Nickname     string
+	Username     string `gorm:"uniqueIndex;size:100"`
+	Password     string `json:"-"` // Hashed password, excluded from JSON by default
+	Privileges   int    `gorm:"default:1"` // 0=unauthorized, 1=user, 2=admin, 3=superadmin
+	Status       int    `gorm:"default:1"` // 0=inactive, 1=active
+	Email        string `gorm:"size:255"`
+	Phone        string `gorm:"size:20"`
+	Avatar       string `gorm:"size:255"`
+	Address      string `gorm:"size:255"`
+	Introduction string `gorm:"type:text"`
+	Nickname     string `gorm:"size:100"`
 }
 
 // RegisterApplication represents a pending registration request from an unregistered user
@@ -284,9 +278,29 @@ type RegisterApplication struct {
 	gorm.Model
 	Username   string
 	Password   string
+	Email      string `gorm:"size:255"`
 	Status     int    // 0 = pending, 1 = approved, 2 = rejected
 	Reason     string // rejection or approval note
 	ApprovedBy *uint  `gorm:"column:approved_by"`
+}
+
+// EmailVerification stores temporary verification codes sent to users
+type EmailVerification struct {
+	ID        uint      `gorm:"primaryKey"`
+	Email     string    `gorm:"index;size:255"`
+	Code      string    `gorm:"size:10"`
+	ExpiresAt time.Time `gorm:"index"`
+}
+
+// PasswordResetApplication represents a request to reset a user password
+type PasswordResetApplication struct {
+	gorm.Model
+	UserID      uint
+	Username    string
+	NewPassword string // Hashed new password to be applied upon approval
+	Status      int    // 0 = pending, 1 = approved, 2 = rejected
+	Reason      string
+	ApprovedBy  *uint `gorm:"column:approved_by"`
 }
 
 // QQWhitelist represents an allowed QQ user or group for commands and alerts
@@ -370,10 +384,8 @@ type SiteMessage struct {
 	UserID    *uint  `gorm:"index"`     // Optional: target specific user, null for all
 }
 
-// UserWithInfo combines User and UserInformation for convenient querying
 type UserWithInfo struct {
 	User
-	UserInformation UserInformation `gorm:"foreignKey:UserID"`
 }
 
 // RetentionPolicy defines how long data for a specific part of the system should be kept.

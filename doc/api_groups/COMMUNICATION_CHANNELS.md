@@ -65,4 +65,4 @@ Lists supported notification protocols (e.g., `email`, `webhook`, `qq`, `sms`).
 
 ### **POST** `/api/v1/media`
 Creates a specific destination (e.g., "SRE Team Email").
-- **Body**: `{ "name": "Team Email", "media_type_id": 1, "target": "sre@company.com" }`
+- **Body**: `{ "name": "Team Email", "type": "email", "target": "sre@company.com" }`

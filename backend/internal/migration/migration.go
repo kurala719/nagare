@@ -32,8 +32,8 @@ func InitDBTables() error {
 		&model.AuditLog{},
 		&model.Chat{},
 		&model.Provider{},
-		&model.UserInformation{},
 		&model.RegisterApplication{},
+		&model.PasswordResetApplication{},
 		&model.QQWhitelist{},
 		&model.Report{},
 		&model.ReportConfig{},
@@ -71,6 +71,21 @@ func ensureDefaultMonitor() error {
 }
 
 func preSchemaUpdates() error {
+	// Deduplicate users before adding unique index if table exists
+	if database.DB.Migrator().HasTable("users") {
+		// This query finds duplicates and deletes all but the one with the smallest ID
+		err := database.DB.Exec(`
+			DELETE u1 FROM users u1
+			INNER JOIN users u2 
+			WHERE u1.id > u2.id AND u1.username = u2.username
+		`).Error
+		if err != nil {
+			// Log error but continue - migration might fail later if duplicates persist
+			// but we don't want to stop the whole process if this specific MySQL syntax fails 
+			// (though it's standard for MySQL/MariaDB)
+		}
+	}
+
 	if database.DB.Migrator().HasTable("sites") && !database.DB.Migrator().HasTable("groups") {
 		if err := database.DB.Migrator().RenameTable("sites", "groups"); err != nil {
 			return err

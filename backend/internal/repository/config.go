@@ -16,8 +16,19 @@ type Config struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+}
+
+// SMTPConfig holds email server settings
+type SMTPConfig struct {
+	Host     string `yaml:"host" json:"host" mapstructure:"host"`
+	Port     int    `yaml:"port" json:"port" mapstructure:"port"`
+	Username string `yaml:"username" json:"username" mapstructure:"username"`
+	Password string `yaml:"password" json:"password" mapstructure:"password"`
+	From     string `yaml:"from" json:"from" mapstructure:"from"`
+	Enabled  bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
 }
 
 // ExternalItemConfig defines external infrastructure items
@@ -80,9 +91,9 @@ type AIConfig struct {
 
 // MediaRateLimitConfig holds notification rate limit settings
 type MediaRateLimitConfig struct {
-	GlobalIntervalSeconds    int `yaml:"global_interval_seconds" json:"global_interval_seconds" mapstructure:"global_interval_seconds"`
-	MediaTypeIntervalSeconds int `yaml:"media_type_interval_seconds" json:"media_type_interval_seconds" mapstructure:"media_type_interval_seconds"`
-	MediaIntervalSeconds     int `yaml:"media_interval_seconds" json:"media_interval_seconds" mapstructure:"media_interval_seconds"`
+	GlobalIntervalSeconds   int `yaml:"global_interval_seconds" json:"global_interval_seconds" mapstructure:"global_interval_seconds"`
+	ProtocolIntervalSeconds int `yaml:"protocol_interval_seconds" json:"protocol_interval_seconds" mapstructure:"protocol_interval_seconds"`
+	MediaIntervalSeconds    int `yaml:"media_interval_seconds" json:"media_interval_seconds" mapstructure:"media_interval_seconds"`
 }
 
 // ConfigRequest is used for modifying configuration
@@ -100,6 +111,7 @@ type ConfigRequest struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -112,6 +124,7 @@ type ConfigResponse struct {
 	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -187,8 +200,15 @@ func ResetConfig() error {
 	viper.Set("ai.analysis_timeout_seconds", 60)
 	viper.Set("ai.analysis_min_severity", 2)
 
+	viper.Set("smtp.enabled", false)
+	viper.Set("smtp.host", "")
+	viper.Set("smtp.port", 587)
+	viper.Set("smtp.username", "")
+	viper.Set("smtp.password", "")
+	viper.Set("smtp.from", "")
+
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
-	viper.Set("media_rate_limit.media_type_interval_seconds", 30)
+	viper.Set("media_rate_limit.protocol_interval_seconds", 30)
 	viper.Set("media_rate_limit.media_interval_seconds", 30)
 
 	viper.Set("external", []map[string]interface{}{

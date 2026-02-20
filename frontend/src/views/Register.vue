@@ -56,6 +56,33 @@
                 autocomplete="username"
               />
             </el-form-item>
+
+            <el-form-item label="Email" prop="email">
+              <div style="display: flex; gap: 8px;">
+                <el-input 
+                  v-model="form.email" 
+                  placeholder="Enter your email"
+                  :prefix-icon="Message"
+                  autocomplete="email"
+                />
+                <el-button 
+                  :disabled="codeCooldown > 0" 
+                  @click="onSendCode" 
+                  style="width: 120px"
+                >
+                  {{ codeCooldown > 0 ? `${codeCooldown}s` : 'Send Code' }}
+                </el-button>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="Verification Code" prop="code">
+              <el-input 
+                v-model="form.code" 
+                placeholder="6-digit code"
+                :prefix-icon="Ticket"
+                maxlength="6"
+              />
+            </el-form-item>
             
             <el-form-item :label="$t('auth.password')" prop="password">
               <el-input 
@@ -104,20 +131,23 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { User as UserIcon, Lock, Check, Monitor, Tools, CircleCheck } from '@element-plus/icons-vue'
+import { User as UserIcon, Lock, Check, Monitor, Tools, CircleCheck, Message, Ticket } from '@element-plus/icons-vue'
 import AuthControls from '@/components/AuthControls.vue'
 import AnimatedBackground from '@/components/Customed/AnimatedBackground.vue'
-import { registerUser } from '@/api/users'
+import { registerUser, sendVerificationCode } from '@/api/users'
 
 const router = useRouter()
 const { t } = useI18n()
 const loading = ref(false)
 const registerFormRef = ref(null)
+const codeCooldown = ref(0)
 
 const form = reactive({
   username: '',
   password: '',
-  confirm: ''
+  confirm: '',
+  email: '',
+  code: ''
 })
 
 const validatePass2 = (rule, value, callback) => {
@@ -132,8 +162,46 @@ const validatePass2 = (rule, value, callback) => {
 
 const rules = {
   username: [{ required: true, message: t('auth.username') + ' is required', trigger: 'blur' }],
+  email: [
+    { required: true, message: 'Email is required', trigger: 'blur' },
+    { type: 'email', message: 'Please enter a valid email address', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: 'Verification code is required', trigger: 'blur' },
+    { len: 6, message: 'Code must be 6 digits', trigger: 'blur' }
+  ],
   password: [{ required: true, message: t('auth.password') + ' is required', trigger: 'blur' }],
   confirm: [{ validator: validatePass2, trigger: 'blur' }]
+}
+
+const onSendCode = async () => {
+  if (!form.email) {
+    ElMessage.warning('Please enter your email first')
+    return
+  }
+  
+  // Basic email regex check
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    ElMessage.warning('Please enter a valid email address')
+    return
+  }
+
+  try {
+    await sendVerificationCode({ email: form.email })
+    ElMessage.success('Verification code sent to your email')
+    
+    // Start cooldown
+    codeCooldown.value = 60
+    const timer = setInterval(() => {
+      codeCooldown.value--
+      if (codeCooldown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (err) {
+    const errorMsg = err?.response?.data?.error || err.message || 'Failed to send code'
+    ElMessage.error(errorMsg)
+  }
 }
 
 const onRegister = async () => {
@@ -147,7 +215,12 @@ const onRegister = async () => {
 
   loading.value = true
   try {
-    await registerUser({ username: form.username, password: form.password })
+    await registerUser({ 
+      username: form.username, 
+      password: form.password,
+      email: form.email,
+      code: form.code
+    })
     ElMessage.success(t('auth.applicationSubmitted'))
     router.replace('/login')
   } catch (err) {

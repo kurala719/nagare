@@ -42,7 +42,6 @@ func setupAlarmRoutes(rg *gin.RouterGroup) {
 		alarms.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateAlarmCtrl)
 		alarms.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
 		alarms.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
-		alarms.POST("/:id/setup-media", api.PrivilegesMiddleware(2), api.SetupAlarmMediaTypeCtrl)
 	}
 }
 

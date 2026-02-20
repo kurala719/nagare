@@ -40,6 +40,26 @@ func GetServiceLogsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, logs)
 }
 
+// ClearLogsCtrl handles DELETE /logs/:type
+func ClearLogsCtrl(c *gin.Context) {
+	logType := c.Param("type")
+	if logType != service.LogTypeSystem && logType != service.LogTypeService {
+		respondBadRequest(c, "invalid log type")
+		return
+	}
+
+	count, err := service.ClearLogsServ(logType)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	respondSuccess(c, http.StatusOK, gin.H{
+		"message": "logs cleared",
+		"count":   count,
+	})
+}
+
 func searchLogs(c *gin.Context, logType string) ([]service.LogResp, int64, error) {
 	severityPtr := parseLogSeverityParam(c.Query("severity"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "200"))

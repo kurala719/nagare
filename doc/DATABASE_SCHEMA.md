@@ -48,7 +48,7 @@ Nagare uses **MySQL** (or any GORM-supported database) to store its knowledge, h
 | Table | Description | Key Columns |
 | :--- | :--- | :--- |
 | `media_types` | Delivery methods (Email/Webhook) | `key`, `template`, `fields` (JSON) |
-| `media` | Specific targets (e.g. "Admin Email") | `target`, `params` (JSON), `media_type_id` |
+| `media` | Specific targets (e.g. "Admin Email") | `type`, `target`, `params` (JSON) |
 | `qq_whitelists` | Authorized QQ IDs | `qq_identifier`, `type` (User/Group), `can_command` |
 
 ---

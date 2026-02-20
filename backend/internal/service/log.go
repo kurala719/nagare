@@ -62,6 +62,10 @@ func CountLogsServ(filter model.LogFilter) (int64, error) {
 	return repository.CountLogsDAO(filter)
 }
 
+func ClearLogsServ(logType string) (int64, error) {
+	return repository.ClearLogsDAO(logType)
+}
+
 func logEntry(logType string, severity int, message string, context map[string]interface{}, userID *uint, ip string) {
 	ctx := ""
 	if len(context) > 0 {

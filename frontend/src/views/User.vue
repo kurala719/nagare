@@ -183,8 +183,7 @@
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { markRaw } from 'vue'
-import { searchUsers, addUser, updateUser, deleteUser } from '@/api/users'
-import { getUserInformationByUserID, updateUserInformationByUserID } from '@/api/userInformation'
+import { searchUsers, addUser, updateUser, deleteUser, getUserByID } from '@/api/users'
 import { getUserPrivileges } from '@/utils/auth'
 import { Loading, Plus, Search, Edit, Delete, ArrowDown } from '@element-plus/icons-vue'
 
@@ -429,6 +428,9 @@ export default {
           nickname: u.Nickname || u.nickname || '',
           email: u.Email || u.email || '',
           phone: u.Phone || u.phone || '',
+          avatar: u.Avatar || u.avatar || '',
+          address: u.Address || u.address || '',
+          introduction: u.Introduction || u.introduction || '',
           privileges: u.Privileges ?? u.privileges ?? 1,
           status: u.Status ?? u.status ?? 0,
         }))
@@ -456,7 +458,7 @@ export default {
       }
       this.dialogVisible = true
     },
-    openEdit(row) {
+    async openEdit(row) {
       this.isEditing = true
       this.form = {
         id: row.id,
@@ -471,27 +473,24 @@ export default {
         introduction: row.introduction || '',
         nickname: row.nickname || '',
       }
-      this.loadUserInfo(row.id)
-      this.dialogVisible = true
-    },
-    async loadUserInfo(userId) {
-      if (!userId) return
+      
+      // Optionally fetch full details in case listing didn't include everything
       try {
-        const { data } = await getUserInformationByUserID(userId)
-        const payload = data?.data || data
+        const { data } = await getUserByID(row.id)
+        const u = data?.data || data
         Object.assign(this.form, {
-          nickname: payload?.nickname || '',
-          email: payload?.email || '',
-          phone: payload?.phone || '',
-          avatar: payload?.avatar || '',
-          address: payload?.address || '',
-          introduction: payload?.introduction || '',
+          email: u.email || u.Email || '',
+          phone: u.phone || u.Phone || '',
+          avatar: u.avatar || u.Avatar || '',
+          address: u.address || u.Address || '',
+          introduction: u.introduction || u.Introduction || '',
+          nickname: u.nickname || u.Nickname || '',
         })
       } catch (err) {
-        if (err?.response?.status !== 404) {
-          ElMessage.error(err?.response?.data?.error || err.message || this.$t('users.loadInfoFailed'))
-        }
+        console.warn('Failed to fetch full user details:', err)
       }
+      
+      this.dialogVisible = true
     },
     async saveUser() {
       this.saving = true
@@ -504,15 +503,12 @@ export default {
           ElMessage.warning(this.$t('users.passwordRequired'))
           return
         }
-        const authPayload = {
+        
+        // Unified payload
+        const payload = {
           username: this.form.username,
           privileges: this.form.privileges,
           status: this.form.status,
-        }
-        if (!this.isEditing && this.form.password) {
-          authPayload.password = this.form.password
-        }
-        const infoPayload = {
           nickname: this.form.nickname,
           email: this.form.email,
           phone: this.form.phone,
@@ -520,12 +516,16 @@ export default {
           address: this.form.address,
           introduction: this.form.introduction,
         }
+        
+        if (!this.isEditing && this.form.password) {
+          payload.password = this.form.password
+        }
+        
         if (this.isEditing && this.form.id) {
-          await updateUser(this.form.id, authPayload)
-          await updateUserInformationByUserID(this.form.id, infoPayload)
+          await updateUser(this.form.id, payload)
           ElMessage.success(this.$t('users.updated'))
         } else {
-          await addUser(authPayload)
+          await addUser(payload)
           ElMessage.success(this.$t('users.created'))
         }
         this.dialogVisible = false

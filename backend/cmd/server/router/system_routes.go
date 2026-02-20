@@ -29,6 +29,10 @@ func setupLogRoutes(rg *gin.RouterGroup) {
 	logs := rg.Group("/logs", api.PrivilegesMiddleware(2))
 	logs.GET("/system", api.GetSystemLogsCtrl)
 	logs.GET("/service", api.GetServiceLogsCtrl)
+
+	// Admin clear logs - privilege level 3
+	logsAdmin := rg.Group("/logs", api.PrivilegesMiddleware(3))
+	logsAdmin.DELETE("/:type", api.ClearLogsCtrl)
 }
 
 func setupAuditLogRoutes(rg *gin.RouterGroup) {

@@ -48,14 +48,12 @@
             label-position="top"
             @keyup.enter="onReset"
           >
-            <el-form-item :label="$t('auth.oldPassword')" prop="oldPassword">
+            <el-form-item :label="$t('auth.username')" prop="username">
               <el-input 
-                v-model="form.oldPassword" 
-                type="password"
-                placeholder="Enter current password"
-                :prefix-icon="Lock"
-                autocomplete="current-password"
-                show-password
+                v-model="form.username" 
+                placeholder="Enter your username"
+                :prefix-icon="User"
+                autocomplete="username"
               />
             </el-form-item>
             
@@ -87,7 +85,7 @@
               :loading="loading" 
               @click="onReset"
             >
-              {{ $t('auth.reset') }}
+              {{ $t('auth.submitResetRequest') || 'Submit Reset Request' }}
             </el-button>
 
             <div class="register-hint">
@@ -106,10 +104,10 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Lock, Key, Check, Monitor, Finished } from '@element-plus/icons-vue'
+import { Lock, Key, Check, Monitor, Finished, User } from '@element-plus/icons-vue'
 import AuthControls from '@/components/AuthControls.vue'
 import AnimatedBackground from '@/components/Customed/AnimatedBackground.vue'
-import { resetPassword } from '@/api/users'
+import request from '@/utils/request'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -117,7 +115,7 @@ const loading = ref(false)
 const resetFormRef = ref(null)
 
 const form = reactive({
-  oldPassword: '',
+  username: '',
   newPassword: '',
   confirm: ''
 })
@@ -133,7 +131,7 @@ const validatePass2 = (rule, value, callback) => {
 }
 
 const rules = {
-  oldPassword: [{ required: true, message: t('auth.oldPassword') + ' is required', trigger: 'blur' }],
+  username: [{ required: true, message: t('auth.username') + ' is required', trigger: 'blur' }],
   newPassword: [{ required: true, message: t('auth.newPassword') + ' is required', trigger: 'blur' }],
   confirm: [{ validator: validatePass2, trigger: 'blur' }]
 }
@@ -149,11 +147,15 @@ const onReset = async () => {
 
   loading.value = true
   try {
-    await resetPassword({
-      old_password: form.oldPassword,
-      new_password: form.newPassword
+    await request({
+      url: '/auth/reset-request',
+      method: 'POST',
+      data: {
+        username: form.username,
+        password: form.newPassword
+      }
     })
-    ElMessage.success(t('auth.resetSuccess'))
+    ElMessage.success(t('auth.resetApplicationSubmitted') || 'Reset request submitted. Please wait for admin approval.')
     router.replace('/login')
   } catch (err) {
     const errorMsg = err?.response?.data?.error || err.message || t('auth.resetFailed')

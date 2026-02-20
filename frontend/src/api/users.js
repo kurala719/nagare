@@ -18,6 +18,14 @@ export function registerUser(data) {
     })
 }
 
+export function sendVerificationCode(data) {
+    return request({
+        method: 'POST',
+        url: '/auth/send-code',
+        data,
+    })
+}
+
 export function resetPassword(data) {
     return request({
         method: 'POST',
@@ -94,6 +102,78 @@ export function rejectRegisterApplication(id, data) {
     return request({
         method: 'PUT',
         url: `/register-applications/${id}/reject`,
+        data,
+    })
+}
+
+// ============= Password Reset Application APIs (Superadmin) =============
+
+export function searchResetApplications(params) {
+    return request({
+        method: 'GET',
+        url: '/reset-applications/',
+        params,
+    })
+}
+
+export function approveResetApplication(id) {
+    return request({
+        method: 'PUT',
+        url: `/reset-applications/${id}/approve`,
+    })
+}
+
+export function rejectResetApplication(id, data) {
+    return request({
+        method: 'PUT',
+        url: `/reset-applications/${id}/reject`,
+        data,
+    })
+}
+
+// ============= User Profile APIs (Current User) =============
+
+export function getUserProfile() {
+    return request({
+        method: 'GET',
+        url: '/user-info/me',
+    })
+}
+
+export function updateUserProfile(data) {
+    return request({
+        method: 'PUT',
+        url: '/user-info/me',
+        data,
+    })
+}
+
+// ============= Legacy/Redundant Profile APIs (Admin) =============
+// These are kept for backward compatibility if needed, but they map to the same backend logic
+
+export function getUserInformation() {
+    return getUserProfile();
+}
+
+export function updateUserInformation(data) {
+    return updateUserProfile(data);
+}
+
+export function createUserInformation(data) {
+    return updateUserProfile(data); // Map to update
+}
+
+export function getUserInformationByUserID(id) {
+    return request({
+        method: 'GET',
+        url: `/user-info/users/${id}`,
+    })
+}
+
+export function updateUserInformationByUserID(id, data) {
+    return request({
+        method: 'PUT',
+        url: `/user-info/users/${id}`,
         data,
     })
 }
