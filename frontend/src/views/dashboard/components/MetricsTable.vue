@@ -75,7 +75,7 @@
 import { defineComponent, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Loading } from '@element-plus/icons-vue'
-import { authFetch } from '@/utils/authFetch'
+import request from '@/utils/request'
 
 export default defineComponent({
   name: 'MetricsTable',
@@ -109,22 +109,14 @@ export default defineComponent({
       loading.value = true
       error.value = null
       try {
-        const params = new URLSearchParams()
-        if (query.value.trim()) {
-          params.set('q', query.value.trim())
-        }
-        if (limit.value) {
-          params.set('limit', String(limit.value))
-        }
-        const url = `/api/v1/system/metrics${params.toString() ? `?${params}` : ''}`
-        const response = await authFetch(url, {
+        const data = await request({
+          url: '/system/metrics',
           method: 'GET',
-          headers: { 'Accept': 'application/json' },
+          params: {
+            q: query.value.trim() || undefined,
+            limit: limit.value || undefined
+          }
         })
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json().catch(() => ({}))
         if (data?.success === false) {
           throw new Error(data.error || t('dashboard.metricsLoadFailed'))
         }

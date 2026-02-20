@@ -6,7 +6,7 @@ import { ElMessageBox } from 'element-plus'
 import { getToken, clearToken } from './auth'
 import i18n from '../i18n'
 const request = axios.create({
-    baseURL: '', // Set to empty because call sites already include /api/v1
+    baseURL: '', // Handled by interceptor to avoid double prefixing
     withCredentials: false, // 表示请求可以携带cookie
     headers: {
         'X-Tunnel-Skip-AntiPhishing-Page': 'true'
@@ -14,6 +14,11 @@ const request = axios.create({
 })
 
 request.interceptors.request.use((config) => {
+    // Ensure URL starts with /api/v1 if it doesn't have it
+    if (config.url && !config.url.startsWith('/api/v1')) {
+        config.url = `/api/v1${config.url.startsWith('/') ? '' : '/'}${config.url}`
+    }
+    
     const token = getToken()
     if (token) {
         config.headers = config.headers || {}

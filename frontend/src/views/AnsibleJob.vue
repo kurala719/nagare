@@ -82,8 +82,8 @@ const loadJobs = async () => {
   loading.value = true
   try {
     const res = await fetchAnsibleJobs()
-    if (res.data.success) {
-      jobs.value = res.data.data || []
+    if (res && res.success) {
+      jobs.value = res.data || []
     }
   } catch (e) {
     console.error(e)
@@ -155,8 +155,8 @@ const connectWebSocket = () => {
 const loadActiveJob = async () => {
   try {
     const res = await getAnsibleJob(currentJobId.value)
-    if (res.data.success) {
-      activeJob.value = res.data.data
+    if (res && res.success) {
+      activeJob.value = res.data
       if (term) {
         term.clear()
         term.write(activeJob.value.output || '')

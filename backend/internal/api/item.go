@@ -166,22 +166,6 @@ func DeleteItemByIDCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "item deleted")
 }
 
-// GetItemsByHostIDFromMonitorCtrl handles GET /items/by-host/:hid
-func GetItemsByHostIDFromMonitorCtrl(c *gin.Context) {
-	hid, err := strconv.Atoi(c.Param("hid"))
-	if err != nil {
-		respondBadRequest(c, "invalid host ID")
-		return
-	}
-
-	items, err := service.GetItemsByHostIDFromMonitorServ(uint(hid))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, items)
-}
-
 // AddItemsByHostIDFromMonitorCtrl handles POST /items/by-host/:hid
 func AddItemsByHostIDFromMonitorCtrl(c *gin.Context) {
 	hid, err := strconv.Atoi(c.Param("hid"))
@@ -195,28 +179,6 @@ func AddItemsByHostIDFromMonitorCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccessMessage(c, http.StatusCreated, "items added from monitor")
-}
-
-// ConsultItemByProviderCtrl handles POST /items/:id/consult/:pid
-func ConsultItemByProviderCtrl(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		respondBadRequest(c, "invalid item ID")
-		return
-	}
-
-	pid, err := strconv.Atoi(c.Param("pid"))
-	if err != nil {
-		respondBadRequest(c, "invalid provider ID")
-		return
-	}
-
-	resp, err := service.ConsultItemByIDServ(uint(id), uint(pid))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, gin.H{"analysis": resp})
 }
 
 func PullItemsFromMonitorCtrl(c *gin.Context) {

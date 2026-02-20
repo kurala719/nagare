@@ -1,66 +1,43 @@
-import { authFetch } from '../utils/authFetch'
+import request from '@/utils/request'
 
-function buildQuery(params = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    qs.set(key, String(value));
-  });
-  const query = qs.toString();
-  return query ? `?${query}` : '';
+export function fetchMediaTypeData(params) {
+  return request({
+    url: '/media-types',
+    method: 'get',
+    params: {
+      limit: 100,
+      offset: 0,
+      ...params
+    }
+  })
 }
 
-export async function fetchMediaTypeData(params = {}) {
-  const { limit = 100, offset = 0, ...rest } = params || {};
-  const url = `/api/v1/media-types/${buildQuery({ ...rest, limit, offset })}`;
-  const resp = await authFetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function addMediaType(data) {
+  return request({
+    url: '/media-types',
+    method: 'post',
+    data
+  })
 }
 
-export async function addMediaType(data) {
-  const url = '/api/v1/media-types/';
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function updateMediaType(id, data) {
+  return request({
+    url: `/media-types/${id}`,
+    method: 'put',
+    data
+  })
 }
 
-export async function updateMediaType(id, data) {
-  const url = `/api/v1/media-types/${id}`;
-  const resp = await authFetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function deleteMediaType(id) {
+  return request({
+    url: `/media-types/${id}`,
+    method: 'delete'
+  })
 }
 
-export async function deleteMediaType(id) {
-  const url = `/api/v1/media-types/${id}`;
-  const resp = await authFetch(url, {
-    method: 'DELETE',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function getMediaTypeById(id) {
+  return request({
+    url: `/media-types/${id}`,
+    method: 'get'
+  })
 }

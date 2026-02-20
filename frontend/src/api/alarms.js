@@ -1,82 +1,73 @@
-import request from '../utils/request';
-import { authFetch } from '../utils/authFetch';
+import request from '@/utils/request'
 
-export function getAlarms() {
-    return request({
-        method: 'GET',
-        url: '/alarms/',
-    });
+export function fetchAlarmData(params) {
+  return request({
+    url: '/alarms',
+    method: 'get',
+    params: {
+      limit: 100,
+      offset: 0,
+      ...params
+    }
+  })
+}
+
+export function getAlarmById(id) {
+  return request({
+    url: `/alarms/${id}`,
+    method: 'get'
+  })
 }
 
 export function addAlarm(data) {
-    return request({
-        method: 'POST',
-        url: '/alarms/',
-        data,
-    });
+  return request({
+    url: '/alarms',
+    method: 'post',
+    data
+  })
 }
 
 export function updateAlarm(id, data) {
-    return request({
-        method: 'PUT',
-        url: `/alarms/${id}`,
-        data,
-    });
+  return request({
+    url: `/alarms/${id}`,
+    method: 'put',
+    data
+  })
 }
 
 export function deleteAlarm(id) {
-    return request({
-        method: 'DELETE',
-        url: `/alarms/${id}`,
-    });
+  return request({
+    url: `/alarms/${id}`,
+    method: 'delete'
+  })
 }
 
-export function loginAlarm(id) {
-    return request({
-        method: 'POST',
-        url: `/alarms/${id}/login`,
-    });
+export function loginAlarm(id, data) {
+  return request({
+    url: `/alarms/${id}/login`,
+    method: 'post',
+    data
+  })
 }
 
 export function regenerateAlarmEventToken(id) {
-    return request({
-        method: 'POST',
-        url: `/alarms/${id}/event-token`,
-    });
+  return request({
+    url: `/alarms/${id}/event-token`,
+    method: 'post'
+  })
 }
 
-export function setupAlarmMedia(id) {
-    return request({
-        method: 'POST',
-        url: `/alarms/${id}/setup-media`,
-    });
+export function refreshAlarmEventToken(id, token) {
+  return request({
+    url: `/alarms/${id}/event-token/refresh?token=${token}`,
+    method: 'post'
+  })
 }
 
-function buildQuery(params = {}) {
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === '') return;
-        qs.set(key, String(value));
-    });
-    const query = qs.toString();
-    return query ? `?${query}` : '';
-}
-
-export async function fetchAlarmData(params = {}) {
-    const { limit = 100, offset = 0, ...rest } = params || {};
-    const url = `/api/v1/alarms/${buildQuery({ ...rest, limit, offset })}`;
-    try {
-        const resp = await authFetch(url, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            credentials: 'include',
-        });
-        if (!resp.ok) {
-            throw new Error(`Request failed with status ${resp.status}`);
-        }
-        return await resp.json();
-    } catch (err) {
-        console.error('fetchAlarmData error:', err);
-        throw err;
-    }
+export function setupAlarmMedia(id, data) {
+  return request({
+    url: `/alarms/${id}/setup-media`,
+    method: 'post',
+    data
+  })
 }

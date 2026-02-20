@@ -85,8 +85,8 @@ watch(() => isAuthenticated.value, (val) => {
 const loadUnreadCount = async () => {
   try {
     const res = await getUnreadCount()
-    if (res.data.success) {
-      unreadCount.value = res.data.data.count
+    if (res && res.success) {
+      unreadCount.value = res.data.count
     }
   } catch (e) {
     console.error(e)
@@ -97,8 +97,8 @@ const loadRecentMessages = async () => {
   loading.value = true
   try {
     const res = await fetchSiteMessages({ limit: 5 })
-    if (res.data.success) {
-      messages.value = res.data.data.items || []
+    if (res && res.success) {
+      messages.value = res.data.items || []
     }
   } catch (e) {
     console.error(e)
@@ -114,7 +114,7 @@ const onPopoverShow = () => {
 const handleMarkAllRead = async () => {
   try {
     const res = await markAllAsRead()
-    if (res.data.success) {
+    if (res && res.success) {
       unreadCount.value = 0
       messages.value.forEach(m => m.is_read = 1)
       ElMessage.success(t('message.markAllReadSuccess'))
@@ -162,11 +162,9 @@ const connectWebSocket = () => {
   const token = getToken()
   if (!token) return
 
-  // Try direct connection to backend if proxy fails, or consistent address
+  // Use the same host as the frontend to let Vite proxy handle the WebSocket connection
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  // Use 127.0.0.1:8080 for direct backend access if needed, but proxy is preferred
-  const backendHost = window.location.hostname === 'localhost' ? '127.0.0.1:8080' : window.location.host
-  const url = `${protocol}//${backendHost}/api/v1/site-messages/ws?token=${token}`
+  const url = `${protocol}//${window.location.host}/api/v1/site-messages/ws?token=${token}`
 
   console.log('Connecting to notification WebSocket:', url)
   ws = new WebSocket(url)

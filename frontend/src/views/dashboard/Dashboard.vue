@@ -84,7 +84,7 @@ import { fetchAlertData } from '@/api/alerts'
 import { fetchHostData } from '@/api/hosts'
 import { fetchProviderData } from '@/api/providers'
 import { fetchMonitorData } from '@/api/monitors'
-import { authFetch } from '@/utils/authFetch'
+import { fetchHealthScore } from '@/api/system'
 import { useI18n } from 'vue-i18n'
 
 import HealthStats from './components/HealthStats.vue'
@@ -194,10 +194,9 @@ export default defineComponent({
     const loadHealthScore = async () => {
       healthLoading.value = true
       try {
-        const res = await authFetch('/system/health')
-        const json = await res.json()
-        if (json.success) {
-          healthScore.value = json.data
+        const res = await fetchHealthScore()
+        if (res && res.success) {
+          healthScore.value = res.data
         }
       } catch (e) {
         console.error('Health load failed', e)

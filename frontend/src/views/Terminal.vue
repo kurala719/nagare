@@ -99,10 +99,10 @@ const hostSSHUser = ref('')
 const fetchHostInfo = async (id) => {
   try {
     const response = await request.get(`/hosts/${id}`)
-    if (response.data.success) {
-      hostName.value = response.data.data.name
-      hostIp.value = response.data.data.ip_addr
-      hostSSHUser.value = response.data.data.ssh_user
+    if (response && response.success) {
+      hostName.value = response.data.name
+      hostIp.value = response.data.ip_addr
+      hostSSHUser.value = response.data.ssh_user
       
       if (!hostSSHUser.value) {
         ElMessage.warning('SSH credentials not configured for this host. Please update host properties first.')

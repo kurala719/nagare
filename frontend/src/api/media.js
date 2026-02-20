@@ -1,66 +1,43 @@
-import { authFetch } from '../utils/authFetch'
+import request from '@/utils/request'
 
-function buildQuery(params = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    qs.set(key, String(value));
-  });
-  const query = qs.toString();
-  return query ? `?${query}` : '';
+export function fetchMediaData(params) {
+  return request({
+    url: '/media',
+    method: 'get',
+    params: {
+      limit: 100,
+      offset: 0,
+      ...params
+    }
+  })
 }
 
-export async function fetchMediaData(params = {}) {
-  const { limit = 100, offset = 0, ...rest } = params || {};
-  const url = `/api/v1/media/${buildQuery({ ...rest, limit, offset })}`;
-  const resp = await authFetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function addMedia(data) {
+  return request({
+    url: '/media',
+    method: 'post',
+    data
+  })
 }
 
-export async function addMedia(data) {
-  const url = '/api/v1/media/';
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function updateMedia(id, data) {
+  return request({
+    url: `/media/${id}`,
+    method: 'put',
+    data
+  })
 }
 
-export async function updateMedia(id, data) {
-  const url = `/api/v1/media/${id}`;
-  const resp = await authFetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function deleteMedia(id) {
+  return request({
+    url: `/media/${id}`,
+    method: 'delete'
+  })
 }
 
-export async function deleteMedia(id) {
-  const url = `/api/v1/media/${id}`;
-  const resp = await authFetch(url, {
-    method: 'DELETE',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function getMediaById(id) {
+  return request({
+    url: `/media/${id}`,
+    method: 'get'
+  })
 }

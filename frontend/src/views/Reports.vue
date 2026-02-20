@@ -162,8 +162,8 @@ const loadReports = async () => {
   loading.value = true
   try {
     const res = await fetchReports({ type: filterType.value })
-    if (res.data.success) {
-      reports.value = res.data.data || []
+    if (res && res.success) {
+      reports.value = res.data || []
     }
   } catch (e) {
     ElMessage.error(t('reports.loadFailed') || 'Failed to load reports')
@@ -175,8 +175,8 @@ const loadReports = async () => {
 const loadConfig = async () => {
   try {
     const res = await getReportConfig()
-    if (res.data.success) {
-      Object.assign(configForm, res.data.data)
+    if (res && res.success) {
+      Object.assign(configForm, res.data)
     }
   } catch (e) {
     console.error(e)
@@ -186,7 +186,7 @@ const loadConfig = async () => {
 const saveConfig = async () => {
   try {
     const res = await updateReportConfig(configForm)
-    if (res.data.success) {
+    if (res && res.success) {
       ElMessage.success(t('common.saveSuccess') || 'Configuration saved')
       configDialogVisible.value = false
     }

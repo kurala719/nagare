@@ -123,10 +123,10 @@ export default defineComponent({
       error.value = null
       try {
         const response = await request.get('/public/status')
-        if (response.data.success) {
-          statusData.value = response.data.data
+        if (response && response.success) {
+          statusData.value = response.data
         } else {
-          error.value = response.data.error || 'Failed to fetch status'
+          error.value = response?.error || 'Failed to fetch status'
         }
       } catch (err) {
         error.value = err.message || 'Network error'

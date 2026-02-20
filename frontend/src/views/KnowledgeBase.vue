@@ -164,8 +164,8 @@ const loadData = async () => {
   selectedIds.value = []
   try {
     const response = await fetchKnowledgeBase({ q: searchQuery.value })
-    if (response.data && response.data.success) {
-      items.value = response.data.data || []
+    if (response && response.success) {
+      items.value = response.data || []
     } else {
       ElMessage.error(t('kb.loadFailed'))
     }
@@ -205,7 +205,7 @@ const handleDelete = (item) => {
   }).then(async () => {
     try {
       const res = await deleteKnowledgeBase(item.ID)
-      if (res.data && res.data.success) {
+      if (res && res.success) {
         ElMessage.success(t('kb.deleteSuccess'))
         loadData()
       } else {
@@ -254,7 +254,7 @@ const submitForm = async () => {
           res = await addKnowledgeBase(payload)
         }
         
-        if (res.data && res.data.success) {
+        if (res && res.success) {
           ElMessage.success(isEdit.value ? t('kb.updateSuccess') : t('kb.createSuccess'))
           dialogVisible.value = false
           loadData()

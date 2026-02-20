@@ -76,22 +76,6 @@ func SearchChatsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chats)
 }
 
-// ConsultCtrl handles POST /items/:id/consult/:pid
-func ConsultCtrl(c *gin.Context) {
-	var chatReq service.ChatReq
-	if err := c.ShouldBindJSON(&chatReq); err != nil {
-		respondBadRequest(c, err.Error())
-		return
-	}
-
-	chatRes, err := service.ConsultServ(chatReq)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, chatRes)
-}
-
 // ConsultAlertCtrl handles POST /chat/alert/:id
 func ConsultAlertCtrl(c *gin.Context) {
 	alertID, err := strconv.Atoi(c.Param("id"))
@@ -111,24 +95,14 @@ func ConsultAlertCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chatRes)
 }
 
-// ConsultItemCtrl handles POST /chat/item/:id/:hid
+// ConsultItemCtrl handles POST /chat/item/:id
 func ConsultItemCtrl(c *gin.Context) {
 	itemID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		respondBadRequest(c, "invalid item id")
 		return
 	}
-	/*
 
-		hostID, err := strconv.Atoi(c.Param("hid"))
-		if err != nil {
-			respondBadRequest(c, "invalid host id")
-			return
-		}
-
-		providerID, _ := strconv.Atoi(c.DefaultQuery("provider_id", "1"))
-		model := c.Query("model")
-	*/
 	chatRes, err := service.ConsultItemServ(uint(itemID))
 	if err != nil {
 		respondError(c, err)

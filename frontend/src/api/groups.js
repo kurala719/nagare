@@ -1,131 +1,78 @@
-import { authFetch } from '../utils/authFetch'
+import request from '@/utils/request'
 
-function buildQuery(params = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    qs.set(key, String(value));
-  });
-  const query = qs.toString();
-  return query ? `?${query}` : '';
+export function fetchGroupData(params) {
+  return request({
+    url: '/groups',
+    method: 'get',
+    params: {
+      limit: 100,
+      offset: 0,
+      ...params
+    }
+  })
 }
 
-export async function fetchGroupData(params = {}) {
-  const { limit = 100, offset = 0, ...rest } = params || {};
-  const url = `/api/v1/groups/${buildQuery({ ...rest, limit, offset })}`;
-  const resp = await authFetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function getGroupById(id) {
+  return request({
+    url: `/groups/${id}`,
+    method: 'get'
+  })
 }
 
-export async function fetchGroupDetail(id) {
-  const url = `/api/v1/groups/${id}/detail`;
-  const resp = await authFetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function getGroupDetail(id) {
+  return request({
+    url: `/groups/${id}/detail`,
+    method: 'get'
+  })
 }
 
-export async function addGroup(data) {
-  const url = '/api/v1/groups/';
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function addGroup(data) {
+  return request({
+    url: '/groups',
+    method: 'post',
+    data
+  })
 }
 
-export async function updateGroup(id, data) {
-  const url = `/api/v1/groups/${id}`;
-  const resp = await authFetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function updateGroup(id, data) {
+  return request({
+    url: `/groups/${id}`,
+    method: 'put',
+    data
+  })
 }
 
-export async function deleteGroup(id) {
-  const url = `/api/v1/groups/${id}`;
-  const resp = await authFetch(url, {
-    method: 'DELETE',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function deleteGroup(id) {
+  return request({
+    url: `/groups/${id}`,
+    method: 'delete'
+  })
 }
 
-export async function checkGroupStatus(id) {
-  const url = `/api/v1/groups/${id}/check`;
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function checkGroupStatus(id) {
+  return request({
+    url: `/groups/${id}/check`,
+    method: 'post'
+  })
 }
 
-export async function checkAllGroupsStatus() {
-  const url = '/api/v1/groups/check';
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function checkAllGroupsStatus() {
+  return request({
+    url: '/groups/check',
+    method: 'post'
+  })
 }
 
-export async function pullGroup(id) {
-  const url = `/api/v1/groups/${id}/pull`;
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function pullGroup(id) {
+  return request({
+    url: `/groups/${id}/pull`,
+    method: 'post'
+  })
 }
 
-export async function pushGroup(id) {
-  const url = `/api/v1/groups/${id}/push`;
-  const resp = await authFetch(url, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json' },
-    credentials: 'include',
-  });
-  if (!resp.ok) {
-    throw new Error(`Request failed with status ${resp.status}`);
-  }
-  return await resp.json();
+export function pushGroup(id) {
+  return request({
+    url: `/groups/${id}/push`,
+    method: 'post'
+  })
 }

@@ -43,7 +43,7 @@ import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { authFetch } from '@/utils/authFetch'
+import request from '@/utils/request'
 
 export default defineComponent({
   name: 'VoiceControl',
@@ -136,14 +136,10 @@ export default defineComponent({
 
     const fetchQuickHealth = async () => {
       try {
-        const response = await authFetch('/api/v1/system/health', {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
+        const data = await request({
+          url: '/system/health',
+          method: 'GET'
         })
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        const data = await response.json().catch(() => ({}))
         const payload = data?.data || data || {}
         const score = payload.score ?? '--'
         ElMessage.success(`${t('dashboard.voiceHealthResult')}: ${score}`)

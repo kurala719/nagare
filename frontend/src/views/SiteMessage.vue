@@ -94,9 +94,9 @@ const loadMessages = async () => {
       unread_only: filterStatus.value === 'unread' ? 1 : 0
     }
     const res = await fetchSiteMessages(params)
-    if (res.data.success) {
-      messages.value = res.data.data.items || []
-      total.value = res.data.data.total || 0
+    if (res && res.success) {
+      messages.value = res.data.items || []
+      total.value = res.data.total || 0
     }
   } catch (e) {
     ElMessage.error(t('message.loadFailed'))

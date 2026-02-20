@@ -177,8 +177,8 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await fetchPlaybooks({ q: searchQuery.value })
-    if (res.data.success) {
-      const data = res.data.data
+    if (res && res.success) {
+      const data = res.data
       if (data.items && Array.isArray(data.items)) {
         playbooks.value = data.items
       } else if (Array.isArray(data)) {
@@ -212,7 +212,7 @@ const handleDelete = (pb) => {
   }).then(async () => {
     try {
       const res = await deletePlaybook(pb.id)
-      if (res.data.success) {
+      if (res && res.success) {
         ElMessage.success(t('ansible.deleteSuccess'))
         loadData()
       }
@@ -243,7 +243,7 @@ const submitForm = async () => {
           res = await createPlaybook(payload)
         }
         
-        if (res.data.success) {
+        if (res && res.success) {
           ElMessage.success(isEdit.value ? t('ansible.updateSuccess') : t('ansible.createSuccess'))
           dialogVisible.value = false
           loadData()
@@ -269,8 +269,8 @@ const confirmRun = async () => {
   running.value = true
   try {
     const res = await runPlaybook(activePlaybook.value.id, { host_filter: runForm.value.hostFilter })
-    if (res.data.success) {
-      const jobId = res.data.data.job_id
+    if (res && res.success) {
+      const jobId = res.data.job_id
       runDialogVisible.value = false
       router.push(`/ansible/jobs/${jobId}`)
     }
@@ -294,8 +294,8 @@ const generateAiPlaybook = async () => {
   generating.value = true
   try {
     const res = await recommendPlaybook({ context: aiForm.value.requirement })
-    if (res.data.success) {
-      form.value.content = res.data.data.content
+    if (res && res.success) {
+      form.value.content = res.data.content
       aiDialogVisible.value = false
       ElMessage.success(t('ansible.aiSuccess'))
     }

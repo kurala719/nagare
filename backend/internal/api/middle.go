@@ -14,13 +14,19 @@ import (
 	"nagare/internal/model"
 )
 
+func isQueryTokenAllowed(path string) bool {
+	return strings.HasSuffix(path, "/ws") ||
+		strings.HasSuffix(path, "/ssh") ||
+		strings.HasSuffix(path, "/download")
+}
+
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		tokenString := ""
 		if authHeader != "" {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-		} else {
+		} else if isQueryTokenAllowed(c.Request.URL.Path) {
 			tokenString = c.Query("token")
 		}
 
@@ -49,7 +55,7 @@ func PrivilegesMiddleware(requiredPrivileges int) gin.HandlerFunc {
 		tokenString := ""
 		if authHeader != "" {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-		} else {
+		} else if isQueryTokenAllowed(c.Request.URL.Path) {
 			tokenString = c.Query("token")
 		}
 

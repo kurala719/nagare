@@ -1,101 +1,86 @@
-import request from '../utils/request';
-import { authFetch } from '../utils/authFetch';
- 
-export function getMonitors() {
-    return request({
-        method:'GET',
-        url:'/monitors/',
-    })
+import request from '@/utils/request'
+
+export function fetchMonitorData(params) {
+  return request({
+    url: '/monitors',
+    method: 'get',
+    params: {
+      limit: 100,
+      offset: 0,
+      ...params
+    }
+  })
+}
+
+export function getMonitorById(id) {
+  return request({
+    url: `/monitors/${id}`,
+    method: 'get'
+  })
 }
 
 export function addMonitor(data) {
-    return request({
-        method:'POST',
-        url:'/monitors/',
-        data,
-    })
+  return request({
+    url: '/monitors',
+    method: 'post',
+    data
+  })
 }
 
 export function updateMonitor(id, data) {
-    return request({
-        method:'PUT',
-        url:`/monitors/${id}`,
-        data,
-    })
+  return request({
+    url: `/monitors/${id}`,
+    method: 'put',
+    data
+  })
 }
 
 export function deleteMonitor(id) {
-    return request({
-        method:'DELETE',
-        url:`/monitors/${id}`,
-    })
+  return request({
+    url: `/monitors/${id}`,
+    method: 'delete'
+  })
 }
 
-export function loginMonitor(id) {
-    return request({
-        method:'POST',
-        url:`/monitors/${id}/login`,
-    })
-}
-
-export function regenerateMonitorEventToken(id) {
-    return request({
-        method: 'POST',
-        url: `/monitors/${id}/event-token`,
-    })
+export function loginMonitor(id, data) {
+  return request({
+    url: `/monitors/${id}/login`,
+    method: 'post',
+    data
+  })
 }
 
 export function checkMonitorStatus(id) {
-    return request({
-        method: 'POST',
-        url: `/monitors/${id}/check`,
-    })
+  return request({
+    url: `/monitors/${id}/check`,
+    method: 'post'
+  })
 }
 
 export function checkAllMonitorsStatus() {
-    return request({
-        method: 'POST',
-        url: '/monitors/check',
-    })
+  return request({
+    url: '/monitors/check',
+    method: 'post'
+  })
 }
 
-export function syncGroupsFromMonitor(id) {
-    return request({
-        method: 'POST',
-        url: `/monitors/${id}/groups/pull`,
-    })
+export function regenerateMonitorEventToken(id) {
+  return request({
+    url: `/monitors/${id}/event-token`,
+    method: 'post'
+  })
 }
 
-/**
- * Fetch monitor data from backend via Vite proxy.
- * Uses /api prefix which gets rewritten by proxy to backend.
- * Returns parsed JSON or throws an error.
- */
-function buildQuery(params = {}) {
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === '') return;
-        qs.set(key, String(value));
-    });
-    const query = qs.toString();
-    return query ? `?${query}` : '';
+export function syncGroupsFromMonitor(monitorId) {
+  return request({
+    url: `/monitors/${monitorId}/groups/pull`,
+    method: 'post'
+  })
 }
 
-export async function fetchMonitorData(params = {}) {
-    const { limit = 100, offset = 0, ...rest } = params || {};
-    const url = `/api/v1/monitors/${buildQuery({ ...rest, limit, offset })}`;
-    try {
-        const resp = await authFetch(url, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            credentials: 'include',
-        });
-        if (!resp.ok) {
-            throw new Error(`Request failed with status ${resp.status}`);
-        }
-        return await resp.json();
-    } catch (err) {
-        console.error('fetchMonitorData error:', err);
-        throw err;
-    }
+export function refreshEventToken(id, token) {
+  return request({
+    url: `/monitors/${id}/event-token/refresh?token=${token}`,
+    method: 'post'
+  })
 }
