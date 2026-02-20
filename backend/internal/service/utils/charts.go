@@ -8,6 +8,9 @@ import (
 
 // GeneratePieChart generates a pie chart and returns the PNG bytes
 func GeneratePieChart(title string, values map[string]float64) ([]byte, error) {
+	if len(values) == 0 {
+		values = map[string]float64{"No Data": 1}
+	}
 	var slices []chart.Value
 	for label, val := range values {
 		slices = append(slices, chart.Value{Value: val, Label: label})
@@ -26,6 +29,9 @@ func GeneratePieChart(title string, values map[string]float64) ([]byte, error) {
 
 // GenerateLineChart generates a line chart for trends
 func GenerateLineChart(title string, xValues []string, yValues []float64) ([]byte, error) {
+	if len(yValues) == 0 {
+		yValues = []float64{0}
+	}
 	var x []float64
 	var y []float64
 	for i, val := range yValues {
@@ -59,6 +65,9 @@ func GenerateLineChart(title string, xValues []string, yValues []float64) ([]byt
 
 // GenerateBarChart generates a bar chart
 func GenerateBarChart(title string, values map[string]float64) ([]byte, error) {
+	if len(values) == 0 {
+		values = map[string]float64{"No Data": 0}
+	}
 	var bars []chart.Value
 	for label, val := range values {
 		bars = append(bars, chart.Value{Value: val, Label: label})

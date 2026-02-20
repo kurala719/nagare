@@ -63,6 +63,23 @@ func GetReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, report)
 }
 
+// GetReportContentCtrl handles GET /reports/:id/content
+func GetReportContentCtrl(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		respondBadRequest(c, "invalid report ID")
+		return
+	}
+
+	content, err := service.GetReportContentServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	respondSuccess(c, http.StatusOK, content)
+}
+
 // GenerateWeeklyReportCtrl handles POST /reports/generate/weekly
 func GenerateWeeklyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateWeeklyReportServ()

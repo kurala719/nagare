@@ -47,6 +47,7 @@ import { defineComponent, ref, onMounted, onBeforeUnmount, watch, nextTick } fro
 import * as echarts from 'echarts'
 import { useI18n } from 'vue-i18n'
 import { fetchNetworkStatusHistory } from '@/api/system'
+import { getToken } from '@/utils/auth'
 
 export default defineComponent({
   name: 'HealthTrendChart',
@@ -130,13 +131,21 @@ export default defineComponent({
         xAxis: { type: 'time' },
         yAxis: { type: 'value', min: 0, max: 100 },
         series: chartSeries,
-      })
+      }, { notMerge: true })
     }
 
     const loadData = async () => {
+      if (!getToken()) return
+      
       loading.value = true
       error.value = null
       empty.value = false
+      
+      // Dispose old instance to prevent stale DOM references when v-if toggles
+      if (chartInstance.value) {
+        chartInstance.value.dispose()
+        chartInstance.value = null
+      }
       
       try {
         const [start, end] = resolveTrendWindow()

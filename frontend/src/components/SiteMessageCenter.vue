@@ -217,8 +217,10 @@ const handleAuthChanged = () => {
 }
 
 onMounted(() => {
-  loadUnreadCount()
-  connectWebSocket()
+  if (getToken()) {
+    loadUnreadCount()
+    connectWebSocket()
+  }
   window.addEventListener('auth-changed', handleAuthChanged)
 })
 

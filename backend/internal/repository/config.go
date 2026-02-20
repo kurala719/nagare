@@ -70,11 +70,12 @@ type MCPConfig struct {
 
 // AIConfig holds AI settings
 type AIConfig struct {
-	AnalysisEnabled        bool   `yaml:"analysis_enabled" json:"analysis_enabled" mapstructure:"analysis_enabled"`
-	ProviderID             int    `yaml:"provider_id" json:"provider_id" mapstructure:"provider_id"`
-	Model                  string `yaml:"model" json:"model" mapstructure:"model"`
-	AnalysisTimeoutSeconds int    `yaml:"analysis_timeout_seconds" json:"analysis_timeout_seconds" mapstructure:"analysis_timeout_seconds"`
-	AnalysisMinSeverity    int    `yaml:"analysis_min_severity" json:"analysis_min_severity" mapstructure:"analysis_min_severity"`
+	AnalysisEnabled          bool   `yaml:"analysis_enabled" json:"analysis_enabled" mapstructure:"analysis_enabled"`
+	NotificationGuardEnabled bool   `yaml:"notification_guard_enabled" json:"notification_guard_enabled" mapstructure:"notification_guard_enabled"`
+	ProviderID               int    `yaml:"provider_id" json:"provider_id" mapstructure:"provider_id"`
+	Model                    string `yaml:"model" json:"model" mapstructure:"model"`
+	AnalysisTimeoutSeconds   int    `yaml:"analysis_timeout_seconds" json:"analysis_timeout_seconds" mapstructure:"analysis_timeout_seconds"`
+	AnalysisMinSeverity      int    `yaml:"analysis_min_severity" json:"analysis_min_severity" mapstructure:"analysis_min_severity"`
 }
 
 // MediaRateLimitConfig holds notification rate limit settings
@@ -180,6 +181,7 @@ func ResetConfig() error {
 	viper.Set("mcp.max_concurrency", 4)
 
 	viper.Set("ai.analysis_enabled", true)
+	viper.Set("ai.notification_guard_enabled", false)
 	viper.Set("ai.provider_id", 1)
 	viper.Set("ai.model", "")
 	viper.Set("ai.analysis_timeout_seconds", 60)

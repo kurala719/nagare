@@ -14,6 +14,10 @@ func aiAnalysisEnabled() bool {
 	return viper.GetBool("ai.analysis_enabled")
 }
 
+func aiNotificationGuardEnabled() bool {
+	return viper.GetBool("ai.notification_guard_enabled")
+}
+
 func aiAnalysisTimeout() time.Duration {
 	seconds := viper.GetInt("ai.analysis_timeout_seconds")
 	if seconds <= 0 {

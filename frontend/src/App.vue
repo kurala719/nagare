@@ -25,6 +25,8 @@ export default defineComponent({
     const { locale } = useI18n()
     const elementLocale = computed(() => (locale.value === 'zh-CN' ? zhCn : en))
     const isStandaloneLayout = computed(() => {
+      // If route is not matched yet, assume standalone to prevent MainLayout flash
+      if (!route.matched || route.matched.length === 0) return true
       const layout = route.meta?.layout
       return layout === 'auth' || layout === 'status'
     })

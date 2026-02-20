@@ -1,8 +1,8 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('hosts.search') }}</h1>
-      <p class="page-subtitle">{{ $t('hosts.loading') }}</p>
+      <h1 class="page-title">{{ $t('hosts.title') }}</h1>
+      <p class="page-subtitle">{{ totalHosts }} {{ $t('dashboard.hosts') }}</p>
     </div>
 
     <div class="standard-toolbar">

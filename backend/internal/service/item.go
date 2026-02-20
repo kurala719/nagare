@@ -34,6 +34,7 @@ type ItemResp struct {
 	Name       string `json:"name"`
 	HID        uint   `json:"hid"`
 	Value      string `json:"value"`
+	Units      string `json:"units"`
 	Enabled    int    `json:"enabled"`
 	Status     int    `json:"status"`
 	StatusDesc string `json:"status_description"`
@@ -364,7 +365,8 @@ func itemToResp(item model.Item) ItemResp {
 		ID:         item.ID,
 		Name:       item.Name,
 		HID:        item.HID,
-		Value:      utils.ParseItemValue(item.LastValue, item.Units),
+		Value:      item.LastValue,
+		Units:      item.Units,
 		Enabled:    item.Enabled,
 		Status:     item.Status,
 		StatusDesc: item.StatusDescription,

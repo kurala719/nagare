@@ -1,6 +1,6 @@
 <template>
   <div class="nagare-container">
-    <div class="page-header dashboard-header">
+    <div class="page-header dashboard-header animate-fade-in">
       <div>
         <h1 class="page-title">{{ $t('dashboard.title') }}</h1>
         <p class="page-subtitle" v-if="lastUpdated">
@@ -22,7 +22,7 @@
 
     <div v-else class="dashboard-content">
       <!-- Health Overview Section -->
-      <div class="section-container">
+      <div class="section-container animate-slide-up">
         <HealthStats 
           :score="healthScore" 
           :alerts="summary.alerts"
@@ -31,23 +31,23 @@
           :loading="healthLoading || loading" 
         />
         
-        <el-row :gutter="20">
-          <el-col :xs="24" :lg="16">
+        <el-row :gutter="20" style="margin-top: 24px">
+          <el-col :xs="24" :lg="16" class="animate-slide-up delay-1">
             <HealthTrendChart ref="trendChart" />
           </el-col>
-          <el-col :xs="24" :lg="8">
+          <el-col :xs="24" :lg="8" class="animate-slide-up delay-2">
             <VoiceControl class="voice-control-card" />
           </el-col>
         </el-row>
       </div>
 
       <!-- Topology Section -->
-      <div class="section-container">
+      <div class="section-container animate-slide-up delay-2">
         <TopologyChart ref="topologyChart" />
       </div>
 
       <!-- Experimental Features Row -->
-      <el-row :gutter="20" class="section-container">
+      <el-row :gutter="20" class="section-container animate-slide-up delay-3">
         <el-col :xs="24" :md="12">
           <MetricsTable ref="metricsTable" />
         </el-col>
@@ -57,7 +57,7 @@
       </el-row>
 
       <!-- Recent Data Section -->
-      <el-row :gutter="20" class="section-container">
+      <el-row :gutter="20" class="section-container animate-slide-up delay-4">
         <el-col :xs="24" :lg="12">
           <RecentAlerts :alerts="recentAlerts" :loading="loading" />
         </el-col>
@@ -65,7 +65,7 @@
           <RecentHosts :hosts="recentHosts" :loading="loading" />
         </el-col>
       </el-row>
-      <el-row :gutter="20" class="section-container">
+      <el-row :gutter="20" class="section-container animate-slide-up" style="animation-delay: 0.5s">
         <el-col :xs="24" :lg="12">
           <RecentMonitors :monitors="recentMonitors" :loading="loading" />
         </el-col>
@@ -86,6 +86,7 @@ import { fetchProviderData } from '@/api/providers'
 import { fetchMonitorData } from '@/api/monitors'
 import { fetchHealthScore } from '@/api/system'
 import { useI18n } from 'vue-i18n'
+import { getToken } from '@/utils/auth'
 
 import HealthStats from './components/HealthStats.vue'
 import HealthTrendChart from './components/HealthTrendChart.vue'
@@ -140,6 +141,7 @@ export default defineComponent({
     const topologyChart = ref(null)
 
     const loadDashboardData = async () => {
+      if (!getToken()) return
       loading.value = true
       try {
         await Promise.all([

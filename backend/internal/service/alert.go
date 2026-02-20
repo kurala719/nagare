@@ -153,11 +153,49 @@ func analyzeAndNotifyAlert(alert model.Alert) {
 	comment := mergeAlertComment(alert.Comment, analysis)
 	if err := repository.UpdateAlertCommentDAO(int(alert.ID), comment); err != nil {
 		LogService("warn", "alert analysis not saved", map[string]interface{}{"alert_id": alert.ID, "error": err.Error()}, nil, "")
-		ExecuteTriggersForAlert(alert)
-		return
 	}
 	alert.Comment = comment
+
+	// AI Notification Guard check
+	if aiNotificationGuardEnabled() {
+		shouldNotify, reasoning := parseAIAlertDecision(analysis)
+		if !shouldNotify {
+			LogService("info", "alert notification suppressed by AI", map[string]interface{}{
+				"alert_id":  alert.ID,
+				"reasoning": reasoning,
+			}, nil, "")
+			return
+		}
+		LogService("info", "alert notification approved by AI", map[string]interface{}{
+			"alert_id":  alert.ID,
+			"reasoning": reasoning,
+		}, nil, "")
+	}
+
 	ExecuteTriggersForAlert(alert)
+}
+
+func parseAIAlertDecision(analysis string) (bool, string) {
+	lines := strings.Split(analysis, "\n")
+	decisionLine := ""
+	for _, line := range lines {
+		if strings.Contains(strings.ToUpper(line), "DECISION:") {
+			decisionLine = line
+			break
+		}
+	}
+
+	if decisionLine == "" {
+		// Default to true if decision not found
+		return true, "no clear decision found in analysis"
+	}
+
+	upperDecision := strings.ToUpper(decisionLine)
+	if strings.Contains(upperDecision, "[SUPPRESS]") || strings.Contains(upperDecision, "SUPPRESS") {
+		return false, decisionLine
+	}
+
+	return true, decisionLine
 }
 
 func analyzeAlertWithAI(alert model.Alert) (string, error) {
@@ -236,6 +274,11 @@ func alertAnalysisPrompt() string {
 		"- Use only the provided data; do not invent metrics or events.\n" +
 		"- If data is missing, state what is missing and how it affects confidence.\n" +
 		"- Severity mapping: severity 0-1=Normal, 2=Warning, 3+=Critical.\n\n" +
+		"Decision Requirement:\n" +
+		"- You must conclude with a clear decision on whether to notify a human user.\n" +
+		"- Decisions: [NOTIFY] or [SUPPRESS].\n" +
+		"- Suppress if the alert is a known false positive, duplicate, or trivial noise.\n" +
+		"- Notify if the alert requires immediate or near-term human attention.\n\n" +
 		"Output format (use headings):\n" +
 		"Summary:\n" +
 		"- What the alert means in plain language.\n\n" +
@@ -243,6 +286,8 @@ func alertAnalysisPrompt() string {
 		"- Bullet list of the most probable causes.\n\n" +
 		"Recommended Actions:\n" +
 		"- Immediate steps first, then follow-ups.\n\n" +
+		"Decision:\n" +
+		"- [NOTIFY] or [SUPPRESS] followed by a one-sentence justification.\n\n" +
 		"Severity:\n" +
 		"- Critical/Warning/Normal with brief justification.\n\n" +
 		"Assumptions:\n" +

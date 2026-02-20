@@ -195,17 +195,13 @@ export default defineComponent({
       ]},
       { key: 'observability_group', label: 'menu.observability', minPrivilege: 1, icon: 'Odometer', children: [
         { key: 'metrics', path: '/item', label: 'menu.item', minPrivilege: 1 },
-        { key: 'sources', label: 'menu.sources', minPrivilege: 1, children: [
-          { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
-          { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
-        ]},
+        { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
+        { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
       ]},
       { key: 'alerting_group', label: 'menu.alerting', minPrivilege: 1, icon: 'Bell', children: [
         { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
-        { key: 'automation', label: 'menu.automation', minPrivilege: 2, children: [
-          { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
-          { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
-        ]},
+        { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
+        { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
       ]},
       { key: 'tooling_group', label: 'menu.tooling', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
@@ -213,10 +209,8 @@ export default defineComponent({
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
-        { key: 'communication', label: 'menu.communication', minPrivilege: 2, children: [
-          { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
-          { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
-        ]},
+        { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
+        { key: 'mediaType', path: '/media-type', label: 'menu.mediaType', minPrivilege: 2 },
         { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
         { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },

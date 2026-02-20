@@ -1,10 +1,10 @@
 <template>
   <div class="global-search">
     <el-popover
-      v-model:visible="searchVisible"
+      :visible="searchVisible"
       placement="bottom-start"
       :width="500"
-      trigger="click"
+      trigger="manual"
       :teleported="true"
       popper-class="global-search-popper"
     >
@@ -14,9 +14,9 @@
           :placeholder="$t('common.searchPlaceholder')"
           clearable
           class="global-search-input"
-          @focus="openSearch"
-          @click="openSearch"
+          @focus="handleInputFocus"
           @input="handleSearch"
+          @blur="handleInputBlur"
           @keydown.esc="closeSearch"
         >
           <template #prefix>
@@ -31,13 +31,13 @@
           <span>{{ $t('common.search') }}...</span>
         </div>
         
-        <div v-else-if="searchQuery && results.length === 0" class="no-results">
-          No results found
+        <div v-else-if="searchQuery && searchQuery.trim().length >= 2 && results.length === 0" class="no-results">
+          {{ $t('common.noMore') || 'No results found' }}
         </div>
         
         <div v-else-if="results.length > 0" class="results-list">
-          <div v-for="(group, category) in groupedResults" :key="category" class="result-group">
-            <div class="result-category">{{ category }}</div>
+          <div v-for="(group, categoryKey) in groupedResults" :key="categoryKey" class="result-group">
+            <div class="result-category">{{ $t(`menu.${categoryKey}`) }}</div>
             <div
               v-for="item in group"
               :key="item.id"
@@ -63,11 +63,16 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Search, Loading, Monitor, Connection, DataAnalysis, Bell, User, Setting } from '@element-plus/icons-vue';
+import { 
+  Search, Loading, Monitor, Connection, DataAnalysis, 
+  Bell, User, Setting, Box, Opportunity 
+} from '@element-plus/icons-vue';
 import { fetchMonitorData } from '@/api/monitors';
 import { fetchHostData } from '@/api/hosts';
 import { fetchItemData } from '@/api/items';
 import { fetchAlertData } from '@/api/alerts';
+import { fetchGroupData } from '@/api/groups';
+import { fetchAlarmData } from '@/api/alarms';
 
 export default {
   name: 'GlobalSearch',
@@ -80,6 +85,8 @@ export default {
     Bell,
     User,
     Setting,
+    Box,
+    Opportunity
   },
   setup() {
     const router = useRouter();
@@ -93,16 +100,25 @@ export default {
     const groupedResults = computed(() => {
       const grouped = {};
       results.value.forEach(item => {
-        if (!grouped[item.category]) {
-          grouped[item.category] = [];
+        if (!grouped[item.categoryKey]) {
+          grouped[item.categoryKey] = [];
         }
-        grouped[item.category].push(item);
+        grouped[item.categoryKey].push(item);
       });
       return grouped;
     });
 
-    const openSearch = () => {
-      searchVisible.value = true;
+    const handleInputFocus = () => {
+      if (searchQuery.value && searchQuery.value.trim().length >= 2) {
+        searchVisible.value = true;
+      }
+    };
+
+    const handleInputBlur = () => {
+      // Small delay to allow click events on results to trigger first
+      setTimeout(() => {
+        searchVisible.value = false;
+      }, 200);
     };
 
     const closeSearch = () => {
@@ -110,117 +126,126 @@ export default {
     };
 
     const handleSearch = () => {
-      if (!searchQuery.value || searchQuery.value.length < 2) {
+      if (!searchQuery.value || searchQuery.value.trim().length < 2) {
         results.value = [];
+        searchVisible.value = false;
         return;
       }
 
+      searchVisible.value = true;
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(async () => {
         await performSearch();
       }, 300);
     };
 
+    const extractArray = (res) => {
+      if (!res) return [];
+      if (Array.isArray(res)) return res;
+      if (res.success && res.data) {
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res.data.items)) return res.data.items;
+      }
+      return [];
+    };
+
     const performSearch = async () => {
       searching.value = true;
-      const query = searchQuery.value.toLowerCase();
+      const query = searchQuery.value.trim().toLowerCase();
       const foundResults = [];
 
       try {
-        // Search monitors
-        const monitorsData = await fetchMonitorData({ q: query, limit: 5, offset: 0 }).catch(() => ({ data: [] }));
-        const monitors = Array.isArray(monitorsData) ? monitorsData : (monitorsData.data || monitorsData.monitors || []);
-        monitors
-          .filter(m => 
-            m.name?.toLowerCase().includes(query) ||
-            m.url?.toLowerCase().includes(query) ||
-            m.type?.toLowerCase().includes(query)
-          )
-          .slice(0, 5)
-          .forEach(m => {
-            foundResults.push({
-              id: `monitor-${m.id}`,
-              category: 'Monitors',
-              title: m.name || m.Name,
-              subtitle: m.url || m.URL,
-              icon: 'Monitor',
-              color: '#409EFF',
-              type: 'monitor',
-              data: m,
-            });
-          });
+        const [monitorsRes, alarmsRes, groupsRes, hostsRes, itemsRes, alertsRes] = await Promise.all([
+          fetchMonitorData({ q: query, limit: 5 }).catch(() => []),
+          fetchAlarmData({ q: query, limit: 5 }).catch(() => []),
+          fetchGroupData({ q: query, limit: 5 }).catch(() => []),
+          fetchHostData({ q: query, limit: 5 }).catch(() => []),
+          fetchItemData({ q: query, limit: 5 }).catch(() => []),
+          fetchAlertData({ q: query, limit: 5 }).catch(() => [])
+        ]);
 
-        // Search hosts
-        const hostsData = await fetchHostData({ q: query, limit: 5, offset: 0 }).catch(() => ({ data: [] }));
-        const hosts = Array.isArray(hostsData) ? hostsData : (hostsData.data || hostsData.hosts || []);
-        hosts
-          .filter(h => 
-            (h.name || h.Name)?.toLowerCase().includes(query) ||
-            (h.ip_addr || h.IPAddr || h.ip)?.toLowerCase().includes(query) ||
-            (h.description || h.Description || h.comment || h.Comment)?.toLowerCase().includes(query)
-          )
-          .slice(0, 5)
-          .forEach(h => {
-            foundResults.push({
-              id: `host-${h.id}`,
-              category: 'Hosts',
-              title: h.name || h.Name,
-              subtitle: h.ip_addr || h.IPAddr || h.ip || '-',
-              icon: 'Connection',
-              color: '#67C23A',
-              type: 'host',
-              data: h,
-            });
+        // 1. Monitors (Inventory Sources)
+        extractArray(monitorsRes).forEach(m => {
+          foundResults.push({
+            id: `m-${m.id || m.ID}`,
+            categoryKey: 'monitor',
+            title: m.name || m.Name,
+            subtitle: m.url || m.URL,
+            icon: 'Monitor',
+            color: '#409EFF',
+            type: 'monitor'
           });
+        });
 
-        // Search items
-        const itemsData = await fetchItemData({ q: query, limit: 5, offset: 0 }).catch(() => ({ data: [] }));
-        const items = Array.isArray(itemsData) ? itemsData : (itemsData.data || itemsData.items || []);
-        items
-          .filter(i => 
-            (i.name || i.Name)?.toLowerCase().includes(query) ||
-            (i.value || i.Value || i.last_value || i.LastValue)?.toLowerCase().includes(query) ||
-            (i.comment || i.Comment || '')?.toLowerCase().includes(query)
-          )
-          .slice(0, 5)
-          .forEach(i => {
-            foundResults.push({
-              id: `item-${i.id}`,
-              category: 'Items',
-              title: i.name || i.Name,
-              subtitle: `Value: ${i.value || i.Value || i.last_value || i.LastValue || 'N/A'}`,
-              icon: 'DataAnalysis',
-              color: '#E6A23C',
-              type: 'item',
-              data: i,
-            });
+        // 2. Alarms (Alert Sources)
+        extractArray(alarmsRes).forEach(a => {
+          foundResults.push({
+            id: `a-${a.id || a.ID}`,
+            categoryKey: 'alarm',
+            title: a.name || a.Name,
+            subtitle: a.url || a.URL,
+            icon: 'Opportunity',
+            color: '#E6A23C',
+            type: 'alarm'
           });
+        });
 
-        // Search alerts
-        const alertsData = await fetchAlertData({ q: query, limit: 5, offset: 0 }).catch(() => ({ data: [] }));
-        const alerts = Array.isArray(alertsData) ? alertsData : (alertsData.data || alertsData.alerts || []);
-        alerts
-          .filter(a => 
-            (a.message || a.Message)?.toLowerCase().includes(query)
-          )
-          .slice(0, 5)
-          .forEach(a => {
-            foundResults.push({
-              id: `alert-${a.id}`,
-              category: 'Alerts',
-              title: a.message || a.Message,
-              subtitle: `Severity: ${a.severity ?? a.Severity ?? 'N/A'}`,
-              icon: 'Bell',
-              color: '#F56C6C',
-              type: 'alert',
-              data: a,
-            });
+        // 3. Groups (Host Groups)
+        extractArray(groupsRes).forEach(g => {
+          foundResults.push({
+            id: `g-${g.id || g.ID}`,
+            categoryKey: 'group',
+            title: g.name || g.Name,
+            subtitle: g.description || g.Description || '-',
+            icon: 'Box',
+            color: '#909399',
+            type: 'group'
           });
+        });
+
+        // 4. Hosts (End-point Assets)
+        extractArray(hostsRes).forEach(h => {
+          foundResults.push({
+            id: `h-${h.id || h.ID}`,
+            categoryKey: 'host',
+            title: h.name || h.Name,
+            subtitle: h.ip_addr || h.IPAddr || h.ip || '-',
+            icon: 'Connection',
+            color: '#67C23A',
+            type: 'host'
+          });
+        });
+
+        // 5. Items (Metrics)
+        extractArray(itemsRes).forEach(i => {
+          foundResults.push({
+            id: `i-${i.id || i.ID}`,
+            categoryKey: 'item',
+            title: i.name || i.Name,
+            subtitle: `Value: ${i.last_value || i.LastValue || 'N/A'} ${i.units || i.Units || ''}`,
+            icon: 'DataAnalysis',
+            color: '#409EFF',
+            type: 'item'
+          });
+        });
+
+        // 6. Alerts
+        extractArray(alertsRes).forEach(a => {
+          foundResults.push({
+            id: `al-${a.id || a.ID}`,
+            categoryKey: 'alert',
+            title: a.message || a.Message,
+            subtitle: `Severity: ${a.severity ?? a.Severity ?? 'N/A'}`,
+            icon: 'Bell',
+            color: '#F56C6C',
+            type: 'alert'
+          });
+        });
 
         results.value = foundResults;
+        console.log('Global Search results:', foundResults);
       } catch (err) {
-        console.error('Search error:', err);
-        results.value = [];
+        console.error('Global Search failed:', err);
       } finally {
         searching.value = false;
       }
@@ -264,7 +289,8 @@ export default {
       searching,
       results,
       groupedResults,
-      openSearch,
+      handleInputFocus,
+      handleInputBlur,
       closeSearch,
       handleSearch,
       navigateToItem,

@@ -163,11 +163,14 @@
           </template>
           <div class="tab-pane-content">
             <div class="section-divider">{{ $t('configuration.aiAnalysis') }}</div>
-            <el-form :model="editableConfig.ai" label-width="180px" label-position="left">
-              <el-form-item :label="$t('system.aiEnabled')">
-                <el-switch v-model="editableConfig.ai.analysis_enabled" />
+            <el-form :model=\"editableConfig.ai\" label-width=\"180px\" label-position=\"left\">
+              <el-form-item :label=\"$t('system.aiEnabled')\">
+                <el-switch v-model=\"editableConfig.ai.analysis_enabled\" />
               </el-form-item>
-              <el-form-item :label="$t('system.aiProviderId')">
+              <el-form-item :label=\"$t('system.aiNotificationGuard')\">
+                <el-switch v-model=\"editableConfig.ai.notification_guard_enabled\" />
+              </el-form-item>
+              <el-form-item :label=\"$t('system.aiProviderId')\">
                 <el-input-number v-model="editableConfig.ai.provider_id" :min="0" />
               </el-form-item>
               <el-form-item :label="$t('system.aiModel')">
@@ -344,6 +347,7 @@ export default {
       },
       ai: {
         analysis_enabled: true,
+        notification_guard_enabled: false,
         provider_id: 1,
         model: '',
         analysis_timeout_seconds: 60,
@@ -419,6 +423,7 @@ export default {
       const aiSource = data.ai || data.AI || {};
       mapData(aiSource, editableConfig.ai, {
         analysis_enabled: ['analysis_enabled', 'AnalysisEnabled'],
+        notification_guard_enabled: ['notification_guard_enabled', 'NotificationGuardEnabled'],
         provider_id: ['provider_id', 'ProviderID'],
         model: ['model', 'Model'],
         analysis_timeout_seconds: ['analysis_timeout_seconds', 'AnalysisTimeoutSeconds'],

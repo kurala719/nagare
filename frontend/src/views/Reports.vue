@@ -61,9 +61,10 @@
           <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('common.actions')" width="150" align="center">
+      <el-table-column :label="$t('common.actions')" width="180" align="center">
         <template #default="{ row }">
           <el-button-group>
+            <el-button size="small" type="info" :icon="View" @click="viewReport(row)" :disabled="row.status !== 'completed'" />
             <el-button size="small" type="primary" :icon="Download" @click="download(row)" :disabled="row.status !== 'completed'" />
             <el-button size="small" type="danger" :icon="Delete" @click="remove(row)" />
           </el-button-group>
@@ -103,14 +104,31 @@
         <el-button type="primary" @click="saveConfig">{{ $t('common.save') }}</el-button>
       </template>
     </el-dialog>
+
+    <!-- Preview Dialog -->
+    <el-dialog v-model="previewDialogVisible" :title="currentReport?.title" width="900px" top="5vh">
+      <ReportPreview 
+        :data="previewData" 
+        :title="currentReport?.title" 
+        :generated-at="currentReport?.generated_at ? new Date(currentReport.generated_at).toLocaleString() : ''"
+        :loading="previewLoading"
+      />
+      <template #footer>
+        <el-button @click="previewDialogVisible = false">Close</el-button>
+        <el-button type="primary" :icon="Printer" @click="exportToPDF" :loading="exporting" :disabled="!previewData">
+          Export PDF from Page
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { Download, Delete, Setting, ArrowDown } from '@element-plus/icons-vue'
+import { Download, Delete, Setting, ArrowDown, View, Printer } from '@element-plus/icons-vue'
 import { 
   fetchReports, 
+  fetchReportContent,
   generateWeeklyReport, 
   generateMonthlyReport, 
   deleteReport, 
@@ -118,6 +136,9 @@ import {
   getReportConfig, 
   updateReportConfig 
 } from '@/api/reports'
+import ReportPreview from '@/components/ReportPreview.vue'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { getToken } from '@/utils/auth'
@@ -127,6 +148,11 @@ const reports = ref([])
 const loading = ref(false)
 const filterType = ref('')
 const configDialogVisible = ref(false)
+const previewDialogVisible = ref(false)
+const currentReport = ref(null)
+const previewData = ref(null)
+const previewLoading = ref(false)
+const exporting = ref(false)
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const selectedRows = ref([])
 
@@ -235,6 +261,51 @@ const handleGenerateCommand = async (cmd) => {
     } catch (e) {
       ElMessage.error(t('reports.generationFailed') || 'Failed to start generation')
     }
+  }
+}
+
+const viewReport = async (row) => {
+  currentReport.value = row
+  previewDialogVisible.value = true
+  previewLoading.value = true
+  previewData.value = null
+  try {
+    const res = await fetchReportContent(row.id)
+    if (res && res.success) {
+      previewData.value = res.data
+    }
+  } catch (err) {
+    ElMessage.error('Failed to load report content')
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+const exportToPDF = async () => {
+  const element = document.querySelector('.report-content')
+  if (!element) return
+
+  exporting.value = true
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false
+    })
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const imgProps = pdf.getImageProperties(imgData)
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    pdf.save(`${currentReport.value.title}.pdf`)
+    ElMessage.success('PDF exported successfully')
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('Failed to export PDF')
+  } finally {
+    exporting.value = false
   }
 }
 

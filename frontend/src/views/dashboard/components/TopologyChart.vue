@@ -40,6 +40,7 @@ import { Loading } from '@element-plus/icons-vue'
 import { fetchGroupData } from '@/api/groups'
 import { fetchHostData } from '@/api/hosts'
 import { fetchMonitorData } from '@/api/monitors'
+import { getToken } from '@/utils/auth'
 
 export default defineComponent({
   name: 'TopologyChart',
@@ -72,125 +73,137 @@ export default defineComponent({
       return palette[status] || palette[0]
     }
 
+    const safeId = (val) => {
+      if (val === null || val === undefined || val === '') return null
+      const n = Number(val)
+      return isNaN(n) ? null : n
+    }
+
+    const getProp = (obj, ...keys) => {
+      if (!obj) return null
+      for (const k of keys) {
+        if (obj[k] !== undefined && obj[k] !== null) return obj[k]
+      }
+      return null
+    }
+
     const buildGraph = (groups, hosts, monitors) => {
       const nodes = []
       const links = []
-      const groupMap = new Map()
-      const monitorMap = new Map()
+      const nodeSet = new Set()
+      
       const impactedGroupIds = new Set()
+      const impactedMonitorIds = new Set()
       const impactedHostIds = new Set()
 
-      const buildLink = (source, target, impacted) => ({
-        source,
-        target,
-        lineStyle: impacted
-          ? { color: '#f56c6c', width: 2.5, opacity: 0.9 }
-          : undefined,
-      })
-      const linkIndex = new Map()
-      const pushLink = (source, target, impacted) => {
-        const key = `${source}|${target}`
-        const existing = linkIndex.get(key)
-        if (existing !== undefined) {
-          if (impacted) {
-            links[existing].lineStyle = { color: '#f56c6c', width: 2.5, opacity: 0.9 }
-          }
-          return
-        }
-        links.push(buildLink(source, target, impacted))
-        linkIndex.set(key, links.length - 1)
-      }
-
-      hosts.forEach((host) => {
-        const hostId = Number(host.ID || host.id)
-        if (!hostId) return
-        const groupId = Number(host.GroupID || host.group_id || 0)
-        const status = host.Status ?? host.status ?? 0
-        if (status === 2) {
-          impactedHostIds.add(hostId)
-          if (groupId) impactedGroupIds.add(groupId)
+      // 1. Pre-process impacts
+      hosts.forEach(h => {
+        const s = h.status ?? h.Status ?? 0
+        if (s === 2) {
+          const hid = safeId(h.id || h.ID)
+          const gid = safeId(getProp(h, 'group_id', 'GroupID', 'gid'))
+          const mid = safeId(getProp(h, 'm_id', 'monitor_id', 'MonitorID'))
+          if (hid !== null) impactedHostIds.add(hid)
+          if (gid !== null) impactedGroupIds.add(gid)
+          if (mid !== null) impactedMonitorIds.add(mid)
         }
       })
 
-      monitors.forEach((monitor) => {
-        const id = Number(monitor.ID || monitor.id)
-        if (!id) return
-        const name = monitor.Name || monitor.name || `Monitor ${id}`
-        const status = monitor.Status ?? monitor.status ?? 0
-        const nodeId = `monitor-${id}`
-        monitorMap.set(id, nodeId)
+      // 2. Build Monitor Nodes - Category Index 0
+      monitors.forEach(m => {
+        const id = safeId(m.id || m.ID)
+        if (id === null) return
+        const nodeId = `m-${id}`
+        nodeSet.add(nodeId)
+        const status = m.status ?? m.Status ?? 0
+        const isImpacted = impactedMonitorIds.has(id)
         nodes.push({
-          id: nodeId,
-          name,
+          name: nodeId,
+          displayName: m.name || m.Name || `Source ${id}`,
           category: 0,
-          symbolSize: 64,
-          value: { status },
-          itemStyle: { color: getStatusColor(status) },
-          label: { show: true },
-        })
-      })
-
-      groups.forEach((group) => {
-        const id = Number(group.ID || group.id)
-        if (!id) return
-        const name = group.Name || group.name || `Group ${id}`
-        const status = group.Status ?? group.status ?? 0
-        const nodeId = `group-${id}`
-        groupMap.set(id, nodeId)
-        const impacted = impactedGroupIds.has(id)
-        nodes.push({
-          id: nodeId,
-          name,
-          category: 1,
-          symbolSize: 48,
-          value: { status, impacted },
-          itemStyle: {
+          symbolSize: 60,
+          value: { status, type: 'source', impacted: isImpacted },
+          itemStyle: { 
             color: getStatusColor(status),
-            borderColor: impacted ? '#f56c6c' : undefined,
-            borderWidth: impacted ? 3 : 0,
-            shadowBlur: impacted ? 8 : 0,
-            shadowColor: impacted ? '#f56c6c' : undefined,
+            borderColor: isImpacted ? '#f56c6c' : undefined,
+            borderWidth: isImpacted ? 3 : 0
           },
-          label: { show: true },
+          label: { show: true, fontWeight: 'bold' }
         })
       })
 
-      const groupHostCount = new Map()
-      hosts.forEach((host) => {
-        const hostId = Number(host.ID || host.id)
-        if (!hostId) return
-        const groupId = Number(host.GroupID || host.group_id || 0)
-        const monitorId = Number(host.MonitorID || host.monitor_id || 0)
-        const name = host.Name || host.name || `Host ${hostId}`
-        const status = host.Status ?? host.status ?? 0
-        const nodeId = `host-${hostId}`
+      // 3. Build Group Nodes - Category Index 1
+      groups.forEach(g => {
+        const id = safeId(g.id || g.ID)
+        if (id === null) return
+        const nodeId = `g-${id}`
+        nodeSet.add(nodeId)
+        
+        const status = g.status ?? g.Status ?? 0
+        const mid = safeId(getProp(g, 'monitor_id', 'MonitorID', 'm_id', 'MID', 'monitorId'))
+        const isImpacted = impactedGroupIds.has(id)
+        
         nodes.push({
-          id: nodeId,
-          name,
-          category: 2,
-          symbolSize: 30,
-          value: { status, ip: host.IPAddr || host.ip_addr || '' },
-          itemStyle: { color: getStatusColor(status) },
-          label: { show: true },
+          name: nodeId,
+          displayName: g.name || g.Name || `Group ${id}`,
+          category: 1,
+          symbolSize: 45,
+          value: { status, type: 'group', impacted: isImpacted },
+          itemStyle: { 
+            color: getStatusColor(status),
+            borderColor: isImpacted ? '#f56c6c' : undefined,
+            borderWidth: isImpacted ? 2 : 0
+          },
+          label: { show: true }
         })
 
-        if (groupId && groupMap.has(groupId)) {
-          pushLink(groupMap.get(groupId), nodeId, impactedHostIds.has(hostId))
-          groupHostCount.set(groupId, (groupHostCount.get(groupId) || 0) + 1)
-          if (monitorId && monitorMap.has(monitorId)) {
-            pushLink(monitorMap.get(monitorId), groupMap.get(groupId), impactedGroupIds.has(groupId))
-          }
-        } else if (monitorId && monitorMap.has(monitorId)) {
-          pushLink(monitorMap.get(monitorId), nodeId, impactedHostIds.has(hostId))
+        // Link Group -> Monitor
+        if (mid !== null && nodeSet.has(`m-${mid}`)) {
+          links.push({ source: `m-${mid}`, target: nodeId })
         }
       })
 
-      // Adjust group node size based on host count
-      nodes.forEach((node) => {
-        if (!node.id.startsWith('group-')) return
-        const groupId = Number(node.id.replace('group-', ''))
-        const count = groupHostCount.get(groupId) || 0
-        node.symbolSize = Math.min(72, 40 + count * 3)
+      // 4. Build Host Nodes - Category Index 2
+      const groupStats = new Map()
+      hosts.forEach(h => {
+        const id = safeId(h.id || h.ID)
+        if (id === null) return
+        const nodeId = `h-${id}`
+        nodeSet.add(nodeId)
+        
+        const status = h.status ?? h.Status ?? 0
+        const gid = safeId(getProp(h, 'group_id', 'GroupID', 'gid'))
+        const mid = safeId(getProp(h, 'm_id', 'monitor_id', 'MonitorID'))
+        const isImpacted = impactedHostIds.has(id)
+
+        nodes.push({
+          name: nodeId,
+          displayName: h.name || h.Name || `Asset ${id}`,
+          category: 2,
+          symbolSize: 25,
+          value: { 
+            status, type: 'asset', impacted: isImpacted,
+            ip: h.ip_addr || h.IPAddr || ''
+          },
+          itemStyle: { color: getStatusColor(status) },
+          label: { show: true, fontSize: 10 }
+        })
+
+        if (gid !== null && nodeSet.has(`g-${gid}`)) {
+          links.push({ source: `g-${gid}`, target: nodeId })
+          groupStats.set(gid, (groupStats.get(gid) || 0) + 1)
+        } else if (mid !== null && nodeSet.has(`m-${mid}`)) {
+          links.push({ source: `m-${mid}`, target: nodeId })
+        }
+      })
+
+      // Rescaling
+      nodes.forEach(n => {
+        if (n.value.type === 'group') {
+          const id = Number(n.name.replace('g-', ''))
+          const count = groupStats.get(id) || 0
+          n.symbolSize = Math.min(80, 45 + Math.sqrt(count) * 6)
+        }
       })
 
       return { nodes, links }
@@ -198,87 +211,113 @@ export default defineComponent({
 
     const initChart = (nodes, links) => {
       if (!chartRef.value) return
+      
+      // Ensure we have a valid instance
       if (!chartInstance.value) {
         chartInstance.value = echarts.init(chartRef.value)
+      } else {
+        chartInstance.value.clear()
       }
       
+      const catNames = [
+        t('dashboard.topologyMonitor'),
+        t('dashboard.topologySite'),
+        t('dashboard.topologyHost')
+      ]
+
+      console.log('Topology Rendering:', { nodes: nodes.length, links: links.length })
+
+      // Final validation of links to prevent ECharts crashes
+      const validLinks = links.filter(l => {
+        const sourceExists = nodes.some(n => n.name === l.source)
+        const targetExists = nodes.some(n => n.name === l.target)
+        return sourceExists && targetExists
+      })
+
       chartInstance.value.setOption({
         tooltip: {
           formatter: (params) => {
             if (params.dataType !== 'node') return ''
-            const status = params.data?.value?.status ?? 0
-            const statusLabel = getStatusInfo(status).label
-            const ip = params.data?.value?.ip
-            const ipLine = ip ? `<br/>IP: ${ip}` : ''
-            const impacted = params.data?.value?.impacted
-            const impactedLine = impacted ? `<br/>${t('dashboard.impactedLabel')}` : ''
-            return `<strong>${params.data?.name || '-'}</strong><br/>${statusLabel}${ipLine}${impactedLine}`
+            const v = params.data?.value || {}
+            const catIdx = typeof params.data?.category === 'number' ? params.data.category : 0
+            const typeName = catNames[catIdx] || ''
+            const statusLabel = getStatusInfo(v.status ?? 0).label
+            const ipLine = v.ip ? `<br/>IP: ${v.ip}` : ''
+            const impactLine = v.impacted ? `<br/><span style="color:#f56c6c">${t('dashboard.impactedLabel')}</span>` : ''
+            return `<div style="padding:4px"><strong>${params.data.displayName || '-'}</strong> (${typeName})<br/>Status: ${statusLabel}${ipLine}${impactLine}</div>`
           }
         },
-        legend: [{
-          data: [t('dashboard.topologyMonitor'), t('dashboard.topologySite'), t('dashboard.topologyHost')],
+        legend: {
+          data: catNames,
           top: 8,
-        }],
+          textStyle: { color: 'var(--text-strong)' }
+        },
         series: [{
           type: 'graph',
           layout: 'force',
           roam: true,
-          data: nodes,
-          links,
-          categories: [
-            { name: t('dashboard.topologyMonitor') },
-            { name: t('dashboard.topologySite') },
-            { name: t('dashboard.topologyHost') },
-          ],
+          draggable: true,
+          data: nodes.map(n => ({
+            ...n,
+            category: typeof n.category === 'number' ? n.category : 0
+          })),
+          links: validLinks,
+          categories: catNames.map(name => ({ name })),
+          edgeSymbol: ['none', 'arrow'],
+          edgeSymbolSize: [0, 8],
           force: {
-            repulsion: 160,
-            edgeLength: 120,
-            gravity: 0.2,
+            repulsion: 450,
+            edgeLength: 150,
+            gravity: 0.05,
+            layoutAnimation: true
           },
           label: {
             position: 'right',
-            formatter: '{b}',
-            fontSize: 12,
+            formatter: (params) => params.data.displayName,
+            fontSize: 11,
+            color: 'var(--text-strong)'
           },
           lineStyle: {
             color: 'source',
             width: 1.5,
-            opacity: 0.7,
-            curveness: 0.2,
+            opacity: 0.4,
+            curveness: 0.1
           },
-        }],
-      })
+          emphasis: {
+            focus: 'adjacency',
+            lineStyle: { width: 4 }
+          }
+        }]
+      }, { notMerge: true })
     }
 
     const loadData = async () => {
+      if (!getToken()) return
+      
       loading.value = true
       error.value = null
       empty.value = false
       
+      if (chartInstance.value) {
+        chartInstance.value.dispose()
+        chartInstance.value = null
+      }
+      
       try {
         const [groupRes, hostRes, monitorRes] = await Promise.all([
-          fetchGroupData({ limit: 200 }),
-          fetchHostData({ limit: 500 }),
+          fetchGroupData({ limit: 500 }),
+          fetchHostData({ limit: 1000 }),
           fetchMonitorData({ limit: 200 }),
         ])
 
-        console.log('TopologyChart raw responses:', { groupRes, hostRes, monitorRes })
-
-        // Backend always returns {success: true, data: ...}
-        // For arrays: data is array directly
-        // For paginated: data is {items: [...], total: N}
         const extractData = (res) => {
           if (!res) return []
-          // Check if response has success/data structure
           if (res.success && res.data !== undefined) {
             const data = res.data
-            // If data is array, return it
             if (Array.isArray(data)) return data
-            // If data.items is array (paginated), return items
             if (Array.isArray(data.items)) return data.items
             return []
           }
-          // Fallback: if response itself is array
           if (Array.isArray(res)) return res
           return []
         }
@@ -287,31 +326,18 @@ export default defineComponent({
         const hosts = extractData(hostRes)
         const monitors = extractData(monitorRes)
 
-        console.log('TopologyChart extracted data:', { groups, hosts, monitors })
-
         const { nodes, links } = buildGraph(groups, hosts, monitors)
-        
-        console.log('TopologyChart graph:', { nodeCount: nodes.length, linkCount: links.length })
         
         if (nodes.length === 0) {
           empty.value = true
-          if (chartInstance.value) {
-            chartInstance.value.dispose()
-            chartInstance.value = null
-          }
         } else {
           loading.value = false
           await nextTick()
           initChart(nodes, links)
         }
       } catch (err) {
-        console.error('TopologyChart load error:', err)
-        const msg = err.message || t('dashboard.topologyLoadFailed')
-        if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized') || err.message.includes('Forbidden'))) {
-          error.value = t('common.sessionExpired') || 'Please log in to view topology'
-        } else {
-          error.value = msg
-        }
+        console.error('TopologyChart error:', err)
+        error.value = err.message || t('dashboard.topologyLoadFailed')
       } finally {
         loading.value = false
       }

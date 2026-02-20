@@ -15,6 +15,13 @@ export function getReport(id) {
   })
 }
 
+export function fetchReportContent(id) {
+  return request({
+    url: `/reports/${id}/content`,
+    method: 'get'
+  })
+}
+
 export function generateWeeklyReport() {
   return request({
     url: '/reports/generate/weekly',

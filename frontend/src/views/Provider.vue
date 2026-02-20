@@ -1,7 +1,7 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('providers.search') }}</h1>
+      <h1 class="page-title">{{ $t('providers.title') }}</h1>
       <p class="page-subtitle">{{ totalProviders }} {{ $t('dashboard.aiProviders') }}</p>
     </div>
 

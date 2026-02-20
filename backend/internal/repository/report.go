@@ -64,6 +64,11 @@ func UpdateReportStatusDAO(id uint, status int, filePath, downloadURL string) er
 	return database.DB.Model(&model.Report{}).Where("id = ?", id).Updates(updates).Error
 }
 
+// UpdateReportContentDAO updates the content data of a report
+func UpdateReportContentDAO(id uint, content string) error {
+	return database.DB.Model(&model.Report{}).Where("id = ?", id).Update("content_data", content).Error
+}
+
 // DeleteReportDAO deletes a report record
 func DeleteReportDAO(id uint) error {
 	return database.DB.Delete(&model.Report{}, id).Error

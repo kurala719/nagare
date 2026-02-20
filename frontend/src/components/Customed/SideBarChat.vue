@@ -85,6 +85,7 @@ import { ElMessage } from 'element-plus';
 import { Loading } from '@element-plus/icons-vue';
 import { sendChatMessage, fetchChatHistory } from '@/api/chats';
 import { fetchProviderData } from '@/api/providers';
+import { getToken } from '@/utils/auth';
 
 interface Chat {
     id: number | string;
@@ -127,8 +128,9 @@ export default {
         return { t };
     },
     created() {
-        // Don't load chat history on created - it will load when user scrolls to top
-        this.loadProviders();
+        if (getToken()) {
+            this.loadProviders();
+        }
     },
     methods: {
         async loadProviders() {

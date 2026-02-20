@@ -504,6 +504,7 @@ export default {
                     id: item.ID || item.id,
                     name: item.Name || item.name || '',
                     value: item.Value || item.value || item.LastValue || item.last_value || '',
+                    units: item.units || item.Units || '',
                     enabled: this.normalizeEnabled(item.Enabled ?? item.enabled ?? item.ENABLED),
                     status: this.normalizeStatus(item.Status ?? item.status ?? item.STATUS),
                     status_reason: item.Reason || item.reason || item.Error || item.error || item.ErrorMessage || item.error_message || item.LastError || item.last_error || item.Comment || item.comment || '',

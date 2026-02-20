@@ -1,13 +1,17 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"nagare/internal/database"
 	"nagare/internal/model"
 	"nagare/internal/repository"
+	"nagare/internal/repository/llm"
 	"nagare/internal/service/utils"
 
 	"github.com/johnfercher/maroto/v2"
@@ -61,10 +65,29 @@ func createAndProcessReport(rtype, title string) (model.Report, error) {
 }
 
 func processReport(report model.Report) {
-	// 1. Fetch Aggregated Data
-	data := aggregateAdvancedReportData()
+	defer func() {
+		if r := recover(); r != nil {
+			LogService("error", "panic in report generation", map[string]interface{}{"panic": r, "report_id": report.ID}, nil, "")
+			_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
+		}
+	}()
 
-	// 2. Generate PDF
+	// 1. Fetch Aggregated Data
+	data := aggregateAdvancedReportData(report.ReportType)
+
+	// 2. Save Data to JSON for preview
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		LogService("error", "failed to marshal report data", map[string]interface{}{"error": err.Error()}, nil, "")
+	} else {
+		report.ContentData = string(dataJSON)
+		if err := repository.UpdateReportContentDAO(report.ID, report.ContentData); err != nil {
+			LogService("error", "failed to update report content in DB", map[string]interface{}{"error": err.Error(), "report_id": report.ID}, nil, "")
+			// This might be the column missing error. We continue to try PDF generation.
+		}
+	}
+
+	// 3. Generate PDF
 	cfg := config.NewBuilder().
 		WithPageNumber(props.PageNumber{
 			Pattern: "Page {current} of {total}",
@@ -85,25 +108,31 @@ func processReport(report model.Report) {
 	m.AddAutoRow(text.NewCol(12, "Infrastructure Health & Trends", props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
 	
 	// Pie Chart & Line Chart
-	pieBytes, _ := utils.GeneratePieChart("Host Status", data.StatusDistribution)
-	lineBytes, _ := utils.GenerateLineChart("Alert Trend", []string{"M", "T", "W", "T", "F", "S", "S"}, data.AlertTrend)
+	pieBytes, errPie := utils.GeneratePieChart("Host Status", data.StatusDistribution)
+	lineBytes, errLine := utils.GenerateLineChart("Alert Trend", []string{"M", "T", "W", "T", "F", "S", "S"}, data.AlertTrend)
 	
-	m.AddRow(80,
-		col.New(6).Add(image.NewFromBytes(pieBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
-		col.New(6).Add(image.NewFromBytes(lineBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
-	)
-	m.AddRow(10,
-		text.NewCol(6, "Status Distribution", props.Text{Align: align.Center, Size: 9}),
-		text.NewCol(6, "Weekly Alert Trend", props.Text{Align: align.Center, Size: 9}),
-	)
+	if errPie == nil && errLine == nil {
+		m.AddRow(80,
+			col.New(6).Add(image.NewFromBytes(pieBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
+			col.New(6).Add(image.NewFromBytes(lineBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
+		)
+		m.AddRow(10,
+			text.NewCol(6, "Status Distribution", props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, "Weekly Alert Trend", props.Text{Align: align.Center, Size: 9}),
+		)
+	} else {
+		m.AddAutoRow(text.NewCol(12, "[Chart Generation Skipped due to data issues]", props.Text{Size: 10, Color: &props.Color{Red: 255}}))
+	}
 
 	// Page 2: Host Analytics
 	m.AddAutoRow(text.NewCol(12, "Critical Host Analytics", props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
 	
 	// Failure Frequency Chart
-	barBytes, _ := utils.GenerateBarChart("Failure Frequency", data.FailureFrequency)
-	m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
-	m.AddRow(10, text.NewCol(12, "Top 5 Most Frequent Failures (Times)", props.Text{Align: align.Center, Size: 9}))
+	barBytes, errBar := utils.GenerateBarChart("Failure Frequency", data.FailureFrequency)
+	if errBar == nil {
+		m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
+		m.AddRow(10, text.NewCol(12, "Top 5 Most Frequent Failures (Times)", props.Text{Align: align.Center, Size: 9}))
+	}
 
 	buildTopHostsTable(m, data.TopCPUHosts)
 	buildDowntimeTable(m, data.LongestDowntimeHosts)
@@ -112,6 +141,7 @@ func processReport(report model.Report) {
 	filePath := "public/reports/" + fileName
 	
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		LogService("error", "failed to create reports directory", map[string]interface{}{"error": err.Error()}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
 		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to create report directory for '%s'.", report.Title), "report", 3, nil)
 		return
@@ -119,12 +149,14 @@ func processReport(report model.Report) {
 	
 	document, err := m.Generate()
 	if err != nil {
+		LogService("error", "failed to generate PDF", map[string]interface{}{"error": err.Error()}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
 		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to generate PDF for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	if err := document.Save(filePath); err != nil {
+		LogService("error", "failed to save PDF file", map[string]interface{}{"error": err.Error(), "path": filePath}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
 		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to save PDF for '%s'.", report.Title), "report", 3, nil)
 		return
@@ -148,38 +180,141 @@ type AdvancedReportData struct {
 	Summary              string
 }
 
-func aggregateAdvancedReportData() AdvancedReportData {
-	// Realistic mock data for visualization
-	return AdvancedReportData{
-		TotalAlerts: 156,
-		AvgUptime:   99.82,
-		StatusDistribution: map[string]float64{
-			"Active":  85,
-			"Warning": 10,
-			"Error":   5,
-		},
-		AlertTrend: []float64{12, 15, 45, 20, 18, 10, 36},
-		FailureFrequency: map[string]float64{
-			"web-srv-01": 12,
-			"db-master":  8,
-			"app-node-2": 15,
-			"gateway-01": 5,
-			"cache-cli":  3,
-		},
-		TopCPUHosts: [][]string{
-			{"app-node-2", "192.168.1.12", "92%", "Warning"},
-			{"db-master", "192.168.1.20", "88%", "Active"},
-			{"web-srv-01", "192.168.1.10", "75%", "Active"},
-			{"worker-04", "192.168.1.44", "62%", "Active"},
-			{"mq-broker", "192.168.1.30", "58%", "Active"},
-		},
-		LongestDowntimeHosts: [][]string{
-			{"backup-srv", "192.168.1.99", "14h 20m", "5 times"},
-			{"app-node-2", "192.168.1.12", "4h 15m", "15 times"},
-			{"db-slave-2", "192.168.1.22", "2h 05m", "2 times"},
-		},
-		Summary: "Overall system stability remained at 99.82%. A major spike in alerts occurred on Wednesday due to network congestion in DC-East. 'app-node-2' remains the most unstable asset with 15 failure events this period. Immediate hardware health check is recommended for the backup server.",
+func aggregateAdvancedReportData(reportType string) AdvancedReportData {
+	days := 7
+	if reportType == "monthly" {
+		days = 30
 	}
+	startTime := time.Now().AddDate(0, 0, -days)
+
+	data := AdvancedReportData{
+		StatusDistribution: make(map[string]float64),
+		FailureFrequency:   make(map[string]float64),
+		AlertTrend:         make([]float64, 7),
+	}
+
+	// 1. Total Alerts in period
+	var totalAlerts int64
+	database.DB.Model(&model.Alert{}).Where("created_at >= ?", startTime).Count(&totalAlerts)
+	data.TotalAlerts = int(totalAlerts)
+
+	// 2. Status Distribution (current)
+	hosts, _ := repository.GetAllHostsDAO()
+	for _, h := range hosts {
+		status := "Unknown"
+		switch h.Status {
+		case 1:
+			status = "Active"
+		case 0:
+			status = "Inactive"
+		case 2:
+			status = "Error"
+		case 3:
+			status = "Syncing"
+		}
+		data.StatusDistribution[status]++
+	}
+
+	// 3. Alert Trend (last 7 days)
+	for i := 0; i < 7; i++ {
+		dStart := time.Now().AddDate(0, 0, -6+i)
+		dStart = time.Date(dStart.Year(), dStart.Month(), dStart.Day(), 0, 0, 0, 0, dStart.Location())
+		dEnd := dStart.Add(24 * time.Hour)
+		var count int64
+		database.DB.Model(&model.Alert{}).Where("created_at >= ? AND created_at < ?", dStart, dEnd).Count(&count)
+		data.AlertTrend[i] = float64(count)
+	}
+
+	// 4. Failure Frequency (Top hosts by alert count)
+	type freqRes struct {
+		HostID uint
+		Count  int64
+	}
+	var frequencies []freqRes
+	database.DB.Model(&model.Alert{}).
+		Select("host_id, count(*) as count").
+		Where("created_at >= ? AND host_id > 0", startTime).
+		Group("host_id").
+		Order("count desc").
+		Limit(5).
+		Scan(&frequencies)
+
+	for _, f := range frequencies {
+		h, err := repository.GetHostByIDDAO(f.HostID)
+		if err == nil {
+			data.FailureFrequency[h.Name] = float64(f.Count)
+		}
+	}
+
+	// 5. Top CPU Hosts
+	var cpuItems []model.Item
+	database.DB.Model(&model.Item{}).
+		Where("name LIKE ? OR name LIKE ?", "%CPU%", "%cpu%").
+		Order("CAST(last_value AS DECIMAL) desc").
+		Limit(5).
+		Find(&cpuItems)
+
+	for _, item := range cpuItems {
+		h, _ := repository.GetHostByIDDAO(item.HID)
+		status := "Active"
+		if h.Status == 2 {
+			status = "Error"
+		}
+		data.TopCPUHosts = append(data.TopCPUHosts, []string{
+			h.Name, h.IPAddr, item.LastValue, item.Units, status,
+		})
+	}
+
+	// 6. Longest Downtime Hosts (Mocked for now as real calculation is complex)
+	data.LongestDowntimeHosts = [][]string{
+		{"N/A", "-", "0h", "0 times"},
+	}
+	if len(frequencies) > 0 {
+		h, _ := repository.GetHostByIDDAO(frequencies[0].HostID)
+		data.LongestDowntimeHosts[0] = []string{h.Name, h.IPAddr, "Detected Issues", fmt.Sprintf("%d alerts", frequencies[0].Count)}
+	}
+
+	// 7. Calculate Avg Uptime (based on host health scores)
+	var avgScore float64
+	database.DB.Model(&model.Host{}).Select("AVG(health_score)").Scan(&avgScore)
+	data.AvgUptime = avgScore
+
+	// 8. AI Summary
+	data.Summary = generateAISummary(data)
+
+	return data
+}
+
+func generateAISummary(data AdvancedReportData) string {
+	if !aiAnalysisEnabled() {
+		return "AI Summary generation is disabled. Based on metrics, the system has " + fmt.Sprint(data.TotalAlerts) + " alerts in the last period."
+	}
+
+	providerID, modelName := aiProviderConfig()
+	client, resolvedModel, err := createLLMClient(providerID, modelName)
+	if err != nil {
+		return "Failed to initialize AI for summary: " + err.Error()
+	}
+
+	ctx, cancel := aiAnalysisContext()
+	defer cancel()
+
+	statsJSON, _ := json.Marshal(data)
+	prompt := "You are a senior infrastructure analyst. Summarize the following operational data into a professional executive summary (3-4 sentences).\nData: " + string(statsJSON)
+
+	resp, err := client.Chat(ctx, llm.ChatRequest{
+		Model:        resolvedModel,
+		SystemPrompt: "Generate a concise executive summary for an infrastructure report.",
+		Messages: []llm.Message{
+			{Role: "user", Content: prompt},
+		},
+	})
+
+	if err != nil {
+		return "Infrastructure remained operational. Total alerts: " + fmt.Sprint(data.TotalAlerts) + ". (AI Summary failed: " + err.Error() + ")"
+	}
+
+	return strings.TrimSpace(resp.Content)
 }
 
 func buildProfessionalHeader(m core.Maroto, title string) {
@@ -206,8 +341,8 @@ func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
 	
 	m.AddRow(20,
 		text.NewCol(4, fmt.Sprintf("Total Alerts: %d", data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
-		text.NewCol(4, fmt.Sprintf("Avg Uptime: %.2f%%", data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
-		text.NewCol(4, fmt.Sprintf("Critical Issues: %d", int(data.StatusDistribution["Error"])), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("Avg Health: %.2f%%", data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("Critical Assets: %d", int(data.StatusDistribution["Error"])), props.Text{Size: 11, Align: align.Center, Top: 5}),
 	)
 
 	m.AddAutoRow(text.NewCol(12, data.Summary, props.Text{Size: 10, Top: 5, Bottom: 10}))
@@ -216,29 +351,31 @@ func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
 func buildTopHostsTable(m core.Maroto, rows [][]string) {
 	m.AddAutoRow(text.NewCol(12, "Top Resource Consumers (CPU Usage)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
 	
-	header := []string{"Host Name", "IP Address", "Avg Usage", "Status"}
+	header := []string{"Asset Name", "IP Address", "Avg Usage", "Units", "Status"}
 	
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
 		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(3, header[2], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(3, header[3], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(2, header[2], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(2, header[3], props.Text{Style: fontstyle.Bold, Size: 10}),
+		text.NewCol(2, header[4], props.Text{Style: fontstyle.Bold, Size: 10}),
 	)
 
 	for _, row := range rows {
 		m.AddRow(8,
 			text.NewCol(3, row[0], props.Text{Size: 9}),
 			text.NewCol(3, row[1], props.Text{Size: 9}),
-			text.NewCol(3, row[2], props.Text{Size: 9}),
-			text.NewCol(3, row[3], props.Text{Size: 9}),
+			text.NewCol(2, row[2], props.Text{Size: 9}),
+			text.NewCol(2, row[3], props.Text{Size: 9}),
+			text.NewCol(2, row[4], props.Text{Size: 9}),
 		)
 	}
 }
 
 func buildDowntimeTable(m core.Maroto, rows [][]string) {
-	m.AddAutoRow(text.NewCol(12, "Stability Issues (Longest Downtime)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+	m.AddAutoRow(text.NewCol(12, "Stability Issues (Frequency)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
 	
-	header := []string{"Host Name", "IP Address", "Total Downtime", "Frequency"}
+	header := []string{"Asset Name", "IP Address", "Summary", "Alert Count"}
 	
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
@@ -322,4 +459,19 @@ func GetReportFilePathServ(id uint) (string, error) {
 		return "", err
 	}
 	return r.FilePath, nil
+}
+
+// GetReportContentServ retrieves the JSON content of a report
+func GetReportContentServ(id uint) (AdvancedReportData, error) {
+	r, err := repository.GetReportByIDDAO(id)
+	if err != nil {
+		return AdvancedReportData{}, err
+	}
+
+	var data AdvancedReportData
+	if err := json.Unmarshal([]byte(r.ContentData), &data); err != nil {
+		return AdvancedReportData{}, fmt.Errorf("failed to unmarshal report content: %w", err)
+	}
+
+	return data, nil
 }

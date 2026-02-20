@@ -48,11 +48,8 @@
       <el-table :data="metrics" style="width: 100%" height="260">
         <el-table-column prop="host_name" :label="$t('dashboard.host')" min-width="140" show-overflow-tooltip sortable />
         <el-table-column prop="item_name" :label="$t('dashboard.metric')" min-width="160" show-overflow-tooltip sortable />
-        <el-table-column prop="value" :label="$t('dashboard.value')" min-width="140" sortable>
-          <template #default="{ row }">
-            <span>{{ row.value }} {{ row.units }}</span>
-          </template>
-        </el-table-column>
+        <el-table-column prop="value" :label="$t('dashboard.value')" width="100" sortable />
+        <el-table-column prop="units" :label="$t('dashboard.units')" width="80" sortable />
         <el-table-column prop="status" :label="$t('dashboard.status')" width="120" sortable>
           <template #default="{ row }">
             <el-tag :type="getStatusInfo(row.status).type" size="small">
@@ -76,6 +73,7 @@ import { defineComponent, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Loading } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { getToken } from '@/utils/auth'
 
 export default defineComponent({
   name: 'MetricsTable',
@@ -106,6 +104,7 @@ export default defineComponent({
     }
 
     const loadMetrics = async () => {
+      if (!getToken()) return
       loading.value = true
       error.value = null
       try {

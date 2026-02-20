@@ -376,8 +376,9 @@ type Report struct {
 	Title       string
 	FilePath    string
 	DownloadURL string
-	Status      int // 0=generating, 1=completed, 2=failed
+	Status      int    // 0=generating, 1=completed, 2=failed
 	GeneratedAt time.Time
+	ContentData string `gorm:"type:longtext"` // JSON content for preview
 }
 
 // SiteMessage represents an internal system notification for users

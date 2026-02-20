@@ -1,7 +1,7 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('users.roleUser') }}</h1>
+      <h1 class="page-title">{{ $t('users.title') }}</h1>
       <p class="page-subtitle">{{ totalUsers }} {{ $t('users.roleUser') }}</p>
     </div>
 
