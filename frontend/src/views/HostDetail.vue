@@ -490,30 +490,57 @@ const loadMetricHistory = async () => {
   // Categorize items
   const cpuItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
-    return (n.includes('cpu') || n.includes('load')) && !n.includes('temp')
+    // Match: CPU, CPU Usage, Processor %, Load Average, System Load, etc.
+    return (n.includes('cpu') || n.includes('processor') || n.includes('load') || n.includes('util')) && !n.includes('temp') && !n.includes('clock')
   })
   const memItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
-    return n.includes('mem') || n.includes('ram') || n.includes('memory')
+    // Match: Memory, Memory Usage, RAM, Memory Available, Swap, Free Memory, etc.
+    return n.includes('mem') || n.includes('ram') || n.includes('swap') || (n.includes('available') && !n.includes('cpu'))
   })
   const netItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
-    return n.includes('net') || n.includes('eth') || n.includes('if') || n.includes('traffic') || n.includes('bps')
+    // Match: Network, Ethernet, Interface, Traffic, Speed, Bytes/sec, etc.
+    return n.includes('net') || n.includes('eth') || n.includes('if') || n.includes('traffic') || n.includes('bps') || n.includes('bytes') || n.includes('speed') || n.includes('interface')
   })
+
+  console.log('[HostDetail] All items:', items.value)
+  console.log('[HostDetail] CPU items:', cpuItems)
+  console.log('[HostDetail] Memory items:', memItems)
+  console.log('[HostDetail] Network items:', netItems)
 
   // Helper to fetch and plot
   const fetchAndPlot = async (itemList, chart, name, color, unit, currentRef, unitRef) => {
-    if (itemList.length === 0 || !chart) return
+    if (itemList.length === 0 || !chart) {
+      console.log(`[HostDetail] Skipping ${name}: no items or chart`)
+      return
+    }
     // Pick the most representative item (e.g., the first one for now)
     const item = itemList[0]
+    console.log(`[HostDetail] Fetching history for ${name}:`, item)
+    
     currentRef.value = item.value || 0
     if (unitRef) {
       unitRef.value = item.units || unit || ''
     }
     try {
-      const resp = await fetchItemHistory(item.id, { from, to, limit: 100 })
-      const rows = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : [])
+      let resp = await fetchItemHistory(item.id, { from, to, limit: 100 })
+      console.log(`[HostDetail] History response for ${name}:`, resp)
+      
+      let rows = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : [])
+      
+      // If no data with time filter, try without time filter
+      if (rows.length === 0) {
+        console.log(`[HostDetail] No data for ${name} in date range, trying without filter`)
+        resp = await fetchItemHistory(item.id, { limit: 100 })
+        rows = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : [])
+      }
+      
+      console.log(`[HostDetail] Parsed rows for ${name}:`, rows, `Count: ${rows.length}`)
+      
       const data = rows.map(r => [new Date(r.sampled_at || r.SampledAt).getTime(), parseFloat(r.value || r.Value || 0)])
+      console.log(`[HostDetail] Chart data for ${name}:`, data)
+      
       setMetricChartOption(chart, name, data, color, unitRef?.value || unit)
     } catch (e) {
       console.warn(`Failed to fetch history for ${item.name}`, e)
@@ -715,9 +742,12 @@ const loadData = async () => {
       id: i.id || i.ID,
       name: i.name || i.Name || '',
       value: i.value || i.Value || '',
+      units: i.units || i.Units || '',
       status: i.status ?? i.Status ?? 0,
       status_reason: i.Reason || i.reason || i.Error || i.error || i.ErrorMessage || i.error_message || i.LastError || i.last_error || i.Comment || i.comment || '',
     }))
+    
+    console.log('[HostDetail] Loaded items:', items.value)
     
     await Promise.allSettled([
       loadHistory(),

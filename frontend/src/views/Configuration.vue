@@ -184,6 +184,25 @@
               </el-form-item>
             </el-form>
 
+            <div class="section-divider">OneBot (NapCat) Configuration</div>
+            <el-form :model="editableConfig.qq" label-width="180px" label-position="left">
+              <el-form-item label="Enabled">
+                <el-switch v-model="editableConfig.qq.enabled" />
+              </el-form-item>
+              <el-form-item label="Connection Mode">
+                <el-radio-group v-model="editableConfig.qq.mode">
+                  <el-radio label="reverse">Reverse (NapCat as Client)</el-radio>
+                  <el-radio label="positive">Positive (Server as Client)</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item v-if="editableConfig.qq.mode === 'positive'" label="NapCat WebSocket URL">
+                <el-input v-model="editableConfig.qq.positive_url" placeholder="ws://localhost:3001" />
+              </el-form-item>
+              <el-form-item label="Access Token">
+                <el-input v-model="editableConfig.qq.access_token" type="password" show-password />
+              </el-form-item>
+            </el-form>
+
             <div class="section-divider">Gmail API Configuration</div>
             <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
               <el-form-item label="Enabled">
@@ -375,6 +394,20 @@ export default {
         token_file: '',
         from: '',
       },
+      smtp: {
+        enabled: false,
+        host: '',
+        port: 587,
+        username: '',
+        password: '',
+        from: '',
+      },
+      qq: {
+        enabled: false,
+        mode: 'reverse',
+        positive_url: '',
+        access_token: '',
+      },
       media_rate_limit: {
         global_interval_seconds: 30,
         protocol_interval_seconds: 30,
@@ -452,6 +485,14 @@ export default {
         analysis_min_severity: ['analysis_min_severity', 'AnalysisMinSeverity']
       });
 
+      const gmailSource = data.gmail || data.Gmail || {};
+      mapData(gmailSource, editableConfig.gmail, {
+        enabled: ['enabled', 'Enabled'],
+        credentials_file: ['credentials_file', 'CredentialsFile'],
+        token_file: ['token_file', 'TokenFile'],
+        from: ['from', 'From']
+      });
+
       const smtpSource = data.smtp || data.SMTP || {};
       mapData(smtpSource, editableConfig.smtp, {
         enabled: ['enabled', 'Enabled'],
@@ -460,6 +501,14 @@ export default {
         username: ['username', 'Username'],
         password: ['password', 'Password'],
         from: ['from', 'From']
+      });
+
+      const qqSource = data.qq || data.QQ || {};
+      mapData(qqSource, editableConfig.qq, {
+        enabled: ['enabled', 'Enabled'],
+        mode: ['mode', 'Mode'],
+        positive_url: ['positive_url', 'PositiveURL'],
+        access_token: ['access_token', 'AccessToken']
       });
 
       const mediaSource = data.media_rate_limit || data.MediaRateLimit || {};

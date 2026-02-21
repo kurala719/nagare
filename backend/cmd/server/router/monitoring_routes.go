@@ -83,4 +83,5 @@ func setupItemRoutes(rg *gin.RouterGroup) {
 	itemsWrite.PUT("/:id", api.UpdateItemCtrl)
 	itemsWrite.DELETE("/:id", api.DeleteItemByIDCtrl)
 	itemsWrite.POST("/hosts/:hid/import", api.AddItemsByHostIDFromMonitorCtrl)
+	itemsWrite.POST("/_test/generate-history", api.GenerateTestHistoryCtrl) // DEVELOPMENT: Test data generation
 }

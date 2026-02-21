@@ -47,6 +47,7 @@ type QQCommandHandler func(message string, qqID string, isGroup bool) (reply str
 // QQWebSocketManager manages the WebSocket connection to NapCat
 type QQWebSocketManager struct {
 	conn           *websocket.Conn
+	accessToken    string
 	mu             sync.RWMutex
 	echoMap        map[string]chan OneBotResponse
 	CommandHandler QQCommandHandler
@@ -70,6 +71,19 @@ func (m *QQWebSocketManager) HandleReverseWS(c *gin.Context) {
 		return
 	}
 
+	// Optional: Validate access token from header if configured
+	if m.accessToken != "" {
+		token := c.GetHeader("Authorization")
+		if token == "" {
+			token = c.Query("access_token")
+		}
+		if !strings.HasSuffix(token, m.accessToken) {
+			log.Printf("[QQ-WS] Unauthorized reverse connection attempt")
+			conn.Close()
+			return
+		}
+	}
+
 	m.mu.Lock()
 	if m.conn != nil {
 		m.conn.Close()
@@ -78,7 +92,39 @@ func (m *QQWebSocketManager) HandleReverseWS(c *gin.Context) {
 	m.mu.Unlock()
 
 	log.Printf("[QQ-WS] NapCat connected via Reverse WebSocket")
+	m.Listen(conn, "Reverse")
+}
 
+// ConnectPositiveWS connects to NapCat as a client
+func (m *QQWebSocketManager) ConnectPositiveWS(url string, accessToken string) error {
+	m.mu.Lock()
+	m.accessToken = accessToken
+	m.mu.Unlock()
+
+	header := http.Header{}
+	if accessToken != "" {
+		header.Set("Authorization", "Bearer "+accessToken)
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(url, header)
+	if err != nil {
+		return fmt.Errorf("failed to dial positive websocket: %w", err)
+	}
+
+	m.mu.Lock()
+	if m.conn != nil {
+		m.conn.Close()
+	}
+	m.conn = conn
+	m.mu.Unlock()
+
+	log.Printf("[QQ-WS] Connected to NapCat via Positive WebSocket: %s", url)
+	go m.Listen(conn, "Positive")
+	return nil
+}
+
+// Listen starts reading messages from the connection
+func (m *QQWebSocketManager) Listen(conn *websocket.Conn, mode string) {
 	defer func() {
 		m.mu.Lock()
 		if m.conn == conn {
@@ -86,13 +132,13 @@ func (m *QQWebSocketManager) HandleReverseWS(c *gin.Context) {
 		}
 		m.mu.Unlock()
 		conn.Close()
-		log.Printf("[QQ-WS] NapCat disconnected")
+		log.Printf("[QQ-WS] NapCat %s disconnected", mode)
 	}()
 
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("[QQ-WS] Read error: %v", err)
+			log.Printf("[QQ-WS] %s read error: %v", err)
 			break
 		}
 
@@ -248,6 +294,12 @@ func (m *QQWebSocketManager) IsConnected() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.conn != nil
+}
+
+func (m *QQWebSocketManager) UpdateConfig(accessToken string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.accessToken = accessToken
 }
 
 func extractOneBotMessageText(raw json.RawMessage, fallback string) string {

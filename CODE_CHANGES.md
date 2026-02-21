@@ -1,5 +1,48 @@
 # Code Changes Reference
 
+## Feature: OneBot (NapCat) Positive WebSocket Client (2026-02-21)
+
+### Backend Changes
+
+**File:** `backend/internal/repository/config.go`
+- Added `QQConfig` struct to hold OneBot settings (Enabled, Mode, PositiveURL, AccessToken).
+- Integrated `QQConfig` into main `Config`, `ConfigRequest`, and `ConfigResponse`.
+- Added default values for QQ configuration in `ResetConfig`.
+
+**File:** `backend/internal/repository/media/qq_ws.go`
+- Updated `QQWebSocketManager` to support an `accessToken`.
+- Added `ConnectPositiveWS` method to initiate connections to NapCat as a client.
+- Added `Listen` method to handle the message loop for both Reverse and Positive modes.
+- Added Authorization header support for WebSocket handshake using Bearer tokens.
+- Added `UpdateConfig` method to refresh internal state when configuration changes.
+
+**File:** `backend/internal/service/config.go`
+- Added `InitQQWSServ` to manage the lifecycle of the Positive WebSocket connection using `context`.
+- Implemented an automatic reconnection loop (10s interval) for Positive mode.
+- Added `RestartQQWSServ` to immediately apply configuration changes by restarting the loop.
+
+**File:** `backend/internal/api/config.go`
+- Updated `ModifyMainConfigCtrl` to include `QQ`, `Gmail`, and `External` settings in updates.
+- Added trigger to `RestartQQWSServ()` upon successful configuration update.
+
+**File:** `backend/cmd/server/main.go`
+- Added call to `service.InitQQWSServ()` during background service initialization.
+
+**File:** `backend/configs/nagare_config.json`
+- Added default `qq` configuration section.
+
+### Frontend Changes
+
+**File:** `frontend/src/api/config.js`
+- **Fix:** Removed trailing slashes from `/config/` endpoints to match backend routes and prevent 404 errors.
+
+**File:** `frontend/src/views/Configuration.vue`
+- Added a new configuration section for "OneBot (NapCat)" in the Integrations tab.
+- Users can now toggle OneBot support, switch between "Reverse" and "Positive" modes, and configure the URL and Access Token.
+- Implemented conditional visibility for the URL field based on the selected mode.
+
+---
+
 ## Feature: User QQ Field (2026-02-21)
 
 ### Backend Changes

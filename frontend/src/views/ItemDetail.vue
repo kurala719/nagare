@@ -335,24 +335,31 @@ const loadHistory = async () => {
     const from = Math.floor(start.getTime() / 1000)
     const to = Math.floor(end.getTime() / 1000)
     
+    console.log('[ItemDetail] Loading history for item:', itemId, { from, to })
+    
     // Fetch current period
     const resp = await fetchItemHistory(itemId, {
       from,
       to,
       limit: 500,
     })
+    console.log('[ItemDetail] History response:', resp)
+    
     const payload = resp?.data || resp || []
     let rows = Array.isArray(payload) ? payload : []
+    console.log('[ItemDetail] Parsed rows:', rows)
     
     if (rows.length === 0) {
       const fallbackResp = await fetchItemHistory(itemId, { limit: 500 })
       const fallbackPayload = fallbackResp?.data || fallbackResp || []
       rows = Array.isArray(fallbackPayload) ? fallbackPayload : []
       if (rows.length === 0) {
+        console.log('[ItemDetail] No history data found, showing empty state')
         historyEmpty.value = true
         buildStatusChart([], '', [])
         return
       }
+      console.log('[ItemDetail] Using fallback data (no time filter), got:', rows.length, 'rows')
     }
     
     const series = []

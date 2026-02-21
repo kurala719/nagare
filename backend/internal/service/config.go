@@ -1,6 +1,13 @@
 package service
 
-import "nagare/internal/repository"
+import (
+	"context"
+	"log"
+	"time"
+
+	"nagare/internal/repository"
+	"nagare/internal/repository/media"
+)
 
 // GetAllConfigServ returns all configuration settings
 func GetAllConfigServ() map[string]interface{} {
@@ -41,4 +48,69 @@ func ResetConfigServ() error {
 // SaveConfigServ persists configuration to disk
 func SaveConfigServ() error {
 	return repository.SaveConfig()
+}
+
+var (
+	qqWSCancel context.CancelFunc
+)
+
+// InitQQWSServ initializes the QQ WebSocket connection based on configuration
+func InitQQWSServ() {
+	config, err := GetMainConfigServ()
+	if err != nil {
+		log.Printf("[QQ-WS] Failed to get config for initialization: %v", err)
+		return
+	}
+
+	// Update manager's internal config anyway
+	media.GlobalQQWSManager.UpdateConfig(config.QQ.AccessToken)
+
+	if !config.QQ.Enabled || config.QQ.Mode != "positive" {
+		StopQQWSServ()
+		return
+	}
+
+	// Small delay if we just stopped it
+	if qqWSCancel != nil {
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	qqWSCancel = cancel
+
+	go func() {
+		log.Printf("[QQ-WS] Starting positive reconnection loop")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[QQ-WS] Positive reconnection loop stopped")
+				return
+			default:
+				if !media.GlobalQQWSManager.IsConnected() {
+					log.Printf("[QQ-WS] Attempting positive connection to %s", config.QQ.PositiveURL)
+					err := media.GlobalQQWSManager.ConnectPositiveWS(config.QQ.PositiveURL, config.QQ.AccessToken)
+					if err != nil {
+						log.Printf("[QQ-WS] Positive connection failed: %v, retrying in 10s...", err)
+					}
+				}
+				time.Sleep(10 * time.Second)
+			}
+		}
+	}()
+}
+
+// StopQQWSServ stops the Positive WebSocket reconnection loop
+func StopQQWSServ() {
+	if qqWSCancel != nil {
+		qqWSCancel()
+		qqWSCancel = nil
+	}
+}
+
+// RestartQQWSServ stops and restarts the QQ WebSocket service
+func RestartQQWSServ() {
+	StopQQWSServ()
+	// Wait a bit for goroutine to exit
+	time.Sleep(200 * time.Millisecond)
+	InitQQWSServ()
 }

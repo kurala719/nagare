@@ -51,6 +51,7 @@ func run() error {
 	fmt.Println(">>> Starting Background Services...")
 	service.StartAutoSync()
 	service.StartStatusChecks()
+	service.InitQQWSServ()
 
 	fmt.Println(">>> Recomputing Action and Trigger statuses...")
 	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {

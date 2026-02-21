@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"nagare/internal/model"
@@ -171,4 +172,44 @@ func reverseNetworkStatusHistory(rows []model.NetworkStatusHistory) {
 	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
+}
+
+// GenerateTestHistoryServ - DEVELOPMENT ONLY: Generates sample history data for testing charts
+func GenerateTestHistoryServ() error {
+	// Get first item with a host
+	items, err := repository.GetAllItemsDAO()
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 {
+		return nil // No items, nothing to do
+	}
+
+	item := items[0]
+	if item.ID == 0 {
+		return nil // No valid item
+	}
+
+	// Generate 24 hours of sample data (one hour intervals)
+	now := time.Now().UTC()
+	for i := 0; i < 24; i++ {
+		sampledAt := now.Add(time.Duration(-i) * time.Hour)
+		// Generate varying values (e.g., CPU 30-80%, Memory 40-90%, Speed 100-500)
+		baseValue := float64(50 + (i % 30) + i)
+		if baseValue > 95 {
+			baseValue = 95
+		}
+
+		if err := repository.AddItemHistoryDAO(model.ItemHistory{
+			ItemID:    item.ID,
+			HostID:    item.HID,
+			Value:     fmt.Sprintf("%.2f", baseValue),
+			Units:     item.Units,
+			Status:    1,
+			SampledAt: sampledAt,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

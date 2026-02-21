@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllItemsCtrl handles GET /items
@@ -304,4 +305,13 @@ func PushItemsFromMonitorCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccess(c, http.StatusOK, result)
+}
+
+// GenerateTestHistoryCtrl - DEVELOPMENT ONLY: Generates test history data for debugging charts
+func GenerateTestHistoryCtrl(c *gin.Context) {
+	if err := service.GenerateTestHistoryServ(); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, gin.H{"message": "test history data generated"})
 }

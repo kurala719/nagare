@@ -37,12 +37,19 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 	repository.SetConfigValue("status_check", req.StatusCheck)
 	repository.SetConfigValue("mcp", req.MCP)
 	repository.SetConfigValue("ai", req.AI)
+	repository.SetConfigValue("gmail", req.Gmail)
+	repository.SetConfigValue("qq", req.QQ)
 	repository.SetConfigValue("media_rate_limit", req.MediaRateLimit)
+	repository.SetConfigValue("external", req.External)
 
 	if err := repository.SaveConfig(); err != nil {
 		respondError(c, err)
 		return
 	}
+
+	// Restart services that might need it
+	service.RestartQQWSServ()
+
 	respondSuccessMessage(c, http.StatusOK, "configuration updated")
 }
 

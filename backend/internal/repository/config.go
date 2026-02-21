@@ -10,15 +10,19 @@ var ConfigPath string
 
 // Config represents the main application configuration
 type Config struct {
-	System         SystemConfig         `yaml:"system" json:"system" mapstructure:"system"`
-	Database       DatabaseConfig       `yaml:"database" json:"database" mapstructure:"database"`
-	Sync           SyncConfig           `yaml:"sync" json:"sync" mapstructure:"sync"`
-	StatusCheck    StatusCheckConfig    `yaml:"status_check" json:"status_check" mapstructure:"status_check"`
-	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+}
+
+// QQConfig holds OneBot/NapCat WebSocket settings
+type QQConfig struct {
+	Enabled     bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
+	Mode        string `yaml:"mode" json:"mode" mapstructure:"mode"` // "reverse" or "positive"
+	PositiveURL string `yaml:"positive_url" json:"positive_url" mapstructure:"positive_url"`
+	AccessToken string `yaml:"access_token" json:"access_token" mapstructure:"access_token"`
 }
 
 // GmailConfig holds Gmail API settings
@@ -110,6 +114,7 @@ type ConfigRequest struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -123,6 +128,7 @@ type ConfigResponse struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -202,6 +208,11 @@ func ResetConfig() error {
 	viper.Set("gmail.credentials_file", "configs/gmail_credentials.json")
 	viper.Set("gmail.token_file", "configs/gmail_token.json")
 	viper.Set("gmail.from", "")
+
+	viper.Set("qq.enabled", false)
+	viper.Set("qq.mode", "reverse")
+	viper.Set("qq.positive_url", "ws://localhost:3001")
+	viper.Set("qq.access_token", "")
 
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
 	viper.Set("media_rate_limit.protocol_interval_seconds", 30)
