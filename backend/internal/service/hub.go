@@ -73,16 +73,10 @@ func (h *Hub) Run() {
 }
 
 func (c *Client) WritePump() {
-	for {
-		select {
-		case message, ok := <-c.Send:
-			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-			c.Conn.WriteMessage(websocket.TextMessage, message)
-		}
+	for message := range c.Send {
+		c.Conn.WriteMessage(websocket.TextMessage, message)
 	}
+	c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 }
 
 func (c *Client) ReadPump() {
@@ -117,7 +111,7 @@ func BroadcastMessage(msg interface{}) {
 		log.Printf("broadcast marshal error: %v", err)
 		return
 	}
-	
+
 	select {
 	case GlobalHub.broadcast <- data:
 	default:

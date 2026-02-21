@@ -11,27 +11,27 @@ import (
 
 // GroupReq represents a group request
 type GroupReq struct {
-	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description"`
-	Enabled     int     `json:"enabled"`
-	MonitorID   *uint   `json:"monitor_id,omitempty"`
-	ExternalID  *string `json:"external_id,omitempty"`
-	LastSyncAt  *time.Time `json:"last_sync_at,omitempty"`
-	ExternalSource *string `json:"external_source,omitempty"`
+	Name           string     `json:"name" binding:"required"`
+	Description    string     `json:"description"`
+	Enabled        int        `json:"enabled"`
+	MonitorID      *uint      `json:"monitor_id,omitempty"`
+	ExternalID     *string    `json:"external_id,omitempty"`
+	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
+	ExternalSource *string    `json:"external_source,omitempty"`
 }
 
 // GroupResp represents a group response
 type GroupResp struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Enabled     int    `json:"enabled"`
-	Status      int    `json:"status"`
-	MonitorID   uint   `json:"monitor_id"`
-	ExternalID  string `json:"external_id"`
-	LastSyncAt  *time.Time `json:"last_sync_at"`
-	ExternalSource string `json:"external_source"`
-	HealthScore int    `json:"health_score"`
+	ID             int        `json:"id"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Enabled        int        `json:"enabled"`
+	Status         int        `json:"status"`
+	MonitorID      uint       `json:"monitor_id"`
+	ExternalID     string     `json:"external_id"`
+	LastSyncAt     *time.Time `json:"last_sync_at"`
+	ExternalSource string     `json:"external_source"`
+	HealthScore    int        `json:"health_score"`
 }
 
 // GroupSummary represents aggregated group data
@@ -119,7 +119,7 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	if req.ExternalID != nil {
 		group.ExternalID = *req.ExternalID
 	}
-	group.Status = determineGroupStatus(group, nil)
+	group.Status = determineGroupStatus(group)
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
 	}
@@ -141,22 +141,17 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		return err
 	}
 
-	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
-	if err != nil {
-		return err
-	}
-
 	// Update fields from request
 	updated := model.Group{
-		Name:        req.Name,
-		Description: req.Description,
-		Enabled:     req.Enabled,
-		MonitorID:   existing.MonitorID,  // Preserve existing value
-		ExternalID:  existing.ExternalID, // Preserve existing value
-		LastSyncAt:  existing.LastSyncAt, // Preserve existing value
+		Name:           req.Name,
+		Description:    req.Description,
+		Enabled:        req.Enabled,
+		MonitorID:      existing.MonitorID,      // Preserve existing value
+		ExternalID:     existing.ExternalID,     // Preserve existing value
+		LastSyncAt:     existing.LastSyncAt,     // Preserve existing value
 		ExternalSource: existing.ExternalSource, // Preserve existing value
-		Status:      existing.Status,
-		HealthScore: existing.HealthScore,
+		Status:         existing.Status,
+		HealthScore:    existing.HealthScore,
 	}
 
 	// Only update if provided in request
@@ -175,7 +170,7 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 
 	// Preserve status unless enabled state changed
 	if req.Enabled != existing.Enabled {
-		updated.Status = determineGroupStatus(updated, hosts)
+		updated.Status = determineGroupStatus(updated)
 	}
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
@@ -315,15 +310,15 @@ func PushGroupConfigServ(id uint) error {
 
 func groupToResp(group model.Group) GroupResp {
 	return GroupResp{
-		ID:          int(group.ID),
-		Name:        group.Name,
-		Description: group.Description,
-		Enabled:     group.Enabled,
-		Status:      group.Status,
-		MonitorID:   group.MonitorID,
-		ExternalID:  group.ExternalID,
-		LastSyncAt:  group.LastSyncAt,
+		ID:             int(group.ID),
+		Name:           group.Name,
+		Description:    group.Description,
+		Enabled:        group.Enabled,
+		Status:         group.Status,
+		MonitorID:      group.MonitorID,
+		ExternalID:     group.ExternalID,
+		LastSyncAt:     group.LastSyncAt,
 		ExternalSource: group.ExternalSource,
-		HealthScore: group.HealthScore,
+		HealthScore:    group.HealthScore,
 	}
 }

@@ -6,41 +6,41 @@ import (
 	"strings"
 	"time"
 
-	"nagare/internal/service/utils"
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
+	"nagare/internal/service/utils"
 )
 
 // ItemReq represents an item request
 type ItemReq struct {
-	Name           string `json:"name"`
-	HID            uint   `json:"hid"`
-	Value          string `json:"value"`
-	ValueType      string `json:"value_type"`
-	Type           string `json:"type"`
-	Enabled        int    `json:"enabled"`
-	ItemID         string `json:"itemid"`
-	ExternalHostID string `json:"hostid"`
-	Units          string `json:"units"`
-	Comment        string `json:"comment"`
+	Name           string     `json:"name"`
+	HID            uint       `json:"hid"`
+	Value          string     `json:"value"`
+	ValueType      string     `json:"value_type"`
+	Type           string     `json:"type"`
+	Enabled        int        `json:"enabled"`
+	ItemID         string     `json:"itemid"`
+	ExternalHostID string     `json:"hostid"`
+	Units          string     `json:"units"`
+	Comment        string     `json:"comment"`
 	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
-	ExternalSource string `json:"external_source,omitempty"`
+	ExternalSource string     `json:"external_source,omitempty"`
 }
 
 // ItemResp represents an item response
 type ItemResp struct {
-	ID         uint   `json:"id"`
-	Name       string `json:"name"`
-	HID        uint   `json:"hid"`
-	Value      string `json:"value"`
-	Units      string `json:"units"`
-	Enabled    int    `json:"enabled"`
-	Status     int    `json:"status"`
-	StatusDesc string `json:"status_description"`
-	Comment    string `json:"comment"`
-	LastSyncAt *time.Time `json:"last_sync_at"`
-	ExternalSource string `json:"external_source"`
+	ID             uint       `json:"id"`
+	Name           string     `json:"name"`
+	HID            uint       `json:"hid"`
+	Value          string     `json:"value"`
+	Units          string     `json:"units"`
+	Enabled        int        `json:"enabled"`
+	Status         int        `json:"status"`
+	StatusDesc     string     `json:"status_description"`
+	Comment        string     `json:"comment"`
+	LastSyncAt     *time.Time `json:"last_sync_at"`
+	ExternalSource string     `json:"external_source"`
 }
 
 // SyncResult is defined in host.go - using the same type here
@@ -111,9 +111,9 @@ func AddItemServ(req ItemReq) (ItemResp, error) {
 	var host model.Host
 	if loadedHost, err := repository.GetHostByIDDAO(hid); err == nil {
 		host = loadedHost
-		item.Status = determineItemStatus(item, host)
+		item.Status = determineItemStatus(item)
 	} else {
-		item.Status = determineItemStatus(item, model.Host{Enabled: 0, Status: 2})
+		item.Status = determineItemStatus(item)
 	}
 
 	if err := repository.AddItemDAO(item); err != nil {
@@ -146,18 +146,18 @@ func UpdateItemServ(id uint, req ItemReq) error {
 		valueType = req.ValueType
 	}
 	updated := model.Item{
-		Name:           req.Name,
-		HID:            hid,
-		ItemID:         req.ItemID,
-		ExternalHostID: req.ExternalHostID,
-		ValueType:      valueType,
-		LastValue:      req.Value,
-		Units:          req.Units,
-		Enabled:        req.Enabled,
-		Comment:        req.Comment,
-		LastSyncAt:     existing.LastSyncAt,
-		ExternalSource: existing.ExternalSource,
-		Status:         existing.Status,
+		Name:              req.Name,
+		HID:               hid,
+		ItemID:            req.ItemID,
+		ExternalHostID:    req.ExternalHostID,
+		ValueType:         valueType,
+		LastValue:         req.Value,
+		Units:             req.Units,
+		Enabled:           req.Enabled,
+		Comment:           req.Comment,
+		LastSyncAt:        existing.LastSyncAt,
+		ExternalSource:    existing.ExternalSource,
+		Status:            existing.Status,
 		StatusDescription: existing.StatusDescription,
 	}
 	if req.LastSyncAt != nil {
@@ -168,11 +168,7 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	}
 	// Preserve status and description unless enabled state changed
 	if req.Enabled != existing.Enabled {
-		if host, err := repository.GetHostByIDDAO(hid); err == nil {
-			updated.Status = determineItemStatus(updated, host)
-		} else {
-			updated.Status = determineItemStatus(updated, model.Host{Enabled: 0, Status: 2})
-		}
+		updated.Status = determineItemStatus(updated)
 		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateItemDAO(id, updated); err != nil {
@@ -362,16 +358,16 @@ func ConsultItemByIDServ(pid, id uint) (string, error) {
 // itemToResp converts a domain Item to ItemResp
 func itemToResp(item model.Item) ItemResp {
 	return ItemResp{
-		ID:         item.ID,
-		Name:       item.Name,
-		HID:        item.HID,
-		Value:      item.LastValue,
-		Units:      item.Units,
-		Enabled:    item.Enabled,
-		Status:     item.Status,
-		StatusDesc: item.StatusDescription,
-		Comment:    item.Comment,
-		LastSyncAt: item.LastSyncAt,
+		ID:             item.ID,
+		Name:           item.Name,
+		HID:            item.HID,
+		Value:          item.LastValue,
+		Units:          item.Units,
+		Enabled:        item.Enabled,
+		Status:         item.Status,
+		StatusDesc:     item.StatusDescription,
+		Comment:        item.Comment,
+		LastSyncAt:     item.LastSyncAt,
 		ExternalSource: item.ExternalSource,
 	}
 }
@@ -566,22 +562,22 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 
 		snmpCfg := monitors.SnmpConfig{
-			Community:           host.SNMPCommunity,
-			Version:             host.SNMPVersion,
-			Port:                host.SNMPPort,
-			V3User:              host.SNMPV3User,
-			V3AuthPass:          authPass,
-			V3PrivPass:          privPass,
-			V3AuthProtocol:      host.SNMPV3AuthProtocol,
-			V3PrivProtocol:      host.SNMPV3PrivProtocol,
-			V3SecurityLevel:     host.SNMPV3SecurityLevel,
+			Community:       host.SNMPCommunity,
+			Version:         host.SNMPVersion,
+			Port:            host.SNMPPort,
+			V3User:          host.SNMPV3User,
+			V3AuthPass:      authPass,
+			V3PrivPass:      privPass,
+			V3AuthProtocol:  host.SNMPV3AuthProtocol,
+			V3PrivProtocol:  host.SNMPV3PrivProtocol,
+			V3SecurityLevel: host.SNMPV3SecurityLevel,
 		}
 		// Use IP address as target for SNMP
 		targetID = host.IPAddr
 		if targetID == "" {
 			targetID = host.Hostid
 		}
-		
+
 		// Load existing items to pick up custom OIDs
 		items, err := repository.GetItemsByHIDDAO(host.ID)
 		if err == nil && len(items) > 0 {
@@ -611,7 +607,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	for _, mItem := range monitorItems {
 		enabled, status := mapMonitorItemStatus(mItem.Status)
 		item, err := repository.GetItemByHIDAndItemIDDAO(hid, mItem.ID)
-		
+
 		if err != nil {
 			// Check if item exists with same NAME but different ID (OID Migration case)
 			existingItems, _ := repository.GetItemsByHIDDAO(hid)
@@ -713,7 +709,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			if len(normalizedLocalID) > 0 && normalizedLocalID[0] == '.' {
 				normalizedLocalID = normalizedLocalID[1:]
 			}
-			
+
 			if _, ok := monitorItemIDs[normalizedLocalID]; ok {
 				continue
 			}
@@ -757,7 +753,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	}
 
 	_, _ = recomputeHostStatus(hid)
-	
+
 	// Update host LastSyncAt after successful poll
 	nowHost := time.Now().UTC()
 	_ = repository.UpdateHostLastSyncAtDAO(hid, &nowHost)
@@ -766,10 +762,10 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		_, _ = recomputeGroupStatus(host.GroupID)
 	}
 	_, _ = recomputeMonitorStatus(mid)
-	
+
 	// Trigger automatic threshold checks for this host
 	go CheckItemThresholds(hid)
-	
+
 	SyncEvent("items", mid, hid, result)
 	return result, nil
 }
@@ -1028,7 +1024,7 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 		LogService("warn", "push items skipped due to host error", map[string]interface{}{"host_id": hid, "host_status": currentStatus, "host_status_description": reason}, nil, "")
 		return result, fmt.Errorf("host is in error state (status: %d)", currentStatus)
 	}
-	
+
 	if host.Status != currentStatus {
 		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, currentStatus, "")
 	}
@@ -1109,13 +1105,13 @@ func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 func mapMonitorItemStatus(status string) (enabled int, itemStatus int) {
 	enabled = 1
 	itemStatus = 1
-	
+
 	// Convention: '0' = Enabled/Active, '1' = Disabled/Inactive
 	if status == "1" || strings.ToLower(status) == "disabled" {
 		enabled = 0
 		itemStatus = 0
 	}
-	
+
 	return enabled, itemStatus
 }
 

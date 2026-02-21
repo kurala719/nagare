@@ -51,6 +51,42 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="16" class="metrics-row">
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('hosts.cpuUsage') || 'CPU' }}</span>
+              <el-tag size="small" type="primary">{{ currentCpu }}%</el-tag>
+            </div>
+          </template>
+          <div ref="cpuChartRef" class="mini-chart"></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('hosts.memoryUsage') || 'Memory' }}</span>
+              <el-tag size="small" type="success">{{ currentMem }}%</el-tag>
+            </div>
+          </template>
+          <div ref="memChartRef" class="mini-chart"></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>{{ $t('hosts.networkTraffic') || 'Network' }}</span>
+              <el-tag size="small" type="warning">{{ currentNet }} KB/s</el-tag>
+            </div>
+          </template>
+          <div ref="netChartRef" class="mini-chart"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="16">
       <el-col :xs="24" :lg="12">
         <el-card>

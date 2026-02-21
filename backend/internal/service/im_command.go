@@ -190,11 +190,12 @@ func handleGetAlertsCommand(args []string, rawArgs string) (IMCommandResult, err
 
 	options, flags := parseIMOptions(args)
 	for _, flag := range flags {
-		if flag == "all" {
+		switch flag {
+		case "all":
 			status = nil
-		} else if flag == "active" {
+		case "active":
 			status = intPtr(0)
-		} else if flag == "resolved" {
+		case "resolved":
 			status = intPtr(1)
 		}
 	}

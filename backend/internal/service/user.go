@@ -283,11 +283,12 @@ func UploadAvatarServ(username string, fileHeader *multipart.FileHeader) (string
 	}
 
 	ext := ".png"
-	if contentType == "image/jpeg" || contentType == "image/jpg" {
+	switch contentType {
+	case "image/jpeg", "image/jpg":
 		ext = ".jpg"
-	} else if contentType == "image/gif" {
+	case "image/gif":
 		ext = ".gif"
-	} else if contentType == "image/webp" {
+	case "image/webp":
 		ext = ".webp"
 	}
 

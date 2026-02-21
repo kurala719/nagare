@@ -70,7 +70,7 @@ func determineHostStatus(h model.Host, monitor model.Monitor) int {
 	return 1
 }
 
-func determineItemStatus(i model.Item, host model.Host) int {
+func determineItemStatus(i model.Item) int {
 	if i.Enabled == 0 {
 		return 0
 	}
@@ -119,7 +119,7 @@ func determineTriggerStatus(t model.Trigger) int {
 	return 1
 }
 
-func determineGroupStatus(group model.Group, hosts []model.Host) int {
+func determineGroupStatus(group model.Group) int {
 	if group.Enabled == 0 {
 		return 0
 	}
@@ -264,7 +264,7 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	status := determineGroupStatus(group, hosts)
+	status := determineGroupStatus(group)
 	_ = repository.UpdateGroupStatusDAO(gid, status)
 
 	// Compute health score based on hosts
@@ -351,15 +351,15 @@ func recomputeItemStatus(id uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	host, err := repository.GetHostByIDDAO(item.HID)
+	_, err = repository.GetHostByIDDAO(item.HID)
 	if err != nil {
-		status := determineItemStatus(item, model.Host{Enabled: 0, Status: 2})
+		status := determineItemStatus(item)
 		if status == 2 {
 			return status, repository.UpdateItemStatusDAO(id, status)
 		}
 		return status, repository.UpdateItemStatusAndDescriptionDAO(id, status, "")
 	}
-	status := determineItemStatus(item, host)
+	status := determineItemStatus(item)
 	if status == 2 {
 		if err := repository.UpdateItemStatusDAO(id, status); err != nil {
 			return status, err

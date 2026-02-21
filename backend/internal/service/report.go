@@ -103,14 +103,14 @@ func processReport(report model.Report) {
 	// Page 1: Cover & Summary
 	buildProfessionalHeader(m, report.Title)
 	buildExecutiveSummary(m, data)
-	
+
 	// Charts Section
 	m.AddAutoRow(text.NewCol(12, "Infrastructure Health & Trends", props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
-	
+
 	// Pie Chart & Line Chart
 	pieBytes, errPie := utils.GeneratePieChart("Host Status", data.StatusDistribution)
 	lineBytes, errLine := utils.GenerateLineChart("Alert Trend", []string{"M", "T", "W", "T", "F", "S", "S"}, data.AlertTrend)
-	
+
 	if errPie == nil && errLine == nil {
 		m.AddRow(80,
 			col.New(6).Add(image.NewFromBytes(pieBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
@@ -126,7 +126,7 @@ func processReport(report model.Report) {
 
 	// Page 2: Host Analytics
 	m.AddAutoRow(text.NewCol(12, "Critical Host Analytics", props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
-	
+
 	// Failure Frequency Chart
 	barBytes, errBar := utils.GenerateBarChart("Failure Frequency", data.FailureFrequency)
 	if errBar == nil {
@@ -139,14 +139,14 @@ func processReport(report model.Report) {
 
 	fileName := fmt.Sprintf("report_%d.pdf", report.ID)
 	filePath := "public/reports/" + fileName
-	
+
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		LogService("error", "failed to create reports directory", map[string]interface{}{"error": err.Error()}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
 		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to create report directory for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
-	
+
 	document, err := m.Generate()
 	if err != nil {
 		LogService("error", "failed to generate PDF", map[string]interface{}{"error": err.Error()}, nil, "")
@@ -338,7 +338,7 @@ func buildProfessionalHeader(m core.Maroto, title string) {
 
 func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
 	m.AddAutoRow(text.NewCol(12, "Executive Summary", props.Text{Size: 14, Style: fontstyle.Bold}))
-	
+
 	m.AddRow(20,
 		text.NewCol(4, fmt.Sprintf("Total Alerts: %d", data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
 		text.NewCol(4, fmt.Sprintf("Avg Health: %.2f%%", data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
@@ -350,9 +350,9 @@ func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
 
 func buildTopHostsTable(m core.Maroto, rows [][]string) {
 	m.AddAutoRow(text.NewCol(12, "Top Resource Consumers (CPU Usage)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
-	
+
 	header := []string{"Asset Name", "IP Address", "Avg Usage", "Units", "Status"}
-	
+
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
 		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
@@ -374,9 +374,9 @@ func buildTopHostsTable(m core.Maroto, rows [][]string) {
 
 func buildDowntimeTable(m core.Maroto, rows [][]string) {
 	m.AddAutoRow(text.NewCol(12, "Stability Issues (Frequency)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
-	
+
 	header := []string{"Asset Name", "IP Address", "Summary", "Alert Count"}
-	
+
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
 		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
@@ -400,12 +400,13 @@ func GetReportServ(id uint) (ReportResp, error) {
 	if err != nil {
 		return ReportResp{}, err
 	}
-	
-	statusStr := "pending"
-	if r.Status == 1 {
-		statusStr = "completed"
-	} else if r.Status == 2 {
-		statusStr = "failed"
+
+	status := "pending"
+	switch r.Status {
+	case 1:
+		status = "completed"
+	case 2:
+		status = "failed"
 	}
 
 	return ReportResp{
@@ -413,7 +414,7 @@ func GetReportServ(id uint) (ReportResp, error) {
 		ReportType:  r.ReportType,
 		Title:       r.Title,
 		DownloadURL: r.DownloadURL,
-		Status:      statusStr,
+		Status:      status,
 		StatusCode:  r.Status,
 		GeneratedAt: r.GeneratedAt,
 	}, nil
@@ -425,21 +426,22 @@ func ListReportsServ(rtype string, status *int, limit, offset int) ([]ReportResp
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var res []ReportResp
 	for _, r := range reports {
-		statusStr := "pending"
-		if r.Status == 1 {
-			statusStr = "completed"
-		} else if r.Status == 2 {
-			statusStr = "failed"
+		status := "pending"
+		switch r.Status {
+		case 1:
+			status = "completed"
+		case 2:
+			status = "failed"
 		}
 		res = append(res, ReportResp{
 			ID:          r.ID,
 			ReportType:  r.ReportType,
 			Title:       r.Title,
 			DownloadURL: r.DownloadURL,
-			Status:      statusStr,
+			Status:      status,
 			StatusCode:  r.Status,
 			GeneratedAt: r.GeneratedAt,
 		})
