@@ -57,7 +57,7 @@
               />
             </el-form-item>
 
-            <el-form-item label="Email" prop="email">
+            <el-form-item :label="$t('auth.email')" prop="email">
               <div style="display: flex; gap: 8px;">
                 <el-input 
                   v-model="form.email" 
@@ -160,17 +160,43 @@ const validatePass2 = (rule, value, callback) => {
   }
 }
 
+const validatePasswordStrength = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error(t('auth.password') + ' is required'))
+    return
+  }
+
+  const trimmed = String(value)
+  if (trimmed.length < 8 || /\s/.test(trimmed)) {
+    callback(new Error(t('auth.passwordRules')))
+    return
+  }
+
+  let score = 0
+  if (/[a-z]/.test(trimmed)) score += 1
+  if (/[A-Z]/.test(trimmed)) score += 1
+  if (/[0-9]/.test(trimmed)) score += 1
+  if (/[^A-Za-z0-9]/.test(trimmed)) score += 1
+
+  if (score < 3) {
+    callback(new Error(t('auth.passwordTooWeak')))
+    return
+  }
+
+  callback()
+}
+
 const rules = {
   username: [{ required: true, message: t('auth.username') + ' is required', trigger: 'blur' }],
   email: [
-    { required: true, message: 'Email is required', trigger: 'blur' },
-    { type: 'email', message: 'Please enter a valid email address', trigger: 'blur' }
+    { required: true, message: t('auth.email') + ' is required', trigger: 'blur' },
+    { type: 'email', message: t('auth.emailInvalid'), trigger: 'blur' }
   ],
   code: [
     { required: true, message: 'Verification code is required', trigger: 'blur' },
     { len: 6, message: 'Code must be 6 digits', trigger: 'blur' }
   ],
-  password: [{ required: true, message: t('auth.password') + ' is required', trigger: 'blur' }],
+  password: [{ validator: validatePasswordStrength, trigger: 'blur' }],
   confirm: [{ validator: validatePass2, trigger: 'blur' }]
 }
 
@@ -182,7 +208,7 @@ const onSendCode = async () => {
   
   // Basic email regex check
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    ElMessage.warning('Please enter a valid email address')
+    ElMessage.warning(t('auth.emailInvalid'))
     return
   }
 

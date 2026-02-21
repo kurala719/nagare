@@ -276,6 +276,9 @@ func UploadAvatarCtrl(c *gin.Context) {
 		return
 	}
 
+	// Limit request body size to reduce abuse
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 6<<20)
+
 	// Parse multipart form with max file size of 5MB
 	if err := c.Request.ParseMultipartForm(5 << 20); err != nil {
 		respondBadRequest(c, "failed to parse form: "+err.Error())

@@ -130,9 +130,35 @@ const validatePass2 = (rule, value, callback) => {
   }
 }
 
+const validatePasswordStrength = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error(t('auth.newPassword') + ' is required'))
+    return
+  }
+
+  const trimmed = String(value)
+  if (trimmed.length < 8 || /\s/.test(trimmed)) {
+    callback(new Error(t('auth.passwordRules')))
+    return
+  }
+
+  let score = 0
+  if (/[a-z]/.test(trimmed)) score += 1
+  if (/[A-Z]/.test(trimmed)) score += 1
+  if (/[0-9]/.test(trimmed)) score += 1
+  if (/[^A-Za-z0-9]/.test(trimmed)) score += 1
+
+  if (score < 3) {
+    callback(new Error(t('auth.passwordTooWeak')))
+    return
+  }
+
+  callback()
+}
+
 const rules = {
   username: [{ required: true, message: t('auth.username') + ' is required', trigger: 'blur' }],
-  newPassword: [{ required: true, message: t('auth.newPassword') + ' is required', trigger: 'blur' }],
+  newPassword: [{ validator: validatePasswordStrength, trigger: 'blur' }],
   confirm: [{ validator: validatePass2, trigger: 'blur' }]
 }
 

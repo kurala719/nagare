@@ -7,11 +7,30 @@
 
     <el-card class="profile-card">
       <div class="profile-header">
-        <div class="avatar-container">
-          <el-avatar :size="100" :src="profile.avatar" />
-          <div class="avatar-edit-overlay" v-if="profile.avatar">
-            <el-icon><Edit /></el-icon>
+        <div class="avatar-block">
+          <div class="avatar-container">
+            <el-avatar :size="100" :src="pendingAvatarUrl || profile.avatar || undefined">
+              <span class="avatar-fallback">{{ avatarInitials }}</span>
+            </el-avatar>
+            <div
+              class="avatar-edit-overlay"
+              role="button"
+              tabindex="0"
+              @click="openAvatarPicker"
+              @keydown.enter.prevent="openAvatarPicker"
+              @keydown.space.prevent="openAvatarPicker"
+            >
+              <el-icon><Edit /></el-icon>
+            </div>
+            <input
+              ref="avatarInput"
+              class="avatar-input"
+              type="file"
+              accept="image/*"
+              @change="handleAvatarFileChange"
+            />
           </div>
+          <p class="avatar-help">{{ $t('profile.avatarHelp') }}</p>
         </div>
         <div class="profile-meta">
           <h2 class="profile-name">{{ profile.nickname || profile.username || '-' }}</h2>
@@ -20,7 +39,7 @@
       </div>
 
       <div class="profile-form-section">
-        <el-form :model="form" label-width="120px" label-position="top">
+        <el-form ref="profileFormRef" :model="form" :rules="rules" label-width="120px" label-position="top">
           <el-row :gutter="24">
             <el-col :md="12">
               <el-form-item :label="$t('profile.username')">
@@ -36,7 +55,7 @@
 
           <el-row :gutter="24">
             <el-col :md="12">
-              <el-form-item :label="$t('profile.email')">
+              <el-form-item :label="$t('profile.email')" prop="email">
                 <el-input v-model="form.email" :prefix-icon="Message" />
               </el-form-item>
             </el-col>
@@ -46,28 +65,6 @@
               </el-form-item>
             </el-col>
           </el-row>
-
-          <el-form-item :label="$t('profile.avatar')">
-            <div class="avatar-upload-wrapper">
-              <el-upload
-                class="avatar-uploader"
-                action="#"
-                :http-request="handleAvatarUpload"
-                :show-file-list="false"
-                :file-list="[]"
-                :auto-upload="true"
-                :disabled="uploading"
-                accept="image/*"
-              >
-                <img v-if="form.avatar" :src="form.avatar" class="avatar-preview" />
-                <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-              </el-upload>
-              <div v-if="uploading" class="upload-loading">
-                <el-progress type="circle" :percentage="uploadProgress" :width="60" />
-              </div>
-            </div>
-            <p class="avatar-help">{{ $t('profile.avatarHelp') }}</p>
-          </el-form-item>
 
           <el-form-item :label="$t('profile.address')">
             <el-input v-model="form.address" :prefix-icon="Location" />
@@ -93,13 +90,17 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Edit, Message, Phone, Location, Plus } from '@element-plus/icons-vue'
+import { Edit, Message, Phone, Location } from '@element-plus/icons-vue'
 import { getUserProfile, updateUserProfile, uploadAvatar } from '@/api/users'
 import { getUserClaims, getUserPrivileges } from '@/utils/auth'
 
 const saving = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
+const profileFormRef = ref(null)
+const avatarInput = ref(null)
+const pendingAvatarFile = ref(null)
+const pendingAvatarUrl = ref('')
 const { t } = useI18n()
 const profile = reactive({
   username: '',
@@ -121,6 +122,23 @@ const form = reactive({
   introduction: ''
 })
 
+const validateEmail = (rule, value, callback) => {
+  if (!value) {
+    callback()
+    return
+  }
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(String(value).trim())) {
+    callback(new Error(t('profile.emailInvalid')))
+    return
+  }
+  callback()
+}
+
+const rules = {
+  email: [{ validator: validateEmail, trigger: 'blur' }]
+}
+
 const roleLabel = computed(() => {
   const privilege = getUserPrivileges()
   if (privilege >= 3) return t('profile.roles.superadmin')
@@ -128,6 +146,35 @@ const roleLabel = computed(() => {
   if (privilege >= 1) return t('profile.roles.user')
   return t('profile.roles.unauthorized')
 })
+
+const avatarInitials = computed(() => {
+  const source = (profile.nickname || profile.username || '').trim()
+  if (!source) return '?'
+  const parts = source.split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+})
+
+const resolveBackendOrigin = () => {
+  if (!import.meta.env.DEV) return ''
+  if (typeof window === 'undefined') return ''
+  const { protocol, hostname, port } = window.location
+  if (port === '8080') return ''
+  return `${protocol}//${hostname}:8080`
+}
+
+const normalizeAvatarUrl = (value) => {
+  if (!value) return ''
+  const trimmed = String(value).trim()
+  if (!trimmed) return ''
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed
+  const prefixed = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  const backendOrigin = resolveBackendOrigin()
+  if (backendOrigin && prefixed.startsWith('/avatars/')) {
+    return `${backendOrigin}${prefixed}`
+  }
+  return prefixed
+}
 
 const setDefaultsFromClaims = () => {
   const claims = getUserClaims()
@@ -140,12 +187,14 @@ const loadProfile = async () => {
   try {
     const { data } = await getUserProfile()
     const payload = data?.data || data
+    const normalizedAvatar = normalizeAvatarUrl(payload?.avatar)
     Object.assign(profile, payload)
+    profile.avatar = normalizedAvatar
     Object.assign(form, {
       nickname: payload?.nickname || '',
       email: payload?.email || '',
       phone: payload?.phone || '',
-      avatar: payload?.avatar || '',
+      avatar: normalizedAvatar,
       address: payload?.address || '',
       introduction: payload?.introduction || ''
     })
@@ -158,87 +207,73 @@ const loadProfile = async () => {
   }
 }
 
-const handleAvatarUpload = async (options) => {
-  const { file, onSuccess, onError, onProgress } = options
+const openAvatarPicker = () => {
+  if (uploading.value) return
+  avatarInput.value?.click()
+}
+
+const clearPendingAvatar = () => {
+  if (pendingAvatarUrl.value) {
+    URL.revokeObjectURL(pendingAvatarUrl.value)
+  }
+  pendingAvatarUrl.value = ''
+  pendingAvatarFile.value = null
+  uploadProgress.value = 0
+}
+
+const handleAvatarFileChange = (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
 
   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
-    const err = new Error('Invalid avatar file type')
-    if (onError) {
-      onError(err)
-    }
     ElMessage.error(t('profile.avatarUploadFailed') || 'Invalid avatar file type')
+    event.target.value = ''
     return
   }
 
-  // Validate file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
-    const err = new Error('Avatar file is too large')
-    if (onError) {
-      onError(err)
-    }
     ElMessage.error(t('profile.avatarTooLarge') || 'Avatar file is too large (max 5MB)')
+    event.target.value = ''
     return
   }
 
-  uploading.value = true
-  uploadProgress.value = 0
-  if (onProgress) {
-    onProgress({ percent: 10 })
-  }
-
-  try {
-    const formData = new FormData()
-    formData.append('avatar', file)
-
-    const response = await uploadAvatar(formData, (progressEvent) => {
-      if (!progressEvent.total) return
-      const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-      uploadProgress.value = percent
-      if (onProgress) {
-        onProgress({ percent })
-      }
-    })
-    const avatarURL = response.data.data?.avatar_url || response.data.avatar_url
-
-    if (avatarURL) {
-      form.avatar = avatarURL
-      profile.avatar = avatarURL
-      if (onProgress) {
-        onProgress({ percent: 100 })
-      }
-      if (onSuccess) {
-        onSuccess(response)
-      }
-      ElMessage.success(t('profile.avatarUploadSuccess') || 'Avatar uploaded successfully')
-    } else {
-      const err = new Error('Missing avatar URL in response')
-      if (onError) {
-        onError(err)
-      }
-      ElMessage.error(t('profile.avatarUploadFailed') || 'Failed to upload avatar')
-    }
-  } catch (err) {
-    if (onError) {
-      onError(err)
-    }
-    ElMessage.error(err?.response?.data?.error || err.message || t('profile.avatarUploadFailed'))
-  } finally {
-    uploading.value = false
-    uploadProgress.value = 0
-  }
+  clearPendingAvatar()
+  pendingAvatarFile.value = file
+  pendingAvatarUrl.value = URL.createObjectURL(file)
+  event.target.value = ''
 }
 
 const onSave = async () => {
   saving.value = true
   try {
-    await updateUserProfile({ ...form })
+    if (profileFormRef.value) {
+      await profileFormRef.value.validate()
+    }
+    let avatarURL = form.avatar
+    if (pendingAvatarFile.value) {
+      uploading.value = true
+      const formData = new FormData()
+      formData.append('avatar', pendingAvatarFile.value)
+      const response = await uploadAvatar(formData, (progressEvent) => {
+        if (!progressEvent.total) return
+        uploadProgress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+      })
+      avatarURL = normalizeAvatarUrl(response?.data?.avatar_url || response?.avatar_url)
+      if (!avatarURL) {
+        throw new Error('Missing avatar URL in response')
+      }
+    }
+
+    await updateUserProfile({ ...form, avatar: avatarURL })
     ElMessage.success(t('profile.updated'))
     await loadProfile()
+    clearPendingAvatar()
   } catch (err) {
     ElMessage.error(err?.response?.data?.error || err.message || t('profile.saveFailed'))
   } finally {
     saving.value = false
+    uploading.value = false
   }
 }
 
@@ -251,6 +286,7 @@ const onReset = () => {
     address: profile.address || '',
     introduction: profile.introduction || ''
   })
+  clearPendingAvatar()
 }
 
 onMounted(() => {
@@ -276,9 +312,24 @@ onMounted(() => {
   margin: -20px -20px 24px -20px;
 }
 
+.avatar-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .avatar-container {
   position: relative;
   display: inline-block;
+}
+
+.avatar-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
 .avatar-edit-overlay {
@@ -342,57 +393,10 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.avatar-upload-wrapper {
-  position: relative;
-  width: 100px;
-  height: 100px;
-}
-
-.avatar-uploader {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-:deep(.avatar-uploader .el-upload) {
-  width: 100%;
-  height: 100%;
-}
-
-:deep(.avatar-uploader .el-upload-dragger) {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-}
-
-.avatar-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.avatar-uploader-icon {
-  width: 60%;
-  height: 60%;
-  font-size: 32px;
-  color: #8c939d;
-}
-
-.upload-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
+.avatar-fallback {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-muted);
 }
 
 .avatar-help {

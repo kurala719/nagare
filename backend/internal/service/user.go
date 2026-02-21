@@ -4,11 +4,18 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"image"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -119,6 +126,12 @@ func GetUserByUsernameServ(username string) (UserResponse, error) {
 }
 
 func AddUserServ(req UserRequest) error {
+	if req.Email != "" && !isValidEmail(req.Email) {
+		return model.ErrInvalidInput
+	}
+	if req.Password != "" && !isStrongPassword(req.Password) {
+		return model.ErrInvalidInput
+	}
 	status := 1
 	if req.Status != nil {
 		status = *req.Status
@@ -152,6 +165,9 @@ func UpdateUserServ(id int, req UserRequest) error {
 		user.Username = req.Username
 	}
 	if req.Password != "" {
+		if !isStrongPassword(req.Password) {
+			return model.ErrInvalidInput
+		}
 		user.Password = req.Password
 	}
 	if req.Privileges != 0 {
@@ -162,6 +178,9 @@ func UpdateUserServ(id int, req UserRequest) error {
 	}
 
 	if req.Email != "" {
+		if !isValidEmail(req.Email) {
+			return model.ErrInvalidInput
+		}
 		user.Email = req.Email
 	}
 	if req.Phone != "" {
@@ -188,10 +207,17 @@ func UpdateUserProfileServ(username string, req UserRequest) error {
 	if err != nil {
 		return err
 	}
+	oldAvatar := strings.TrimSpace(user.Avatar)
+	if req.Email != "" && !isValidEmail(req.Email) {
+		return model.ErrInvalidInput
+	}
 
 	user.Email = req.Email
 	user.Phone = req.Phone
-	user.Avatar = req.Avatar
+	newAvatar := strings.TrimSpace(req.Avatar)
+	if newAvatar != "" {
+		user.Avatar = newAvatar
+	}
 	user.Address = req.Address
 	user.Introduction = req.Introduction
 	user.Nickname = req.Nickname
@@ -200,7 +226,15 @@ func UpdateUserProfileServ(username string, req UserRequest) error {
 		user.Username = req.Username
 	}
 
-	return repository.UpdateUserDAO(int(user.ID), user)
+	if err := repository.UpdateUserDAO(int(user.ID), user); err != nil {
+		return err
+	}
+
+	if newAvatar != "" && newAvatar != oldAvatar {
+		_ = deleteLocalAvatar(oldAvatar)
+	}
+
+	return nil
 }
 
 // UploadAvatarServ handles avatar file upload and returns the file URL
@@ -266,7 +300,7 @@ func UploadAvatarServ(username string, fileHeader *multipart.FileHeader) (string
 		return "", fmt.Errorf("failed to create avatars directory: %w", err)
 	}
 
-	// Save file
+	// Save file (resize if possible)
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return "", fmt.Errorf("failed to reset file pointer: %w", err)
 	}
@@ -276,22 +310,109 @@ func UploadAvatarServ(username string, fileHeader *multipart.FileHeader) (string
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, file); err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
+	resized := false
+	if contentType != "image/webp" {
+		img, format, err := image.Decode(file)
+		if err == nil {
+			img = resizeToMax(img, 512)
+			switch format {
+			case "jpeg":
+				if err := jpeg.Encode(out, img, &jpeg.Options{Quality: 85}); err == nil {
+					resized = true
+				}
+			case "png":
+				if err := png.Encode(out, img); err == nil {
+					resized = true
+				}
+			case "gif":
+				if err := gif.Encode(out, img, nil); err == nil {
+					resized = true
+				}
+			}
+		}
 	}
 
-	// Return relative URL and update user profile
+	if !resized {
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return "", fmt.Errorf("failed to reset file pointer: %w", err)
+		}
+		if _, err := io.Copy(out, file); err != nil {
+			return "", fmt.Errorf("failed to save file: %w", err)
+		}
+	}
+
+	// Return relative URL
 	avatarURL := fmt.Sprintf("/avatars/%s", filename)
-	user, err := repository.GetUserByUsernameDAO(username)
-	if err != nil {
-		return "", err
+	return avatarURL, nil
+}
+
+func deleteLocalAvatar(avatarURL string) error {
+	if avatarURL == "" {
+		return nil
 	}
-	user.Avatar = avatarURL
-	if err := repository.UpdateUserDAO(int(user.ID), user); err != nil {
-		return "", err
+	trimmed := strings.TrimSpace(avatarURL)
+	if trimmed == "" {
+		return nil
+	}
+	if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+		parsed, err := url.Parse(trimmed)
+		if err != nil {
+			return nil
+		}
+		trimmed = parsed.Path
 	}
 
-	return avatarURL, nil
+	trimmed = strings.TrimPrefix(trimmed, "/")
+	if !strings.HasPrefix(trimmed, "avatars/") {
+		return nil
+	}
+	relPath := strings.TrimPrefix(trimmed, "avatars/")
+	if relPath == "" {
+		return nil
+	}
+
+	baseDir := filepath.Clean(filepath.Join("public", "avatars"))
+	filePath := filepath.Clean(filepath.Join(baseDir, relPath))
+	if !strings.HasPrefix(filePath, baseDir) {
+		return nil
+	}
+
+	if err := os.Remove(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	return nil
+}
+
+func resizeToMax(img image.Image, maxDim int) image.Image {
+	if maxDim <= 0 {
+		return img
+	}
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= maxDim && height <= maxDim {
+		return img
+	}
+
+	maxSide := float64(width)
+	if height > width {
+		maxSide = float64(height)
+	}
+	scale := float64(maxDim) / maxSide
+	newWidth := int(math.Max(1, math.Round(float64(width)*scale)))
+	newHeight := int(math.Max(1, math.Round(float64(height)*scale)))
+
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+	for y := 0; y < newHeight; y++ {
+		srcY := int(math.Min(float64(height-1), math.Floor(float64(y)/scale)))
+		for x := 0; x < newWidth; x++ {
+			srcX := int(math.Min(float64(width-1), math.Floor(float64(x)/scale)))
+			dst.Set(x, y, img.At(bounds.Min.X+srcX, bounds.Min.Y+srcY))
+		}
+	}
+
+	return dst
 }
 
 func LoginUserServ(username, password string) (string, error) {
@@ -323,6 +444,12 @@ func LoginUserServ(username, password string) (string, error) {
 
 func RegisterUserServ(req RegisterRequest) error {
 	if req.Username == "" || req.Password == "" || req.Email == "" || req.Code == "" {
+		return model.ErrInvalidInput
+	}
+	if !isValidEmail(req.Email) {
+		return model.ErrInvalidInput
+	}
+	if !isStrongPassword(req.Password) {
 		return model.ErrInvalidInput
 	}
 
@@ -357,6 +484,9 @@ func RegisterUserServ(req RegisterRequest) error {
 
 func SendRegistrationCodeServ(email string) error {
 	if email == "" {
+		return model.ErrInvalidInput
+	}
+	if !isValidEmail(email) {
 		return model.ErrInvalidInput
 	}
 
@@ -397,6 +527,9 @@ func ResetPasswordServ(req ResetPasswordRequest) error {
 	if req.Username == "" || req.OldPassword == "" || req.NewPassword == "" {
 		return model.ErrInvalidInput
 	}
+	if !isStrongPassword(req.NewPassword) {
+		return model.ErrInvalidInput
+	}
 	user, err := repository.GetUserByUsernameDAO(req.Username)
 	if err != nil {
 		return err
@@ -418,6 +551,43 @@ func privilegeToRole(privileges int) string {
 	default:
 		return "unauthorized"
 	}
+}
+
+func isValidEmail(email string) bool {
+	trimmed := strings.TrimSpace(email)
+	if trimmed == "" {
+		return false
+	}
+	// Simple, safe email syntax check.
+	if len(trimmed) > 254 {
+		return false
+	}
+	pattern := regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+	return pattern.MatchString(trimmed)
+}
+
+func isStrongPassword(password string) bool {
+	trimmed := strings.TrimSpace(password)
+	if len(trimmed) < 8 {
+		return false
+	}
+	if strings.Contains(trimmed, " ") {
+		return false
+	}
+	classes := 0
+	if regexp.MustCompile(`[a-z]`).MatchString(trimmed) {
+		classes++
+	}
+	if regexp.MustCompile(`[A-Z]`).MatchString(trimmed) {
+		classes++
+	}
+	if regexp.MustCompile(`[0-9]`).MatchString(trimmed) {
+		classes++
+	}
+	if regexp.MustCompile(`[^A-Za-z0-9]`).MatchString(trimmed) {
+		classes++
+	}
+	return classes >= 3
 }
 
 func userToResp(u model.User) UserResponse {

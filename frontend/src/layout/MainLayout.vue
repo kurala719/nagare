@@ -45,7 +45,9 @@
           <el-divider direction="vertical" />
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="toolbar-link">
-              <el-avatar :size="24" />
+              <el-avatar :size="24" :src="currentUserAvatar || undefined">
+                <span class="toolbar-avatar-fallback">{{ currentUserInitials }}</span>
+              </el-avatar>
               <span class="toolbar-username">{{ currentUserLabel }}</span>
             </span>
             <template #dropdown>
@@ -146,6 +148,7 @@ import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, T
 import SideBarChat from '@/components/Customed/SideBarChat.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import SiteMessageCenter from '@/components/SiteMessageCenter.vue'
+import { getUserProfile } from '@/api/users'
 import { getUserPrivileges, getToken, clearToken, getUserClaims } from '@/utils/auth'
 
 export default defineComponent({
@@ -176,11 +179,61 @@ export default defineComponent({
     const isSidebarCollapsed = ref(false)
     const isChatBarCollapsed = ref(false)
     
+    const currentUserName = ref('')
+    const currentUserAvatar = ref('')
+
     const currentUserLabel = computed(() => {
       if (!authState.value) return t('auth.guest')
+      if (currentUserName.value) return currentUserName.value
       const claims = getUserClaims()
       return claims?.username || t('auth.guest')
     })
+
+    const currentUserInitials = computed(() => {
+      const source = (currentUserName.value || '').trim()
+      if (!source) return '?'
+      const parts = source.split(/\s+/)
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    })
+
+    const resolveBackendOrigin = () => {
+      if (!import.meta.env.DEV) return ''
+      if (typeof window === 'undefined') return ''
+      const { protocol, hostname, port } = window.location
+      if (port === '8080') return ''
+      return `${protocol}//${hostname}:8080`
+    }
+
+    const normalizeAvatarUrl = (value) => {
+      if (!value) return ''
+      const trimmed = String(value).trim()
+      if (!trimmed) return ''
+      if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed
+      const prefixed = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+      const backendOrigin = resolveBackendOrigin()
+      if (backendOrigin && prefixed.startsWith('/avatars/')) {
+        return `${backendOrigin}${prefixed}`
+      }
+      return prefixed
+    }
+
+    const loadCurrentUserProfile = async () => {
+      if (!authState.value) {
+        currentUserAvatar.value = ''
+        currentUserName.value = ''
+        return
+      }
+      try {
+        const { data } = await getUserProfile()
+        const payload = data?.data || data
+        currentUserAvatar.value = normalizeAvatarUrl(payload?.avatar || '')
+        currentUserName.value = payload?.nickname || payload?.username || ''
+      } catch {
+        currentUserAvatar.value = ''
+        currentUserName.value = ''
+      }
+    }
 
     const menuItems = computed(() => [
       { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1, icon: 'DataBoard' },
@@ -291,6 +344,7 @@ export default defineComponent({
       () => {
         authState.value = !!getToken()
         userPrivilege.value = getUserPrivileges()
+        loadCurrentUserProfile()
       }
     )
 
@@ -309,11 +363,14 @@ export default defineComponent({
       const updateAuth = () => {
         authState.value = !!getToken()
         userPrivilege.value = getUserPrivileges()
+        loadCurrentUserProfile()
       }
       window.addEventListener('auth-changed', updateAuth)
       onBeforeUnmount(() => {
         window.removeEventListener('auth-changed', updateAuth)
       })
+
+      loadCurrentUserProfile()
     })
 
     return {
@@ -324,6 +381,9 @@ export default defineComponent({
       isSidebarCollapsed,
       isChatBarCollapsed,
       currentUserLabel,
+      currentUserName,
+      currentUserAvatar,
+      currentUserInitials,
       setLanguage,
       toggleTheme,
       toggleSidebar,
