@@ -438,20 +438,29 @@ const resolveRangeWindow = () => {
 }
 
 const initMetricCharts = () => {
+  console.log(`[HostDetail] initMetricCharts called - refs exist:`, !!cpuChartRef.value, !!memChartRef.value, !!netChartRef.value)
   if (cpuChartRef.value && !cpuChart) {
     cpuChart = echarts.init(cpuChartRef.value)
+    console.log(`[HostDetail] CPU chart initialized`)
   }
   if (memChartRef.value && !memChart) {
     memChart = echarts.init(memChartRef.value)
+    console.log(`[HostDetail] Memory chart initialized`)
   }
   if (netChartRef.value && !netChart) {
     netChart = echarts.init(netChartRef.value)
+    console.log(`[HostDetail] Network chart initialized`)
   }
 }
 
 const setMetricChartOption = (chart, name, data, color, unit = '%') => {
-  if (!chart) return
+  console.log(`[HostDetail] setMetricChartOption called for ${name}, chart exists:`, !!chart, 'data points:', data?.length)
+  if (!chart) {
+    console.warn(`[HostDetail] Chart object is null/undefined for ${name}`)
+    return
+  }
   const unitLabel = unit === '%' ? '%' : (unit ? ` ${unit}` : '')
+  console.log(`[HostDetail] Setting chart option for ${name}...`)
   chart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -482,26 +491,43 @@ const setMetricChartOption = (chart, name, data, color, unit = '%') => {
 }
 
 const loadMetricHistory = async () => {
+  // Wait for items to be loaded before proceeding
+  if (!items.value || items.value.length === 0) {
+    console.log('[HostDetail] loadMetricHistory: waiting for items to load')
+    return
+  }
+
+  // Ensure DOM is ready before initializing charts
+  await nextTick()
   initMetricCharts()
   const [start, end] = resolveRangeWindow()
   const from = Math.floor(start.getTime() / 1000)
   const to = Math.floor(end.getTime() / 1000)
 
-  // Categorize items
+  // Categorize items - more specific to avoid cross-matching
   const cpuItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
     // Match: CPU, CPU Usage, Processor %, Load Average, System Load, etc.
-    return (n.includes('cpu') || n.includes('processor') || n.includes('load') || n.includes('util')) && !n.includes('temp') && !n.includes('clock')
+    // Exclude: Memory, Utilization (too broad)
+    return (n.includes('cpu') || n.includes('processor') || n.includes('load')) && 
+           !n.includes('temp') && !n.includes('clock') && !n.includes('memory') && !n.includes('mem') && !n.includes('ram')
   })
   const memItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
     // Match: Memory, Memory Usage, RAM, Memory Available, Swap, Free Memory, etc.
-    return n.includes('mem') || n.includes('ram') || n.includes('swap') || (n.includes('available') && !n.includes('cpu'))
+    // Be explicit - memory metrics
+    return (n.includes('memory') || n.includes('mem') || n.includes('ram') || n.includes('swap')) && 
+           !n.includes('cpu') && !n.includes('processor')
   })
   const netItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
     // Match: Network, Ethernet, Interface, Traffic, Speed, Bytes/sec, etc.
-    return n.includes('net') || n.includes('eth') || n.includes('if') || n.includes('traffic') || n.includes('bps') || n.includes('bytes') || n.includes('speed') || n.includes('interface')
+    // Exclude: uptime, status, interface type
+    return (n.includes('traffic') || n.includes('bps') || n.includes('speed') || n.includes('bandwidth') || 
+            n.includes('byte') || (n.includes('network') && !n.includes('uptime')) || 
+            (n.includes('eth') && !n.includes('interface type')) ||
+            (n.includes('if') && n.includes('speed'))) && 
+           !n.includes('uptime') && !n.includes('status') && !n.includes('interface type')
   })
 
   console.log('[HostDetail] All items:', items.value)
@@ -792,6 +818,14 @@ watch(compareMode, () => {
   loadHistory()
   loadMetricHistory()
 })
+
+// Trigger metric chart loading when items are first loaded
+watch(() => items.value.length, (length) => {
+  if (length > 0) {
+    console.log('[HostDetail] Items loaded, loading metric history...')
+    loadMetricHistory()
+  }
+}, { immediate: false })
 
 async function generateReport() {
   reportGenerating.value = true

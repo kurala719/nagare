@@ -110,6 +110,16 @@ func GetUserByUsernameDAO(username string) (model.User, error) {
 	return user, err
 }
 
+// GetUserByQQDAO retrieves a user by QQ number
+func GetUserByQQDAO(qq string) (model.User, error) {
+	var user model.User
+	err := database.DB.Where("qq = ?", qq).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return user, model.ErrNotFound
+	}
+	return user, err
+}
+
 // AddUserDAO creates a new user
 func AddUserDAO(user model.User) error {
 	return database.DB.Create(&user).Error

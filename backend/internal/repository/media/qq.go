@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -54,14 +55,17 @@ func (p *QQProvider) SendMessage(ctx context.Context, target, message string) er
 		baseURL = p.BaseURL
 	}
 	payload := map[string]interface{}{
-		"message_type": messageType,
-		"message":      message,
-		"auto_escape":  false,
+		"message":     message,
+		"auto_escape": false,
 	}
 	if messageType == "group" {
-		payload["group_id"] = groupID
+		id, _ := strconv.ParseInt(groupID, 10, 64)
+		payload["group_id"] = id
+		payload["message_type"] = "group"
 	} else {
-		payload["user_id"] = userID
+		id, _ := strconv.ParseInt(userID, 10, 64)
+		payload["user_id"] = id
+		payload["message_type"] = "private"
 	}
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(baseURL, "/")+"/send_msg", bytes.NewBuffer(body))

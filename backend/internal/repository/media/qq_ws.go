@@ -163,6 +163,12 @@ func (m *QQWebSocketManager) handleIncomingMessage(message []byte) {
 		if err := json.Unmarshal(message, &resp); err != nil {
 			return
 		}
+		
+		// Log non-zero retcodes for debugging
+		if resp.Retcode != 0 {
+			log.Printf("[QQ-WS] API Response Error: status=%s, retcode=%d, echo=%s", resp.Status, resp.Retcode, resp.Echo)
+		}
+
 		if resp.Echo != "" {
 			m.mu.RLock()
 			ch, ok := m.echoMap[resp.Echo]
@@ -267,15 +273,16 @@ func (m *QQWebSocketManager) CallAction(action string, params interface{}) (OneB
 // SendMessage sends a message via WebSocket
 func (m *QQWebSocketManager) SendMessage(ctx context.Context, messageType, userID, groupID, message string) error {
 	params := map[string]interface{}{
-		"message_type": messageType,
-		"message":      message,
+		"message": message,
 	}
 	if messageType == "group" {
 		id, _ := strconv.ParseInt(groupID, 10, 64)
 		params["group_id"] = id
+		params["message_type"] = "group"
 	} else {
 		id, _ := strconv.ParseInt(userID, 10, 64)
 		params["user_id"] = id
+		params["message_type"] = "private"
 	}
 
 	resp, err := m.CallAction("send_msg", params)
@@ -283,8 +290,9 @@ func (m *QQWebSocketManager) SendMessage(ctx context.Context, messageType, userI
 		return err
 	}
 
-	if resp.Status != "ok" && resp.Retcode != 0 {
-		return fmt.Errorf("QQ API error: %d", resp.Retcode)
+	if resp.Retcode != 0 {
+		log.Printf("[QQ-WS] OneBot API error: retcode=%d, status=%s, message=%s", resp.Retcode, resp.Status, resp.Echo)
+		return fmt.Errorf("QQ API error: %d (status: %s)", resp.Retcode, resp.Status)
 	}
 
 	return nil

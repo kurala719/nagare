@@ -134,17 +134,34 @@ func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
 			"can_command": whitelist.CanCommand,
 			"allowed":     allowed,
 		}, nil, "")
-		return allowed
+		if allowed {
+			return true
+		}
+	} else {
+		allowed := whitelist.CanReceive == 1
+		LogService("info", "whitelist alert check", map[string]interface{}{
+			"qqID":        qqID,
+			"type":        whitelistType,
+			"can_receive": whitelist.CanReceive,
+			"allowed":     allowed,
+		}, nil, "")
+		if allowed {
+			return true
+		}
 	}
 
-	allowed := whitelist.CanReceive == 1
-	LogService("info", "whitelist alert check", map[string]interface{}{
-		"qqID":        qqID,
-		"type":        whitelistType,
-		"can_receive": whitelist.CanReceive,
-		"allowed":     allowed,
-	}, nil, "")
-	return allowed
+	// Fallback: Check if the QQ belongs to a registered user (only for non-group)
+	if !isGroup {
+		if u, err := repository.GetUserByQQDAO(qqID); err == nil && u.ID > 0 {
+			LogService("info", "QQ ID found in users table, allowing", map[string]interface{}{
+				"qqID": qqID,
+				"userID": u.ID,
+			}, nil, "")
+			return true
+		}
+	}
+
+	return false
 }
 
 func getQQWhitelist(qqID string, whitelistType int) (*model.QQWhitelist, error) {

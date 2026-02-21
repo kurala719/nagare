@@ -206,6 +206,13 @@ func AddAlertServ(req AlertReq) error {
 		return err
 	}
 
+	LogService("info", "alert created", map[string]interface{}{
+		"alert_id": alert.ID,
+		"severity": alert.Severity,
+		"status": alert.Status,
+		"host_id": alert.HostID,
+	}, nil, "")
+
 	// Trigger Site Message
 	_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
 

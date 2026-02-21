@@ -39,14 +39,14 @@ export function resetPassword(data) {
 export function getUsers() {
     return request({
         method: 'GET',
-        url: '/users/',
+        url: '/users',
     })
 }
 
 export function searchUsers(params) {
     return request({
         method: 'GET',
-        url: '/users/',
+        url: '/users',
         params,
     })
 }
@@ -69,7 +69,7 @@ export function updateUser(id, data) {
 export function addUser(data) {
     return request({
         method: 'POST',
-        url: '/users/',
+        url: '/users',
         data,
     })
 }
@@ -86,7 +86,7 @@ export function deleteUser(id) {
 export function searchRegisterApplications(params) {
     return request({
         method: 'GET',
-        url: '/register-applications/',
+        url: '/register-applications',
         params,
     })
 }
@@ -111,7 +111,7 @@ export function rejectRegisterApplication(id, data) {
 export function searchResetApplications(params) {
     return request({
         method: 'GET',
-        url: '/reset-applications/',
+        url: '/reset-applications',
         params,
     })
 }

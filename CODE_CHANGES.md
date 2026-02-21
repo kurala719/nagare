@@ -1,19 +1,40 @@
 # Code Changes Reference
 
+## Feature: Users in Action (2026-02-21)
+
+### Backend Changes
+
+**File:** `backend/internal/model/entities.go`
+- Added `Users []User `gorm:"many2many:action_users;"`` to `Action` struct to support many-to-many relationship between actions and users.
+
+**File:** `backend/internal/repository/action.go`
+- Updated `GetAllActionsDAO`, `SearchActionsDAO`, `GetActionByIDDAO`, and `GetActionsByMediaIDDAO` to preload associated `Users`.
+- Updated `UpdateActionDAO` to handle the many-to-many relationship updates using GORM's `Association.Replace` within a transaction.
+
+**File:** `backend/internal/service/action.go`
+- Updated `ActionReq` to include `UserIDs []uint`.
+- Updated `ActionResp` to include `Users []UserResponse`.
+- Updated `AddActionServ` and `UpdateActionServ` to fetch `User` records and associate them with the `Action`.
+- Updated `actionToResp` to map associated `Users` to `UserResponse`.
+- **New logic:** Updated `ExecuteActionsForAlert` to iterate over an action's associated users and send alerts specifically to their `QQ` numbers if the media type is `qq`.
+
+### Frontend Changes
+
+**File:** `frontend/src/views/Action.vue`
+- Added a "Users" column to the actions table to display associated users as tags.
+- Updated "Create Action" and "Edit Action" dialogs to include a multiple-select field for users.
+- Updated component logic to fetch the list of available users and map the data between the API and form models.
+
+---
+
 ## Feature: OneBot (NapCat) Positive WebSocket Client (2026-02-21)
 
 ### Backend Changes
 
-**File:** `backend/internal/repository/config.go`
-- Added `QQConfig` struct to hold OneBot settings (Enabled, Mode, PositiveURL, AccessToken).
-- Integrated `QQConfig` into main `Config`, `ConfigRequest`, and `ConfigResponse`.
-- Added default values for QQ configuration in `ResetConfig`.
-
-**File:** `backend/internal/repository/media/qq_ws.go`
-- Updated `QQWebSocketManager` to support an `accessToken`.
-- Added `ConnectPositiveWS` method to initiate connections to NapCat as a client.
-- Added `Listen` method to handle the message loop for both Reverse and Positive modes.
-- Added Authorization header support for WebSocket handshake using Bearer tokens.
+**File:** `backend/internal/repository/media/qq_ws.go` & `backend/internal/repository/media/qq.go`
+- **Fix:** Ensured `user_id` and `group_id` are passed as integers (`int64`) in OneBot 11 API calls. Passing them as strings often causes Error 1200 in some implementations like NapCat.
+- **Fix:** Removed redundant `message_type` from `send_msg` parameters, as OneBot 11 infers the type from the ID field used.
+- Improved logging for OneBot API errors to include `retcode` and `status` for easier debugging.
 - Added `UpdateConfig` method to refresh internal state when configuration changes.
 
 **File:** `backend/internal/service/config.go`

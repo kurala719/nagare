@@ -19,28 +19,30 @@ type ActionReq struct {
 	Enabled     int    `json:"enabled"`
 	Description string `json:"description"`
 	// Filter conditions
-	SeverityMin *int  `json:"severity_min"`
-	TriggerID   *uint `json:"trigger_id"`
-	HostID      *uint `json:"host_id"`
-	GroupID     *uint `json:"group_id"`
-	AlertStatus *int  `json:"alert_status"`
+	SeverityMin *int   `json:"severity_min"`
+	TriggerID   *uint  `json:"trigger_id"`
+	HostID      *uint  `json:"host_id"`
+	GroupID     *uint  `json:"group_id"`
+	AlertStatus *int   `json:"alert_status"`
+	UserIDs     []uint `json:"user_ids"`
 }
 
 // ActionResp represents an action response
 type ActionResp struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	MediaID     uint   `json:"media_id"`
-	Template    string `json:"template"`
-	Enabled     int    `json:"enabled"`
-	Status      int    `json:"status"`
-	Description string `json:"description"`
+	ID          int            `json:"id"`
+	Name        string         `json:"name"`
+	MediaID     uint           `json:"media_id"`
+	Template    string         `json:"template"`
+	Enabled     int            `json:"enabled"`
+	Status      int            `json:"status"`
+	Description string         `json:"description"`
 	// Filter conditions
-	SeverityMin *int  `json:"severity_min"`
-	TriggerID   *uint `json:"trigger_id"`
-	HostID      *uint `json:"host_id"`
-	GroupID     *uint `json:"group_id"`
-	AlertStatus *int  `json:"alert_status"`
+	SeverityMin *int           `json:"severity_min"`
+	TriggerID   *uint          `json:"trigger_id"`
+	HostID      *uint          `json:"host_id"`
+	GroupID     *uint          `json:"group_id"`
+	AlertStatus *int           `json:"alert_status"`
+	Users       []UserResponse `json:"users"`
 }
 
 func GetAllActionsServ() ([]ActionResp, error) {
@@ -81,6 +83,13 @@ func GetActionByIDServ(id uint) (ActionResp, error) {
 }
 
 func AddActionServ(req ActionReq) (ActionResp, error) {
+	users := make([]model.User, 0)
+	for _, uid := range req.UserIDs {
+		if u, err := repository.GetUserByIDDAO(int(uid)); err == nil {
+			users = append(users, u)
+		}
+	}
+
 	action := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
@@ -92,6 +101,7 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
+		Users:       users,
 	}
 	if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
 		action.Status = determineActionStatus(action, media)
@@ -109,6 +119,14 @@ func UpdateActionServ(id uint, req ActionReq) error {
 	if err != nil {
 		return err
 	}
+
+	users := make([]model.User, 0)
+	for _, uid := range req.UserIDs {
+		if u, err := repository.GetUserByIDDAO(int(uid)); err == nil {
+			users = append(users, u)
+		}
+	}
+
 	updated := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
@@ -121,6 +139,7 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
+		Users:       users,
 	}
 	// Preserve status unless enabled state or media changed
 	if req.Enabled != existing.Enabled || req.MediaID != existing.MediaID {
@@ -142,6 +161,11 @@ func DeleteActionByIDServ(id uint) error {
 }
 
 func actionToResp(action model.Action) ActionResp {
+	userResps := make([]UserResponse, 0, len(action.Users))
+	for _, u := range action.Users {
+		userResps = append(userResps, userToResp(u))
+	}
+
 	return ActionResp{
 		ID:          int(action.ID),
 		Name:        action.Name,
@@ -155,35 +179,106 @@ func actionToResp(action model.Action) ActionResp {
 		HostID:      action.HostID,
 		GroupID:     action.GroupID,
 		AlertStatus: action.AlertStatus,
+		Users:       userResps,
 	}
 }
 
 // ExecuteActionsForAlert evaluates all active actions against the alert and executes matching ones
 func ExecuteActionsForAlert(alert model.Alert) {
 	// Fetch all enabled actions
-	// Ideally we would have a repository method to get enabled actions only
 	actions, err := repository.GetAllActionsDAO()
 	if err != nil {
 		LogService("error", "failed to load actions for alert execution", map[string]interface{}{"error": err.Error()}, nil, "")
 		return
 	}
 
+	enabledCount := 0
+	for _, a := range actions {
+		if a.Enabled == 1 {
+			enabledCount++
+		}
+	}
+
+	LogService("info", "evaluating actions for alert", map[string]interface{}{
+		"alert_id": alert.ID,
+		"total_actions": len(actions),
+		"enabled_actions": enabledCount,
+	}, nil, "")
+
 	// Prepare context for matching
-	context := buildAlertMatchContext(alert)
-	replacements := buildAlertReplacements(context)
+	matchCtx := buildAlertMatchContext(alert)
+	replacements := buildAlertReplacements(matchCtx)
 
 	for _, action := range actions {
 		if action.Enabled == 0 {
+			LogService("debug", "action skipped: disabled", map[string]interface{}{"action_id": action.ID, "action_name": action.Name}, nil, "")
 			continue
 		}
-		if matchActionFilter(action, context) {
+		if matchActionFilter(action, matchCtx) {
+			LogService("info", "action matched for alert", map[string]interface{}{
+				"action_id": action.ID,
+				"action_name": action.Name,
+				"alert_id": alert.ID,
+			}, nil, "")
+
 			// Get Media
 			media, err := repository.GetMediaByIDDAO(action.MediaID)
-			if err != nil || media.Enabled == 0 {
+			if err != nil {
+				LogService("error", "failed to load media for action", map[string]interface{}{
+					"action_id": action.ID,
+					"media_id": action.MediaID,
+					"error": err.Error(),
+				}, nil, "")
 				continue
 			}
-			// Execute
-			_ = ExecuteAction(action, media, replacements)
+			if media.Enabled == 0 {
+				LogService("warn", "media disabled for action", map[string]interface{}{
+					"action_id": action.ID,
+					"media_id": action.MediaID,
+					"media_name": media.Name,
+				}, nil, "")
+				continue
+			}
+
+			// Execute default target
+			if err := ExecuteAction(action, media, replacements); err != nil {
+				LogService("error", "action execution failed", map[string]interface{}{
+					"action_id": action.ID,
+					"media_id": media.ID,
+					"target": media.Target,
+					"error": err.Error(),
+				}, nil, "")
+			} else {
+				LogService("info", "action execution succeeded", map[string]interface{}{
+					"action_id": action.ID,
+					"media_id": media.ID,
+					"target": media.Target,
+				}, nil, "")
+			}
+
+			// Also send to specifically associated users if it's a QQ media
+			lowerType := strings.ToLower(media.Type)
+			if (lowerType == "qq" || lowerType == "qrobot") && len(action.Users) > 0 {
+				for _, user := range action.Users {
+					if user.QQ != "" {
+						userMedia := media
+						userMedia.Target = "user:" + user.QQ
+						LogService("debug", "sending alert to associated user", map[string]interface{}{
+							"action_id": action.ID,
+							"user_id": user.ID,
+							"qq": user.QQ,
+						}, nil, "")
+						if err := ExecuteAction(action, userMedia, replacements); err != nil {
+							LogService("error", "user action execution failed", map[string]interface{}{
+								"action_id": action.ID,
+								"user_id": user.ID,
+								"qq": user.QQ,
+								"error": err.Error(),
+							}, nil, "")
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -236,38 +331,48 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 	
 	// Severity Check
 	if action.SeverityMin != nil && alert.Severity < *action.SeverityMin {
+		LogService("debug", "action filter mismatch: severity", map[string]interface{}{"action_id": action.ID, "alert_severity": alert.Severity, "min_severity": *action.SeverityMin}, nil, "")
 		return false
 	}
 	
 	// Status Check
-	if action.AlertStatus != nil && alert.Status != *action.AlertStatus {
+	// If AlertStatus is nil or -1, ignore status filter. 
+	// (Note: default 0 means only active alerts)
+	if action.AlertStatus != nil && *action.AlertStatus != -1 && alert.Status != *action.AlertStatus {
+		LogService("debug", "action filter mismatch: status", map[string]interface{}{"action_id": action.ID, "alert_status": alert.Status, "filter_status": *action.AlertStatus}, nil, "")
 		return false
 	}
 	
 	// Host Check
-	if action.HostID != nil {
+	// Ignore if nil or 0
+	if action.HostID != nil && *action.HostID > 0 {
 		// Alert must be associated with this host
 		hostID := alert.HostID
 		if ctx.host != nil {
 			hostID = ctx.host.ID
 		}
 		if hostID != *action.HostID {
+			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
 			return false
 		}
 	}
 	
 	// Group Check
-	if action.GroupID != nil {
+	// Ignore if nil or 0
+	if action.GroupID != nil && *action.GroupID > 0 {
 		if ctx.groupID != *action.GroupID {
+			LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
 			return false
 		}
 	}
 	
-	// Trigger ID Check - Not applicable as Alert model doesn't store TriggerID directly currently,
-	// but we could infer it if needed. For now, skipping TriggerID match unless we add TriggerID to Alert model.
-	// Since we removed ActionID from Trigger, there is no direct link back unless Alert stores "CreatedByTriggerID".
-	// The current Alert model has AlarmID but not TriggerID.
-	// We will skip this check for now or assume it always passes if set (feature limitation).
+	// Trigger ID Check
+	if action.TriggerID != nil && *action.TriggerID > 0 {
+		if alert.AlarmID != *action.TriggerID {
+			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{"action_id": action.ID, "alert_alarm_id": alert.AlarmID, "filter_trigger_id": *action.TriggerID}, nil, "")
+			return false
+		}
+	}
 	
 	return true
 }
@@ -327,6 +432,7 @@ func sendMediaMessage(media model.Media, msg string) error {
 	if lowerType == "qq" || lowerType == "qrobot" {
 		qqID, isGroup := parseQQTarget(media.Target)
 		if !CheckQQWhitelistForAlert(qqID, isGroup) {
+			err := fmt.Errorf("QQ ID %s (group=%v) is not in whitelist or authorized", qqID, isGroup)
 			LogService("info", "send message skipped (QQ alert whitelist)", map[string]interface{}{
 				"media":        media.Type,
 				"media_id":     media.ID,
@@ -334,8 +440,9 @@ func sendMediaMessage(media model.Media, msg string) error {
 				"qq_id":        qqID,
 				"is_group":     isGroup,
 				"skip_trigger": true,
+				"error":        err.Error(),
 			}, nil, "")
-			return nil
+			return err
 		}
 	}
 

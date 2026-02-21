@@ -188,6 +188,7 @@ type Action struct {
 	HostID      *uint `gorm:"index"`     // Optional: specific host
 	GroupID     *uint `gorm:"index"`     // Optional: specific group
 	AlertStatus *int  `gorm:"default:0"` // Filter by alert status (0=active, 1=ack, 2=resolved)
+	Users       []User `gorm:"many2many:action_users;"`
 }
 
 // Trigger represents a rule that filters alerts or logs to invoke an action

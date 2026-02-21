@@ -11,7 +11,7 @@ import (
 // GetAllActionsDAO retrieves all actions
 func GetAllActionsDAO() ([]model.Action, error) {
 	var actions []model.Action
-	if err := database.DB.Find(&actions).Error; err != nil {
+	if err := database.DB.Preload("Users").Find(&actions).Error; err != nil {
 		return nil, err
 	}
 	return actions, nil
@@ -19,7 +19,7 @@ func GetAllActionsDAO() ([]model.Action, error) {
 
 // SearchActionsDAO retrieves actions by filter
 func SearchActionsDAO(filter model.ActionFilter) ([]model.Action, error) {
-	query := database.DB.Model(&model.Action{})
+	query := database.DB.Model(&model.Action{}).Preload("Users")
 	if filter.Query != "" {
 		query = query.Where("name LIKE ? OR description LIKE ? OR template LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 	}
@@ -67,7 +67,7 @@ func CountActionsDAO(filter model.ActionFilter) (int64, error) {
 // GetActionByIDDAO retrieves action by ID
 func GetActionByIDDAO(id uint) (model.Action, error) {
 	var action model.Action
-	err := database.DB.First(&action, id).Error
+	err := database.DB.Preload("Users").First(&action, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return action, model.ErrNotFound
 	}
@@ -77,7 +77,7 @@ func GetActionByIDDAO(id uint) (model.Action, error) {
 // GetActionsByMediaIDDAO retrieves actions by media ID
 func GetActionsByMediaIDDAO(mediaID uint) ([]model.Action, error) {
 	var actions []model.Action
-	if err := database.DB.Where("media_id = ?", mediaID).Find(&actions).Error; err != nil {
+	if err := database.DB.Preload("Users").Where("media_id = ?", mediaID).Find(&actions).Error; err != nil {
 		return nil, err
 	}
 	return actions, nil
@@ -90,14 +90,37 @@ func AddActionDAO(action model.Action) error {
 
 // UpdateActionDAO updates action by ID
 func UpdateActionDAO(id uint, action model.Action) error {
-	return database.DB.Model(&model.Action{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":        action.Name,
-		"media_id":    action.MediaID,
-		"template":    action.Template,
-		"enabled":     action.Enabled,
-		"status":      action.Status,
-		"description": action.Description,
-	}).Error
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Model(&model.Action{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":         action.Name,
+		"media_id":     action.MediaID,
+		"template":     action.Template,
+		"enabled":      action.Enabled,
+		"status":       action.Status,
+		"description":  action.Description,
+		"severity_min": action.SeverityMin,
+		"trigger_id":   action.TriggerID,
+		"host_id":      action.HostID,
+		"group_id":     action.GroupID,
+		"alert_status": action.AlertStatus,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Update many-to-many relationship
+	if err := tx.Model(&model.Action{Model: gorm.Model{ID: id}}).Association("Users").Replace(action.Users); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 // DeleteActionByIDDAO deletes action by ID

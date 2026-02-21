@@ -86,17 +86,21 @@
                 </div>
               </div>
             </template>
-            <el-skeleton v-if="historyLoading" animated :rows="8" />
-            <el-alert
-              v-else-if="historyError"
-              :title="historyError"
-              type="error"
-              show-icon
-              :closable="false"
-              class="chart-alert"
-            />
-            <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
-            <div v-else ref="statusChartRef" class="chart"></div>
+            <div style="position: relative; min-height: 400px;">
+              <div ref="statusChartRef" class="chart"></div>
+              <div v-if="historyLoading || historyError || historyEmpty" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1;">
+                <el-skeleton v-if="historyLoading" animated :rows="8" style="width: 100%; padding: 20px;" />
+                <el-alert
+                  v-else-if="historyError"
+                  :title="historyError"
+                  type="error"
+                  show-icon
+                  :closable="false"
+                  style="width: calc(100% - 40px);"
+                />
+                <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
+              </div>
+            </div>
           </el-card>
         </el-col>
         <el-col :xs="24" :lg="12">
@@ -129,7 +133,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, onBeforeUnmount, watch } from 'vue'
+import { onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
@@ -147,6 +151,7 @@ const historyEmpty = ref(false)
 const compareMode = ref(false)
 const loading = ref(false)
 const error = ref(null)
+const isMounted = ref(false)
 const historyShortcuts = [
   {
     text: '1h',
@@ -261,72 +266,90 @@ const resolveRangeWindow = () => {
 }
 
 const buildStatusChart = (series, units, prevSeries = []) => {
-  if (!statusChartRef.value) return
-  if (!statusChart) {
-    statusChart = echarts.init(statusChartRef.value)
+  console.log('[ItemDetail] buildStatusChart called, chartRef exists:', !!statusChartRef.value, 'series length:', series.length)
+  
+  if (!statusChartRef.value) {
+    console.warn('[ItemDetail] Chart ref is null, cannot build chart')
+    return
   }
-  const safeUnits = units || ''
-  const chartSeries = [
-    {
-      name: t('common.currentPeriod'),
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: series,
-      itemStyle: { color: '#409EFF' },
-      areaStyle: { opacity: 0.1 },
+
+  try {
+    if (!statusChart) {
+      console.log('[ItemDetail] Initializing EChart...')
+      statusChart = echarts.init(statusChartRef.value)
     }
-  ]
-  if (prevSeries.length > 0) {
-    chartSeries.push({
-      name: t('common.previousPeriod'),
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: prevSeries,
-      itemStyle: { color: '#909399' },
-      lineStyle: { type: 'dashed' },
-      areaStyle: { opacity: 0.05 },
-    })
-  }
-  statusChart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params) => {
-        let tip = ''
-        params.forEach((point) => {
-          const value = point.data?.[1]
-          const time = new Date(point.data?.[0])
-          const timeLabel = Number.isNaN(time.getTime()) ? '-' : time.toLocaleString()
-          tip += `<div style="margin-bottom:4px;"><strong>${point.seriesName}</strong><br/>${timeLabel}<br/>${t('items.value')}: ${value ?? '-'} ${safeUnits}</div>`
-        })
-        return tip
-      },
-    },
-    legend: {
-      show: prevSeries.length > 0,
-      data: prevSeries.length > 0 ? [t('common.currentPeriod'), t('common.previousPeriod')] : [],
-    },
-    grid: { left: 60, right: 20, top: prevSeries.length > 0 ? 40 : 20, bottom: 40 },
-    xAxis: { type: 'time' },
-    yAxis: { 
-      type: 'value', 
-      min: 'dataMin',
-      name: safeUnits,
-      nameLocation: 'end',
-      nameGap: 10,
-      nameTextStyle: {
-        fontSize: 12,
-        color: '#606266'
+    const safeUnits = units || ''
+    const chartSeries = [
+      {
+        name: t('common.currentPeriod'),
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        data: series,
+        itemStyle: { color: '#409EFF' },
+        areaStyle: { opacity: 0.1 },
       }
-    },
-    series: chartSeries
-  })
+    ]
+    if (prevSeries.length > 0) {
+      chartSeries.push({
+        name: t('common.previousPeriod'),
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        data: prevSeries,
+        itemStyle: { color: '#909399' },
+        lineStyle: { type: 'dashed' },
+        areaStyle: { opacity: 0.05 },
+      })
+    }
+    statusChart.setOption({
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params) => {
+          let tip = ''
+          params.forEach((point) => {
+            const value = point.data?.[1]
+            const time = new Date(point.data?.[0])
+            const timeLabel = Number.isNaN(time.getTime()) ? '-' : time.toLocaleString()
+            tip += `<div style="margin-bottom:4px;"><strong>${point.seriesName}</strong><br/>${timeLabel}<br/>${t('items.value')}: ${value ?? '-'} ${safeUnits}</div>`
+          })
+          return tip
+        },
+      },
+      legend: {
+        show: prevSeries.length > 0,
+        data: prevSeries.length > 0 ? [t('common.currentPeriod'), t('common.previousPeriod')] : [],
+      },
+      grid: { left: 60, right: 20, top: prevSeries.length > 0 ? 40 : 20, bottom: 40 },
+      xAxis: { type: 'time' },
+      yAxis: { 
+        type: 'value', 
+        min: 'dataMin',
+        name: safeUnits,
+        nameLocation: 'end',
+        nameGap: 10,
+        nameTextStyle: {
+          fontSize: 12,
+          color: '#606266'
+        }
+      },
+      series: chartSeries
+    })
+  } catch (err) {
+    console.error('[ItemDetail] Error building chart:', err)
+  }
 }
 
 const loadHistory = async () => {
   const itemId = Number(route.params.id)
   if (!itemId) return
+  
+  // Don't load history until component is mounted
+  if (!isMounted.value) {
+    console.log('[ItemDetail] Component not yet mounted, deferring loadHistory')
+    return
+  }
+  
   historyLoading.value = true
   historyError.value = null
   historyEmpty.value = false
@@ -356,6 +379,7 @@ const loadHistory = async () => {
       if (rows.length === 0) {
         console.log('[ItemDetail] No history data found, showing empty state')
         historyEmpty.value = true
+        await nextTick()
         buildStatusChart([], '', [])
         return
       }
@@ -410,9 +434,11 @@ const loadHistory = async () => {
     }
     
     historyEmpty.value = series.length === 0
+    await nextTick()
     buildStatusChart(series, units, prevSeries)
   } catch (err) {
     historyError.value = err?.message || t('common.historyLoadFailed')
+    await nextTick()
     buildStatusChart([], '', [])
   } finally {
     historyLoading.value = false
@@ -447,12 +473,17 @@ const loadData = async () => {
       comment: data.comment || data.Comment || '',
       status_reason: data.Reason || data.reason || data.Error || data.error || data.ErrorMessage || data.error_message || data.LastError || data.last_error || '',
     }
-    await loadHistory()
   } catch (err) {
     console.error('Failed to load item detail data', err)
     error.value = err.message || 'Failed to load item data'
   } finally {
     loading.value = false
+  }
+  
+  // Load history after loading is complete and DOM has updated
+  if (!error.value) {
+    await nextTick()
+    await loadHistory()
   }
 }
 
@@ -460,16 +491,37 @@ const onResize = () => {
   if (statusChart) statusChart.resize()
 }
 
-onMounted(() => {
+let resizeObserver
+
+onMounted(async () => {
   loadVisibleColumns()
   setDefaultHistoryRange()
-  loadData()
+  isMounted.value = true  
+  
+  // Wait for DOM to be ready
+  await nextTick()
+  
+  // Use ResizeObserver for more reliable resizing than window resize event
+  if (statusChartRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (statusChart) statusChart.resize()
+    })
+    resizeObserver.observe(statusChartRef.value)
+  }
+  
+  await loadData()
   window.addEventListener('resize', onResize)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
-  if (statusChart) statusChart.dispose()
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
+  if (statusChart) {
+    statusChart.dispose()
+    statusChart = null
+  }
 })
 
 watch(historyRange, () => {

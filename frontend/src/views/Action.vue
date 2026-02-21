@@ -89,6 +89,14 @@
           {{ mediaName(row.media_id) }}
         </template>
       </el-table-column>
+      <el-table-column :label="$t('users.title') || 'Users'" min-width="160">
+        <template #default="{ row }">
+          <el-tag v-for="user in row.users" :key="user.id" size="small" style="margin-right: 4px; margin-bottom: 4px;">
+            {{ user.nickname || user.username }}
+          </el-tag>
+          <span v-if="!row.users || row.users.length === 0" style="color: #909399; font-size: 12px;">N/A</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" width="140" align="center" sortable="custom" />
       <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip sortable="custom" />
       <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
@@ -138,6 +146,11 @@
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
         </el-select>
       </el-form-item>
+      <el-form-item :label="$t('users.title') || 'Users'">
+        <el-select v-model="newAction.user_ids" multiple placeholder="Select users to notify" style="width: 100%;">
+          <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item :label="$t('triggers.severityMin')">
         <el-input-number v-model="newAction.severity_min" :min="0" :max="10" style="width: 100%;" />
       </el-form-item>
@@ -181,6 +194,11 @@
       <el-form-item :label="$t('actions.media')">
         <el-select v-model="selectedAction.media_id" style="width: 100%;">
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item :label="$t('users.title') || 'Users'">
+        <el-select v-model="selectedAction.user_ids" multiple placeholder="Select users to notify" style="width: 100%;">
+          <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('triggers.severityMin')">
@@ -261,6 +279,7 @@ import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchActionData, addAction, updateAction, deleteAction } from '@/api/actions';
 import { fetchMediaData } from '@/api/media';
+import { getUsers } from '@/api/users';
 
 export default {
   name: 'Action',
@@ -277,6 +296,7 @@ export default {
     return {
       actions: [],
       mediaOptions: [],
+      userOptions: [],
       loading: false,
       error: null,
       search: '',
@@ -304,7 +324,8 @@ export default {
         host_id: null,
         group_id: null,
         trigger_id: null,
-        alert_status: null
+        alert_status: null,
+        user_ids: []
       },
       selectedAction: {
         id: 0,
@@ -318,7 +339,8 @@ export default {
         host_id: null,
         group_id: null,
         trigger_id: null,
-        alert_status: null
+        alert_status: null,
+        user_ids: []
       },
       bulkForm: {
         enabled: 'nochange',
@@ -468,7 +490,7 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const [actionResp, mediaResp] = await Promise.all([
+        const [actionResp, mediaResp, userResp] = await Promise.all([
           fetchActionData({
             q: this.search || undefined,
             status: this.statusFilter === 'all' ? undefined : this.statusFilter,
@@ -479,6 +501,7 @@ export default {
             with_total: 1,
           }),
           this.mediaOptions.length === 0 ? fetchMediaData({ limit: 100, offset: 0 }) : Promise.resolve(null),
+          this.userOptions.length === 0 ? getUsers() : Promise.resolve(null),
         ]);
         const data = Array.isArray(actionResp)
           ? actionResp
@@ -498,6 +521,8 @@ export default {
           group_id: a.group_id ?? a.GroupID ?? null,
           trigger_id: a.trigger_id ?? a.TriggerID ?? null,
           alert_status: a.alert_status ?? a.AlertStatus ?? null,
+          users: a.users || [],
+          user_ids: (a.users || []).map((u: any) => u.id || u.ID)
         }));
         this.actions = mapped;
         this.totalActions = Number.isFinite(total) ? total : mapped.length;
@@ -506,6 +531,14 @@ export default {
           this.mediaOptions = mediaData.map((m) => ({
             id: m.ID || m.id || 0,
             name: m.Name || m.name || '',
+          }));
+        }
+        if (userResp) {
+          const userData = userResp.data?.data || userResp.data || userResp || [];
+          this.userOptions = userData.map((u: any) => ({
+            id: u.id || u.ID || 0,
+            username: u.username || u.Username || '',
+            nickname: u.nickname || u.Nickname || '',
           }));
         }
       } catch (err) {
@@ -534,7 +567,8 @@ export default {
         host_id: null,
         group_id: null,
         trigger_id: null,
-        alert_status: null
+        alert_status: null,
+        user_ids: []
       };
     },
     async onCreate() {
@@ -553,7 +587,10 @@ export default {
       }
     },
     openProperties(action) {
-      this.selectedAction = { ...action };
+      this.selectedAction = { 
+        ...action,
+        user_ids: (action.users || []).map((u: any) => u.id || u.ID)
+      };
       this.propertiesDialogVisible = true;
     },
     cancelProperties() {
@@ -572,7 +609,8 @@ export default {
           host_id: this.selectedAction.host_id,
           group_id: this.selectedAction.group_id,
           trigger_id: this.selectedAction.trigger_id,
-          alert_status: this.selectedAction.alert_status
+          alert_status: this.selectedAction.alert_status,
+          user_ids: this.selectedAction.user_ids
         });
         await this.loadActions(true);
         this.propertiesDialogVisible = false;
