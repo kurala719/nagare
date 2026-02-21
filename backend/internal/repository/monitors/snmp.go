@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,44 @@ import (
 
 type SnmpProvider struct {
 	config Config
+}
+
+func translateStatus(name, val string) string {
+	lower := strings.ToLower(name)
+	if strings.Contains(lower, "status") || strings.Contains(lower, "state") || strings.Contains(lower, "session") || strings.Contains(lower, "health") {
+		switch val {
+		case "1":
+			if strings.Contains(lower, "health") || strings.Contains(lower, "admin") {
+				return "Normal"
+			}
+			return "Up"
+		case "2":
+			if strings.Contains(lower, "health") {
+				return "Minor Alarm"
+			}
+			return "Down"
+		case "3":
+			if strings.Contains(lower, "health") {
+				return "Major Alarm"
+			}
+			return "Testing"
+		case "4":
+			if strings.Contains(lower, "health") {
+				return "Fatal Alarm"
+			}
+			return "Unknown"
+		case "5":
+			if strings.Contains(lower, "health") {
+				return "Not Supported"
+			}
+			return "Dormant"
+		case "6":
+			return "Not Present"
+		case "7":
+			return "Lower Layer Down"
+		}
+	}
+	return val
 }
 
 func NewSnmpProvider(cfg Config) (Provider, error) {
@@ -116,6 +155,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.39": "Normal Fans Count",
 		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.40": "Total Power Modules",
 		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.41": "Normal Power Modules Count",
+		"1.3.6.1.4.1.2011.5.25.41.1.1.1.1.39": "System-wide Inbound Rate",
+		"1.3.6.1.4.1.2011.5.25.41.1.1.1.1.40": "System-wide Outbound Rate",
 	}
 
 	for k, v := range translate {
@@ -369,25 +410,30 @@ func (p *SnmpProvider) processPDU(v gosnmp.SnmpPDU, oidNames map[string]string, 
 	val := formatSnmpValue(v)
 
 	// Smart-Probe for V200 Hardware metrics (find active board index)
-	// Only probe if value is truly missing (N/A or empty). '0' can be a valid metric value (e.g. CPU 0%).
-	if (val == "N/A" || val == "") && isV200HardwareMetric(name) {
+	// Only probe if value is truly missing (N/A, <nil> or empty). '0' can be a valid metric value (e.g. CPU 0%).
+	if (val == "N/A" || val == "<nil>" || val == "") && isV200HardwareMetric(name) {
 		fmt.Printf("[DEBUG] SNMP Triggering V200 Probe for %s (%s) as value is %s\n", name, norm, val)
-		root := norm
-		if idx := strings.LastIndex(root, "."); idx != -1 {
-			root = root[:idx]
-		}
-		discoveredVal := p.discoverV200Metric(gs, root)
+		// Walk the base OID to find any instance in the table
+		discoveredVal := p.discoverV200Metric(gs, norm)
 		if discoveredVal != "" {
 			fmt.Printf("[DEBUG] SNMP V200 Probe found value: %s\n", discoveredVal)
 			val = discoveredVal
 		}
 	}
 
+	// Translate status values to human-readable strings
+	val = translateStatus(name, val)
+
+	// Track memory metrics for usage calculation
 	if strings.Contains(name, "Memory Capacity") {
-		*memSize = float64(gosnmp.ToBigInt(v.Value).Int64())
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			*memSize = f
+		}
 	}
 	if strings.Contains(name, "Memory Available") {
-		*memFree = float64(gosnmp.ToBigInt(v.Value).Int64())
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			*memFree = f
+		}
 	}
 
 	*items = append(*items, Item{
@@ -403,31 +449,37 @@ func determineUnits(name string) string {
 	if strings.Contains(lower, "temperature") {
 		return "°C"
 	}
+	if strings.Contains(lower, "voltage") {
+		return "mV"
+	}
 	if strings.Contains(lower, "bitrate") || strings.Contains(lower, "speed") || strings.Contains(lower, "rate") {
 		return "bps"
-	}
-	if strings.Contains(lower, "capacity") || strings.Contains(lower, "available") || strings.Contains(lower, "total") || strings.Contains(lower, "free") {
-		return "B"
 	}
 	if strings.Contains(lower, "power") && strings.Contains(lower, "dbm") {
 		return "dBm"
 	}
-	if strings.Contains(lower, "errors") || strings.Contains(lower, "discards") || strings.Contains(lower, "count") {
+	if strings.Contains(lower, "capacity") || strings.Contains(lower, "available") || (strings.Contains(lower, "memory") && strings.Contains(lower, "total")) || strings.Contains(lower, "free") || strings.Contains(lower, "size") {
+		return "B"
+	}
+	if strings.Contains(lower, "errors") || strings.Contains(lower, "discards") || (strings.Contains(lower, "packets") && strings.Contains(lower, "count")) {
 		return "pkts"
 	}
 	return ""
 }
 
 func isV200HardwareMetric(name string) bool {
-	return strings.Contains(name, "CPU Usage") || strings.Contains(name, "Memory") ||
-		strings.Contains(name, "Temperature") || strings.Contains(name, "Fan Status")
+	lower := strings.ToLower(name)
+	return strings.Contains(lower, "cpu usage") || strings.Contains(lower, "memory") ||
+		strings.Contains(lower, "temperature") || strings.Contains(lower, "fan") ||
+		strings.Contains(lower, "power module") || strings.Contains(lower, "voltage") ||
+		strings.Contains(lower, "rate")
 }
 
 func (p *SnmpProvider) discoverV200Metric(gs *gosnmp.GoSNMP, baseOid string) string {
 	val := ""
 	_ = gs.Walk("."+baseOid, func(v gosnmp.SnmpPDU) error {
 		walkVal := formatSnmpValue(v)
-		if walkVal != "N/A" && walkVal != "" && walkVal != "0" {
+		if walkVal != "N/A" && walkVal != "" {
 			val = walkVal
 			return fmt.Errorf("found")
 		}
@@ -459,20 +511,25 @@ func (p *SnmpProvider) discoverInventory(gs *gosnmp.GoSNMP) ([]Item, error) {
 
 func (p *SnmpProvider) discoverAdvancedHealth(gs *gosnmp.GoSNMP, entityMap map[string]string) ([]Item, error) {
 	var items []Item
-	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.13", func(v gosnmp.SnmpPDU) error {
+	// Use hwEntityHealthStatus (.2) instead of hwEntityVoltage (.13) for health states
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.2", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v)
 		idx := v.Name[strings.LastIndex(v.Name, ".")+1:]
 		pretty := entityMap[idx]
 		if pretty == "" {
-			pretty = "Power Module " + idx
+			return nil
 		}
 		switch val {
 		case "1":
 			val = "Normal"
 		case "2":
-			val = "Abnormal"
+			val = "Minor Alarm"
 		case "3":
-			val = "Not Supplied"
+			val = "Major Alarm"
+		case "4":
+			val = "Fatal Alarm"
+		case "5":
+			val = "Not Supported"
 		}
 		items = append(items, Item{ID: normalizeOID(v.Name), Name: pretty + " Health State", Key: normalizeOID(v.Name), Value: val, Status: "0", Timestamp: time.Now().Unix()})
 		return nil
@@ -567,49 +624,77 @@ func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
 			!strings.Contains(lowerName, "ethernet") {
 			continue
 		}
-		// Huawei V5 Instant Rate OIDs (match display interface exactly)
-		inOid := ".1.3.6.1.4.1.2011.5.25.41.1.1.1.1.3." + idx
-		outOid := ".1.3.6.1.4.1.2011.5.25.41.1.1.1.1.4." + idx
+		// Primary Rate OIDs (HUAWEI-IF-EXT-MIB)
+		inOid := ".1.3.6.1.4.1.2011.5.25.41.1.1.1.1.39." + idx
+		outOid := ".1.3.6.1.4.1.2011.5.25.41.1.1.1.1.40." + idx
+		// Fallback OIDs (HUAWEI-PORT-MIB)
+		inOid2 := ".1.3.6.1.4.1.2011.5.25.26.1.1.1.1.8." + idx
+		outOid2 := ".1.3.6.1.4.1.2011.5.25.26.1.1.1.1.9." + idx
+
 		statOid := ".1.3.6.1.2.1.2.2.1.8." + idx
 		speedOid := ".1.3.6.1.2.1.31.1.1.1.15." + idx
 
-		fetchOids = append(fetchOids, inOid, outOid, statOid, speedOid)
+		fetchOids = append(fetchOids, inOid, outOid, inOid2, outOid2, statOid, speedOid)
 		oidToMeta[normalizeOID(inOid)] = struct{ Name, Type string }{name + " Inbound Rate", "traffic"}
 		oidToMeta[normalizeOID(outOid)] = struct{ Name, Type string }{name + " Outbound Rate", "traffic"}
+		oidToMeta[normalizeOID(inOid2)] = struct{ Name, Type string }{name + " Inbound Rate", "traffic"}
+		oidToMeta[normalizeOID(outOid2)] = struct{ Name, Type string }{name + " Outbound Rate", "traffic"}
 		oidToMeta[normalizeOID(statOid)] = struct{ Name, Type string }{name + " Link Status", "status"}
 		oidToMeta[normalizeOID(speedOid)] = struct{ Name, Type string }{name + " Negotiated Speed", "speed"}
 	}
 
-	for i := 0; i < len(fetchOids); i += 20 {
-		end := i + 20
+	ifNamesMap := make(map[string]Item)
+	for i := 0; i < len(fetchOids); i += 10 {
+		end := i + 10
 		if end > len(fetchOids) {
 			end = len(fetchOids)
 		}
-		result, err := gs.Get(fetchOids[i:end])
+		batch := fetchOids[i:end]
+		result, err := gs.Get(batch)
 		if err != nil {
+			for _, singleOid := range batch {
+				if r, e := gs.Get([]string{singleOid}); e == nil && len(r.Variables) > 0 {
+					p.processInterfaceVar(r.Variables[0], oidToMeta, &ifNamesMap)
+				}
+			}
 			continue
 		}
 		for _, v := range result.Variables {
-			val := formatSnmpValue(v)
-			normOid := normalizeOID(v.Name)
-			meta := oidToMeta[normOid]
-			if meta.Name == "" {
-				continue
-			}
-			if meta.Type == "status" {
-				switch val {
-				case "1":
-					val = "Up"
-				case "2":
-					val = "Down"
-				default:
-					val = "Unknown"
-				}
-			}
-			items = append(items, Item{ID: normOid, Name: meta.Name, Key: normOid, Value: val, Units: determineUnits(meta.Name), Status: "0", Timestamp: time.Now().Unix()})
+			p.processInterfaceVar(v, oidToMeta, &ifNamesMap)
 		}
 	}
+
+	for _, it := range ifNamesMap {
+		items = append(items, it)
+	}
 	return items, nil
+}
+
+func (p *SnmpProvider) processInterfaceVar(v gosnmp.SnmpPDU, oidToMeta map[string]struct{ Name, Type string }, ifNamesMap *map[string]Item) {
+	val := formatSnmpValue(v)
+	if val == "N/A" || val == "" || (val == "0" && !strings.Contains(oidToMeta[normalizeOID(v.Name)].Name, "Status")) {
+		return
+	}
+	normOid := normalizeOID(v.Name)
+	meta := oidToMeta[normOid]
+	if meta.Name == "" {
+		return
+	}
+
+	if meta.Type == "speed" {
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			val = fmt.Sprintf("%.0f", f*1000000)
+		}
+	}
+
+	val = translateStatus(meta.Name, val)
+
+	existing, exists := (*ifNamesMap)[meta.Name]
+	if !exists || (existing.Value == "N/A" || existing.Value == "0") {
+		(*ifNamesMap)[meta.Name] = Item{
+			ID: normOid, Name: meta.Name, Key: normOid, Value: val, Units: determineUnits(meta.Name), Status: "0", Timestamp: time.Now().Unix(),
+		}
+	}
 }
 
 func (p *SnmpProvider) discoverRoutingMetrics(gs *gosnmp.GoSNMP) ([]Item, error) {
@@ -758,30 +843,47 @@ func (p *SnmpProvider) discoverHuaweiMetrics(gs *gosnmp.GoSNMP) ([]Item, error) 
 		val := formatSnmpValue(v)
 		if val != "" && val != "N/A" && val != "0" {
 			norm := normalizeOID(v.Name)
+			idx := norm[strings.LastIndex(norm, ".")+1:]
 			items = append(items, Item{
-				ID: norm, Name: "Board Temperature (°C)", Key: "huawei_temp", Value: val, Units: "°C", Status: "0", Timestamp: now,
+				ID: norm, Name: "Board [" + idx + "] Temperature (°C)", Key: "huawei_temp", Value: val, Units: "°C", Status: "0", Timestamp: now,
 			})
-			return fmt.Errorf("found")
 		}
 		return nil
 	})
 
-	// 4. Fan Status
-	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.39", func(v gosnmp.SnmpPDU) error {
+	// 4. Board Voltage (hwEntityExtentMIB -> hwEntityVoltage)
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.13", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v)
-		items = append(items, Item{
-			ID: normalizeOID(v.Name), Name: "Normal Fans Count", Key: "huawei_fans_normal", Value: val, Status: "0", Timestamp: now,
-		})
-		return fmt.Errorf("found")
+		if val != "" && val != "N/A" && val != "0" {
+			norm := normalizeOID(v.Name)
+			idx := norm[strings.LastIndex(norm, ".")+1:]
+			items = append(items, Item{
+				ID: norm, Name: "Board [" + idx + "] Voltage (mV)", Key: "huawei_voltage", Value: val, Units: "mV", Status: "0", Timestamp: now,
+			})
+		}
+		return nil
 	})
 
-	// 5. Power Status
+	// 5. Fan Status
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.39", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		if val != "N/A" {
+			items = append(items, Item{
+				ID: normalizeOID(v.Name), Name: "Normal Fans Count", Key: "huawei_fans_normal", Value: val, Status: "0", Timestamp: now,
+			})
+		}
+		return nil
+	})
+
+	// 6. Power Status
 	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.41", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v)
-		items = append(items, Item{
-			ID: normalizeOID(v.Name), Name: "Normal Power Modules Count", Key: "huawei_pwr_normal", Value: val, Status: "0", Timestamp: now,
-		})
-		return fmt.Errorf("found")
+		if val != "N/A" {
+			items = append(items, Item{
+				ID: normalizeOID(v.Name), Name: "Normal Power Modules Count", Key: "huawei_pwr_normal", Value: val, Status: "0", Timestamp: now,
+			})
+		}
+		return nil
 	})
 
 	fmt.Printf("[DEBUG] SNMP Huawei discovery found %d items\n", len(items))
@@ -825,9 +927,12 @@ func formatSnmpValue(variable gosnmp.SnmpPDU) string {
 		return fmt.Sprintf("%s", variable.Value)
 	case gosnmp.IPAddress:
 		return fmt.Sprintf("%s", variable.Value)
-	case gosnmp.Null:
+	case gosnmp.NoSuchObject, gosnmp.NoSuchInstance, gosnmp.EndOfMibView, gosnmp.Null:
 		return "N/A"
 	default:
+		if variable.Value == nil {
+			return "N/A"
+		}
 		return fmt.Sprintf("%v", variable.Value)
 	}
 }

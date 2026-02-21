@@ -46,13 +46,20 @@ type zabbixError struct {
 }
 
 type zabbixHost struct {
-	HostID          string `json:"hostid"`
-	Host            string `json:"host"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	Status          string `json:"status"`
-	ActiveAvailable string `json:"active_available"`
-	Interfaces      []struct {
+	HostID        string `json:"hostid"`
+	Host          string `json:"host"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Status        string `json:"status"`
+	Available     string `json:"available"`
+	Error         string `json:"error"`
+	SnmpAvailable string `json:"snmp_available"`
+	SnmpError     string `json:"snmp_error"`
+	IpmiAvailable string `json:"ipmi_available"`
+	IpmiError     string `json:"ipmi_error"`
+	JmxAvailable  string `json:"jmx_available"`
+	JmxError      string `json:"jmx_error"`
+	Interfaces    []struct {
 		InterfaceID string `json:"interfaceid"`
 		IP          string `json:"ip"`
 		DNS         string `json:"dns"`
