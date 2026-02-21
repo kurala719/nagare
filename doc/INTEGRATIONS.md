@@ -1,6 +1,6 @@
 # Nagare Integrations: Connecting Your Monitors
 
-Nagare is designed to be the "Brain" on top of existing monitoring systems. This guide explains how to connect Zabbix, Prometheus, and any other tool to the Nagare Brain.
+Nagare is designed to be the "Brain" on top of existing monitoring systems. This guide explains how to connect Zabbix and other tools to the Nagare Brain.
 
 ---
 
@@ -41,23 +41,7 @@ return 'OK';
 
 ---
 
-## 3. Prometheus Integration 🟧
-
-### Alertmanager Configuration
-Add a `webhook_config` to your `alertmanager.yml`:
-
-```yaml
-receivers:
-- name: 'nagare-webhook'
-  webhook_configs:
-  - url: 'http://nagare-server:8080/api/v1/alerts/webhook'
-    http_config:
-      bearer_token: "YOUR_EVENT_TOKEN"
-```
-
----
-
-## 4. Custom Scripts (Bash/Python/PowerShell)
+## 3. Custom Scripts (Bash/Python/PowerShell)
 You can send custom alerts from any script:
 
 ```bash
@@ -72,22 +56,22 @@ curl -X POST http://nagare-server:8080/api/v1/alerts/webhook
 
 ---
 
-## 5. Synchronizing Hosts & Items
+## 4. Synchronizing Hosts & Items
 Nagare can "Pull" data from Zabbix to keep its inventory up to date.
 - **Auto-Sync**: Nagare runs a background job (if configured) to sync every hour.
 - **Manual Sync**: Click the **"Sync Now"** button on the Monitor or Group details page.
 
 ---
 
-## 6. How Nagare Maps Data
-| Nagare Field | Zabbix Mapping | Prometheus Mapping |
-| :--- | :--- | :--- |
-| `Host.Name` | `host` | `instance` |
-| `Item.LastValue` | `lastvalue` | `metric_value` |
-| `Alert.Severity` | `trigger.severity` | `labels.severity` |
+## 5. How Nagare Maps Data
+| Nagare Field | Zabbix Mapping |
+| :--- | :--- |
+| `Host.Name` | `host` |
+| `Item.LastValue` | `lastvalue` |
+| `Alert.Severity` | `trigger.severity` |
 
 ---
 
-## 🛠️ Debugging Integrations
+## 6. Debugging Integrations
 - Visit the **Site Messages** section in the Nagare Dashboard. If a webhook fails, you'll see an error message like: *"Failed to parse alert from 192.168.1.50."*
 - Check the **Audit Logs** for `POST /api/v1/alerts/webhook` to see incoming payloads.

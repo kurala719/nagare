@@ -18,13 +18,13 @@ Items (Metrics)
     ↓
     Actions filter alerts
     ↓
-    Send via Media (email, webhook, QQ, etc.)
+    Send via Media (email, other, QQ, etc.)
 ```
 
 ## How It Works
 
 ### Stage 1: Item Value Monitoring
-- External monitors (Zabbix, Prometheus) poll metrics
+- External monitors (Zabbix) poll metrics
 - Item values are updated in the system
 - `ExecuteTriggersForItem()` is called automatically
 
@@ -46,7 +46,7 @@ Items (Metrics)
 ### Stage 5: Action Execution
 - Matching triggers execute their actions
 - Actions format messages using templates
-- Notifications sent via media (email, webhook, etc.)
+- Notifications sent via media (email, other, etc.)
 
 ## Key Features
 

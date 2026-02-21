@@ -153,6 +153,7 @@
                         <el-select v-model="dialogItem.type" style="width: 100%;">
                             <el-option :label="$t('providers.typeGemini')" :value="1" />
                             <el-option :label="$t('providers.typeOpenAI')" :value="2" />
+                            <el-option :label="$t('providers.typeOther')" :value="3" />
                         </el-select>
                     </el-form-item>
                     <el-form-item :label="$t('providers.url')">
@@ -666,6 +667,7 @@ export default {
             const map: Record<number, string> = {
                 1: this.$t('providers.typeGemini'),
                 2: this.$t('providers.typeOpenAI'),
+                3: this.$t('providers.typeOther'),
             };
             return map[type] || this.$t('providers.typeOpenAI');
         },

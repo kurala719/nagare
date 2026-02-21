@@ -130,7 +130,7 @@
       <el-form-item :label="$t('media.type')">
         <el-select v-model="newMedia.type" style="width: 100%;">
           <el-option label="Gmail" value="gmail" />
-          <el-option label="Webhook" value="webhook" />
+          <el-option label="Other" value="other" />
           <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>
@@ -169,7 +169,7 @@
       <el-form-item :label="$t('media.type')">
         <el-select v-model="selectedMedia.type" style="width: 100%;">
           <el-option label="Gmail" value="gmail" />
-          <el-option label="Webhook" value="webhook" />
+          <el-option label="Other" value="other" />
           <el-option label="QQ" value="qq" />
         </el-select>
       </el-form-item>

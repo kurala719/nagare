@@ -69,8 +69,7 @@
       <el-form-item :label="$t('alarms.type')">
         <el-select v-model="newAlarm.type" style="width: 100%;">
           <el-option label="Zabbix" :value="1" />
-          <el-option label="Prometheus" :value="2" />
-          <el-option label="Other" :value="3" />
+          <el-option label="Other" :value="2" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('alarms.description')">
@@ -128,7 +127,7 @@
             </div>
             <div class="alarm-title-area">
               <h3 class="alarm-name">{{ alarm.name }}</h3>
-              <span class="alarm-type-tag">{{ alarm.type === 1 ? 'Zabbix' : alarm.type === 2 ? 'Prometheus' : 'Other' }}</span>
+              <span class="alarm-type-tag">{{ alarm.type === 1 ? 'Zabbix' : 'Other' }}</span>
             </div>
             <el-checkbox :model-value="isSelected(alarm.id)" @change="toggleSelection(alarm.id, $event)" class="alarm-select" />
           </div>
@@ -203,8 +202,7 @@
       <el-form-item :label="$t('alarms.type')">
         <el-select v-model="selectedAlarm.type" style="width: 100%;">
           <el-option label="Zabbix" :value="1" />
-          <el-option label="Prometheus" :value="2" />
-          <el-option label="Other" :value="3" />
+          <el-option label="Other" :value="2" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('alarms.description')">

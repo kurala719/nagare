@@ -72,7 +72,7 @@
           <div class="feature-card">
             <div class="feature-icon">📊</div>
             <h3>Unified Monitoring</h3>
-            <p>Seamlessly synchronize hosts and metrics from Zabbix, Prometheus, and other providers into a single dashboard.</p>
+            <p>Seamlessly synchronize hosts and metrics from Zabbix and other monitoring sources into a single dashboard.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">🐚</div>
@@ -87,7 +87,7 @@
           <div class="feature-card">
             <div class="feature-icon">🔔</div>
             <h3>Multi-Channel Alerts</h3>
-            <p>Configurable triggers for Email, Webhooks, and QQ integration with whitelist management.</p>
+            <p>Configurable triggers for Email, Webhooks/Other, and QQ integration with whitelist management.</p>
           </div>
         </div>
       </div>

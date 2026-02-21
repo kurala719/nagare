@@ -22,7 +22,7 @@ If Nagare isn't working as expected, follow these steps to diagnose and resolve 
 
 ---
 
-## 2. 🔌 Zabbix/Prometheus Webhook Failures
+## 2. 🔌 Zabbix Webhook Failures
 
 ### Q: "Failed to parse alert" in Site Messages.
 **Cause**: The JSON payload format sent by Zabbix doesn't match what Nagare expects.

@@ -677,6 +677,7 @@ const messages = {
       typeRequired: 'Provider type is required',
       typeGemini: 'Gemini',
       typeOpenAI: 'OpenAI',
+      typeOther: 'Other (OpenAI-compatible)',
     },
     users: {
       title: 'Identity Management',
@@ -766,7 +767,7 @@ const messages = {
       filterAll: 'All',
       name: 'Name',
       type: 'Type',
-      typeHint: 'email/webhook/qq',
+      typeHint: 'email/other/qq',
       target: 'Target',
       targetHint: 'address or endpoint',
       params: 'Params',
@@ -1829,6 +1830,7 @@ const messages = {
       typeRequired: '请选择供应商类型',
       typeGemini: 'Gemini',
       typeOpenAI: 'OpenAI',
+      typeOther: '其他 (OpenAI 兼容)',
     },
     users: {
       title: '身份管理',
@@ -1918,7 +1920,7 @@ const messages = {
       filterAll: '全部',
       name: '名称',
       type: '类型',
-      typeHint: 'email/webhook',
+      typeHint: 'email/other',
       target: '目标',
       targetHint: '地址或端点',
       params: '参数',

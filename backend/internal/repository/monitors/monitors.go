@@ -11,23 +11,20 @@ import (
 type MonitorType int
 
 const (
-	MonitorZabbix     MonitorType = iota + 1 // 1 = zabbix
-	MonitorPrometheus                        // 2 = prometheus
-	MonitorOther                             // 3 = other
-	MonitorSNMP                              // 4 = snmp
+	MonitorSNMP   MonitorType = 1 // 1 = snmp
+	MonitorZabbix MonitorType = 2 // 2 = zabbix
+	MonitorOther  MonitorType = 3 // 3 = other
 )
 
 // String returns the string representation of the monitor type
 func (m MonitorType) String() string {
 	switch m {
-	case MonitorZabbix:
-		return "zabbix"
-	case MonitorPrometheus:
-		return "prometheus"
-	case MonitorOther:
-		return "other"
 	case MonitorSNMP:
 		return "snmp"
+	case MonitorZabbix:
+		return "zabbix"
+	case MonitorOther:
+		return "other"
 	default:
 		return "unknown"
 	}
@@ -37,13 +34,11 @@ func (m MonitorType) String() string {
 func ParseMonitorType(s int) MonitorType {
 	switch s {
 	case 1:
-		return MonitorZabbix
+		return MonitorSNMP
 	case 2:
-		return MonitorPrometheus
+		return MonitorZabbix
 	case 3:
 		return MonitorOther
-	case 4:
-		return MonitorSNMP
 	default:
 		return MonitorZabbix
 	}
@@ -178,10 +173,10 @@ func NewClient(cfg Config) (*Client, error) {
 	switch cfg.Type {
 	case MonitorZabbix:
 		provider, err = NewZabbixProvider(cfg)
-	case MonitorPrometheus:
-		provider, err = NewPrometheusProvider(cfg)
 	case MonitorSNMP:
 		provider, err = NewSnmpProvider(cfg)
+	case MonitorOther:
+		return nil, errors.New("generic 'Other' monitor type requires a specific provider implementation")
 	default:
 		return nil, errors.New("unsupported monitor type")
 	}

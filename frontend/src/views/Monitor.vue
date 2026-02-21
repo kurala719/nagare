@@ -67,9 +67,8 @@
       </el-form-item>
       <el-form-item :label="$t('monitors.type')">
         <el-select v-model="newMonitor.type" style="width: 100%;">
-          <el-option label="Zabbix" :value="1" />
-          <el-option label="Prometheus" :value="2" />
-          <el-option label="SNMP" :value="4" />
+          <el-option label="SNMP" :value="1" />
+          <el-option label="Zabbix" :value="2" />
           <el-option label="Other" :value="3" />
         </el-select>
       </el-form-item>
@@ -131,7 +130,7 @@
             </div>
             <div class="monitor-title-area">
               <h3 class="monitor-name">{{ monitor.name }}</h3>
-              <span class="monitor-type-tag">{{ monitor.type === 1 ? 'Zabbix' : monitor.type === 2 ? 'Prometheus' : 'Other' }}</span>
+              <span class="monitor-type-tag">{{ monitor.type === 1 ? 'SNMP' : monitor.type === 2 ? 'Zabbix' : 'Other' }}</span>
             </div>
             <el-checkbox :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" class="monitor-select" />
           </div>
@@ -204,12 +203,13 @@
         </div>
       </el-form-item>
       <el-form-item :label="$t('monitors.type')">
+      <el-form-item :label="$t('monitors.type')">
         <el-select v-model="selectedMonitor.type" style="width: 100%;">
-          <el-option label="Zabbix" :value="1" />
-          <el-option label="Prometheus" :value="2" />
-          <el-option label="SNMP" :value="4" />
+          <el-option label="SNMP" :value="1" />
+          <el-option label="Zabbix" :value="2" />
           <el-option label="Other" :value="3" />
         </el-select>
+      </el-form-item>
       </el-form-item>
       <el-form-item :label="$t('monitors.description')">
         <el-input type="textarea" v-model="selectedMonitor.description" />

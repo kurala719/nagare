@@ -78,7 +78,7 @@ Human-readable description of trigger conditions for logging and alerts:
 
 ```
 1. ITEM MONITORING
-   ├─ External Monitor (Zabbix, Prometheus, etc.) polls metrics
+   ├─ External Monitor (Zabbix) polls metrics
    ├─ Service: PullItemsFromHostServ() updates item values
    └─ Calls: ExecuteTriggersForItem(item)
 

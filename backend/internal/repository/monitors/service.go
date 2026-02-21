@@ -150,8 +150,8 @@ func CreateProviderFromConfig(cfg Config) (Provider, error) {
 	switch cfg.Type {
 	case MonitorZabbix:
 		return NewZabbixProvider(cfg)
-	case MonitorPrometheus:
-		return NewPrometheusProvider(cfg)
+	case MonitorSNMP:
+		return NewSnmpProvider(cfg)
 	case MonitorOther:
 		return nil, fmt.Errorf("other provider not implemented yet")
 	default:

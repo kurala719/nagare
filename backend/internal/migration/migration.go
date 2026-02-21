@@ -81,7 +81,7 @@ func preSchemaUpdates() error {
 		`).Error
 		if err != nil {
 			// Log error but continue - migration might fail later if duplicates persist
-			// but we don't want to stop the whole process if this specific MySQL syntax fails 
+			// but we don't want to stop the whole process if this specific MySQL syntax fails
 			// (though it's standard for MySQL/MariaDB)
 		}
 	}
@@ -116,7 +116,7 @@ func preSchemaUpdates() error {
 			return err
 		}
 	}
-	// Migrate monitor type from string to int: 'zabbix' -> 1, 'prometheus' -> 2, others -> 3
+	// Migrate monitor type from string to int: 'snmp' -> 1, 'zabbix' -> 2, 'prometheus' -> 3 (now 'other')
 	if database.DB.Migrator().HasTable(&model.Monitor{}) && database.DB.Migrator().HasColumn(&model.Monitor{}, "type") {
 		columnType, err := database.DB.Migrator().ColumnTypes(&model.Monitor{})
 		if err != nil {
@@ -132,9 +132,13 @@ func preSchemaUpdates() error {
 			}
 		}
 		if isString {
-			if err := database.DB.Exec("UPDATE monitors SET type = CASE WHEN LOWER(type) = 'zabbix' THEN '1' WHEN LOWER(type) = 'prometheus' THEN '2' ELSE '3' END WHERE type IS NOT NULL").Error; err != nil {
+			if err := database.DB.Exec("UPDATE monitors SET type = CASE WHEN LOWER(type) = 'snmp' THEN '1' WHEN LOWER(type) = 'zabbix' THEN '2' WHEN LOWER(type) = 'prometheus' THEN '3' ELSE '3' END WHERE type IS NOT NULL").Error; err != nil {
 				return err
 			}
+		}
+		// Migrate numeric types: old Zabbix(1)->2, old Other(2)->3, old SNMP(4)->1
+		if err := database.DB.Exec("UPDATE monitors SET type = CASE WHEN type = 1 THEN 2 WHEN type = 2 THEN 3 WHEN type = 4 THEN 1 ELSE type END WHERE type IN (1, 2, 4)").Error; err != nil {
+			return err
 		}
 	}
 	return nil

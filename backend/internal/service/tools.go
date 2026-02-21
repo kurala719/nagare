@@ -74,7 +74,7 @@ func ListTools() []ToolDefinition {
 			Description: "List monitors with optional filters.",
 			InputSchema: schemaObject(map[string]interface{}{
 				"q":      schemaString("Search by name, url, or description."),
-				"type":   schemaString("Monitor type (zabbix, prometheus, etc.)."),
+				"type":   schemaString("Monitor type (zabbix, snmp, etc.)."),
 				"status": schemaInt("Monitor status."),
 				"limit":  schemaInt("Max results (default 100)."),
 				"offset": schemaInt("Offset for pagination."),
@@ -124,7 +124,7 @@ func ListTools() []ToolDefinition {
 			InputSchema: schemaObject(map[string]interface{}{
 				"q":      schemaString("Search by name, type, target, description."),
 				"status": schemaInt("Media status."),
-				"type":   schemaString("Media type (email, webhook, etc.)."),
+				"type":   schemaString("Media type (email, other, qq, etc.)."),
 				"limit":  schemaInt("Max results (default 100)."),
 				"offset": schemaInt("Offset for pagination."),
 			}),

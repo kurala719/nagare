@@ -143,11 +143,11 @@ Media specifies how and where to send notifications.
 }
 ```
 
-**Webhook Example:**
+**Other (Webhook) Example:**
 ```json
 {
   "name": "Slack Webhook",
-  "type": "webhook",
+  "type": "other",
   "target": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
   "enabled": 1
 }
@@ -456,7 +456,7 @@ GET /trigger/search?entity=alert
 ## Architecture Diagram
 
 ```
-External Monitor (Zabbix, Prometheus)
+External Monitor (Zabbix)
     ↓
   PULL ITEMS
     ↓

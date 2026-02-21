@@ -10,7 +10,7 @@ Nagare is built as a robust, decoupled, clean-architecture application. It acts 
 - **Framework**: `gin-gonic` for HTTP routing, middleware (CORS, JWT auth, logging, audit).
 - **ORM**: `gorm` handling database operations and schema migrations.
 - **Communication**: WebSocket hubs (`hub.go`, `qq_ws.go`, `webssh.go`) for real-time bidirectional messaging.
-- **Integrations**: Standardized Provider interfaces for AI (`ai.go`), Email (`gmail.go`), and Webhooks (`webhook.go`).
+- **Integrations**: Standardized Provider interfaces for AI (`ai.go`), Email (`gmail.go`), and Other/Webhooks (`webhook.go`).
 
 ### Frontend: Vue 3
 - **Build Tool**: Vite.

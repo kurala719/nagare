@@ -11,7 +11,7 @@ Items (Metrics) -> Alerts -> Triggers -> Actions -> Media (Notification)
 ## Components
 
 ### 1. Items (Metrics)
-- **Model**: `Item` - Represents monitoring metrics from external sources (Zabbix, Prometheus)
+- **Model**: `Item` - Represents monitoring metrics from external sources (Zabbix, SNMP, etc.)
 - **Properties**: 
   - `ID`, `Name`, `HID` (Host ID), `ItemID` (External ID)
   - `LastValue` (current metric value)
@@ -56,8 +56,8 @@ Items (Metrics) -> Alerts -> Triggers -> Actions -> Media (Notification)
 ### 5. Media
 - **Model**: `Media` - Notification delivery channels
 - **Properties**:
-  - `Type` (email, webhook, QQ, etc.)
-  - `Target` (email address, webhook URL, QQ account)
+  - `Type` (email, other, QQ, etc.)
+  - `Target` (email address, webhook/other URL, QQ account)
   - `Params` - Type-specific configuration
   - `Status`, `Enabled`
 

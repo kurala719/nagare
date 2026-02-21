@@ -65,7 +65,7 @@ type Monitor struct {
 	AuthToken         string
 	EventToken        string `gorm:"size:64;uniqueIndex"`
 	Description       string
-	Type              int    // 1 = zabbix, 2 = prometheus, 3 = other
+	Type              int    // 1 = snmp, 2 = zabbix, 3 = other
 	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
@@ -82,7 +82,7 @@ type Alarm struct {
 	AuthToken         string
 	EventToken        string `gorm:"size:64;uniqueIndex"`
 	Description       string
-	Type              int    // 1 = zabbix, 2 = prometheus, 3 = other
+	Type              int    // 1 = snmp, 2 = zabbix, 3 = other
 	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
@@ -159,7 +159,7 @@ type Alert struct {
 type Media struct {
 	gorm.Model
 	Name        string
-	Type        string            // "email", "webhook", "qq", etc.
+	Type        string            // "email", "other", "qq", etc.
 	Target      string            // address/endpoint/number
 	Params      map[string]string `gorm:"type:json;serializer:json"`
 	Enabled     int               `gorm:"default:1"` // 0 = disabled, 1 = enabled

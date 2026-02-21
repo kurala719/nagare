@@ -20,7 +20,7 @@ Metrics (Items) → Triggers (Threshold) → Alerts (Notification) → Actions (
 
 ### 3. **Actions** (Delivery)
 - Template message with placeholders
-- Reference media (email, webhook, QQ, etc.)
+- Reference media (email, other, QQ, etc.)
 - Executed when triggers match
 
 ## API Quick Start

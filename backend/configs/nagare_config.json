@@ -52,16 +52,16 @@
         "from": ""
       },
         "external": [
-          { "type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 1 },
-          { "type": "monitor", "key": "prometheus", "name": "Prometheus", "id": 2 },
+          { "type": "monitor", "key": "snmp", "name": "SNMP", "id": 1 },
+          { "type": "monitor", "key": "zabbix", "name": "Zabbix", "id": 2 },
           { "type": "monitor", "key": "other", "name": "Other", "id": 3 },
           { "type": "alarm", "key": "zabbix", "name": "Zabbix", "id": 1 },
-          { "type": "alarm", "key": "prometheus", "name": "Prometheus", "id": 2 },
-          { "type": "alarm", "key": "other", "name": "Other", "id": 3 },
+          { "type": "alarm", "key": "other", "name": "Other", "id": 2 },
           { "type": "provider", "key": "gemini", "name": "Gemini", "id": 1 },
           { "type": "provider", "key": "openai", "name": "OpenAI", "id": 2 },
+          { "type": "provider", "key": "other", "name": "Other", "id": 3 },
           { "type": "media", "key": "gmail", "name": "Gmail", "id": 1 },
-          { "type": "media", "key": "webhook", "name": "Webhook", "id": 2 },
-          { "type": "media", "key": "qq", "name": "QQ", "id": 3 }
+          { "type": "media", "key": "qq", "name": "QQ", "id": 2 },
+          { "type": "media", "key": "other", "name": "Other", "id": 3 }
         ]
       }    

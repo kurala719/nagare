@@ -32,7 +32,7 @@ The `views` directory contains the primary pages a user interacts with.
 - **`StatusPage.vue`**: Public-facing read-only status page (similar to Atlassian/GitHub status pages).
 
 ### 2.2 Infrastructure Management
-- **`Monitor.vue`**: Manages external monitoring tool connections (Zabbix/Prometheus).
+- **`Monitor.vue`**: Manages external monitoring tool connections (Zabbix, SNMP).
 - **`Group.vue` & `GroupDetail.vue`**: Logical server clusters and their aggregated health.
 - **`Host.vue` & `HostDetail.vue`**: Lists individual servers. The detail view shows specific items, history charts, and an AI diagnostic action.
 - **`Item.vue` & `ItemDetail.vue`**: Individual metrics and checks (e.g., CPU load, HTTP ping).

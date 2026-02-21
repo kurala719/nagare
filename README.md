@@ -3,7 +3,7 @@
 **Nagare** (Japanese for "Flow") is a smart platform that watches over your servers and applications. Unlike traditional systems that just "beep" when something breaks, Nagare uses Artificial Intelligence to understand **why** it broke and tells you **how** to fix it.
 
 ## 🌟 What makes Nagare special? (The Layman's View)
-- **It Listens**: It connects to your existing tools (Zabbix, Prometheus) to hear every "heartbeat" of your system.
+- **It Listens**: It connects to your existing tools (Zabbix) to hear every "heartbeat" of your system.
 - **It Remembers**: It has a "Knowledge Base" (RAG). When a problem occurs, it looks up your past notes and manuals to find a solution.
 - **It Thinks**: It uses advanced AI (Google Gemini) to analyze errors. It acts like a senior engineer who is awake 24/7.
 - **It Acts**: You can fix problems directly from your browser using a built-in "Command Center" (WebSSH) or automated "Robot Scripts" (Ansible).
@@ -25,7 +25,7 @@ If you are a developer or an engineer, explore our deep-dive manuals:
 | [**Database Schema**](./doc/DATABASE_SCHEMA.md) | The Storage Engine | MySQL/GORM, ERD, History Tracking. |
 | [**Deployment Guide**](./doc/DEPLOYMENT_GUIDE.md) | Production & Staging | Nginx, systemd, JWT Secrets, HTTPS. |
 | [**Developer Guide**](./doc/DEVELOPER_GUIDE.md) | Code Standards | DDD Layering, Vue 3 Composition API. |
-| [**Integrations**](./doc/INTEGRATIONS.md) | Connecting Monitors | Zabbix Webhooks, Prometheus Alertmanager. |
+| [**Integrations**](./doc/INTEGRATIONS.md) | Connecting Monitors | Zabbix Webhooks, Custom Integrations. |
 | [**AI Configuration**](./doc/AI_CONFIGURATION.md) | The Brain Setup | Gemini, OpenAI, RAG Tuning. |
 | [**Playbook Authoring**](./doc/PLAYBOOK_AUTHORING.md) | Robot Scripts | Ansible YAML, Dynamic Inventory. |
 | [**Security & RBAC**](./doc/RBAC_SECURITY_MODEL.md) | Access Control | Privilege Levels, JWT, WebSSH Security. |

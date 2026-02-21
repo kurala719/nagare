@@ -19,7 +19,7 @@ This is where the "Thinking" happens.
 The "Digital Assets" Nagare is watching.
 - **Hosts**: Individual servers. You can see their history, current health, and connect via **WebSSH**.
 - **Groups**: Logical clusters (e.g., "Web Servers", "Database Team").
-- **Synchronization**: Nagare can "Pull" data from Zabbix/Prometheus, so you don't have to add servers manually.
+- **Synchronization**: Nagare can "Pull" data from Zabbix, so you don't have to add servers manually.
 
 ### 3. 🔔 The Alerting Zone (Sensors)
 The "Security Guard" of your system.
@@ -70,5 +70,5 @@ Explore the specific details of each zone:
 - [**Deployment Guide**](./doc/DEPLOYMENT_GUIDE.md) - Production & Staging.
 - [**Developer Guide**](./doc/DEVELOPER_GUIDE.md) - Coding Standards.
 - [**Troubleshooting**](./doc/TROUBLESHOOTING.md) - Common Errors & Fixes.
-- [**Integrations**](./doc/INTEGRATIONS.md) - Zabbix & Prometheus.
+- [**Integrations**](./doc/INTEGRATIONS.md) - Zabbix Integration.
 - [**Architecture & API**](./doc/ARCHITECTURE.md) - How it's built (For Techies).
