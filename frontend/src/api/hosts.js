@@ -92,3 +92,12 @@ export function testSNMP(id) {
     timeout: 120000
   })
 }
+
+export function probeSnmpOid(id, oid) {
+  const encodedOid = encodeURIComponent(oid || '')
+  return request({
+    url: `/hosts/${id}/snmp/probe${encodedOid ? `?oid=${encodedOid}` : ''}`,
+    method: 'post',
+    timeout: 120000
+  })
+}

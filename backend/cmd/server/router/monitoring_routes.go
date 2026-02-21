@@ -1,8 +1,9 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"nagare/internal/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupMonitorRoutes(rg *gin.RouterGroup) {
@@ -53,6 +54,7 @@ func setupHostRoutes(rg *gin.RouterGroup) {
 		hosts.GET("/:id", api.PrivilegesMiddleware(1), api.GetHostByIDCtrl)
 		hosts.GET("/:id/history", api.PrivilegesMiddleware(1), api.GetHostHistoryCtrl)
 		hosts.POST("/:id/consult", api.PrivilegesMiddleware(1), api.ConsultHostCtrl)
+		hosts.POST("/:id/snmp/probe", api.PrivilegesMiddleware(1), api.ProbeSNMPOIDCtrl)
 		hosts.GET("/:id/ssh", api.PrivilegesMiddleware(1), api.HandleWebSSH)
 
 		// Privilege level 2

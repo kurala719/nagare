@@ -382,9 +382,55 @@
       <el-form-item label="SNMP Port">
         <el-input-number v-model="selectedHost.snmp_port" :min="1" :max="65535" />
       </el-form-item>
+      <el-divider content-position="left">SNMP Probe</el-divider>
+      <el-form-item label="Test OID">
+        <el-input v-model="snmpTestOid" placeholder=".1.3.6.1.2.1.1.1.0" />
+      </el-form-item>
+      <el-form-item label="Quick Probe">
+        <el-button type="primary" plain @click="runHuaweiQuickProbe" :loading="quickTestingSNMP">
+          Huawei Quick Probe
+        </el-button>
+      </el-form-item>
+      <el-form-item v-if="snmpQuickResults.length > 0" label="Quick Results">
+        <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+          <div
+            v-for="entry in snmpQuickResults"
+            :key="`${entry.label}-${entry.oid}`"
+            style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; word-break: break-all;"
+          >
+            <el-tag :type="entry.success ? 'success' : 'danger'" size="small">
+              {{ entry.success ? 'PASS' : 'FAIL' }}
+            </el-tag>
+            <span><strong>{{ entry.label }}</strong> ({{ entry.oid }})</span>
+            <span v-if="entry.success">→ {{ entry.value }}</span>
+            <span v-else>→ {{ entry.error }}</span>
+          </div>
+        </div>
+      </el-form-item>
+      <el-form-item v-if="snmpTestResult" label="Probe Result">
+        <el-alert
+          :title="snmpTestResult.success ? 'SNMP probe successful' : 'SNMP probe failed'"
+          :type="snmpTestResult.success ? 'success' : 'error'"
+          :closable="false"
+          show-icon
+          style="width: 100%;"
+        >
+          <template #default>
+            <div style="font-size: 12px; line-height: 1.6; word-break: break-all;">
+              <div><strong>Target:</strong> {{ snmpTestResult.target }}:{{ snmpTestResult.port }} ({{ snmpTestResult.version }})</div>
+              <div><strong>OID:</strong> {{ snmpTestResult.oid }}</div>
+              <div v-if="snmpTestResult.success"><strong>Type:</strong> {{ snmpTestResult.raw_type || snmpTestResult.value_type }}</div>
+              <div v-if="snmpTestResult.success"><strong>Value:</strong> {{ snmpTestResult.value }}</div>
+              <div v-if="!snmpTestResult.success"><strong>Error:</strong> {{ snmpTestResult.error }}</div>
+              <div><strong>Duration:</strong> {{ snmpTestResult.duration_ms }} ms</div>
+            </div>
+          </template>
+        </el-alert>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="cancelProperties">{{ $t('hosts.cancel') }}</el-button>
+      <el-button type="success" plain @click="runHuaweiQuickProbe" :loading="quickTestingSNMP">Huawei Quick Probe</el-button>
       <el-button type="warning" plain @click="onTestSNMP" :loading="testingSNMP">Test SNMP</el-button>
       <el-button type="primary" @click="saveProperties">{{ $t('hosts.save') }}</el-button>
     </template>
@@ -453,7 +499,7 @@
 <script lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor, testSNMP } from '@/api/hosts';
+import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor, probeSnmpOid } from '@/api/hosts';
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
@@ -522,6 +568,10 @@ export default {
       pullingHosts: false,
       pushingHosts: false,
       testingSNMP: false,
+      quickTestingSNMP: false,
+      snmpTestOid: '.1.3.6.1.2.1.1.1.0',
+      snmpTestResult: null,
+      snmpQuickResults: [],
       newHost: { 
         id: 0, 
         name: '', 
@@ -796,6 +846,13 @@ export default {
             ssh_user: h.ssh_user || '',
             ssh_port: h.ssh_port || 22,
             ssh_password: '',
+            snmp_community: h.snmp_community || h.SNMPCommunity || 'public',
+            snmp_version: h.snmp_version || h.SNMPVersion || 'v2c',
+            snmp_port: Number(h.snmp_port || h.SNMPPort || 161),
+            snmp_v3_user: h.snmp_v3_user || h.SNMPV3User || '',
+            snmp_v3_auth_protocol: h.snmp_v3_auth_protocol || h.SNMPV3AuthProtocol || 'SHA',
+            snmp_v3_priv_protocol: h.snmp_v3_priv_protocol || h.SNMPV3PrivProtocol || 'AES',
+            snmp_v3_security_level: h.snmp_v3_security_level || h.SNMPV3SecurityLevel || 'NoAuthNoPriv',
             last_sync_at: h.last_sync_at,
             external_source: h.external_source || '',
           };
@@ -823,6 +880,8 @@ export default {
         snmp_v3_priv_protocol: host.snmp_v3_priv_protocol || 'AES',
         snmp_v3_security_level: host.snmp_v3_security_level || 'NoAuthNoPriv'
       };
+      this.snmpTestOid = '.1.3.6.1.2.1.1.1.0';
+      this.snmpTestResult = null;
       this.propertiesDialogVisible = true;
     },
     viewItems(host: Host) {
@@ -1054,6 +1113,8 @@ export default {
     },
     cancelProperties() {
       this.propertiesDialogVisible = false;
+      this.snmpTestResult = null;
+      this.snmpQuickResults = [];
     },
     async saveProperties() {
       try {
@@ -1125,13 +1186,18 @@ export default {
           snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
         };
         await updateHost(this.selectedHost.id, updateData);
-        
-        const res = await testSNMP(this.selectedHost.id);
-        if (res.success) {
-          ElMessage.success('SNMP Test Successful: Metrics retrieved');
+
+        const oid = (this.snmpTestOid || '').trim() || '.1.3.6.1.2.1.1.1.0';
+        const response = await probeSnmpOid(this.selectedHost.id, oid);
+        const probe = response?.data || response;
+        this.snmpTestResult = probe;
+
+        if (probe?.success) {
+          ElMessage.success(`SNMP Test Successful: ${probe.value}`);
+          this.selectedHost.status = 1;
           await this.loadHosts();
         } else {
-          ElMessage.error('SNMP Test Failed: ' + (res.error || 'The device did not return a valid response. Check OIDs and Community string.'));
+          ElMessage.error('SNMP Test Failed: ' + (probe?.error || 'No valid SNMP response'));
         }
       } catch (err) {
         console.error('SNMP Test Exception:', err);
@@ -1139,6 +1205,80 @@ export default {
         ElMessage.error('SNMP Test Error: ' + detail);
       } finally {
         this.testingSNMP = false;
+      }
+    },
+    async runHuaweiQuickProbe() {
+      if (!this.selectedHost.id) return;
+      this.quickTestingSNMP = true;
+      this.snmpQuickResults = [];
+
+      try {
+        const updateData = {
+          name: this.selectedHost.name,
+          m_id: this.selectedHost.mid,
+          ip_addr: this.selectedHost.ip_addr,
+          hostid: this.selectedHost.hostid,
+          group_id: this.selectedHost.group_id,
+          description: this.selectedHost.description,
+          enabled: this.selectedHost.enabled,
+          status: this.selectedHost.status,
+          ssh_user: this.selectedHost.ssh_user,
+          ssh_password: this.selectedHost.ssh_password,
+          ssh_port: this.selectedHost.ssh_port,
+          snmp_community: this.selectedHost.snmp_community,
+          snmp_version: this.selectedHost.snmp_version,
+          snmp_port: this.selectedHost.snmp_port,
+          snmp_v3_user: this.selectedHost.snmp_v3_user,
+          snmp_v3_auth_pass: this.selectedHost.snmp_v3_auth_pass,
+          snmp_v3_priv_pass: this.selectedHost.snmp_v3_priv_pass,
+          snmp_v3_auth_protocol: this.selectedHost.snmp_v3_auth_protocol,
+          snmp_v3_priv_protocol: this.selectedHost.snmp_v3_priv_protocol,
+          snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
+        };
+        await updateHost(this.selectedHost.id, updateData);
+
+        const quickSet = [
+          { label: 'SysDescr', oid: '.1.3.6.1.2.1.1.1.0' },
+          { label: 'SysName', oid: '.1.3.6.1.2.1.1.5.0' },
+          { label: 'Huawei CPU (idx1)', oid: '.1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5.1' },
+        ];
+
+        for (const entry of quickSet) {
+          try {
+            const response = await probeSnmpOid(this.selectedHost.id, entry.oid);
+            const probe = response?.data || response;
+            this.snmpQuickResults.push({
+              label: entry.label,
+              oid: entry.oid,
+              success: !!probe?.success,
+              value: probe?.value || '',
+              error: probe?.error || '',
+            });
+          } catch (err) {
+            const detail = err.response?.data?.error || err.message || 'request failed';
+            this.snmpQuickResults.push({
+              label: entry.label,
+              oid: entry.oid,
+              success: false,
+              value: '',
+              error: detail,
+            });
+          }
+        }
+
+        const successCount = this.snmpQuickResults.filter((item) => item.success).length;
+        if (successCount > 0) {
+          this.selectedHost.status = 1;
+          await this.loadHosts();
+          ElMessage.success(`Huawei quick probe: ${successCount}/${quickSet.length} OIDs passed`);
+        } else {
+          ElMessage.error('Huawei quick probe failed: no OIDs responded');
+        }
+      } catch (err) {
+        const detail = err.response?.data?.error || err.message || 'request failed';
+        ElMessage.error('Huawei quick probe error: ' + detail);
+      } finally {
+        this.quickTestingSNMP = false;
       }
     },
     onDelete(host: Host) {

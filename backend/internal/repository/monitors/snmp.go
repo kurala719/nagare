@@ -3,6 +3,8 @@ package monitors
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -54,13 +56,23 @@ func normalizeOID(oid string) string {
 	return oid
 }
 
+func isSnmpTimeoutErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	errText := strings.ToLower(err.Error())
+	return strings.Contains(errText, "request timeout") || strings.Contains(errText, "i/o timeout")
+}
+
 func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, error) {
-	fmt.Printf("[DEBUG] SNMP GetItems started for host: %s\n", hostID)
+	hostID = strings.TrimSpace(hostID)
+	fmt.Printf("[DEBUG] SNMP GetItems started for host: '%s'\n", hostID)
 	config, ok := ctx.Value("snmp_config").(SnmpConfig)
 	if !ok {
 		fmt.Println("[DEBUG] SNMP config not found in context, using defaults")
 		config = SnmpConfig{Community: "public", Version: "v2c", Port: 161}
 	}
+	config.Community = strings.TrimSpace(config.Community)
 	if config.Port == 0 {
 		config.Port = 161
 	}
@@ -71,7 +83,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		config.Version = "v2c"
 	}
 
-	fmt.Printf("[DEBUG] SNMP Config: Version=%s, Port=%d, Community=%s\n", config.Version, config.Port, config.Community)
+	fmt.Printf("[DEBUG] SNMP Config: Version=%s, Port=%d, Community='%s' (len: %d)\n",
+		config.Version, config.Port, config.Community, len(config.Community))
 
 	oidNames := make(map[string]string)
 
@@ -80,11 +93,29 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		"1.3.6.1.2.1.1.1.0":                   "System Version Details",
 		"1.3.6.1.2.1.1.3.0":                   "System Uptime",
 		"1.3.6.1.2.1.1.5.0":                   "System Hostname",
-		"1.3.6.1.4.1.2011.6.3.4.1.3":          "CPU Usage (%)",
+		"1.3.6.1.4.1.2011.6.3.4.1.2":          "CPU Usage (5s) (%)",
+		"1.3.6.1.4.1.2011.6.3.4.1.3":          "CPU Usage (1m) (%)",
+		"1.3.6.1.4.1.2011.6.3.4.1.4":          "CPU Usage (5m) (%)",
+		"1.3.6.1.4.1.2011.6.1.1.1.3":          "System CPU Usage (VRP5) (%)",
+		"1.3.6.1.4.1.2011.6.1.1.1.2":          "System Memory Usage (VRP5) (%)",
+		"1.3.6.1.4.1.2011.6.1.1.1.4":          "System Memory Total (B)",
+		"1.3.6.1.4.1.2011.6.1.1.1.5":          "System Memory Free (B)",
+		"1.3.6.1.4.1.2011.6.3.5.1.2":          "Memory Total Capacity (B)",
+		"1.3.6.1.4.1.2011.6.3.5.1.3":          "Memory Available (B)",
 		"1.3.6.1.4.1.2011.6.1.2.1.1.2":        "Physical Memory Capacity",
 		"1.3.6.1.4.1.2011.6.1.2.1.1.3":        "Physical Memory Available",
 		"1.3.6.1.4.1.2011.6.3.4.1.1":          "Core Temperature",
 		"1.3.6.1.4.1.2011.5.25.31.1.1.10.1.7": "Fan Tray Status",
+		// Huawei V200 Entity Extent OIDs
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5":  "Board CPU Usage (%)",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7":  "Board Memory Usage (%)",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11": "Board Temperature (°C)",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.13": "Board Voltage (mV)",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.37": "Board Memory Used (B)",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.38": "Total Fans in Chassis",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.39": "Normal Fans Count",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.40": "Total Power Modules",
+		"1.3.6.1.4.1.2011.5.25.31.1.1.1.1.41": "Normal Power Modules Count",
 	}
 
 	for k, v := range translate {
@@ -98,7 +129,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	}
 
 	gs := &gosnmp.GoSNMP{
-		Target: hostID, Port: uint16(config.Port), Timeout: 5 * time.Second, Retries: 3, MaxOids: 10,
+		Target: hostID, Port: uint16(config.Port), Timeout: 5 * time.Second, Retries: 1, MaxOids: 1,
+		Logger: gosnmp.NewLogger(log.New(os.Stdout, "", 0)),
 	}
 
 	// Auth Config (v1/v2c/v3 logic)
@@ -155,18 +187,38 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	fmt.Println("[DEBUG] SNMP Connected successfully")
 	defer gs.Conn.Close()
 
-	// PRE-FLIGHT CHECK: Fetch System Description or System Name to confirm access
-	fmt.Println("[DEBUG] SNMP Performing Pre-flight check (SysDescr/SysName)...")
-	_, err = gs.Get([]string{".1.3.6.1.2.1.1.1.0"}) // SysDescr
-	if err != nil {
-		fmt.Printf("[DEBUG] SNMP SysDescr failed: %v. Trying SysName fallback...\n", err)
-		_, err = gs.Get([]string{".1.3.6.1.2.1.1.5.0"}) // SysName
-		if err != nil {
-			fmt.Printf("[DEBUG] SNMP Pre-flight check failed: %v. Aborting.\n", err)
-			return nil, fmt.Errorf("SNMP connectivity check failed (Timeout/Community string incorrect): %w", err)
-		}
+	// PRE-FLIGHT CHECK: Try several standard OIDs to confirm access
+	fmt.Println("[DEBUG] SNMP Performing Pre-flight check (SysDescr/SysName/SysObjectID/SysUpTime)...")
+	preflightOids := []string{
+		".1.3.6.1.2.1.1.1.0", // SysDescr
+		".1.3.6.1.2.1.1.5.0", // SysName
+		".1.3.6.1.2.1.1.2.0", // SysObjectID
+		".1.3.6.1.2.1.1.3.0", // SysUpTime
 	}
-	fmt.Println("[DEBUG] SNMP Pre-flight check successful")
+
+	success := false
+	var lastErr error
+	for _, oid := range preflightOids {
+		fmt.Printf("[DEBUG] SNMP Trying pre-flight OID: %s\n", oid)
+		_, lastErr = gs.Get([]string{oid})
+		if lastErr == nil {
+			fmt.Printf("[DEBUG] SNMP Pre-flight success on OID: %s\n", oid)
+			success = true
+			break
+		}
+		fmt.Printf("[DEBUG] SNMP OID %s failed: %v\n", oid, lastErr)
+	}
+
+	if !success {
+		if isSnmpTimeoutErr(lastErr) {
+			localAddr := "unknown"
+			if gs.Conn != nil && gs.Conn.LocalAddr() != nil {
+				localAddr = gs.Conn.LocalAddr().String()
+			}
+			return nil, fmt.Errorf("SNMP timeout during pre-flight from %s to %s:%d (no UDP response). Check network path/ACL/device SNMP service/community", localAddr, gs.Target, gs.Port)
+		}
+		fmt.Printf("[DEBUG] SNMP ALL pre-flight OIDs failed. Continuing with full poll (device may block system OIDs by view/ACL).\n")
+	}
 
 	// Entity Map for hardware discovery
 	entityMap := make(map[string]string)
@@ -189,8 +241,14 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		targetOids = append(targetOids, "."+rawOid)
 	}
 
+	if len(targetOids) == 0 {
+		return nil, fmt.Errorf("no SNMP OIDs configured for polling")
+	}
+
 	var items []Item
 	var memSize, memFree float64
+	requestSuccessCount := 0
+	requestTimeoutCount := 0
 
 	// Resilient Batch Fetch
 	batchSize := 10
@@ -207,12 +265,19 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		result, err := gs.Get(batch)
 
 		if err != nil {
+			if isSnmpTimeoutErr(err) {
+				requestTimeoutCount++
+			}
 			fmt.Printf("[DEBUG] SNMP Batch %d failed (%v), trying individual OIDs...\n", batchNum, err)
 			for _, singleOid := range batch {
 				sRes, sErr := gs.Get([]string{singleOid})
 				if sErr == nil && len(sRes.Variables) > 0 {
+					requestSuccessCount++
 					p.processPDU(sRes.Variables[0], oidNames, &items, &memSize, &memFree, gs)
 				} else {
+					if isSnmpTimeoutErr(sErr) {
+						requestTimeoutCount++
+					}
 					norm := normalizeOID(singleOid)
 					name := oidNames[norm]
 					if name == "" {
@@ -227,9 +292,18 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 			continue
 		}
 
+		requestSuccessCount++
+
 		for _, variable := range result.Variables {
 			p.processPDU(variable, oidNames, &items, &memSize, &memFree, gs)
 		}
+	}
+
+	if requestSuccessCount == 0 && (lastErr != nil || requestTimeoutCount > 0) {
+		if lastErr == nil {
+			lastErr = fmt.Errorf("request timeout")
+		}
+		return nil, fmt.Errorf("SNMP connectivity check failed: no SNMP response from %s:%d (community/version/ACL/view). Last error: %w", gs.Target, gs.Port, lastErr)
 	}
 
 	// Memory Percentage (S5700 Fix)
@@ -259,6 +333,7 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	sfpItems, _ := p.discoverSFPDetails(gs, entityMap)
 	invItems, _ := p.discoverInventory(gs)
 	healthItems, _ := p.discoverAdvancedHealth(gs, entityMap)
+	huaweiItems, _ := p.discoverHuaweiMetrics(gs)
 
 	discovered := append(ifaceItems, routingItems...)
 	discovered = append(discovered, lldpItems...)
@@ -267,6 +342,7 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	discovered = append(discovered, healthItems...)
 	discovered = append(discovered, bgpItems...)
 	discovered = append(discovered, stpItems...)
+	discovered = append(discovered, huaweiItems...)
 
 	fmt.Printf("[DEBUG] SNMP Total discovered items: %d\n", len(discovered))
 
@@ -603,6 +679,112 @@ func (p *SnmpProvider) discoverSFPDetails(gs *gosnmp.GoSNMP, entityMap map[strin
 		items = append(items, Item{ID: normOid, Name: pretty + " RX Power Level", Key: normOid, Value: val, Units: "dBm", Status: "0", Timestamp: time.Now().Unix()})
 		return nil
 	})
+	return items, nil
+}
+
+func (p *SnmpProvider) discoverHuaweiMetrics(gs *gosnmp.GoSNMP) ([]Item, error) {
+	fmt.Println("[DEBUG] SNMP discoverHuaweiMetrics started")
+	var items []Item
+	now := time.Now().Unix()
+
+	// 1. CPU Usage (hwCpuDevTable or Legacy hwCPUUtilization)
+	// Index: hwFrameIndex, hwSlotIndex, hwCpuDevIndex
+	cpuFound := false
+	_ = gs.Walk(".1.3.6.1.4.1.2011.6.3.4.1.2", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		if val != "" && val != "N/A" {
+			norm := normalizeOID(v.Name)
+			items = append(items, Item{
+				ID: norm, Name: "System CPU Usage (%)", Key: "huawei_cpu_usage", Value: val, Units: "%", Status: "0", Timestamp: now,
+			})
+			cpuFound = true
+			return fmt.Errorf("found")
+		}
+		return nil
+	})
+
+	if !cpuFound {
+		// Try legacy VRP5 OID
+		_ = gs.Walk(".1.3.6.1.4.1.2011.6.1.1.1.3", func(v gosnmp.SnmpPDU) error {
+			val := formatSnmpValue(v)
+			if val != "" && val != "N/A" {
+				norm := normalizeOID(v.Name)
+				items = append(items, Item{
+					ID: norm, Name: "System CPU Usage (Legacy) (%)", Key: "huawei_cpu_usage_legacy", Value: val, Units: "%", Status: "0", Timestamp: now,
+				})
+				return fmt.Errorf("found")
+			}
+			return nil
+		})
+	}
+
+	// 2. Memory Usage (hwMemoryDevTable or Legacy)
+	// Index: hwFrameIndex, hwSlotIndex, hwMemoryDevModuleIndex
+	var memTotal, memFree float64
+	memFound := false
+	_ = gs.Walk(".1.3.6.1.4.1.2011.6.3.5.1.2", func(v gosnmp.SnmpPDU) error {
+		memTotal = float64(gosnmp.ToBigInt(v.Value).Int64())
+		memFound = true
+		return fmt.Errorf("found")
+	})
+	_ = gs.Walk(".1.3.6.1.4.1.2011.6.3.5.1.3", func(v gosnmp.SnmpPDU) error {
+		memFree = float64(gosnmp.ToBigInt(v.Value).Int64())
+		memFound = true
+		return fmt.Errorf("found")
+	})
+
+	if !memFound {
+		// Try legacy VRP5 Memory OIDs
+		_ = gs.Walk(".1.3.6.1.4.1.2011.6.1.1.1.4", func(v gosnmp.SnmpPDU) error {
+			memTotal = float64(gosnmp.ToBigInt(v.Value).Int64())
+			return fmt.Errorf("found")
+		})
+		_ = gs.Walk(".1.3.6.1.4.1.2011.6.1.1.1.5", func(v gosnmp.SnmpPDU) error {
+			memFree = float64(gosnmp.ToBigInt(v.Value).Int64())
+			return fmt.Errorf("found")
+		})
+	}
+
+	if memTotal > 0 {
+		usage := ((memTotal - memFree) / memTotal) * 100
+		items = append(items, Item{
+			ID: "huawei.mem.usage", Name: "System Memory Usage (%)", Key: "huawei_mem_usage", Value: fmt.Sprintf("%.2f", usage), Units: "%", Status: "0", Timestamp: now,
+		})
+	}
+
+	// 3. Board Temperature (hwEntityExtentMIB -> hwEntityTemperature)
+	// Index: entPhysicalIndex
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		if val != "" && val != "N/A" && val != "0" {
+			norm := normalizeOID(v.Name)
+			items = append(items, Item{
+				ID: norm, Name: "Board Temperature (°C)", Key: "huawei_temp", Value: val, Units: "°C", Status: "0", Timestamp: now,
+			})
+			return fmt.Errorf("found")
+		}
+		return nil
+	})
+
+	// 4. Fan Status
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.39", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		items = append(items, Item{
+			ID: normalizeOID(v.Name), Name: "Normal Fans Count", Key: "huawei_fans_normal", Value: val, Status: "0", Timestamp: now,
+		})
+		return fmt.Errorf("found")
+	})
+
+	// 5. Power Status
+	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.41", func(v gosnmp.SnmpPDU) error {
+		val := formatSnmpValue(v)
+		items = append(items, Item{
+			ID: normalizeOID(v.Name), Name: "Normal Power Modules Count", Key: "huawei_pwr_normal", Value: val, Status: "0", Timestamp: now,
+		})
+		return fmt.Errorf("found")
+	})
+
+	fmt.Printf("[DEBUG] SNMP Huawei discovery found %d items\n", len(items))
 	return items, nil
 }
 

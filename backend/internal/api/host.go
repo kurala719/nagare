@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"nagare/internal/model"
 	"nagare/internal/service"
@@ -267,6 +268,37 @@ func TestSNMPCtrl(c *gin.Context) {
 	}
 
 	result, err := service.TestSNMPServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, result)
+}
+
+func ProbeSNMPOIDCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid host ID")
+		return
+	}
+
+	oid := strings.TrimSpace(c.Query("oid"))
+	if oid == "" {
+		var req struct {
+			OID string `json:"oid"`
+		}
+		if bindErr := c.ShouldBindJSON(&req); bindErr != nil {
+			respondBadRequest(c, "oid is required (query ?oid=... or JSON body {\"oid\":\"...\"})")
+			return
+		}
+		oid = strings.TrimSpace(req.OID)
+	}
+	if oid == "" {
+		respondBadRequest(c, "oid is required")
+		return
+	}
+
+	result, err := service.ProbeSNMPOIDServ(uint(id), oid)
 	if err != nil {
 		respondError(c, err)
 		return
