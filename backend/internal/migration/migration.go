@@ -40,7 +40,7 @@ func InitDBTables() error {
 		}
 	}
 
-	// Now run AutoMigrate on all models. 
+	// Now run AutoMigrate on all models.
 	// Since we enabled Username in the struct, GORM will handle it.
 	if err := database.DB.AutoMigrate(
 		&model.User{},
