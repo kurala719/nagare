@@ -548,8 +548,12 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 
 	ctx := context.Background()
 	targetID := host.Hostid
-	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
+	mType := monitors.ParseMonitorType(monitor.Type)
+	fmt.Printf("[DEBUG] pullItemsFromHostServ: monitor_type=%s (%d), host=%s, target=%s\n", mType.String(), monitor.Type, host.Name, targetID)
+	
+	if mType == monitors.MonitorSNMP {
 		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
+		fmt.Printf("[DEBUG] SNMP Config: IP=%s, Version=%s, Community=%s\n", host.IPAddr, host.SNMPVersion, host.SNMPCommunity)
 		authPass := host.SNMPV3AuthPass
 		if authPass != "" {
 			if decrypted, err := utils.Decrypt(authPass); err == nil {
@@ -579,6 +583,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		if targetID == "" {
 			targetID = host.Hostid
 		}
+		fmt.Printf("[DEBUG] SNMP Final Target: %s\n", targetID)
 
 		// Load existing items to pick up custom OIDs
 		items, err := repository.GetItemsByHIDDAO(host.ID)
@@ -594,12 +599,15 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		ctx = context.WithValue(ctx, "snmp_config", snmpCfg)
 	}
 
+	fmt.Printf("[DEBUG] Calling client.GetItems for %s\n", targetID)
 	monitorItems, err := client.GetItems(ctx, targetID)
 	if err != nil {
+		fmt.Printf("[DEBUG] client.GetItems error: %v\n", err)
 		LogService("error", "poller.GetItems failed", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error(), "target": targetID}, nil, "")
 		setHostStatusErrorWithReason(hid, err.Error())
 		return result, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
+	fmt.Printf("[DEBUG] client.GetItems returned %d items\n", len(monitorItems))
 	monitorItemIDs := make(map[string]struct{}, len(monitorItems))
 	for _, mItem := range monitorItems {
 		monitorItemIDs[mItem.ID] = struct{}{}

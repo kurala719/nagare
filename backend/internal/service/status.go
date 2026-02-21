@@ -12,7 +12,7 @@ func determineMonitorStatus(m model.Monitor) int {
 		return 0
 	}
 	// SNMP monitors are active if enabled, as polling is per-host
-	if m.Type == 4 { // SNMP
+	if m.Type == 1 { // SNMP
 		return 1
 	}
 	// Monitor status is independent - based on its own connectivity/token
@@ -58,7 +58,7 @@ func determineHostStatus(h model.Host, monitor model.Monitor) int {
 	}
 
 	// SNMP hosts can rely on IP address if Hostid is missing
-	if h.Hostid == "" && (monitor.Type != 4 || h.IPAddr == "") {
+	if h.Hostid == "" && (monitor.Type != 1 || h.IPAddr == "") {
 		return 2
 	}
 

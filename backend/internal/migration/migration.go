@@ -114,9 +114,13 @@ func ensureDefaultMonitor() error {
 			Status:      1,
 			Description: "System default internal monitoring engine",
 		}
+		// Set ID to 1 explicitly
+		defaultMonitor.ID = 1
 		return database.DB.Create(&defaultMonitor).Error
 	}
-	return nil
+
+	// Enforce Type 1 (SNMP) for ID 1 if it exists
+	return database.DB.Model(&model.Monitor{}).Where("id = ?", 1).Update("type", 1).Error
 }
 
 func preSchemaUpdates() error {

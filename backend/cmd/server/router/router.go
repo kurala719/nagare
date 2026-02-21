@@ -80,9 +80,9 @@ func InitRouter() {
 		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	service.LogSystem("info", "server starting", map[string]interface{}{"port": port}, nil, "")

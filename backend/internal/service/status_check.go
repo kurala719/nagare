@@ -100,7 +100,7 @@ func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 	}
 
 	// SNMP monitors are stateless and always considered up if enabled
-	if monitor.Type == 4 { // SNMP
+	if monitor.Type == 1 { // SNMP
 		_ = repository.UpdateMonitorStatusAndDescriptionDAO(monitor.ID, 1, "")
 		result.Status = 1
 		return result

@@ -55,8 +55,10 @@ func normalizeOID(oid string) string {
 }
 
 func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, error) {
+	fmt.Printf("[DEBUG] SNMP GetItems started for host: %s\n", hostID)
 	config, ok := ctx.Value("snmp_config").(SnmpConfig)
 	if !ok {
+		fmt.Println("[DEBUG] SNMP config not found in context, using defaults")
 		config = SnmpConfig{Community: "public", Version: "v2c", Port: 161}
 	}
 	if config.Port == 0 {
@@ -68,6 +70,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	if config.Version == "" {
 		config.Version = "v2c"
 	}
+
+	fmt.Printf("[DEBUG] SNMP Config: Version=%s, Port=%d, Community=%s\n", config.Version, config.Port, config.Community)
 
 	oidNames := make(map[string]string)
 
@@ -94,7 +98,7 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	}
 
 	gs := &gosnmp.GoSNMP{
-		Target: hostID, Port: uint16(config.Port), Timeout: 10 * time.Second, Retries: 1, MaxOids: 20,
+		Target: hostID, Port: uint16(config.Port), Timeout: 5 * time.Second, Retries: 3, MaxOids: 10,
 	}
 
 	// Auth Config (v1/v2c/v3 logic)
@@ -142,15 +146,32 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		gs.Community = config.Community
 	}
 
+	fmt.Printf("[DEBUG] SNMP Connecting to %s:%d (Timeout: %v, Retries: %d)...\n", gs.Target, gs.Port, gs.Timeout, gs.Retries)
 	err := gs.Connect()
 	if err != nil {
+		fmt.Printf("[DEBUG] SNMP Connect failed: %v\n", err)
 		return nil, fmt.Errorf("SNMP connect failed: %w", err)
 	}
+	fmt.Println("[DEBUG] SNMP Connected successfully")
 	defer gs.Conn.Close()
+
+	// PRE-FLIGHT CHECK: Fetch System Description or System Name to confirm access
+	fmt.Println("[DEBUG] SNMP Performing Pre-flight check (SysDescr/SysName)...")
+	_, err = gs.Get([]string{".1.3.6.1.2.1.1.1.0"}) // SysDescr
+	if err != nil {
+		fmt.Printf("[DEBUG] SNMP SysDescr failed: %v. Trying SysName fallback...\n", err)
+		_, err = gs.Get([]string{".1.3.6.1.2.1.1.5.0"}) // SysName
+		if err != nil {
+			fmt.Printf("[DEBUG] SNMP Pre-flight check failed: %v. Aborting.\n", err)
+			return nil, fmt.Errorf("SNMP connectivity check failed (Timeout/Community string incorrect): %w", err)
+		}
+	}
+	fmt.Println("[DEBUG] SNMP Pre-flight check successful")
 
 	// Entity Map for hardware discovery
 	entityMap := make(map[string]string)
-	_ = gs.BulkWalk(".1.3.6.1.2.1.47.1.1.1.1.7", func(v gosnmp.SnmpPDU) error {
+	fmt.Println("[DEBUG] SNMP Starting BulkWalk for Entity Map...")
+	err = gs.BulkWalk(".1.3.6.1.2.1.47.1.1.1.1.7", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v)
 		if val != "" && val != "N/A" {
 			idx := v.Name[strings.LastIndex(v.Name, ".")+1:]
@@ -158,6 +179,10 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		}
 		return nil
 	})
+	if err != nil {
+		fmt.Printf("[DEBUG] SNMP BulkWalk for Entity Map failed: %v (skipping)\n", err)
+	}
+	fmt.Printf("[DEBUG] SNMP Entity Map built with %d entries\n", len(entityMap))
 
 	var targetOids []string
 	for rawOid := range oidNames {
@@ -168,19 +193,35 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	var memSize, memFree float64
 
 	// Resilient Batch Fetch
-	for i := 0; i < len(targetOids); i += 20 {
-		end := i + 20
+	batchSize := 10
+	totalBatches := (len(targetOids) + batchSize - 1) / batchSize
+	fmt.Printf("[DEBUG] SNMP Fetching %d target OIDs in %d batches...\n", len(targetOids), totalBatches)
+	for i := 0; i < len(targetOids); i += batchSize {
+		end := i + batchSize
 		if end > len(targetOids) {
 			end = len(targetOids)
 		}
 		batch := targetOids[i:end]
+		batchNum := i/batchSize + 1
+		fmt.Printf("[DEBUG] SNMP Fetching batch %d/%d (%d OIDs)...\n", batchNum, totalBatches, len(batch))
 		result, err := gs.Get(batch)
 
 		if err != nil {
+			fmt.Printf("[DEBUG] SNMP Batch %d failed (%v), trying individual OIDs...\n", batchNum, err)
 			for _, singleOid := range batch {
 				sRes, sErr := gs.Get([]string{singleOid})
 				if sErr == nil && len(sRes.Variables) > 0 {
 					p.processPDU(sRes.Variables[0], oidNames, &items, &memSize, &memFree, gs)
+				} else {
+					norm := normalizeOID(singleOid)
+					name := oidNames[norm]
+					if name == "" {
+						name = norm
+					}
+					fmt.Printf("[DEBUG] SNMP OID %s failed: %v\n", singleOid, sErr)
+					items = append(items, Item{
+						ID: norm, Name: name, Key: norm, Value: "N/A", Status: "2", Timestamp: time.Now().Unix(),
+					})
 				}
 			}
 			continue
@@ -207,8 +248,10 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	}
 
 	// ENFORCED DEEP forensic DISCOVERY
+	fmt.Println("[DEBUG] SNMP Starting Advanced Discovery...")
 
 	ifaceItems, _ := p.discoverInterfaces(gs)
+	fmt.Printf("[DEBUG] SNMP Found %d Interface items\n", len(ifaceItems))
 	routingItems, _ := p.discoverRoutingMetrics(gs)
 	bgpItems, _ := p.discoverBGPMetrics(gs)
 	stpItems, _ := p.discoverSTPMetrics(gs)
@@ -225,6 +268,8 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	discovered = append(discovered, bgpItems...)
 	discovered = append(discovered, stpItems...)
 
+	fmt.Printf("[DEBUG] SNMP Total discovered items: %d\n", len(discovered))
+
 	existingIDs := make(map[string]bool)
 	for _, it := range items {
 		existingIDs[it.ID] = true
@@ -235,6 +280,7 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 		}
 	}
 
+	fmt.Printf("[DEBUG] SNMP Returning %d items\n", len(items))
 	return items, nil
 }
 
@@ -247,13 +293,16 @@ func (p *SnmpProvider) processPDU(v gosnmp.SnmpPDU, oidNames map[string]string, 
 	val := formatSnmpValue(v)
 
 	// Smart-Probe for V200 Hardware metrics (find active board index)
-	if (val == "N/A" || val == "" || val == "0") && isV200HardwareMetric(name) {
+	// Only probe if value is truly missing (N/A or empty). '0' can be a valid metric value (e.g. CPU 0%).
+	if (val == "N/A" || val == "") && isV200HardwareMetric(name) {
+		fmt.Printf("[DEBUG] SNMP Triggering V200 Probe for %s (%s) as value is %s\n", name, norm, val)
 		root := norm
 		if idx := strings.LastIndex(root, "."); idx != -1 {
 			root = root[:idx]
 		}
 		discoveredVal := p.discoverV200Metric(gs, root)
 		if discoveredVal != "" {
+			fmt.Printf("[DEBUG] SNMP V200 Probe found value: %s\n", discoveredVal)
 			val = discoveredVal
 		}
 	}
@@ -408,6 +457,7 @@ func (p *SnmpProvider) discoverSTPMetrics(gs *gosnmp.GoSNMP) ([]Item, error) {
 }
 
 func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
+	fmt.Println("[DEBUG] SNMP discoverInterfaces started")
 	var items []Item
 	ifNames := make(map[string]string)
 	handlePDU := func(v gosnmp.SnmpPDU) error {
@@ -426,6 +476,7 @@ func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
 	if len(ifNames) == 0 {
 		_ = gs.Walk(".1.3.6.1.2.1.2.2.1.2", handlePDU)
 	}
+	fmt.Printf("[DEBUG] SNMP Found %d interface names\n", len(ifNames))
 	if len(ifNames) == 0 {
 		return items, nil
 	}

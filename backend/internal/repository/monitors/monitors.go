@@ -176,7 +176,7 @@ func NewClient(cfg Config) (*Client, error) {
 	case MonitorSNMP:
 		provider, err = NewSnmpProvider(cfg)
 	case MonitorOther:
-		return nil, errors.New("generic 'Other' monitor type requires a specific provider implementation")
+		provider, err = NewGenericProvider(cfg)
 	default:
 		return nil, errors.New("unsupported monitor type")
 	}
@@ -190,6 +190,59 @@ func NewClient(cfg Config) (*Client, error) {
 		config:   cfg,
 	}, nil
 }
+
+// GenericProvider is a placeholder provider for 'Other' monitor type
+type GenericProvider struct {
+	config Config
+}
+
+func NewGenericProvider(cfg Config) (Provider, error) {
+	return &GenericProvider{config: cfg}, nil
+}
+
+func (p *GenericProvider) Authenticate(ctx context.Context) error                             { return nil }
+func (p *GenericProvider) GetAuthToken() string                                               { return "" }
+func (p *GenericProvider) SetAuthToken(token string)                                          {}
+func (p *GenericProvider) GetHosts(ctx context.Context) ([]Host, error)                       { return []Host{}, nil }
+func (p *GenericProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) { return []Host{}, nil }
+func (p *GenericProvider) GetHostByName(ctx context.Context, name string) (*Host, error)       { return nil, nil }
+func (p *GenericProvider) GetHostByID(ctx context.Context, hostID string) (*Host, error)       { return nil, nil }
+func (p *GenericProvider) CreateHost(ctx context.Context, host Host) (Host, error)             { return host, nil }
+func (p *GenericProvider) UpdateHost(ctx context.Context, host Host) (Host, error)             { return host, nil }
+func (p *GenericProvider) DeleteHost(ctx context.Context, hostID string) error                 { return nil }
+func (p *GenericProvider) GetItems(ctx context.Context, hostID string) ([]Item, error)         { return []Item{}, nil }
+func (p *GenericProvider) GetItemByID(ctx context.Context, itemID string) (*Item, error)       { return nil, nil }
+func (p *GenericProvider) GetItemHistory(ctx context.Context, itemID string, from, to int64) ([]Item, error) {
+	return []Item{}, nil
+}
+func (p *GenericProvider) CreateItem(ctx context.Context, item Item) (Item, error) { return item, nil }
+func (p *GenericProvider) UpdateItem(ctx context.Context, item Item) (Item, error) { return item, nil }
+func (p *GenericProvider) DeleteItem(ctx context.Context, itemID string) error     { return nil }
+func (p *GenericProvider) GetAlerts(ctx context.Context) ([]Alert, error)          { return []Alert{}, nil }
+func (p *GenericProvider) GetAlertsByHost(ctx context.Context, hostID string) ([]Alert, error) {
+	return []Alert{}, nil
+}
+func (p *GenericProvider) GetTriggers(ctx context.Context) ([]Trigger, error) { return []Trigger{}, nil }
+func (p *GenericProvider) GetTriggersByHost(ctx context.Context, hostID string) ([]Trigger, error) {
+	return []Trigger{}, nil
+}
+func (p *GenericProvider) GetTemplateidByName(ctx context.Context, name string) ([]string, error) {
+	return []string{}, nil
+}
+func (p *GenericProvider) GetHostGroups(ctx context.Context) ([]string, error) { return []string{}, nil }
+func (p *GenericProvider) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
+	return nil, nil
+}
+func (p *GenericProvider) GetHostGroupByName(ctx context.Context, name string) (string, error) {
+	return "", nil
+}
+func (p *GenericProvider) CreateHostGroup(ctx context.Context, name string) (string, error) {
+	return "", nil
+}
+func (p *GenericProvider) UpdateHostGroup(ctx context.Context, id, name string) error { return nil }
+func (p *GenericProvider) DeleteHostGroup(ctx context.Context, id string) error       { return nil }
+func (p *GenericProvider) Name() string                                               { return p.config.Name }
+func (p *GenericProvider) Type() MonitorType                                          { return MonitorOther }
 
 // Authenticate authenticates with the monitoring system
 func (c *Client) Authenticate(ctx context.Context) error {
