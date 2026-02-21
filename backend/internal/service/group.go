@@ -127,6 +127,12 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{Query: group.Name})
 	if err == nil && len(groups) > 0 {
 		created := groups[len(groups)-1]
+		
+		// Auto-push to monitor if MID is set
+		if created.MonitorID > 0 {
+			_ = PushGroupToMonitorServ(created.MonitorID, created.ID)
+		}
+		
 		_, _ = recomputeGroupStatus(created.ID)
 		group, _ = repository.GetGroupByIDDAO(created.ID)
 	}
@@ -175,6 +181,12 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
 	}
+	
+	// Auto-push to monitor if MID is set and name/desc changed
+	if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.Description != existing.Description) {
+		_ = PushGroupToMonitorServ(updated.MonitorID, id)
+	}
+	
 	_, _ = recomputeGroupStatus(id)
 	return nil
 }

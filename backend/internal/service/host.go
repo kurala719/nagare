@@ -439,20 +439,30 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		newHost.Status = determineHostStatus(newHost, model.Monitor{Enabled: 1, Status: 1})
 	}
 
-	if err := repository.AddHostDAO(newHost); err != nil {
+	if err := repository.AddHostDAO(&newHost); err != nil {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
 	}
+
+	// Auto-push to monitor if MID is set (either from request or resolved to "Nagare Internal")
 	if newHost.MonitorID > 0 {
-		if _, err := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); err == nil {
+		LogService("info", "auto-pushing new host to monitor", map[string]interface{}{"host_id": newHost.ID, "monitor_id": newHost.MonitorID}, nil, "")
+		if _, pushErr := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); pushErr != nil {
+			LogService("error", "auto-push failed for new host", map[string]interface{}{"host_id": newHost.ID, "error": pushErr.Error()}, nil, "")
+		} else {
+			// Reload to get the external Hostid if it was updated during push
 			if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
 				newHost = refreshed
 			}
 		}
 	}
+
 	_, _ = recomputeHostStatus(newHost.ID)
+	
+	// Final reload to ensure we have all fields including any from recompute
 	if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
 		newHost = refreshed
 	}
+
 	return HostResp{
 		ID:          int(newHost.ID),
 		Name:        newHost.Name,
@@ -550,6 +560,12 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if err := repository.UpdateHostDAO(id, updated); err != nil {
 		return err
 	}
+
+	// Auto-push to monitor if MID is set and critical fields changed
+	if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.IPAddr != existing.IPAddr || updated.MonitorID != existing.MonitorID) {
+		_, _ = PushHostToMonitorServ(updated.MonitorID, id)
+	}
+
 	if refreshed, err := repository.GetHostByIDDAO(id); err == nil {
 		recordHostHistory(refreshed, time.Now().UTC())
 	}
@@ -1063,7 +1079,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			result.Updated++
 		} else {
 			// Host doesn't exist, add it
-			if err := repository.AddHostDAO(model.Host{
+			hNew := model.Host{
 				Name:              h.Name,
 				Hostid:            h.ID,
 				MonitorID:         mid,
@@ -1075,7 +1091,8 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				IPAddr:            h.IPAddress,
 				LastSyncAt:        &now,
 				ExternalSource:    monitor.Name,
-			}); err != nil {
+			}
+			if err := repository.AddHostDAO(&hNew); err != nil {
 				setMonitorStatusError(mid)
 				LogService("error", "pull hosts failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
 				result.Failed++
@@ -1249,7 +1266,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
 			IPAddr:      h.IPAddress,
 		}
-		if err := repository.AddHostDAO(newHost); err != nil {
+		if err := repository.AddHostDAO(&newHost); err != nil {
 			setMonitorStatusError(mid)
 			LogService("error", "pull host failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
 			return SyncResult{}, fmt.Errorf("failed to add host: %w", err)
@@ -1365,7 +1382,13 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 		Name:        host.Name,
 		IPAddress:   host.IPAddr,
 		Description: host.Description,
-		Metadata:    map[string]string{"groupid": extGroupID},
+		Metadata: map[string]string{
+			"groupid":        extGroupID,
+			"monitor_type":   fmt.Sprintf("%d", monitor.Type),
+			"snmp_community": host.SNMPCommunity,
+			"snmp_version":   host.SNMPVersion,
+			"snmp_port":      fmt.Sprintf("%d", host.SNMPPort),
+		},
 	}
 	if host.Hostid == "" {
 		// Try to find host by name first to avoid duplicates

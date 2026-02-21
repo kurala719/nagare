@@ -1822,22 +1822,60 @@ func (p *ZabbixProvider) Type() MonitorType {
 
 func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error) {
 	groupID := "7"
+	isSNMP := false
+	snmpVersion := 2 // default v2c
+	snmpCommunity := "public"
+	snmpPort := "161"
+
 	if host.Metadata != nil {
 		if gid, ok := host.Metadata["groupid"]; ok && gid != "" {
 			groupID = gid
 		}
+		if mType, ok := host.Metadata["monitor_type"]; ok && mType == "2" {
+			isSNMP = true
+		}
+		if ver, ok := host.Metadata["snmp_version"]; ok {
+			if strings.Contains(ver, "1") {
+				snmpVersion = 1
+			} else if strings.Contains(ver, "3") {
+				snmpVersion = 3
+			}
+		}
+		if comm, ok := host.Metadata["snmp_community"]; ok && comm != "" {
+			snmpCommunity = comm
+		}
+		if port, ok := host.Metadata["snmp_port"]; ok && port != "" && port != "0" {
+			snmpPort = port
+		}
 	}
 
-	// Default to Zabbix Agent interface
-	interfaces := []map[string]interface{}{
-		{
+	var interfaces []map[string]interface{}
+	if isSNMP {
+		iface := map[string]interface{}{
+			"type":  2, // SNMP
+			"main":  1,
+			"useip": 1,
+			"ip":    host.IPAddress,
+			"dns":   "",
+			"port":  snmpPort,
+			"details": map[string]interface{}{
+				"version":   snmpVersion,
+				"bulk":      1,
+				"community": snmpCommunity,
+			},
+		}
+		// Zabbix 6.0+ requires community at top level of details or as a macro
+		interfaces = append(interfaces, iface)
+	} else {
+		// Default to Zabbix Agent interface
+		interfaces = append(interfaces, map[string]interface{}{
 			"type":  1, // Agent
 			"main":  1,
 			"useip": 1,
 			"ip":    host.IPAddress,
 			"dns":   "",
 			"port":  "10050",
-		},
+		})
 	}
 
 	// Prepare templates
@@ -1907,17 +1945,31 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				"dns":         iface.DNS,
 				"port":        iface.Port,
 			}
-			if iface.Type == "2" {
-				ifaceParams["details"] = map[string]interface{}{
-					"version":   2,
-					"community": "{$SNMP_COMMUNITY}",
+			
+			// Update SNMP details if provided in metadata
+			if host.Metadata != nil && host.Metadata["monitor_type"] == "2" {
+				snmpVersion := 2
+				if ver, ok := host.Metadata["snmp_version"]; ok {
+					if strings.Contains(ver, "1") {
+						snmpVersion = 1
+					} else if strings.Contains(ver, "3") {
+						snmpVersion = 3
+					}
 				}
+				comm := host.Metadata["snmp_community"]
+				if comm == "" {
+					comm = "public"
+				}
+				
+				ifaceParams["details"] = map[string]interface{}{
+					"version":   snmpVersion,
+					"bulk":      1,
+					"community": comm,
+				}
+				ifaceParams["type"] = 2 // Ensure type is SNMP
 			}
+			
 			params["interfaces"] = []map[string]interface{}{ifaceParams}
-		} else {
-			// If no interface found (unlikely for existing host), create one
-			// or just ignore. Logic below handles update.
-			// Ideally we should try to create one if missing, but let's stick to update logic.
 		}
 	}
 	if _, err := p.sendRequest(ctx, "host.update", params); err != nil {

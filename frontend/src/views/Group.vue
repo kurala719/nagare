@@ -601,11 +601,14 @@ export default {
         return;
       }
       try {
+        const mid = this.newGroup.monitor_id;
         await addGroup(this.newGroup);
         await this.loadGroups(true);
         this.createDialogVisible = false;
+        
+        const msg = this.$t('groups.created') + (mid > 0 ? ' & Automatically synced to monitor' : '');
         this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
-        ElMessage.success(this.$t('groups.created'));
+        ElMessage.success(msg);
       } catch (err) {
         ElMessage.error(this.$t('groups.createFailed') + ': ' + (err.message || ''));
       }

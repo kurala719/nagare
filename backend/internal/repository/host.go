@@ -139,8 +139,8 @@ func GetHostByMIDAndHostIDDAO(mid uint, hostid string) (model.Host, error) {
 }
 
 // AddHostDAO creates a new host in the database
-func AddHostDAO(h model.Host) error {
-	return database.DB.Create(&h).Error
+func AddHostDAO(h *model.Host) error {
+	return database.DB.Create(h).Error
 }
 
 // DeleteHostByIDDAO deletes a host by ID

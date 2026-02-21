@@ -153,7 +153,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('hosts.cancel') }}</el-button>
-      <el-button type="primary" @click="onCreate">{{ $t('hosts.createBtn') }}</el-button>
+      <el-button type="primary" plain @click="onCreateAndPush" :loading="saving">{{ $t('hosts.createAndPush') || 'Create & Push' }}</el-button>
+      <el-button type="primary" @click="onCreate" :loading="saving">{{ $t('hosts.createBtn') }}</el-button>
     </template>  
   </el-dialog>
 
@@ -432,7 +433,8 @@
       <el-button @click="cancelProperties">{{ $t('hosts.cancel') }}</el-button>
       <el-button type="success" plain @click="runHuaweiQuickProbe" :loading="quickTestingSNMP">Huawei Quick Probe</el-button>
       <el-button type="warning" plain @click="onTestSNMP" :loading="testingSNMP">Test SNMP</el-button>
-      <el-button type="primary" @click="saveProperties">{{ $t('hosts.save') }}</el-button>
+      <el-button type="primary" plain @click="savePropertiesAndPush" :loading="saving">{{ $t('hosts.saveAndPush') || 'Save & Push' }}</el-button>
+      <el-button type="primary" @click="saveProperties" :loading="saving">{{ $t('hosts.save') }}</el-button>
     </template>
   </el-dialog>
 
@@ -537,6 +539,7 @@ export default {
       currentHostForAI: null,
       aiResponse: '',
       selectedHosts: [],
+      saving: false,
       bulkDialogVisible: false,
       bulkDeleteDialogVisible: false,
       bulkUpdating: false,
@@ -1332,9 +1335,11 @@ export default {
         
         this.resetNewHost();
         this.createDialogVisible = false;
+        
+        const msg = this.$t('hosts.created') + (hostData.mid > 0 ? ' & Automatically synced to monitor' : '');
         ElMessage({
           type: 'success',
-          message: this.$t('hosts.created'),
+          message: msg,
         });
       } catch (err) {
         ElMessage({
