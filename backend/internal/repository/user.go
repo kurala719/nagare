@@ -132,6 +132,7 @@ func UpdateUserDAO(id int, user model.User) error {
 		"address":      user.Address,
 		"introduction": user.Introduction,
 		"nickname":     user.Nickname,
+		"qq":           user.QQ,
 	}
 	if user.Password != "" {
 		updates["password"] = user.Password

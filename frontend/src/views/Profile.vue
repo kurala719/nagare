@@ -66,9 +66,18 @@
             </el-col>
           </el-row>
 
-          <el-form-item :label="$t('profile.address')">
-            <el-input v-model="form.address" :prefix-icon="Location" />
-          </el-form-item>
+          <el-row :gutter="24">
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.address')">
+                <el-input v-model="form.address" :prefix-icon="Location" />
+              </el-form-item>
+            </el-col>
+            <el-col :md="12">
+              <el-form-item :label="$t('profile.qq') || 'QQ'">
+                <el-input v-model="form.qq" />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
           <el-form-item :label="$t('profile.introduction')">
             <el-input v-model="form.introduction" type="textarea" :autosize="{ minRows: 4, maxRows: 8 }" />
@@ -110,7 +119,8 @@ const profile = reactive({
   avatar: '',
   address: '',
   introduction: '',
-  role: ''
+  role: '',
+  qq: ''
 })
 
 const form = reactive({
@@ -119,7 +129,8 @@ const form = reactive({
   phone: '',
   avatar: '',
   address: '',
-  introduction: ''
+  introduction: '',
+  qq: ''
 })
 
 const validateEmail = (rule, value, callback) => {
@@ -196,7 +207,8 @@ const loadProfile = async () => {
       phone: payload?.phone || '',
       avatar: normalizedAvatar,
       address: payload?.address || '',
-      introduction: payload?.introduction || ''
+      introduction: payload?.introduction || '',
+      qq: payload?.qq || payload?.QQ || ''
     })
   } catch (err) {
     if (err?.response?.status !== 404) {
@@ -284,7 +296,8 @@ const onReset = () => {
     phone: profile.phone || '',
     avatar: profile.avatar || '',
     address: profile.address || '',
-    introduction: profile.introduction || ''
+    introduction: profile.introduction || '',
+    qq: profile.qq || ''
   })
   clearPendingAvatar()
 }

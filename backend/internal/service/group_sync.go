@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"nagare/internal/model"
@@ -12,6 +13,11 @@ import (
 
 // PullGroupsFromMonitorServ pulls groups (host groups) from a monitor
 func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
+	return pullGroupsFromMonitorServ(mid, false)
+}
+
+// pullGroupsFromMonitorServ pulls groups with optional status bypass (used by auto sync)
+func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error) {
 	result := SyncResult{}
 
 	// 1. Get monitor
@@ -21,16 +27,28 @@ func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
 	}
 
 	if monitor.Status != 1 {
-		return result, fmt.Errorf("monitor is not active")
+		if !allowInactive {
+			return result, fmt.Errorf("monitor is not active")
+		}
+		LogService("warn", "auto sync proceeding despite monitor status for group pull", map[string]interface{}{
+			"monitor_id":     mid,
+			"monitor_status": monitor.Status,
+			"monitor_name":   monitor.Name,
+		}, nil, "")
 	}
 
 	// 2. Create monitor client
+	monitorType := monitors.ParseMonitorType(monitor.Type)
+	if monitorType == monitors.MonitorOther && (monitor.URL != "" || monitor.Username != "" || monitor.Password != "" || monitor.AuthToken != "") {
+		monitorType = monitors.MonitorZabbix
+	}
+
 	cfg := monitors.Config{
 		Name:    monitor.Name,
-		Type:    monitors.ParseMonitorType(monitor.Type),
+		Type:    monitorType,
 		Timeout: 10,
 		Auth: monitors.AuthConfig{
-			URL:      monitor.URL,
+			URL:      normalizeMonitorURL(monitor.URL),
 			Username: monitor.Username,
 			Password: monitor.Password,
 			Token:    monitor.AuthToken,
@@ -116,7 +134,72 @@ func PullGroupsFromMonitorServ(mid uint) (SyncResult, error) {
 		}
 	}
 
+	// 5. Backfill host group IDs for existing hosts
+	if err := backfillHostGroupIDsFromMonitor(mid, client); err != nil {
+		LogService("warn", "group sync host group_id backfill failed", map[string]interface{}{
+			"monitor_id": mid,
+			"error":      err.Error(),
+		}, nil, "")
+	}
+
 	return result, nil
+}
+
+func backfillHostGroupIDsFromMonitor(mid uint, client *monitors.Client) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	monitorHosts, err := client.GetHosts(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch hosts for group backfill: %w", err)
+	}
+
+	updated := 0
+	for _, h := range monitorHosts {
+		existing, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+		if err != nil {
+			continue
+		}
+		groupID := resolveHostGroupIDFromMetadata(mid, h.Metadata, existing.GroupID)
+		if groupID == 0 || groupID == existing.GroupID {
+			continue
+		}
+		existing.GroupID = groupID
+		if err := repository.UpdateHostDAO(existing.ID, existing); err != nil {
+			LogService("error", "failed to update host group_id during backfill", map[string]interface{}{
+				"host_id":    existing.ID,
+				"monitor_id": mid,
+				"error":      err.Error(),
+			}, nil, "")
+			continue
+		}
+		updated++
+	}
+
+	if updated > 0 {
+		LogService("info", "backfilled host group_id from monitor", map[string]interface{}{
+			"monitor_id": mid,
+			"updated":    updated,
+		}, nil, "")
+	}
+
+	return nil
+}
+
+// PullGroupsFromMonitorAutoSyncServ pulls groups for auto sync, bypassing inactive status.
+func PullGroupsFromMonitorAutoSyncServ(mid uint) (SyncResult, error) {
+	return pullGroupsFromMonitorServ(mid, true)
+}
+
+func normalizeMonitorURL(url string) string {
+	trimmed := strings.TrimSpace(url)
+	if trimmed == "" {
+		return trimmed
+	}
+	trimmed = strings.TrimSuffix(trimmed, "/")
+	trimmed = strings.TrimSuffix(trimmed, "/api_jsonrpc.php")
+	trimmed = strings.TrimSuffix(trimmed, "/API_JSONRPC.PHP")
+	return trimmed
 }
 
 // PushGroupToMonitorServ pushes a group to a monitor (create or update host group)
@@ -136,13 +219,17 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 		return fmt.Errorf("monitor is in error state")
 	}
 
-	// 2. Create monitor client
+	monitorType := monitors.ParseMonitorType(monitor.Type)
+	if monitorType == monitors.MonitorOther && (monitor.URL != "" || monitor.Username != "" || monitor.Password != "" || monitor.AuthToken != "") {
+		monitorType = monitors.MonitorZabbix
+	}
+
 	cfg := monitors.Config{
 		Name:    monitor.Name,
-		Type:    monitors.ParseMonitorType(monitor.Type),
+		Type:    monitorType,
 		Timeout: 10,
 		Auth: monitors.AuthConfig{
-			URL:      monitor.URL,
+			URL:      normalizeMonitorURL(monitor.URL),
 			Username: monitor.Username,
 			Password: monitor.Password,
 			Token:    monitor.AuthToken,

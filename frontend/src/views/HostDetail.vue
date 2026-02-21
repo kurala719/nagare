@@ -102,7 +102,7 @@
             <template #header>
               <div class="card-header">
                 <span>{{ $t('hosts.networkTraffic') || 'Network' }}</span>
-                <el-tag size="small" type="warning">{{ currentNet }} KB/s</el-tag>
+                <el-tag size="small" type="warning">{{ currentNet }}{{ currentNetUnit ? ' ' + currentNetUnit : '' }}</el-tag>
               </div>
             </template>
             <div ref="netChartRef" class="mini-chart"></div>
@@ -286,6 +286,7 @@ const error = ref(null)
 const currentCpu = ref(0)
 const currentMem = ref(0)
 const currentNet = ref(0)
+const currentNetUnit = ref('')
 
 const historyShortcuts = [
   {
@@ -450,13 +451,14 @@ const initMetricCharts = () => {
 
 const setMetricChartOption = (chart, name, data, color, unit = '%') => {
   if (!chart) return
+  const unitLabel = unit === '%' ? '%' : (unit ? ` ${unit}` : '')
   chart.setOption({
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
         const p = params[0]
         const time = new Date(p.data[0]).toLocaleString()
-        return `${time}<br/>${p.seriesName}: ${p.data[1]}${unit}`
+        return `${time}<br/>${p.seriesName}: ${p.data[1]}${unitLabel}`
       }
     },
     grid: { left: 40, right: 10, top: 10, bottom: 20 },
@@ -500,25 +502,29 @@ const loadMetricHistory = async () => {
   })
 
   // Helper to fetch and plot
-  const fetchAndPlot = async (itemList, chart, name, color, unit, currentRef) => {
+  const fetchAndPlot = async (itemList, chart, name, color, unit, currentRef, unitRef) => {
     if (itemList.length === 0 || !chart) return
     // Pick the most representative item (e.g., the first one for now)
     const item = itemList[0]
     currentRef.value = item.value || 0
+    if (unitRef) {
+      unitRef.value = item.units || unit || ''
+    }
     try {
       const resp = await fetchItemHistory(item.id, { from, to, limit: 100 })
       const rows = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : [])
       const data = rows.map(r => [new Date(r.sampled_at || r.SampledAt).getTime(), parseFloat(r.value || r.Value || 0)])
-      setMetricChartOption(chart, name, data, color, unit)
+      setMetricChartOption(chart, name, data, color, unitRef?.value || unit)
     } catch (e) {
       console.warn(`Failed to fetch history for ${item.name}`, e)
     }
   }
 
+  currentNetUnit.value = ''
   await Promise.all([
     fetchAndPlot(cpuItems, cpuChart, t('hosts.cpuUsage'), '#409EFF', '%', currentCpu),
     fetchAndPlot(memItems, memChart, t('hosts.memoryUsage'), '#67C23A', '%', currentMem),
-    fetchAndPlot(netItems, netChart, t('hosts.networkTraffic'), '#E6A23C', ' KB/s', currentNet)
+    fetchAndPlot(netItems, netChart, t('hosts.networkTraffic'), '#E6A23C', '', currentNet, currentNetUnit)
   ])
 }
 

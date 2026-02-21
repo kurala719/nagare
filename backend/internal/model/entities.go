@@ -287,6 +287,7 @@ type User struct {
 	Address      string     `gorm:"size:255"`
 	Introduction string     `gorm:"type:text"`
 	Nickname     string     `gorm:"size:100"`
+	QQ           string     `gorm:"size:20"`
 }
 
 // RegisterApplication represents a pending registration request from an unregistered user

@@ -284,7 +284,7 @@ func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
 			// Token is still valid, no need to re-authenticate
 			return nil
 		}
-		
+
 		// If token verification fails and we have no credentials, we can't do anything
 		if p.username == "" || p.password == "" {
 			return fmt.Errorf("provided token is invalid and no credentials supplied for login")
@@ -319,7 +319,7 @@ func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
 
 	var token string
 	if err := json.Unmarshal(resp.Result, &token); err != nil {
-		// Some Zabbix versions might return the token wrapped in a different way or 
+		// Some Zabbix versions might return the token wrapped in a different way or
 		// if it's already an API token used as password, we might need different handling.
 		// For now, try to catch empty result.
 		if string(resp.Result) == "null" || string(resp.Result) == "" {
@@ -352,6 +352,7 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 		"output":           "extend",
 		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
+		"selectHostGroups": "extend",
 	}
 
 	resp, err := p.sendRequest(ctx, "host.get", params)
@@ -368,6 +369,7 @@ func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) 
 		"output":           "extend",
 		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
+		"selectHostGroups": "extend",
 		"groupids":         groupID,
 	}
 
@@ -414,6 +416,115 @@ func determineZabbixAvailability(zh zabbixHostWithGroups) (string, string, strin
 	return "up", "0", ""
 }
 
+func zabbixInterfaceTypeLabel(raw string) string {
+	switch raw {
+	case "1":
+		return "agent"
+	case "2":
+		return "snmp"
+	case "3":
+		return "ipmi"
+	case "4":
+		return "jmx"
+	default:
+		return "unknown"
+	}
+}
+
+func mapZabbixIfTypeLabel(raw string) string {
+	switch raw {
+	case "1":
+		return "other"
+	case "6":
+		return "ethernetCsmacd"
+	case "24":
+		return "softwareLoopback"
+	case "53":
+		return "propVirtual"
+	case "54":
+		return "propMultiplexor"
+	case "117":
+		return "gigabitEthernet"
+	case "131":
+		return "tunnel"
+	case "135":
+		return "l2vlan"
+	case "136":
+		return "l3ipvlan"
+	case "161":
+		return "ieee8023adLag"
+	default:
+		return raw
+	}
+}
+
+func mapZabbixFanStatus(raw string) string {
+	switch raw {
+	case "1":
+		return "Normal"
+	case "2":
+		return "Abnormal"
+	case "3":
+		return "Not Supported"
+	case "4":
+		return "Unknown"
+	default:
+		return raw
+	}
+}
+
+func normalizeZabbixItemValue(name, key, value, units string) (string, string) {
+	nameLower := strings.ToLower(strings.TrimSpace(name))
+	keyLower := strings.ToLower(strings.TrimSpace(key))
+	unitsLower := strings.ToLower(strings.TrimSpace(units))
+	value = strings.TrimSpace(value)
+
+	if strings.Contains(nameLower, "fan") && strings.Contains(nameLower, "status") {
+		return mapZabbixFanStatus(value), units
+	}
+	if strings.Contains(nameLower, "interface type") || strings.Contains(keyLower, "iftype") {
+		return mapZabbixIfTypeLabel(value), units
+	}
+
+	if (unitsLower == "bps" || unitsLower == "b/s" || unitsLower == "bit/s") &&
+		(strings.Contains(nameLower, "speed") || strings.Contains(keyLower, "ifspeed") || strings.Contains(keyLower, "ifhighspeed")) {
+		if numeric, err := strconv.ParseFloat(value, 64); err == nil {
+			scaledValue, scaledUnits := scaleBitsPerSecond(numeric)
+			return scaledValue, scaledUnits
+		}
+	}
+
+	return value, units
+}
+
+func scaleBitsPerSecond(value float64) (string, string) {
+	switch {
+	case value >= 1e9:
+		return fmt.Sprintf("%.2f", value/1e9), "Gbps"
+	case value >= 1e6:
+		return fmt.Sprintf("%.2f", value/1e6), "Mbps"
+	case value >= 1e3:
+		return fmt.Sprintf("%.2f", value/1e3), "Kbps"
+	default:
+		return fmt.Sprintf("%.0f", value), "bps"
+	}
+}
+
+func zabbixPrimaryInterfaceInfo(host zabbixHost) (string, string, string) {
+	if len(host.Interfaces) == 0 {
+		return "", "", ""
+	}
+	selected := host.Interfaces[0]
+	for _, iface := range host.Interfaces {
+		if toString(iface.Main) == "1" {
+			selected = iface
+			break
+		}
+	}
+	interfaceTypeID := toString(selected.Type)
+	return selected.IP, interfaceTypeID, zabbixInterfaceTypeLabel(interfaceTypeID)
+}
+
 // parseZabbixHosts parses Zabbix host.get result into common Host slice
 func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error) {
 	var zabbixHosts []zabbixHostWithGroups
@@ -423,10 +534,7 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 
 	hosts := make([]Host, 0, len(zabbixHosts))
 	for _, zh := range zabbixHosts {
-		ip := ""
-		if len(zh.Interfaces) > 0 {
-			ip = zh.Interfaces[0].IP
-		}
+		ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
 
 		status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -434,6 +542,10 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 			"host":               zh.Host,
 			"active_available":   activeAvailable,
 			"status_description": statusDesc,
+		}
+		if interfaceTypeID != "" {
+			metadata["interface_type_id"] = interfaceTypeID
+			metadata["interface_type"] = interfaceTypeLabel
 		}
 		selectedGroups := zh.HostGroups
 		if len(selectedGroups) == 0 {
@@ -493,10 +605,7 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 	}
 
 	zh := zabbixHosts[0]
-	ip := ""
-	if len(zh.Interfaces) > 0 {
-		ip = zh.Interfaces[0].IP
-	}
+	ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
 
 	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -504,6 +613,10 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 		"host":               zh.Host,
 		"active_available":   activeAvailable,
 		"status_description": statusDesc,
+	}
+	if interfaceTypeID != "" {
+		metadata["interface_type_id"] = interfaceTypeID
+		metadata["interface_type"] = interfaceTypeLabel
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {
@@ -558,10 +671,7 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	}
 
 	zh := zabbixHosts[0]
-	ip := ""
-	if len(zh.Interfaces) > 0 {
-		ip = zh.Interfaces[0].IP
-	}
+	ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
 
 	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -569,6 +679,10 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		"host":               zh.Host,
 		"active_available":   activeAvailable,
 		"status_description": statusDesc,
+	}
+	if interfaceTypeID != "" {
+		metadata["interface_type_id"] = interfaceTypeID
+		metadata["interface_type"] = interfaceTypeLabel
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {
@@ -618,14 +732,17 @@ func (p *ZabbixProvider) GetItems(ctx context.Context, hostID string) ([]Item, e
 	items := make([]Item, 0, len(zabbixItems))
 	for _, zi := range zabbixItems {
 		timestamp := parseUnixClock(zi.LastClock)
+		value := toString(zi.LastValue)
+		units := zi.Units
+		value, units = normalizeZabbixItemValue(zi.Name, zi.Key, value, units)
 		items = append(items, Item{
 			ID:          zi.ItemID,
 			HostID:      zi.HostID,
 			Name:        zi.Name,
 			Key:         zi.Key,
 			Type:        toString(zi.Type),
-			Value:       toString(zi.LastValue),
-			Units:       zi.Units,
+			Value:       value,
+			Units:       units,
 			ValueType:   toString(zi.ValueType),
 			Delay:       zi.Delay,
 			Status:      toString(zi.Status),
@@ -659,14 +776,17 @@ func (p *ZabbixProvider) GetItemByID(ctx context.Context, itemID string) (*Item,
 	}
 
 	zi := zabbixItems[0]
+	value := toString(zi.LastValue)
+	units := zi.Units
+	value, units = normalizeZabbixItemValue(zi.Name, zi.Key, value, units)
 	return &Item{
 		ID:          zi.ItemID,
 		HostID:      zi.HostID,
 		Name:        zi.Name,
 		Key:         zi.Key,
 		Type:        toString(zi.Type),
-		Value:       toString(zi.LastValue),
-		Units:       zi.Units,
+		Value:       value,
+		Units:       units,
 		ValueType:   toString(zi.ValueType),
 		Delay:       zi.Delay,
 		Status:      toString(zi.Status),
@@ -711,12 +831,15 @@ func (p *ZabbixProvider) GetItemHistory(ctx context.Context, itemID string, from
 	items := make([]Item, 0, len(history))
 	for _, h := range history {
 		timestamp := parseUnixClock(h.Clock)
+		value := h.Value
+		units := item.Units
+		value, units = normalizeZabbixItemValue(item.Name, item.Key, value, units)
 		items = append(items, Item{
 			ID:        h.ItemID,
-			Value:     h.Value,
+			Value:     value,
 			HostID:    item.HostID,
 			Name:      item.Name,
-			Units:     item.Units,
+			Units:     units,
 			Timestamp: timestamp,
 		})
 	}

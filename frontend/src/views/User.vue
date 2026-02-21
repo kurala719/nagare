@@ -74,6 +74,7 @@
       <el-table-column prop="nickname" :label="$t('users.nickname')" min-width="140" show-overflow-tooltip sortable="custom" />
       <el-table-column prop="email" :label="$t('users.email')" min-width="180" show-overflow-tooltip sortable="custom" />
       <el-table-column prop="phone" :label="$t('users.phone')" width="140" align="center" show-overflow-tooltip sortable="custom" />
+      <el-table-column prop="qq" :label="$t('users.qq') || 'QQ'" width="140" align="center" show-overflow-tooltip sortable="custom" />
       <el-table-column prop="privileges" :label="$t('users.role')" width="140" align="center" sortable="custom">
         <template #default="{ row }">
           <el-tag :type="roleTagType(row.privileges)" size="small" effect="dark">{{ roleLabel(row.privileges) }}</el-tag>
@@ -125,6 +126,9 @@
         </el-form-item>
         <el-form-item :label="$t('users.phone')">
           <el-input v-model="form.phone" />
+        </el-form-item>
+        <el-form-item :label="$t('users.qq') || 'QQ'">
+          <el-input v-model="form.qq" />
         </el-form-item>
         <el-form-item :label="$t('users.role')">
           <el-select v-model="form.privileges" style="width: 100%">
@@ -228,6 +232,7 @@ export default {
         address: '',
         introduction: '',
         nickname: '',
+        qq: '',
       },
       bulkForm: {
         status: 'nochange',
@@ -428,6 +433,7 @@ export default {
           nickname: u.Nickname || u.nickname || '',
           email: u.Email || u.email || '',
           phone: u.Phone || u.phone || '',
+          qq: u.QQ || u.qq || '',
           avatar: u.Avatar || u.avatar || '',
           address: u.Address || u.address || '',
           introduction: u.Introduction || u.introduction || '',
@@ -455,6 +461,7 @@ export default {
         address: '',
         introduction: '',
         nickname: '',
+        qq: '',
       }
       this.dialogVisible = true
     },
@@ -472,6 +479,7 @@ export default {
         address: row.address || '',
         introduction: row.introduction || '',
         nickname: row.nickname || '',
+        qq: row.qq || '',
       }
       
       // Optionally fetch full details in case listing didn't include everything
@@ -485,6 +493,7 @@ export default {
           address: u.address || u.Address || '',
           introduction: u.introduction || u.Introduction || '',
           nickname: u.nickname || u.Nickname || '',
+          qq: u.qq || u.QQ || '',
         })
       } catch (err) {
         console.warn('Failed to fetch full user details:', err)
@@ -512,6 +521,7 @@ export default {
           nickname: this.form.nickname,
           email: this.form.email,
           phone: this.form.phone,
+          qq: this.form.qq,
           avatar: this.form.avatar,
           address: this.form.address,
           introduction: this.form.introduction,

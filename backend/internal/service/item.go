@@ -35,6 +35,8 @@ type ItemResp struct {
 	HID            uint       `json:"hid"`
 	HostName       string     `json:"host_name"`
 	Value          string     `json:"value"`
+	ValueType      string     `json:"value_type"`
+	ValueTypeLabel string     `json:"value_type_label"`
 	Units          string     `json:"units"`
 	Enabled        int        `json:"enabled"`
 	Status         int        `json:"status"`
@@ -366,6 +368,8 @@ func itemToResp(item model.Item) ItemResp {
 		HID:            item.HID,
 		HostName:       item.HostName,
 		Value:          item.LastValue,
+		ValueType:      item.ValueType,
+		ValueTypeLabel: mapZabbixValueTypeLabel(item.ValueType),
 		Units:          item.Units,
 		Enabled:        item.Enabled,
 		Status:         item.Status,
@@ -373,6 +377,25 @@ func itemToResp(item model.Item) ItemResp {
 		Comment:        item.Comment,
 		LastSyncAt:     item.LastSyncAt,
 		ExternalSource: item.ExternalSource,
+	}
+}
+
+func mapZabbixValueTypeLabel(valueType string) string {
+	switch strings.TrimSpace(valueType) {
+	case "0":
+		return "float"
+	case "1":
+		return "character"
+	case "2":
+		return "log"
+	case "3":
+		return "unsigned"
+	case "4":
+		return "text"
+	case "5":
+		return "binary"
+	default:
+		return valueType
 	}
 }
 

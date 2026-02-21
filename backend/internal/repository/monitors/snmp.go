@@ -18,6 +18,21 @@ type SnmpProvider struct {
 
 func translateStatus(name, val string) string {
 	lower := strings.ToLower(name)
+	if strings.Contains(lower, "interface type") || strings.Contains(lower, "iftype") {
+		return mapInterfaceTypeLabel(val)
+	}
+	if strings.Contains(lower, "fan") && (strings.Contains(lower, "status") || strings.Contains(lower, "tray")) {
+		switch val {
+		case "1":
+			return "Normal"
+		case "2":
+			return "Abnormal"
+		case "3":
+			return "Not Supported"
+		case "4":
+			return "Unknown"
+		}
+	}
 	if strings.Contains(lower, "status") || strings.Contains(lower, "state") || strings.Contains(lower, "session") || strings.Contains(lower, "health") {
 		switch val {
 		case "1":
@@ -52,6 +67,27 @@ func translateStatus(name, val string) string {
 		}
 	}
 	return val
+}
+
+func mapInterfaceTypeLabel(val string) string {
+	switch val {
+	case "1":
+		return "other"
+	case "6":
+		return "ethernetCsmacd"
+	case "24":
+		return "softwareLoopback"
+	case "53":
+		return "propVirtual"
+	case "54":
+		return "propMultiplexor"
+	case "117":
+		return "gigabitEthernet"
+	case "131":
+		return "tunnel"
+	default:
+		return val
+	}
 }
 
 func NewSnmpProvider(cfg Config) (Provider, error) {
@@ -452,7 +488,10 @@ func determineUnits(name string) string {
 	if strings.Contains(lower, "voltage") {
 		return "mV"
 	}
-	if strings.Contains(lower, "bitrate") || strings.Contains(lower, "speed") || strings.Contains(lower, "rate") {
+	if strings.Contains(lower, "speed") {
+		return "Mbps"
+	}
+	if strings.Contains(lower, "bitrate") || strings.Contains(lower, "rate") {
 		return "bps"
 	}
 	if strings.Contains(lower, "power") && strings.Contains(lower, "dbm") {
@@ -681,18 +720,16 @@ func (p *SnmpProvider) processInterfaceVar(v gosnmp.SnmpPDU, oidToMeta map[strin
 		return
 	}
 
-	if meta.Type == "speed" {
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			val = fmt.Sprintf("%.0f", f*1000000)
-		}
-	}
-
 	val = translateStatus(meta.Name, val)
 
 	existing, exists := (*ifNamesMap)[meta.Name]
 	if !exists || (existing.Value == "N/A" || existing.Value == "0") {
+		units := determineUnits(meta.Name)
+		if meta.Type == "speed" {
+			units = "Mbps"
+		}
 		(*ifNamesMap)[meta.Name] = Item{
-			ID: normOid, Name: meta.Name, Key: normOid, Value: val, Units: determineUnits(meta.Name), Status: "0", Timestamp: time.Now().Unix(),
+			ID: normOid, Name: meta.Name, Key: normOid, Value: val, Units: units, Status: "0", Timestamp: time.Now().Unix(),
 		}
 	}
 }
@@ -895,7 +932,8 @@ func (p *SnmpProvider) pollViaWalk(gs *gosnmp.GoSNMP, oidNames map[string]string
 	for rawOid, name := range oidNames {
 		_ = gs.Walk("."+rawOid, func(v gosnmp.SnmpPDU) error {
 			norm := normalizeOID(v.Name)
-			items = append(items, Item{ID: norm, Name: name, Key: norm, Value: formatSnmpValue(v), Timestamp: time.Now().Unix(), Status: "0"})
+			value := translateStatus(name, formatSnmpValue(v))
+			items = append(items, Item{ID: norm, Name: name, Key: norm, Value: value, Units: determineUnits(name), Timestamp: time.Now().Unix(), Status: "0"})
 			return fmt.Errorf("found")
 		})
 	}

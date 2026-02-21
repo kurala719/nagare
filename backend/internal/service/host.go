@@ -842,6 +842,31 @@ func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallba
 	}
 
 	if len(externalGroupIDs) == 0 {
+		for _, groupName := range externalGroupNames {
+			if matchedGroupID, err := findGroupByExternalIDOrName("", groupName, mid); err == nil && matchedGroupID != 0 {
+				return matchedGroupID
+			}
+		}
+
+		if len(externalGroupNames) > 0 {
+			newGroupName := strings.TrimSpace(externalGroupNames[0])
+			if newGroupName == "" {
+				return groupID
+			}
+			newGroup := model.Group{
+				Name:       newGroupName,
+				MonitorID:  mid,
+				Enabled:    1,
+				Status:     1,
+				ExternalID: "",
+			}
+			if err := repository.AddGroupDAO(newGroup); err == nil {
+				if createdGroup, err := repository.SearchGroupsDAO(model.GroupFilter{Query: newGroupName}); err == nil && len(createdGroup) > 0 {
+					return createdGroup[len(createdGroup)-1].ID
+				}
+			}
+		}
+
 		return groupID
 	}
 

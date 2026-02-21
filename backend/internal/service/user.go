@@ -37,6 +37,7 @@ type UserRequest struct {
 	Address      string `json:"address"`
 	Introduction string `json:"introduction"`
 	Nickname     string `json:"nickname"`
+	QQ           string `json:"qq"`
 }
 
 type UserResponse struct {
@@ -51,6 +52,7 @@ type UserResponse struct {
 	Address      string `json:"address"`
 	Introduction string `json:"introduction"`
 	Nickname     string `json:"nickname"`
+	QQ           string `json:"qq"`
 }
 
 type LoginResponse struct {
@@ -147,6 +149,7 @@ func AddUserServ(req UserRequest) error {
 		Address:      req.Address,
 		Introduction: req.Introduction,
 		Nickname:     req.Nickname,
+		QQ:           req.QQ,
 	}
 	return repository.AddUserDAO(user)
 }
@@ -198,6 +201,9 @@ func UpdateUserServ(id int, req UserRequest) error {
 	if req.Nickname != "" {
 		user.Nickname = req.Nickname
 	}
+	if req.QQ != "" {
+		user.QQ = req.QQ
+	}
 
 	return repository.UpdateUserDAO(id, user)
 }
@@ -221,6 +227,7 @@ func UpdateUserProfileServ(username string, req UserRequest) error {
 	user.Address = req.Address
 	user.Introduction = req.Introduction
 	user.Nickname = req.Nickname
+	user.QQ = req.QQ
 
 	if req.Username != "" {
 		user.Username = req.Username
@@ -604,5 +611,6 @@ func userToResp(u model.User) UserResponse {
 		Address:      u.Address,
 		Introduction: u.Introduction,
 		Nickname:     u.Nickname,
+		QQ:           u.QQ,
 	}
 }

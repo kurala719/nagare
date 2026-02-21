@@ -32,6 +32,7 @@ func InitDBTables() error {
 			address varchar(255),
 			introduction text,
 			nickname varchar(100),
+			qq varchar(20),
 			PRIMARY KEY (id),
 			KEY idx_users_deleted_at (deleted_at),
 			UNIQUE KEY idx_username (username(100))

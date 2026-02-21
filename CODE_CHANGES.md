@@ -1,5 +1,66 @@
 # Code Changes Reference
 
+## Feature: User QQ Field (2026-02-21)
+
+### Backend Changes
+
+**File:** `backend/internal/model/entities.go`
+- Added `QQ` field to `User` struct.
+
+**File:** `backend/internal/service/user.go`
+- Added `QQ` field to `UserRequest` and `UserResponse` structs.
+- Updated `AddUserServ`, `UpdateUserServ`, `UpdateUserProfileServ`, and `userToResp` to handle the `QQ` field.
+
+**File:** `backend/internal/repository/user.go`
+- Updated `UpdateUserDAO` to include the `qq` field in database updates.
+
+**File:** `backend/internal/migration/migration.go`
+- Added `qq` column to the manual `users` table creation SQL.
+
+### Frontend Changes
+
+**File:** `frontend/src/views/User.vue`
+- Added QQ column to the users table.
+- Added QQ input field to the user create/edit dialog.
+- Updated data mapping and save logic to support the QQ field.
+
+**File:** `frontend/src/views/Profile.vue`
+- Added QQ input field to the user profile form.
+- Updated profile loading and reset logic to support the QQ field.
+
+**File:** `frontend/src/i18n/index.js`
+- Added translations for "QQ" and "QQ Number" in English and Chinese.
+
+---
+
+## Feature: Alert Comment & AI Adoption (2026-02-21)
+
+### Frontend Changes
+
+**File:** `frontend/src/views/Alert.vue`
+
+- Added display for `comment` field on alert cards.
+- Added `comment` field to Add/Edit Alert dialog.
+- Enhanced "AI Consult" dialog with an "Adopt AI Suggestions" panel.
+- Users can now edit the AI response, select a new status, and apply these changes directly to the alert.
+- Added styling for the new comment section.
+
+**File:** `frontend/src/i18n/index.js`
+
+- Added English and Chinese translation keys for:
+  - `commentLabel` / `备注/诊断`
+  - `enterComment` / `请输入详细说明或处理方案...`
+  - `adoptTitle` / `采纳 AI 建议`
+  - `aiCommentPlaceholder` / `AI 分析摘要...`
+
+### Backend Changes
+
+- Confirmed `Alert` model in `backend/internal/model/entities.go` already contains the `Comment` field.
+- Confirmed `UpdateAlertDAO` in `backend/internal/repository/alert.go` correctly updates the `comment` field.
+- Confirmed `UpdateAlertServ` in `backend/internal/service/alert.go` supports `Comment` in the request payload.
+
+---
+
 ## File Modified: `backend/internal/service/trigger.go`
 
 ### Change 1: Enhanced `execTriggersForItem()` Function

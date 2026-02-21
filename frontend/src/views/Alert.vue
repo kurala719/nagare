@@ -114,173 +114,219 @@
                   </div>
               </div>
               
-              <div class="alert-content">
-                <div class="alert-message">{{ alert.message }}</div>
-                
-                <el-row :gutter="20" class="alert-meta">
-                  <el-col :span="8">
-                    <div class="meta-item">
-                      <el-icon><Monitor /></el-icon>
-                      <span class="meta-label">Host:</span>
-                      <router-link v-if="alert.host_name" :to="'/hosts/' + alert.host_id" class="meta-value link">
-                        {{ alert.host_name }}
-                      </router-link>
-                      <span v-else-if="alert.host_id" class="meta-value">{{ 'Host #' + alert.host_id }}</span>
-                      <span v-else class="meta-value">N/A</span>
+                              <div class="alert-content">
+                              <div class="alert-message">{{ alert.message }}</div>
+                              
+                              <div v-if="alert.status_reason" class="alert-comment">
+                                <div class="comment-label">{{ $t('alerts.commentLabel') || 'Comment' }}:</div>
+                                <div class="comment-text">{{ alert.status_reason }}</div>
+                              </div>
+              
+                              <el-row :gutter="20" class="alert-meta">
+                                <el-col :span="8">
+                                  <div class="meta-item">
+                                    <el-icon><Monitor /></el-icon>
+                                    <span class="meta-label">Host:</span>
+                                    <router-link v-if="alert.host_name" :to="'/hosts/' + alert.host_id" class="meta-value link">
+                                      {{ alert.host_name }}
+                                    </router-link>
+                                    <span v-else-if="alert.host_id" class="meta-value">{{ 'Host #' + alert.host_id }}</span>
+                                    <span v-else class="meta-value">N/A</span>
+                                  </div>
+                                </el-col>
+                                <el-col :span="8">
+                                  <div class="meta-item">
+                                    <el-icon><Document /></el-icon>
+                                    <span class="meta-label">Metric:</span>
+                                    <router-link v-if="alert.item_name" :to="'/items/' + alert.item_id" class="meta-value link">
+                                      {{ alert.item_name }}
+                                    </router-link>
+                                    <span v-else-if="alert.item_id" class="meta-value">{{ 'Item #' + alert.item_id }}</span>
+                                    <span v-else class="meta-value">N/A</span>
+                                  </div>
+                                </el-col>
+                                <el-col :span="8">
+                                  <div class="meta-item">
+                                    <el-icon><Bell /></el-icon>
+                                    <span class="meta-label">Source:</span>
+                                    <span class="meta-value">{{ alert.alarm_name || 'System' }}</span>
+                                  </div>
+                                </el-col>
+                              </el-row>
+              
+                              <div class="alert-footer">
+                                <div class="alert-time">
+                                  <el-icon><Clock /></el-icon>
+                                  {{ alert.created_at ? new Date(alert.created_at).toLocaleString() : 'N/A' }}
+                                </div>
+                                <div class="alert-actions">
+                                  <el-button type="primary" link :icon="ChatLineRound" @click="consultAI(alert)">{{ $t('alerts.consult') }}</el-button>
+                                  <el-button type="warning" link :icon="Edit" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
+                                  <el-button type="danger" link :icon="Delete" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
+                                </div>
+                              </div>
+                            </div>
+                        </el-card>
                     </div>
-                  </el-col>
-                  <el-col :span="8">
-                    <div class="meta-item">
-                      <el-icon><Document /></el-icon>
-                      <span class="meta-label">Metric:</span>
-                      <router-link v-if="alert.item_name" :to="'/items/' + alert.item_id" class="meta-value link">
-                        {{ alert.item_name }}
-                      </router-link>
-                      <span v-else-if="alert.item_id" class="meta-value">{{ 'Item #' + alert.item_id }}</span>
-                      <span v-else class="meta-value">N/A</span>
-                    </div>
-                  </el-col>
-                  <el-col :span="8">
-                    <div class="meta-item">
-                      <el-icon><Bell /></el-icon>
-                      <span class="meta-label">Source:</span>
-                      <span class="meta-value">{{ alert.alarm_name || 'System' }}</span>
-                    </div>
-                  </el-col>
-                </el-row>
-
-                <div class="alert-footer">
-                  <div class="alert-time">
-                    <el-icon><Clock /></el-icon>
-                    {{ alert.created_at ? new Date(alert.created_at).toLocaleString() : 'N/A' }}
                   </div>
-                  <div class="alert-actions">
-                    <el-button type="primary" link :icon="ChatLineRound" @click="consultAI(alert)">{{ $t('alerts.consult') }}</el-button>
-                    <el-button type="warning" link :icon="Edit" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
-                    <el-button type="danger" link :icon="Delete" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
+                  <div v-if="!loading && !error && totalAlerts > 0" class="alerts-pagination">
+                      <el-pagination
+                          background
+                          layout="sizes, prev, pager, next"
+                          :page-sizes="[10, 20, 50, 100]"
+                          v-model:page-size="pageSize"
+                          v-model:current-page="currentPage"
+                          :total="totalAlerts"
+                      />
                   </div>
-                </div>
-              </div>
-          </el-card>
-      </div>
-    </div>
-    <div v-if="!loading && !error && totalAlerts > 0" class="alerts-pagination">
-        <el-pagination
-            background
-            layout="sizes, prev, pager, next"
-            :page-sizes="[10, 20, 50, 100]"
-            v-model:page-size="pageSize"
-            v-model:current-page="currentPage"
-            :total="totalAlerts"
-        />
-    </div>
-
-    <!-- Add/Edit Dialog -->
-    <el-dialog 
-        v-model="dialogVisible" 
-        :title="isEditing ? $t('alerts.editTitle') : $t('alerts.addTitle')"
-        width="500px"
-    >
-        <el-form :model="alertForm" label-width="100px" :rules="formRules" ref="alertFormRef">
-            <el-form-item :label="$t('alerts.messageLabel')" prop="message">
-                <el-input v-model="alertForm.message" type="textarea" :rows="3" :placeholder="$t('alerts.enterMessage')" />
-            </el-form-item>
-            <el-form-item :label="$t('alerts.severityLabel')" prop="severity">
-                <el-select v-model="alertForm.severity" :placeholder="$t('alerts.selectSeverity')" style="width: 100%;">
-                    <el-option :label="$t('alerts.severityCritical')" :value="4" />
-                    <el-option :label="$t('alerts.severityHigh')" :value="3" />
-                    <el-option :label="$t('alerts.severityMedium')" :value="2" />
-                    <el-option :label="$t('alerts.severityLow')" :value="1" />
-                    <el-option :label="$t('alerts.severityInfo')" :value="0" />
-                </el-select>
-            </el-form-item>
-            <el-form-item :label="$t('alerts.statusLabel')" prop="status">
-                <el-select v-model="alertForm.status" :placeholder="$t('alerts.selectStatus')" style="width: 100%;">
-                    <el-option :label="$t('alerts.statusOpen')" value="open" />
-                    <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
-                    <el-option :label="$t('alerts.statusResolved')" value="resolved" />
-                    <el-option :label="$t('alerts.statusClosed')" value="closed" />
-                </el-select>
-            </el-form-item>
-            <el-form-item :label="$t('hosts.monitor')" prop="host_id">
-                <el-select v-model="alertForm.host_id" clearable filterable @change="onHostChange" style="width: 100%;">
-                    <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
-                </el-select>
-            </el-form-item>
-            <el-form-item :label="$t('menu.item')" prop="item_id">
-                <el-select v-model="alertForm.item_id" clearable filterable :disabled="!alertForm.host_id" style="width: 100%;">
-                    <el-option v-for="it in filteredItems" :key="it.id" :label="it.name" :value="it.id" />
-                </el-select>
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <el-button @click="dialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
-            <el-button type="primary" @click="saveAlert" :loading="saving">
-                {{ isEditing ? $t('alerts.update') : $t('alerts.create') }}
-            </el-button>
-        </template>
-    </el-dialog>
-
-    <!-- Delete Confirmation Dialog -->
-    <el-dialog v-model="deleteDialogVisible" :title="$t('alerts.confirmDelete')" width="400px">
-        <p>{{ $t('alerts.confirmDeleteText') }}</p>
-        <p v-if="alertToDelete"><strong>{{ alertToDelete.message }}</strong></p>
-        <template #footer>
-            <el-button @click="deleteDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
-            <el-button type="danger" @click="deleteAlertConfirmed" :loading="deleting">{{ $t('alerts.remove') }}</el-button>
-        </template>
-    </el-dialog>
-
-    <!-- Bulk Update Dialog -->
-    <el-dialog v-model="bulkDialogVisible" :title="$t('common.bulkUpdateTitle')" width="460px">
-        <el-form :model="bulkForm" label-width="140px">
-            <el-form-item :label="$t('alerts.statusLabel')">
-                <el-select v-model="bulkForm.status" style="width: 100%;">
-                    <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-                    <el-option :label="$t('alerts.statusOpen')" value="open" />
-                    <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
-                    <el-option :label="$t('alerts.statusResolved')" value="resolved" />
-                    <el-option :label="$t('alerts.statusClosed')" value="closed" />
-                </el-select>
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <el-button @click="bulkDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
-            <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
-        </template>
-    </el-dialog>
-
-    <!-- Bulk Delete Confirmation Dialog -->
-    <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
-        <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
-        <template #footer>
-            <el-button @click="bulkDeleteDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
-            <el-button type="danger" @click="deleteSelectedAlerts" :loading="bulkDeleting">{{ $t('alerts.remove') }}</el-button>
-        </template>
-    </el-dialog>
-
-    <!-- AI Response Dialog -->
-    <el-dialog v-model="aiDialogVisible" :title="$t('alerts.aiTitle')" width="600px">
-        <div v-if="consultingAI" style="text-align: center; padding: 40px;">
-            <el-icon class="is-loading" size="40" color="#409EFF">
-                <Loading />
-            </el-icon>
-            <p style="margin-top: 16px; color: #909399;">{{ $t('alerts.aiLoading') }}</p>
-        </div>
-        <div v-else>
-            <el-descriptions v-if="currentAlertForAI" :column="1" border style="margin-bottom: 16px;">
-                <el-descriptions-item :label="$t('alerts.title')">{{ currentAlertForAI.message }}</el-descriptions-item>
-            </el-descriptions>
-            <el-divider content-position="left">{{ $t('alerts.aiResponse') }}</el-divider>
-            <div class="ai-response-content">
-                <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
-            </div>
-        </div>
-        <template #footer>
-            <el-button @click="aiDialogVisible = false">{{ $t('alerts.close') }}</el-button>
-        </template>
-    </el-dialog>
-  </div>
+              
+                  <!-- Add/Edit Dialog -->
+                  <el-dialog 
+                      v-model="dialogVisible" 
+                      :title="isEditing ? $t('alerts.editTitle') : $t('alerts.addTitle')"
+                      width="550px"
+                  >
+                      <el-form :model="alertForm" label-width="100px" :rules="formRules" ref="alertFormRef">
+                          <el-form-item :label="$t('alerts.messageLabel')" prop="message">
+                              <el-input v-model="alertForm.message" type="textarea" :rows="3" :placeholder="$t('alerts.enterMessage')" />
+                          </el-form-item>
+                          <el-row :gutter="20">
+                              <el-col :span="12">
+                                  <el-form-item :label="$t('alerts.severityLabel')" prop="severity">
+                                      <el-select v-model="alertForm.severity" :placeholder="$t('alerts.selectSeverity')" style="width: 100%;">
+                                          <el-option :label="$t('alerts.severityCritical')" :value="4" />
+                                          <el-option :label="$t('alerts.severityHigh')" :value="3" />
+                                          <el-option :label="$t('alerts.severityMedium')" :value="2" />
+                                          <el-option :label="$t('alerts.severityLow')" :value="1" />
+                                          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+                                      </el-select>
+                                  </el-form-item>
+                              </el-col>
+                              <el-col :span="12">
+                                  <el-form-item :label="$t('alerts.statusLabel')" prop="status">
+                                      <el-select v-model="alertForm.status" :placeholder="$t('alerts.selectStatus')" style="width: 100%;">
+                                          <el-option :label="$t('alerts.statusOpen')" value="open" />
+                                          <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
+                                          <el-option :label="$t('alerts.statusResolved')" value="resolved" />
+                                          <el-option :label="$t('alerts.statusClosed')" value="closed" />
+                                      </el-select>
+                                  </el-form-item>
+                              </el-col>
+                          </el-row>
+                          <el-form-item :label="$t('hosts.monitor')" prop="host_id">
+                              <el-select v-model="alertForm.host_id" clearable filterable @change="onHostChange" style="width: 100%;">
+                                  <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
+                              </el-select>
+                          </el-form-item>
+                          <el-form-item :label="$t('menu.item')" prop="item_id">
+                              <el-select v-model="alertForm.item_id" clearable filterable :disabled="!alertForm.host_id" style="width: 100%;">
+                                  <el-option v-for="it in filteredItems" :key="it.id" :label="it.name" :value="it.id" />
+                              </el-select>
+                          </el-form-item>
+                          <el-form-item :label="$t('alerts.commentLabel') || 'Comment'" prop="comment">
+                              <el-input v-model="alertForm.comment" type="textarea" :rows="3" :placeholder="$t('alerts.enterComment') || 'Add details or resolution...'" />
+                          </el-form-item>
+                      </el-form>
+                      <template #footer>
+                          <el-button @click="dialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
+                          <el-button type="primary" @click="saveAlert" :loading="saving">
+                              {{ isEditing ? $t('alerts.update') : $t('alerts.create') }}
+                          </el-button>
+                      </template>
+                  </el-dialog>
+              
+                  <!-- Delete Confirmation Dialog -->
+                  <el-dialog v-model="deleteDialogVisible" :title="$t('alerts.confirmDelete')" width="400px">
+                      <p>{{ $t('alerts.confirmDeleteText') }}</p>
+                      <p v-if="alertToDelete"><strong>{{ alertToDelete.message }}</strong></p>
+                      <template #footer>
+                          <el-button @click="deleteDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
+                          <el-button type="danger" @click="deleteAlertConfirmed" :loading="deleting">{{ $t('alerts.remove') }}</el-button>
+                      </template>
+                  </el-dialog>
+              
+                  <!-- Bulk Update Dialog -->
+                  <el-dialog v-model="bulkDialogVisible" :title="$t('common.bulkUpdateTitle')" width="460px">
+                      <el-form :model="bulkForm" label-width="140px">
+                          <el-form-item :label="$t('alerts.statusLabel')">
+                              <el-select v-model="bulkForm.status" style="width: 100%;">
+                                  <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
+                                  <el-option :label="$t('alerts.statusOpen')" value="open" />
+                                  <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
+                                  <el-option :label="$t('alerts.statusResolved')" value="resolved" />
+                                  <el-option :label="$t('alerts.statusClosed')" value="closed" />
+                              </el-select>
+                          </el-form-item>
+                      </el-form>
+                      <template #footer>
+                          <el-button @click="bulkDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
+                          <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+                      </template>
+                  </el-dialog>
+              
+                  <!-- Bulk Delete Confirmation Dialog -->
+                  <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
+                      <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
+                      <template #footer>
+                          <el-button @click="bulkDeleteDialogVisible = false">{{ $t('alerts.cancel') }}</el-button>
+                          <el-button type="danger" @click="deleteSelectedAlerts" :loading="bulkDeleting">{{ $t('alerts.remove') }}</el-button>
+                      </template>
+                  </el-dialog>
+              
+                  <!-- AI Response Dialog -->
+                  <el-dialog v-model="aiDialogVisible" :title="$t('alerts.aiTitle')" width="700px">
+                      <div v-if="consultingAI" style="text-align: center; padding: 40px;">
+                          <el-icon class="is-loading" size="40" color="#409EFF">
+                              <Loading />
+                          </el-icon>
+                          <p style="margin-top: 16px; color: #909399;">{{ $t('alerts.aiLoading') }}</p>
+                      </div>
+                      <div v-else>
+                          <el-descriptions v-if="currentAlertForAI" :column="1" border style="margin-bottom: 16px;">
+                              <el-descriptions-item :label="$t('alerts.title')">{{ currentAlertForAI.message }}</el-descriptions-item>
+                          </el-descriptions>
+                          
+                          <div class="ai-consult-tabs">
+                              <el-divider content-position="left">{{ $t('alerts.aiResponse') }}</el-divider>
+                              <div class="ai-response-content">
+                                  <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
+                              </div>
+              
+                              <div class="ai-action-panel" style="margin-top: 24px; padding: 16px; background: var(--el-fill-color-extra-light); border-radius: 8px;">
+                                  <h4 style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                                      <el-icon color="#409EFF"><Edit /></el-icon>
+                                      {{ $t('alerts.adoptTitle') || 'Adopt AI Suggestions' }}
+                                  </h4>
+                                  
+                                  <el-form label-position="top">
+                                      <el-form-item :label="$t('alerts.commentLabel') || 'Comment'">
+                                          <el-input v-model="aiComment" type="textarea" :rows="4" :placeholder="$t('alerts.aiCommentPlaceholder') || 'Summary of AI analysis...'" />
+                                      </el-form-item>
+                                      
+                                      <el-row :gutter="20">
+                                          <el-col :span="12">
+                                              <el-form-item :label="$t('alerts.statusLabel')">
+                                                  <el-select v-model="aiStatus" style="width: 100%;">
+                                                      <el-option :label="$t('alerts.statusOpen')" value="open" />
+                                                      <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
+                                                      <el-option :label="$t('alerts.statusResolved')" value="resolved" />
+                                                  </el-select>
+                                              </el-form-item>
+                                          </el-col>
+                                          <el-col :span="12" style="display: flex; align-items: flex-end; padding-bottom: 18px;">
+                                              <el-button type="primary" @click="applyAISuggestions" :loading="saving" style="width: 100%;">
+                                                  {{ $t('common.applyAndSave') || 'Apply & Save' }}
+                                              </el-button>
+                                          </el-col>
+                                      </el-row>
+                                  </el-form>
+                              </div>
+                          </div>
+                      </div>
+                      <template #footer>
+                          <el-button @click="aiDialogVisible = false">{{ $t('alerts.close') }}</el-button>
+                      </template>
+                  </el-dialog>  </div>
 </template>
 
 <script>
@@ -337,6 +383,8 @@ export default {
         alertToDelete: null,
         currentAlertForAI: null,
         aiResponse: '',
+        aiComment: '',
+        aiStatus: 'acknowledged',
                 bulkForm: {
                         status: 'nochange',
                 },
@@ -346,6 +394,7 @@ export default {
             status: 'open',
             host_id: null,
             item_id: null,
+            comment: '',
         },
         formRules: {},
         // Icons for template usage
@@ -618,6 +667,7 @@ export default {
                 status: 'open',
                 host_id: null,
                 item_id: null,
+                comment: '',
             };
             this.filteredItems = [];
             this.dialogVisible = true;
@@ -631,6 +681,7 @@ export default {
                 status: alert.status,
                 host_id: alert.host_id,
                 item_id: alert.item_id,
+                comment: alert.status_reason || '',
             };
             if (alert.host_id) {
                 this.onHostChange(alert.host_id).then(() => {
@@ -699,40 +750,71 @@ export default {
         async consultAI(alert) {
             this.currentAlertForAI = alert;
             this.aiResponse = '';
+            this.aiComment = '';
+            this.aiStatus = alert.status === 'resolved' ? 'resolved' : 'acknowledged';
             this.aiDialogVisible = true;
             this.consultingAI = true;
             
             try {
                 const response = await consultAlertAI(alert.id);
+                let content = '';
                 
                 // Handle different response formats
                 if (typeof response === 'string') {
-                    this.aiResponse = response;
+                    content = response;
                 } else if (response.message) {
-                    this.aiResponse = response.message;
+                    content = response.message;
                 } else if (response.content) {
-                    this.aiResponse = response.content;
+                    content = response.content;
                 } else if (response.data) {
                     if (typeof response.data === 'string') {
-                        this.aiResponse = response.data;
+                        content = response.data;
                     } else if (response.data.message) {
-                        this.aiResponse = response.data.message;
+                        content = response.data.message;
                     } else if (response.data.content) {
-                        this.aiResponse = response.data.content;
+                        content = response.data.content;
                     } else if (response.data.Content) {
-                        this.aiResponse = response.data.Content;
+                        content = response.data.Content;
                     } else {
-                        this.aiResponse = JSON.stringify(response.data, null, 2);
+                        content = JSON.stringify(response.data, null, 2);
                     }
                 } else {
-                    this.aiResponse = JSON.stringify(response, null, 2);
+                    content = JSON.stringify(response, null, 2);
                 }
+                
+                this.aiResponse = content;
+                this.aiComment = content; // Pre-fill with AI response
             } catch (err) {
                 this.aiResponse = 'Error: ' + (err.message || 'Failed to consult AI');
                 ElMessage.error(err.message || 'Failed to consult AI');
                 console.error('Error consulting AI:', err);
             } finally {
                 this.consultingAI = false;
+            }
+        },
+        async applyAISuggestions() {
+            if (!this.currentAlertForAI) return;
+            
+            this.saving = true;
+            try {
+                const payload = {
+                    message: this.currentAlertForAI.message,
+                    severity: this.severityLabelToInt(this.currentAlertForAI.severity),
+                    status: this.statusStringToInt(this.aiStatus),
+                    host_id: this.currentAlertForAI.host_id,
+                    item_id: this.currentAlertForAI.item_id,
+                    comment: this.aiComment
+                };
+                
+                await updateAlert(this.currentAlertForAI.id, payload);
+                ElMessage.success('AI suggestions applied and alert updated');
+                this.aiDialogVisible = false;
+                await this.loadAlerts(true);
+            } catch (err) {
+                ElMessage.error(err.message || 'Failed to apply AI suggestions');
+                console.error('Error applying AI suggestions:', err);
+            } finally {
+                this.saving = false;
             }
         },
         getSeverityType(severity) {
@@ -797,8 +879,31 @@ export default {
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   line-height: 1.5;
+}
+
+.alert-comment {
+  background: var(--el-color-info-light-9);
+  border-left: 4px solid var(--el-color-info);
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 0 4px 4px 0;
+}
+
+.comment-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 
 .alert-meta {

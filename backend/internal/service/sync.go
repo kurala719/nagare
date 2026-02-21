@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/viper"
 	"nagare/internal/repository"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -62,16 +63,19 @@ func pullAllMonitors() {
 
 	limit := configuredLimit("sync.concurrency", defaultSyncConcurrency)
 	LogSystem("info", "auto sync processing monitors", map[string]interface{}{"count": len(monitors), "concurrency": limit}, nil, "")
-	
+
 	runWithLimit(len(monitors), limit, func(i int) {
 		monitor := monitors[i]
 		if monitor.Enabled == 0 {
 			LogSystem("info", "auto sync skipping disabled monitor", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name}, nil, "")
 			return
 		}
-		
+
 		LogSystem("info", "auto sync syncing monitor", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name}, nil, "")
-		
+		if _, err := PullGroupsFromMonitorAutoSyncServ(monitor.ID); err != nil {
+			LogSystem("error", "auto sync groups failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
+		}
+
 		if _, err := pullHostsFromMonitorServ(monitor.ID, false); err != nil {
 			LogSystem("error", "auto sync hosts failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
 		}
