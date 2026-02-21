@@ -239,10 +239,13 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.meta?.requiresAuth
+  const token = getToken()
+  
+  console.log(`Routing to: ${to.path}, RequiresAuth: ${requiresAuth}, HasToken: ${!!token}`)
+
   if (!requiresAuth) {
     return next()
   }
-  const token = getToken()
   if (!token) {
     const t = i18n?.global?.t || ((key) => key)
     await ElMessageBox.alert(t('common.loginToContinue'), t('common.unauthorizedTitle'), {

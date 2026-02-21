@@ -1,18 +1,21 @@
 <template>
   <el-config-provider :locale="elementLocale">
-    <router-view v-if="isStandaloneLayout" />
-    <MainLayout v-else />
+    <div class="app-wrapper">
+      <router-view v-if="isStandaloneLayout" />
+      <MainLayout v-else />
+    </div>
   </el-config-provider>
 </template>
 
 <script>
-import { defineComponent, computed, ref, onMounted } from 'vue'
+import { defineComponent, computed, ref, onMounted, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElConfigProvider } from 'element-plus'
 import en from 'element-plus/dist/locale/en.mjs'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import MainLayout from '@/layout/MainLayout.vue'
+
+const MainLayout = defineAsyncComponent(() => import('@/layout/MainLayout.vue'))
 
 export default defineComponent({
   name: 'App',
@@ -23,16 +26,22 @@ export default defineComponent({
   setup() {
     const route = useRoute()
     const { locale } = useI18n()
-    const elementLocale = computed(() => (locale.value === 'zh-CN' ? zhCn : en))
+    
+    const elementLocale = computed(() => {
+      try {
+        return (locale.value === 'zh-CN' ? zhCn : en) || en;
+      } catch (e) {
+        return en;
+      }
+    })
+
     const isStandaloneLayout = computed(() => {
-      // If route is not matched yet, assume standalone to prevent MainLayout flash
-      if (!route.matched || route.matched.length === 0) return true
+      // Default to true only for specific routes
       const layout = route.meta?.layout
       return layout === 'auth' || layout === 'status'
     })
 
     onMounted(() => {
-      // Initialize theme from local storage
       const storedTheme = localStorage.getItem('nagare_theme')
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
       const useDark = storedTheme ? storedTheme === 'dark' : prefersDark
@@ -47,7 +56,6 @@ export default defineComponent({
         body.classList.add('theme-light')
       }
 
-      // Initialize locale
       const storedLocale = localStorage.getItem('nagare_locale')
       if (storedLocale) {
         locale.value = storedLocale
@@ -64,6 +72,14 @@ export default defineComponent({
 
 <style>
 /* Global Styles */
+#app, .app-wrapper {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background, #f8fafc);
+}
+
 :root {
   --text-strong: #1e293b;
   --border-1: #e2e8f0;

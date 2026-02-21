@@ -496,7 +496,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor, probeSnmpOid } from '@/api/hosts';
@@ -504,30 +504,6 @@ import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown, Monitor } from '@element-plus/icons-vue';
-
-interface Host {
-  id: number;
-  name: string;
-  mid: number;
-  group_id: number;
-  hostid: string;
-  description: string;
-  enabled: number;
-  status: number;
-  ip_addr: string;
-  status_reason?: string;
-  monitor_name?: string;
-  // SNMP Fields
-  snmp_community?: string;
-  snmp_version?: string;
-  snmp_port?: number;
-  snmp_v3_user?: string;
-  snmp_v3_auth_pass?: string;
-  snmp_v3_priv_pass?: string;
-  snmp_v3_auth_protocol?: string;
-  snmp_v3_priv_protocol?: string;
-  snmp_v3_security_level?: string;
-}
 
 export default {
   name: 'Host',
@@ -558,7 +534,7 @@ export default {
       propertiesDialogVisible: false,
       aiDialogVisible: false,
       consultingAI: false,
-      currentHostForAI: null as Host | null,
+      currentHostForAI: null,
       aiResponse: '',
       selectedHosts: [],
       bulkDialogVisible: false,
@@ -735,7 +711,7 @@ export default {
           data = response
         }
         const list = data;
-        this.monitors = list.map((m: any) => ({
+        this.monitors = list.map((m) => ({
           id: Number(
             m.ID || m.Id || m.id || m.MID || m.Mid || m.mid ||
             m.MonitorID || m.MonitorId || m.monitor_id || m.monitorId || m.monitorID || 0
@@ -771,7 +747,7 @@ export default {
         } else if (Array.isArray(response)) {
           data = response
         }
-        this.groups = data.map((g: any) => ({
+        this.groups = data.map((g) => ({
           id: g.ID || g.id || 0,
           name: g.Name || g.name || '',
         }));
@@ -780,16 +756,16 @@ export default {
         console.error('Error loading groups:', err);
       }
     },
-    getMonitorName(target: Host | number) {
+    getMonitorName(target) {
       if (typeof target !== 'number' && target?.monitor_name) return target.monitor_name;
       const mid = typeof target === 'number' ? Number(target || 0) : Number(target?.mid || 0);
-      const monitor = this.monitors.find((m: any) => m.id === mid);
+      const monitor = this.monitors.find((m) => m.id === mid);
       if (monitor) return monitor.name;
       return mid ? `${this.$t('hosts.unknown')} (#${mid})` : this.$t('hosts.unknown');
     },
-    getGroupName(groupId: number) {
+    getGroupName(groupId) {
       if (!groupId) return this.$t('hosts.unknown');
-      const group = this.groups.find((g: any) => g.id === groupId);
+      const group = this.groups.find((g) => g.id === groupId);
       return group ? group.name : this.$t('hosts.unknown');
     },
     async loadHosts(reset = false) {
@@ -828,8 +804,8 @@ export default {
           total = response.length
         }
         
-        const mapped = payload.map((h: any) => {
-          const monitorId = h.m_id || h.MID || h.Mid || h.mid || h.MonitorID || h.MonitorId || h.monitorId || h.monitor_id || h.Monitorid || h.monitorID || h.Monitor?.ID || h.Monitor?.Id || h.monitor?.id || h.monitor?.ID || 0;
+        const mapped = payload.map((h) => {
+          const monitorId = h.m_id || h.MID || h.Mid || h.mid || h.MonitorID || h.MonitorId || h.monitorId || h.monitor_id || h.Monitorid || h.monitorID || h.Monitor?.ID || h.Monitor?.Id || h.monitor?.id || h.Monitor?.ID || 0;
           return {
             id: Number(h.ID || h.id || 0),
             name: h.Name || h.name || '',
@@ -867,7 +843,7 @@ export default {
         this.loading = false;
       }
     },
-    openProperties(host: Host) {
+    openProperties(host) {
       this.selectedHost = { 
         ...host,
         snmp_community: host.snmp_community || 'public',
@@ -884,13 +860,13 @@ export default {
       this.snmpTestResult = null;
       this.propertiesDialogVisible = true;
     },
-    viewItems(host: Host) {
+    viewItems(host) {
       this.$router.push({ path: '/item', query: { hostId: host.id } });
     },
-    openDetails(host: Host) {
+    openDetails(host) {
       this.$router.push({ path: `/host/${host.id}/detail` });
     },
-    openTerminal(host: Host) {
+    openTerminal(host) {
       this.$router.push({ path: `/host/${host.id}/terminal` });
     },
     async pullHosts() {
@@ -957,9 +933,9 @@ export default {
         this.pushingHosts = false;
       }
     },
-    async batchSyncSelectedHosts(action: 'pull' | 'push') {
-      const targets: Host[] = this.selectedHosts || [];
-      const tasks: Array<Promise<any>> = [];
+    async batchSyncSelectedHosts(action) {
+      const targets = this.selectedHosts || [];
+      const tasks = [];
       let skipped = 0;
       targets.forEach((host) => {
         const monitorId = Number(host.mid || this.syncMonitorId || this.monitorFilter || 0);
@@ -975,7 +951,7 @@ export default {
       const success = results.filter((result) => result.status === 'fulfilled').length;
       return { total: tasks.length + skipped, success, skipped };
     },
-    async pullHostItems(host: Host) {
+    async pullHostItems(host) {
       try {
         if (!host.mid) {
           ElMessage({
@@ -996,7 +972,7 @@ export default {
         });
       }
     },
-    async pushHostItems(host: Host) {
+    async pushHostItems(host) {
       try {
         if (!host.mid) {
           ElMessage({
@@ -1050,7 +1026,7 @@ export default {
 
       this.bulkDeleting = true;
       try {
-        await Promise.all(this.selectedHosts.map((host: Host) => deleteHost(host.id)));
+        await Promise.all(this.selectedHosts.map((host) => deleteHost(host.id)));
         ElMessage.success(this.$t('common.bulkDeleteSuccess', { count: this.selectedCount }));
         this.bulkDeleteDialogVisible = false;
         this.clearSelection();
@@ -1083,7 +1059,7 @@ export default {
       try {
         const enabledOverride = this.bulkForm.enabled;
         const statusOverride = this.bulkForm.status;
-        await Promise.all(this.selectedHosts.map((host: Host) => {
+        await Promise.all(this.selectedHosts.map((host) => {
           const payload = {
             name: host.name,
             ip_addr: host.ip_addr,
@@ -1141,7 +1117,7 @@ export default {
           snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
         };
         await updateHost(this.selectedHost.id, updateData);
-        const idx = this.hosts.findIndex((h: Host) => h.id === this.selectedHost.id);
+        const idx = this.hosts.findIndex((h) => h.id === this.selectedHost.id);
         if (idx !== -1) {
           this.hosts.splice(idx, 1, { ...this.selectedHost, ssh_password: '', snmp_v3_auth_pass: '', snmp_v3_priv_pass: '' });
         }
@@ -1281,7 +1257,7 @@ export default {
         this.quickTestingSNMP = false;
       }
     },
-    onDelete(host: Host) {
+    onDelete(host) {
       ElMessageBox.confirm(
         this.$t('hosts.deleteConfirmText', { name: host.name }),
         this.$t('hosts.deleteConfirmTitle'),
@@ -1293,7 +1269,7 @@ export default {
       ).then(async () => {
         try {
           await deleteHost(host.id);
-          const index = this.hosts.findIndex((h: Host) => h.id === host.id);
+          const index = this.hosts.findIndex((h) => h.id === host.id);
           if (index !== -1) {
             this.hosts.splice(index, 1);
           }
@@ -1404,7 +1380,7 @@ export default {
         snmp_v3_security_level: 'NoAuthNoPriv'
       };
     },
-    async consultAI(host: Host) {
+    async consultAI(host) {
       this.currentHostForAI = host;
       this.aiResponse = '';
       this.aiDialogVisible = true;
@@ -1446,8 +1422,8 @@ export default {
         this.consultingAI = false;
       }
     },
-    getStatusInfo(status: number) {
-      const map: Record<number, { label: string; reason: string; type: string }> = {
+    getStatusInfo(status) {
+      const map = {
         0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
         1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
         2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },
@@ -1455,24 +1431,24 @@ export default {
       };
       return map[status] || map[0];
     },
-    getHealthStatus(score: number) {
+    getHealthStatus(score) {
       if (score >= 90) return 'success';
       if (score >= 70) return 'warning';
       return 'exception';
     },
-    normalizeStatus(value: any) {
+    normalizeStatus(value) {
       if (value === null || value === undefined || value === '') return 0;
       if (typeof value === 'boolean') return value ? 1 : 0;
       const num = Number(value);
       return Number.isNaN(num) ? 0 : num;
     },
-    normalizeEnabled(value: any) {
+    normalizeEnabled(value) {
       if (value === null || value === undefined || value === '') return 1;
       if (typeof value === 'boolean') return value ? 1 : 0;
       const num = Number(value);
       return Number.isNaN(num) ? 1 : num;
     },
-    isColumnVisible(key: string) {
+    isColumnVisible(key) {
       return this.selectedColumns.includes(key);
     }
   }

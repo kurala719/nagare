@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -140,7 +140,9 @@ const onLogin = async () => {
       throw new Error(t('auth.missingToken'))
     }
     
+    // Store token - this triggers notifyAuthChanged()
     setToken(token)
+    
     if (rememberMe.value) {
       localStorage.setItem('nagare_remembered_user', form.username)
     } else {
@@ -148,9 +150,24 @@ const onLogin = async () => {
     }
 
     ElMessage.success(t('auth.welcomeBack'))
+    
+    // Crucial: Wait for state to settle
+    await nextTick()
+    
     const redirect = route.query.redirect || '/dashboard'
-    router.replace(redirect)
+    console.log('Redirecting to:', redirect)
+    
+    // Attempt router redirect
+    try {
+      await router.push(redirect)
+    } catch (routerError) {
+      console.warn('Router push failed, trying window.location:', routerError)
+      // Fallback if router fails
+      window.location.hash = redirect
+    }
+    
   } catch (err) {
+    console.error('Login error:', err)
     const errorMsg = err?.response?.data?.error || err.message || t('auth.loginFailed')
     ElMessage.error(errorMsg)
   } finally {
@@ -175,7 +192,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   position: relative;
-  background: transparent !important;
+  /* background: transparent !important; Removed to allow base color fallback if needed */
 }
 
 .auth-container {

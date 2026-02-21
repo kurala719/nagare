@@ -66,16 +66,16 @@
           <div class="tab-pane-content">
             <el-form :model="editableConfig.system" label-width="180px" label-position="left">
               <el-form-item :label="$t('configuration.systemName')">
-                <el-input v-model="editableConfig.system.system_name" placeholder="Nagare System" />
+                <el-input v-model="editableConfig.system.system_name" :disabled="!editing" placeholder="Nagare System" />
               </el-form-item>
               <el-form-item :label="$t('configuration.ipAddress')">
-                <el-input v-model="editableConfig.system.ip_address" placeholder="127.0.0.1" />
+                <el-input v-model="editableConfig.system.ip_address" :disabled="!editing" placeholder="127.0.0.1" />
               </el-form-item>
               <el-form-item :label="$t('configuration.port')">
-                <el-input-number v-model="editableConfig.system.port" :min="1" :max="65535" />
+                <el-input-number v-model="editableConfig.system.port" :disabled="!editing" :min="1" :max="65535" />
               </el-form-item>
               <el-form-item :label="$t('configuration.availability')">
-                <el-switch v-model="editableConfig.system.availability" />
+                <el-switch v-model="editableConfig.system.availability" :disabled="!editing" />
               </el-form-item>
             </el-form>
           </div>
@@ -92,22 +92,22 @@
           <div class="tab-pane-content">
             <el-form :model="editableConfig.database" label-width="180px" label-position="left">
               <el-form-item :label="$t('configuration.dbVersion')">
-                <el-input v-model="editableConfig.database.version" placeholder="MYSQL 8.0" />
+                <el-input v-model="editableConfig.database.version" :disabled="!editing" placeholder="MYSQL 8.0" />
               </el-form-item>
               <el-form-item :label="$t('configuration.dbHost')">
-                <el-input v-model="editableConfig.database.host" placeholder="127.0.0.1" />
+                <el-input v-model="editableConfig.database.host" :disabled="!editing" placeholder="127.0.0.1" />
               </el-form-item>
               <el-form-item :label="$t('configuration.dbPort')">
-                <el-input-number v-model="editableConfig.database.port" :min="1" :max="65535" />
+                <el-input-number v-model="editableConfig.database.port" :disabled="!editing" :min="1" :max="65535" />
               </el-form-item>
               <el-form-item :label="$t('configuration.dbUsername')">
-                <el-input v-model="editableConfig.database.username" />
+                <el-input v-model="editableConfig.database.username" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('configuration.dbPassword')">
-                <el-input v-model="editableConfig.database.password" type="password" show-password />
+                <el-input v-model="editableConfig.database.password" :disabled="!editing" type="password" show-password />
               </el-form-item>
               <el-form-item :label="$t('configuration.dbName')">
-                <el-input v-model="editableConfig.database.database_name" />
+                <el-input v-model="editableConfig.database.database_name" :disabled="!editing" />
               </el-form-item>
             </el-form>
           </div>
@@ -125,29 +125,29 @@
             <div class="section-divider">{{ $t('configuration.syncService') }}</div>
             <el-form :model="editableConfig.sync" label-width="180px" label-position="left">
               <el-form-item :label="$t('system.syncEnabled')">
-                <el-switch v-model="editableConfig.sync.enabled" />
+                <el-switch v-model="editableConfig.sync.enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.syncInterval')">
-                <el-input-number v-model="editableConfig.sync.interval_seconds" :min="1" />
+                <el-input-number v-model="editableConfig.sync.interval_seconds" :disabled="!editing" :min="1" />
               </el-form-item>
               <el-form-item :label="$t('system.syncConcurrency')">
-                <el-input-number v-model="editableConfig.sync.concurrency" :min="1" />
+                <el-input-number v-model="editableConfig.sync.concurrency" :disabled="!editing" :min="1" />
               </el-form-item>
             </el-form>
 
             <div class="section-divider">{{ $t('configuration.statusCheckService') }}</div>
             <el-form :model="editableConfig.status_check" label-width="180px" label-position="left">
               <el-form-item :label="$t('system.statusCheckEnabled')">
-                <el-switch v-model="editableConfig.status_check.enabled" />
+                <el-switch v-model="editableConfig.status_check.enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.statusCheckProviderEnabled')">
-                <el-switch v-model="editableConfig.status_check.provider_enabled" />
+                <el-switch v-model="editableConfig.status_check.provider_enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.statusCheckInterval')">
-                <el-input-number v-model="editableConfig.status_check.interval_seconds" :min="1" />
+                <el-input-number v-model="editableConfig.status_check.interval_seconds" :disabled="!editing" :min="1" />
               </el-form-item>
               <el-form-item :label="$t('system.statusCheckConcurrency')">
-                <el-input-number v-model="editableConfig.status_check.concurrency" :min="1" />
+                <el-input-number v-model="editableConfig.status_check.concurrency" :disabled="!editing" :min="1" />
               </el-form-item>
             </el-form>
           </div>
@@ -165,70 +165,70 @@
             <div class="section-divider">{{ $t('configuration.aiAnalysis') }}</div>
             <el-form :model="editableConfig.ai" label-width="180px" label-position="left">
               <el-form-item :label="$t('system.aiEnabled')">
-                <el-switch v-model="editableConfig.ai.analysis_enabled" />
+                <el-switch v-model="editableConfig.ai.analysis_enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.aiNotificationGuard')">
-                <el-switch v-model="editableConfig.ai.notification_guard_enabled" />
+                <el-switch v-model="editableConfig.ai.notification_guard_enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.aiProviderId')">
-                <el-input-number v-model="editableConfig.ai.provider_id" :min="0" />
+                <el-input-number v-model="editableConfig.ai.provider_id" :disabled="!editing" :min="0" />
               </el-form-item>
               <el-form-item :label="$t('system.aiModel')">
-                <el-input v-model="editableConfig.ai.model" placeholder="gemini-1.5-pro" />
+                <el-input v-model="editableConfig.ai.model" :disabled="!editing" placeholder="gemini-1.5-pro" />
               </el-form-item>
               <el-form-item :label="$t('system.aiTimeout')">
-                <el-input-number v-model="editableConfig.ai.analysis_timeout_seconds" :min="1" />
+                <el-input-number v-model="editableConfig.ai.analysis_timeout_seconds" :disabled="!editing" :min="1" />
               </el-form-item>
               <el-form-item :label="$t('system.aiMinSeverity')">
-                <el-input-number v-model="editableConfig.ai.analysis_min_severity" :min="0" :max="4" />
+                <el-input-number v-model="editableConfig.ai.analysis_min_severity" :disabled="!editing" :min="0" :max="4" />
               </el-form-item>
             </el-form>
 
             <div class="section-divider">OneBot (NapCat) Configuration</div>
             <el-form :model="editableConfig.qq" label-width="180px" label-position="left">
               <el-form-item label="Enabled">
-                <el-switch v-model="editableConfig.qq.enabled" />
+                <el-switch v-model="editableConfig.qq.enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item label="Connection Mode">
-                <el-radio-group v-model="editableConfig.qq.mode">
+                <el-radio-group v-model="editableConfig.qq.mode" :disabled="!editing">
                   <el-radio label="reverse">Reverse (NapCat as Client)</el-radio>
                   <el-radio label="positive">Positive (Server as Client)</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item v-if="editableConfig.qq.mode === 'positive'" label="NapCat WebSocket URL">
-                <el-input v-model="editableConfig.qq.positive_url" placeholder="ws://localhost:3001" />
+                <el-input v-model="editableConfig.qq.positive_url" :disabled="!editing" placeholder="ws://localhost:3001" />
               </el-form-item>
               <el-form-item label="Access Token">
-                <el-input v-model="editableConfig.qq.access_token" type="password" show-password />
+                <el-input v-model="editableConfig.qq.access_token" :disabled="!editing" type="password" show-password />
               </el-form-item>
             </el-form>
 
             <div class="section-divider">Gmail API Configuration</div>
             <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
               <el-form-item label="Enabled">
-                <el-switch v-model="editableConfig.gmail.enabled" />
+                <el-switch v-model="editableConfig.gmail.enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item label="Credentials File">
-                <el-input v-model="editableConfig.gmail.credentials_file" placeholder="configs/gmail_credentials.json" />
+                <el-input v-model="editableConfig.gmail.credentials_file" :disabled="!editing" placeholder="configs/gmail_credentials.json" />
               </el-form-item>
               <el-form-item label="Token File">
-                <el-input v-model="editableConfig.gmail.token_file" placeholder="configs/gmail_token.json" />
+                <el-input v-model="editableConfig.gmail.token_file" :disabled="!editing" placeholder="configs/gmail_token.json" />
               </el-form-item>
               <el-form-item label="From Address">
-                <el-input v-model="editableConfig.gmail.from" placeholder="your-email@gmail.com" />
+                <el-input v-model="editableConfig.gmail.from" :disabled="!editing" placeholder="your-email@gmail.com" />
               </el-form-item>
             </el-form>
 
             <div class="section-divider">{{ $t('configuration.mcpSettings') }}</div>
             <el-form :model="editableConfig.mcp" label-width="180px" label-position="left">
               <el-form-item :label="$t('system.mcpEnabled')">
-                <el-switch v-model="editableConfig.mcp.enabled" />
+                <el-switch v-model="editableConfig.mcp.enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.mcpApiKey')">
-                <el-input v-model="editableConfig.mcp.api_key" type="password" show-password />
+                <el-input v-model="editableConfig.mcp.api_key" :disabled="!editing" type="password" show-password />
               </el-form-item>
               <el-form-item :label="$t('system.mcpMaxConcurrency')">
-                <el-input-number v-model="editableConfig.mcp.max_concurrency" :min="1" />
+                <el-input-number v-model="editableConfig.mcp.max_concurrency" :disabled="!editing" :min="1" />
               </el-form-item>
             </el-form>
           </div>
@@ -299,13 +299,13 @@
             <div class="section-divider">{{ $t('system.mediaRateLimitSettings') }}</div>
             <el-form :model="editableConfig.media_rate_limit" label-width="180px" label-position="left">
               <el-form-item label="Global Interval (s)">
-                <el-input-number v-model="editableConfig.media_rate_limit.global_interval_seconds" :min="0" />
+                <el-input-number v-model="editableConfig.media_rate_limit.global_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
               <el-form-item label="Protocol Interval (s)">
-                <el-input-number v-model="editableConfig.media_rate_limit.protocol_interval_seconds" :min="0" />
+                <el-input-number v-model="editableConfig.media_rate_limit.protocol_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
               <el-form-item label="Media Interval (s)">
-                <el-input-number v-model="editableConfig.media_rate_limit.media_interval_seconds" :min="0" />
+                <el-input-number v-model="editableConfig.media_rate_limit.media_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
             </el-form>
           </div>

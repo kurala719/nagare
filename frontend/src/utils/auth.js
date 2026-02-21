@@ -7,17 +7,30 @@ function notifyAuthChanged() {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch (e) {
+    console.error('localStorage.getItem failed', e)
+    return null
+  }
 }
 
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token)
-  notifyAuthChanged()
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+    notifyAuthChanged()
+  } catch (e) {
+    console.error('localStorage.setItem failed', e)
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
-  notifyAuthChanged()
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+    notifyAuthChanged()
+  } catch (e) {
+    console.error('localStorage.removeItem failed', e)
+  }
 }
 
 export function getUserClaims() {

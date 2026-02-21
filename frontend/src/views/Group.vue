@@ -302,7 +302,7 @@
   </el-dialog>
 </template>
 
-<script lang="ts">
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
@@ -441,7 +441,7 @@ export default {
         } else if (Array.isArray(response)) {
           data = response;
         }
-        this.monitors = data.map((m: any) => ({
+        this.monitors = data.map((m) => ({
           id: Number(m.ID || m.id || 0),
           name: m.Name || m.name || '',
         }));
@@ -451,7 +451,7 @@ export default {
     },
     getMonitorName(monitorId) {
       if (!monitorId) return this.$t('hosts.unknown');
-      const monitor = this.monitors.find((m: any) => m.id === monitorId);
+      const monitor = this.monitors.find((m) => m.id === monitorId);
       return monitor ? monitor.name : `${this.$t('hosts.unknown')} (#${monitorId})`;
     },
     openBulkDeleteDialog() {
@@ -721,7 +721,7 @@ export default {
       };
       return map[status] || map[0];
     },
-    getHealthStatus(score: number) {
+    getHealthStatus(score) {
       if (score >= 90) return 'success';
       if (score >= 70) return 'warning';
       return 'exception';

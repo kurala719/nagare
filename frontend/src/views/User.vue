@@ -342,7 +342,7 @@ export default {
         this.clearSelection()
         await this.loadUsers(true)
       } catch (err) {
-        ElMessage.error(err?.response?.data?.error || err.message || this.$t('common.bulkDeleteFailed'))
+        ElMessage.error(err?.response?.data?.translatedError || err?.response?.data?.error || err.message || this.$t('common.bulkDeleteFailed'))
       } finally {
         this.bulkDeleting = false
       }
@@ -374,7 +374,7 @@ export default {
         this.clearSelection()
         await this.loadUsers(true)
       } catch (err) {
-        ElMessage.error(err?.response?.data?.error || err.message || this.$t('common.bulkUpdateFailed'))
+        ElMessage.error(err?.response?.data?.translatedError || err?.response?.data?.error || err.message || this.$t('common.bulkUpdateFailed'))
       } finally {
         this.bulkUpdating = false
       }
@@ -541,7 +541,7 @@ export default {
         this.dialogVisible = false
         await this.loadUsers(true)
       } catch (err) {
-        ElMessage.error(err?.response?.data?.error || err.message || this.$t('users.operationFailed'))
+        ElMessage.error(err?.response?.data?.translatedError || err?.response?.data?.error || err.message || this.$t('users.operationFailed'))
       } finally {
         this.saving = false
       }
@@ -558,7 +558,7 @@ export default {
         await this.loadUsers(true)
       } catch (err) {
         if (err !== 'cancel' && err !== 'close') {
-          ElMessage.error(err?.response?.data?.error || err.message || this.$t('users.deleteFailed'))
+          ElMessage.error(err?.response?.data?.translatedError || err?.response?.data?.error || err.message || this.$t('users.deleteFailed'))
         }
       }
     },

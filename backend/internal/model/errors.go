@@ -10,6 +10,15 @@ var (
 	// ErrInvalidInput indicates the input data is invalid
 	ErrInvalidInput = errors.New("invalid input")
 
+	// ErrInvalidEmail indicates the email format is invalid
+	ErrInvalidEmail = errors.New("invalid email format")
+
+	// ErrWeakPassword indicates the password does not meet security requirements
+	ErrWeakPassword = errors.New("password must be at least 8 characters and include 3 of: lowercase, uppercase, digits, special characters")
+
+	// ErrInvalidUsername indicates the username format is invalid
+	ErrInvalidUsername = errors.New("username must be 3-32 characters, alphanumeric with underscores/hyphens only")
+
 	// ErrUnauthorized indicates the request is not authorized
 	ErrUnauthorized = errors.New("unauthorized")
 

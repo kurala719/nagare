@@ -78,7 +78,7 @@
     </div>
 </template>
 
-<script lang="ts">
+<script>
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
@@ -86,24 +86,6 @@ import { Loading } from '@element-plus/icons-vue';
 import { sendChatMessage, fetchChatHistory } from '@/api/chats';
 import { fetchProviderData } from '@/api/providers';
 import { getToken } from '@/utils/auth';
-
-interface Chat {
-    id: number | string;
-    provider_id: number;
-    role: 'user' | 'assistant';
-    model: string;
-    content: string;
-}
-
-interface Provider {
-    id: number;
-    name: string;
-    default_model: string;
-    url: string;
-    api_key: string;
-    description: string;
-    status: number;
-}
 
 export default {
     name: 'SideBarChat',
@@ -113,12 +95,12 @@ export default {
     data() {
         return {
             talkInput: '',
-            messages: [] as Chat[],
+            messages: [],
             loading: false,
             loadingHistory: false,
             historyLoaded: false,
-            providers: [] as Provider[],
-            selectedProviderId: null as number | null,
+            providers: [],
+            selectedProviderId: null,
             toolModeEnabled: true,
             toneMode: 'professional',
         };
@@ -155,7 +137,7 @@ export default {
                 console.error('Error loading providers:', err);
             }
         },
-        onProviderChange(providerId: number) {
+        onProviderChange(providerId) {
             // Provider changed, model will be taken from provider's default
         },
         async loadChatHistory() {

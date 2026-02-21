@@ -273,7 +273,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
@@ -522,7 +522,7 @@ export default {
           trigger_id: a.trigger_id ?? a.TriggerID ?? null,
           alert_status: a.alert_status ?? a.AlertStatus ?? null,
           users: a.users || [],
-          user_ids: (a.users || []).map((u: any) => u.id || u.ID)
+          user_ids: (a.users || []).map((u) => u.id || u.ID)
         }));
         this.actions = mapped;
         this.totalActions = Number.isFinite(total) ? total : mapped.length;
@@ -535,7 +535,7 @@ export default {
         }
         if (userResp) {
           const userData = userResp.data?.data || userResp.data || userResp || [];
-          this.userOptions = userData.map((u: any) => ({
+          this.userOptions = userData.map((u) => ({
             id: u.id || u.ID || 0,
             username: u.username || u.Username || '',
             nickname: u.nickname || u.Nickname || '',
@@ -589,7 +589,7 @@ export default {
     openProperties(action) {
       this.selectedAction = { 
         ...action,
-        user_ids: (action.users || []).map((u: any) => u.id || u.ID)
+        user_ids: (action.users || []).map((u) => u.id || u.ID)
       };
       this.propertiesDialogVisible = true;
     },

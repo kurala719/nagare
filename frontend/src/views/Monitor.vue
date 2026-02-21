@@ -259,7 +259,7 @@
     </template>
     
 
-<script lang="ts">
+<script>
 import {
   Check,
   Delete,
@@ -279,21 +279,6 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import { markRaw } from 'vue'
 import { fetchMonitorData, addMonitor, deleteMonitor, updateMonitor, loginMonitor, regenerateMonitorEventToken, syncGroupsFromMonitor } from '@/api/monitors'
-
-interface Monitor {
-  id: number;
-  name: string;
-  url: string;
-  username: string;
-  password: string;
-  auth_token: string;
-  event_token?: string;
-  enabled: number;
-  status: number;
-  status_reason?: string;
-  description: string;
-  type: number;
-}
 
 export default {
     name: 'Monitor',
@@ -476,7 +461,7 @@ export default {
         try {
           const enabledOverride = this.bulkForm.enabled;
           const statusOverride = this.bulkForm.status;
-          await Promise.all(this.monitors.filter((m: Monitor) => this.selectedMonitorIds.includes(m.id)).map((monitor) => {
+          await Promise.all(this.monitors.filter((m) => this.selectedMonitorIds.includes(m.id)).map((monitor) => {
             const payload = {
               enabled: enabledOverride === 'nochange' ? monitor.enabled : (enabledOverride === 'enable' ? 1 : 0),
               status: statusOverride === 'nochange' ? monitor.status : statusOverride,
@@ -515,7 +500,7 @@ export default {
             ? response
             : (response.data?.items || response.items || response.data || response.monitors || []);
           const total = response?.data?.total ?? response?.total ?? data.length;
-          const mapped = data.map((m: any) => ({
+          const mapped = data.map((m) => ({
             id: m.ID || m.id || 0,
             name: m.Name || m.name || '',
             url: m.URL || m.url || '',
@@ -556,7 +541,7 @@ export default {
             return { sortBy: 'updated_at', sortOrder: 'desc' };
         }
       },
-      openProperties(monitor: Monitor) {
+      openProperties(monitor) {
         this.selectedMonitor = Object.assign({}, monitor);
         this.propertiesDialogVisible = true;
       },
@@ -577,7 +562,7 @@ export default {
             status: this.selectedMonitor.status,
           };
           await updateMonitor(this.selectedMonitor.id, updateData);
-          const idx = this.monitors.findIndex((m: Monitor) => m.id === this.selectedMonitor.id);
+          const idx = this.monitors.findIndex((m) => m.id === this.selectedMonitor.id);
           if (idx !== -1) {
             this.monitors.splice(idx, 1, Object.assign({}, this.selectedMonitor));
           }
@@ -610,7 +595,7 @@ export default {
           const token = payload?.event_token || payload?.EventToken || '';
           if (token) {
             this.selectedMonitor.event_token = token;
-            const idx = this.monitors.findIndex((m: Monitor) => m.id === this.selectedMonitor.id);
+            const idx = this.monitors.findIndex((m) => m.id === this.selectedMonitor.id);
             if (idx !== -1) {
               this.monitors.splice(idx, 1, Object.assign({}, this.selectedMonitor));
             }
@@ -641,13 +626,13 @@ export default {
         }
         ElMessage.info('Copy not available in this browser.');
       },
-      deleteMonitor(monitor: Monitor) {
-        const index = this.monitors.findIndex((m: Monitor) => m.id === monitor.id);
+      deleteMonitor(monitor) {
+        const index = this.monitors.findIndex((m) => m.id === monitor.id);
         if (index !== -1) {
           this.monitors.splice(index, 1);
         }
       },
-      async onDelete(monitor: Monitor) {
+      async onDelete(monitor) {
         ElMessageBox.confirm(
           `Are you sure you want to delete ${monitor.name}?`,
           'Warning',
@@ -659,7 +644,7 @@ export default {
         ).then(async () => {
           try {
             await deleteMonitor(monitor.id);
-            const index = this.monitors.findIndex((m: Monitor) => m.id === monitor.id);
+            const index = this.monitors.findIndex((m) => m.id === monitor.id);
             if (index !== -1) {
               this.monitors.splice(index, 1);
             }
@@ -737,7 +722,7 @@ export default {
           console.error('Error creating monitor:', err);
         }
       },
-      async onLogin(monitor: Monitor) {
+      async onLogin(monitor) {
         // Set loading state for this specific monitor
         monitor.logging_in = true;
         try {
@@ -745,7 +730,7 @@ export default {
           
           // Update monitor with new auth token
           const updatedMonitor = response.data || response;
-          const idx = this.monitors.findIndex((m: Monitor) => m.id === monitor.id);
+          const idx = this.monitors.findIndex((m) => m.id === monitor.id);
           if (idx !== -1) {
             this.monitors.splice(idx, 1, {
               ...monitor,
@@ -767,7 +752,7 @@ export default {
           console.error('Error logging in to monitor:', err);
         }
       },
-      async onSyncGroups(monitor: Monitor) {
+      async onSyncGroups(monitor) {
         monitor.syncing_groups = true;
         try {
           const response = await syncGroupsFromMonitor(monitor.id);
@@ -785,8 +770,8 @@ export default {
         this.createDialogVisible = false;
         this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 };
       },
-      getStatusInfo(status: number) {
-        const map: Record<number, { label: string; reason: string; type: string }> = {
+      getStatusInfo(status) {
+        const map = {
           0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
           1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
           2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },
@@ -794,7 +779,7 @@ export default {
         };
         return map[status] || map[0];
       },
-      getHealthStatus(score: number) {
+      getHealthStatus(score) {
         if (score >= 90) return 'success';
         if (score >= 70) return 'warning';
         return 'exception';

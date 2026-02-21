@@ -240,26 +240,13 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown } from '@element-plus/icons-vue';
 import { fetchProviderData, addProvider, deleteProvider, updateProvider } from '@/api/providers';
 
-interface Provider {
-    id: number;
-    name: string;
-    url: string;
-    api_key: string;
-    default_model: string;
-    type: number;
-    description: string;
-    enabled: number;
-    status: number;
-    status_reason?: string;
-}
-
-const defaultProviderItem = (): Provider => ({
+const defaultProviderItem = () => ({
     id: 0,
     name: '',
     url: '',
@@ -276,7 +263,7 @@ export default {
     components: { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown },
     data() {
         return {
-            providers: [] as Provider[],
+            providers: [],
             dialogVisible: false,
             dialogTitle: '',
             dialogItem: defaultProviderItem(),
@@ -488,7 +475,7 @@ export default {
                     offset: 0,
                 });
                 const data = Array.isArray(response) ? response : (response.data || response.providers || []);
-                const mapped = data.map((p: any) => ({
+                const mapped = data.map((p) => ({
                     id: p.ID || p.id,
                     name: p.Name || p.name || '',
                     url: p.URL || p.url || '',
@@ -509,7 +496,7 @@ export default {
             }
         },
         async onCreate() {
-            const form = this.$refs.providerForm as any;
+            const form = this.$refs.providerForm;
             if (form) {
                 const valid = await form.validate().catch(() => false);
                 if (!valid) return;
@@ -624,7 +611,7 @@ export default {
             this.propertiesDialogVisible = false;
         },
         async saveProperties() {
-            const form = this.$refs.propertiesForm as any;
+            const form = this.$refs.propertiesForm;
             if (form) {
                 const valid = await form.validate().catch(() => false);
                 if (!valid) return;
@@ -654,8 +641,8 @@ export default {
                 console.error('Error updating provider:', err);
             }
         },
-        getStatusInfo(status: number) {
-            const map: Record<number, { label: string; reason: string; type: string }> = {
+        getStatusInfo(status) {
+            const map = {
                 0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
                 1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
                 2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },
@@ -663,8 +650,8 @@ export default {
             };
             return map[status] || map[0];
         },
-        getTypeLabel(type: number) {
-            const map: Record<number, string> = {
+        getTypeLabel(type) {
+            const map = {
                 1: this.$t('providers.typeGemini'),
                 2: this.$t('providers.typeOpenAI'),
                 3: this.$t('providers.typeOther'),
@@ -672,7 +659,7 @@ export default {
             return map[type] || this.$t('providers.typeOpenAI');
         },
         syncQueryParams() {
-            const query: Record<string, string> = {};
+            const query = {};
             if (this.search) query.q = this.search;
             if (this.statusFilter !== 'all') query.status = String(this.statusFilter);
             if (this.typeFilter !== 'all') query.type = String(this.typeFilter);
@@ -697,8 +684,8 @@ export default {
             this.currentPage = typeof query.page === 'string' ? Number(query.page) : 1;
             this.pageSize = typeof query.pageSize === 'string' ? Number(query.pageSize) : 12;
         },
-        isQueryEqual(nextQuery: Record<string, string>, currentQuery: Record<string, any>) {
-            const current: Record<string, string> = {};
+        isQueryEqual(nextQuery, currentQuery) {
+            const current = {};
             Object.keys(currentQuery || {}).forEach((key) => {
                 const value = currentQuery[key];
                 if (typeof value === 'string') current[key] = value;

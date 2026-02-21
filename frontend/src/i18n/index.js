@@ -1,7 +1,7 @@
 import { createI18n } from 'vue-i18n'
 
 const browserLocale = (typeof navigator !== 'undefined' && navigator.language)
-  ? (navigator.language.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en')
+  ? (String(navigator.language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'en')
   : 'en'
 
 const savedLocale = (typeof localStorage !== 'undefined' && localStorage.getItem('nagare_locale')) || browserLocale
@@ -75,6 +75,10 @@ const messages = {
       cancel: 'Cancel',
       warning: 'Warning',
       invalidJson: 'Invalid JSON',
+      invalidEmail: 'Invalid email format',
+      weakPassword: 'Password must be at least 8 characters and include 3 of: lowercase, uppercase, digits, special characters',
+      invalidUsername: 'Username must be 3-32 characters, alphanumeric with underscores/hyphens only',
+      invalidInput: 'Invalid input',
       unauthorizedTitle: 'Unauthorized',
       accessDeniedTitle: 'Access Denied',
       operationFailed: 'Operation failed',
@@ -1240,6 +1244,10 @@ const messages = {
       cancel: '取消',
       warning: '警告',
       invalidJson: 'JSON 格式无效',
+      invalidEmail: '邮箱格式无效',
+      weakPassword: '密码必须至少 8 个字符，且包含以下至少 3 种：小写字母、大写字母、数字、特殊符号',
+      invalidUsername: '用户名必须是 3-32 个字符，仅支持字母、数字、下划线和连字符',
+      invalidInput: '输入无效',
       unauthorizedTitle: '未授权',
       accessDeniedTitle: '访问被拒绝',
       operationFailed: '操作失败',

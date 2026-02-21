@@ -44,6 +44,25 @@ request.interceptors.request.use((config) => {
 
 let isAuthAlertOpen = false
 
+// Map backend error messages to i18n keys
+const mapErrorToI18nKey = (errorMessage) => {
+    if (!errorMessage) return null
+    
+    const errorMap = {
+        'invalid email format': 'common.invalidEmail',
+        'password must be at least 8 characters and include 3 of: lowercase, uppercase, digits, special characters': 'common.weakPassword',
+        'username must be 3-32 characters, alphanumeric with underscores/hyphens only': 'common.invalidUsername',
+        'invalid input': 'common.invalidInput',
+        'resource not found': 'common.operationFailed',
+        'unauthorized': 'common.unauthorizedTitle',
+        'forbidden': 'common.accessDeniedTitle',
+        'resource already exists': 'common.operationFailed'
+    }
+    
+    const lowerMsg = errorMessage.toLowerCase()
+    return errorMap[lowerMsg] || null
+}
+
 request.interceptors.response.use(
     (response) => response.data,
     async (error) => {
@@ -73,9 +92,20 @@ request.interceptors.response.use(
                 router.replace({ path: '/login', query: { redirect } })
             }
         }
+        
+        // Translate backend error messages to i18n keys
+        if (error?.response?.data?.error) {
+            const i18nKey = mapErrorToI18nKey(error.response.data.error)
+            if (i18nKey) {
+                const t = i18n?.global?.t || ((key) => key)
+                error.response.data.translatedError = t(i18nKey)
+            }
+        }
+        
         return Promise.reject(error)
     }
 )
 //前端采用export.default，在写后端代码时用module.export
 
+export { mapErrorToI18nKey }
 export default request

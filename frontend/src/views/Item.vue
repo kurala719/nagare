@@ -267,29 +267,12 @@
     </div>
 </template>
 
-<script lang="ts">
+<script>
 import { fetchItemData, addItem, updateItem, deleteItem, consultItemAI, pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { fetchHostData } from '@/api/hosts';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
-
-interface ItemRecord {
-    id: number;
-    name: string;
-    value: string;
-    enabled: number;
-    status: number;
-    status_reason?: string;
-    description?: string;
-    host_id: number | null;
-}
-
-interface HostRecord {
-    id: number;
-    name: string;
-    mid: number;
-}
 
 export default {
     name: 'Item',
@@ -308,8 +291,8 @@ export default {
     },
     data() {
       return {
-                items: [] as ItemRecord[],
-                hosts: [] as HostRecord[],
+                items: [],
+                hosts: [],
             pageSize: 20,
             currentPage: 1,
             totalItems: 0,
@@ -329,11 +312,11 @@ export default {
         bulkDeleteDialogVisible: false,
         aiDialogVisible: false,
         isEditing: false,
-        editingId: null as number | null,
-        itemToDelete: null as ItemRecord | null,
-        selectedItems: [] as ItemRecord[],
+        editingId: null,
+        itemToDelete: null,
+        selectedItems: [],
         bulkUpdating: false,
-        currentItemForAI: null as ItemRecord | null,
+        currentItemForAI: null,
         aiResponse: '',
         itemForm: {
             name: '',
@@ -360,8 +343,8 @@ export default {
             { key: 'externalSource', label: this.$t('hosts.externalSource') },
             { key: 'description', label: this.$t('items.description') },
         ],
-        hostFilter: 0 as number,
-        statusFilter: 'all' as 'all' | number,
+        hostFilter: 0,
+        statusFilter: 'all',
                 bulkForm: {
                         enabled: 'nochange',
                         status: 'nochange',
@@ -535,7 +518,7 @@ export default {
             };
             this.dialogVisible = true;
         },
-        openEditDialog(item: ItemRecord) {
+        openEditDialog(item) {
             this.isEditing = true;
             this.editingId = item.id;
             this.itemForm = {
@@ -581,7 +564,7 @@ export default {
                 this.saving = false;
             }
         },
-        confirmDelete(item: ItemRecord) {
+        confirmDelete(item) {
             this.itemToDelete = item;
             this.deleteDialogVisible = true;
         },
@@ -662,16 +645,16 @@ export default {
                 this.pushing = false;
             }
         },
-        async batchSyncSelectedItems(action: 'pull' | 'push') {
-            const hostMap = new Map<number, HostRecord>(this.hosts.map((host) => [this.toNumber(host.id, 0), host]));
-            const hostIds = Array.from(new Set<number>(
+        async batchSyncSelectedItems(action) {
+            const hostMap = new Map(this.hosts.map((host) => [this.toNumber(host.id, 0), host]));
+            const hostIds = Array.from(new Set(
                 this.selectedItems
                     .map((item) => this.toNumber(item.host_id, 0))
                     .filter((id) => id)
             ));
-            const tasks: Array<Promise<any>> = [];
+            const tasks = [];
             let skipped = 0;
-            hostIds.forEach((hostId: number) => {
+            hostIds.forEach((hostId) => {
                 const host = hostMap.get(hostId);
                 const monitorId = this.toNumber(host?.mid, 0);
                 if (!hostId || !monitorId) {
@@ -686,7 +669,7 @@ export default {
             const success = results.filter((result) => result.status === 'fulfilled').length;
             return { total: tasks.length + skipped, success, skipped };
         },
-        onSelectionChange(selection: ItemRecord[]) {
+        onSelectionChange(selection) {
             this.selectedItems = selection || [];
         },
         selectAll() {
@@ -779,10 +762,10 @@ export default {
             }
             this.selectedItems = [];
         },
-        openDetails(item: ItemRecord) {
+        openDetails(item) {
             this.$router.push({ path: `/item/${item.id}/detail` });
         },
-        async consultAI(item: ItemRecord) {
+        async consultAI(item) {
             this.currentItemForAI = item;
             this.aiResponse = '';
             this.aiDialogVisible = true;
@@ -821,8 +804,8 @@ export default {
                 this.consultingAI = false;
             }
         },
-        getStatusInfo(status: number) {
-            const map: Record<number, { label: string; reason: string; type: string }> = {
+        getStatusInfo(status) {
+            const map = {
                 0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
                 1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
                 2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },
@@ -842,12 +825,12 @@ export default {
             const num = Number(value);
             return Number.isNaN(num) ? 1 : num;
         },
-        toNumber(value: unknown, fallback: number) {
+        toNumber(value, fallback) {
             if (value === null || value === undefined || value === '') return fallback;
             const num = Number(value);
             return Number.isNaN(num) ? fallback : num;
         },
-        isColumnVisible(key: string) {
+        isColumnVisible(key) {
             return this.selectedColumns.includes(key);
         }
     }

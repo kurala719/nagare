@@ -237,7 +237,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting, ChatDotRound } from '@element-plus/icons-vue';

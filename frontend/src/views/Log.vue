@@ -149,7 +149,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { defineComponent, markRaw } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, Refresh, Download, Delete, View } from '@element-plus/icons-vue'
@@ -178,9 +178,9 @@ export default defineComponent({
       sortBy: 'created_at',
       sortOrder: 'desc',
       autoRefresh: false,
-      refreshTimer: null as any,
+      refreshTimer: null,
       detailVisible: false,
-      selectedLog: null as any,
+      selectedLog: null,
       // Icons
       Loading: markRaw(Loading),
       Search: markRaw(Search),
@@ -226,8 +226,8 @@ export default defineComponent({
   },
   methods: {
     debouncedSearch() {
-      clearTimeout((this as any)._searchTimer)
-      ;(this as any)._searchTimer = setTimeout(() => {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => {
         this.currentPage = 1
         this.loadLogs(true)
       }, 500)
@@ -267,7 +267,7 @@ export default defineComponent({
           : (response.data?.items || response.items || response.data || response.logs || [])
         const total = response?.data?.total ?? response?.total ?? data.length
         
-        this.logs = data.map((l: any) => ({
+        this.logs = data.map((l) => ({
           id: l.ID || l.id || 0,
           type: l.Type || l.type || '',
           severity: this.coerceSeverity(l.Severity ?? l.severity),
@@ -277,7 +277,7 @@ export default defineComponent({
           created_at: l.CreatedAt || l.created_at || '',
         }))
         this.totalLogs = Number.isFinite(total) ? total : this.logs.length
-      } catch (err: any) {
+      } catch (err) {
         if (!this.autoRefresh) {
           this.error = err.message || this.$t('logs.loadFailed')
           ElMessage.error(this.error)
@@ -286,7 +286,7 @@ export default defineComponent({
         this.loading = false
       }
     },
-    toggleAutoRefresh(val: boolean) {
+    toggleAutoRefresh(val) {
       if (val) {
         this.startAutoRefresh()
       } else {
@@ -305,11 +305,11 @@ export default defineComponent({
         this.refreshTimer = null
       }
     },
-    showLogDetail(row: any) {
+    showLogDetail(row) {
       this.selectedLog = row
       this.detailVisible = true
     },
-    formatJson(str: string) {
+    formatJson(str) {
       try {
         if (!str) return ''
         const obj = JSON.parse(str)
@@ -318,21 +318,21 @@ export default defineComponent({
         return str
       }
     },
-    severityTag(severity: number) {
+    severityTag(severity) {
       switch (severity) {
         case 2: return 'danger'
         case 1: return 'warning'
         default: return 'info'
       }
     },
-    severityLabel(severity: number) {
+    severityLabel(severity) {
       switch (severity) {
         case 2: return this.$t('logs.levelError')
         case 1: return this.$t('logs.levelWarn')
         default: return this.$t('logs.levelInfo')
       }
     },
-    coerceSeverity(value: any) {
+    coerceSeverity(value) {
       if (value === null || value === undefined || value === '') return 0
       if (typeof value === 'number') return value
       const text = String(value).toLowerCase()
@@ -343,7 +343,7 @@ export default defineComponent({
     },
     exportCSV() {
       const header = ['Time', 'Level', 'Message', 'IP', 'Context']
-      const rows = this.logs.map((l: any) => [
+      const rows = this.logs.map((l) => [
         l.created_at,
         this.severityLabel(l.severity),
         l.message,

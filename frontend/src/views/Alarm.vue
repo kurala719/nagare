@@ -253,7 +253,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import {
   Refresh,
   SuccessFilled,
@@ -270,23 +270,6 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { fetchAlarmData, addAlarm, deleteAlarm, updateAlarm, loginAlarm, regenerateAlarmEventToken, setupAlarmMedia } from '@/api/alarms';
-
-interface Alarm {
-  id: number;
-  name: string;
-  url: string;
-  username: string;
-  password: string;
-  auth_token: string;
-  event_token?: string;
-  enabled: number;
-  status: number;
-  status_reason?: string;
-  description: string;
-  type: number;
-  logging_in?: boolean;
-  setting_up_media?: boolean;
-}
 
 export default {
   name: 'Alarm',
@@ -463,7 +446,7 @@ export default {
       try {
         const enabledOverride = this.bulkForm.enabled;
         const statusOverride = this.bulkForm.status;
-        await Promise.all(this.alarms.filter((a: Alarm) => this.selectedAlarmIds.includes(a.id)).map((alarm) => {
+        await Promise.all(this.alarms.filter((a) => this.selectedAlarmIds.includes(a.id)).map((alarm) => {
           const payload = {
             enabled: enabledOverride === 'nochange' ? alarm.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? alarm.status : statusOverride,
@@ -501,7 +484,7 @@ export default {
           ? response
           : (response.data?.items || response.items || response.data || response.alarms || []);
         const total = response?.data?.total ?? response?.total ?? data.length;
-        const mapped = data.map((a: any) => ({
+        const mapped = data.map((a) => ({
           id: a.ID || a.id || 0,
           name: a.Name || a.name || '',
           url: a.URL || a.url || '',
@@ -541,7 +524,7 @@ export default {
           return { sortBy: 'updated_at', sortOrder: 'desc' };
       }
     },
-    openProperties(alarm: Alarm) {
+    openProperties(alarm) {
       this.selectedAlarm = Object.assign({}, alarm);
       this.propertiesDialogVisible = true;
     },
@@ -562,7 +545,7 @@ export default {
           status: this.selectedAlarm.status,
         };
         await updateAlarm(this.selectedAlarm.id, updateData);
-        const idx = this.alarms.findIndex((a: Alarm) => a.id === this.selectedAlarm.id);
+        const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
         if (idx !== -1) {
           this.alarms.splice(idx, 1, Object.assign({}, this.selectedAlarm));
         }
@@ -595,7 +578,7 @@ export default {
         const token = payload?.event_token || payload?.EventToken || '';
         if (token) {
           this.selectedAlarm.event_token = token;
-          const idx = this.alarms.findIndex((a: Alarm) => a.id === this.selectedAlarm.id);
+          const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
           if (idx !== -1) {
             this.alarms.splice(idx, 1, Object.assign({}, this.selectedAlarm));
           }
@@ -626,13 +609,13 @@ export default {
       }
       ElMessage.info('Copy not available in this browser.');
     },
-    deleteAlarm(alarm: Alarm) {
-      const index = this.alarms.findIndex((a: Alarm) => a.id === alarm.id);
+    deleteAlarm(alarm) {
+      const index = this.alarms.findIndex((a) => a.id === alarm.id);
       if (index !== -1) {
         this.alarms.splice(index, 1);
       }
     },
-    async onDelete(alarm: Alarm) {
+    async onDelete(alarm) {
       ElMessageBox.confirm(
         `Are you sure you want to delete ${alarm.name}?`,
         'Warning',
@@ -644,7 +627,7 @@ export default {
       ).then(async () => {
         try {
           await deleteAlarm(alarm.id);
-          const index = this.alarms.findIndex((a: Alarm) => a.id === alarm.id);
+          const index = this.alarms.findIndex((a) => a.id === alarm.id);
           if (index !== -1) {
             this.alarms.splice(index, 1);
           }
@@ -719,12 +702,12 @@ export default {
         console.error('Error creating alarm:', err);
       }
     },
-    async onLogin(alarm: Alarm) {
+    async onLogin(alarm) {
       alarm.logging_in = true;
       try {
         const response = await loginAlarm(alarm.id);
         const updatedAlarm = response.data || response;
-        const idx = this.alarms.findIndex((a: Alarm) => a.id === alarm.id);
+        const idx = this.alarms.findIndex((a) => a.id === alarm.id);
         if (idx !== -1) {
           this.alarms.splice(idx, 1, {
             ...alarm,
@@ -746,7 +729,7 @@ export default {
         console.error('Error logging in to alarm:', err);
       }
     },
-    async onSetupMedia(alarm: Alarm) {
+    async onSetupMedia(alarm) {
       alarm.setting_up_media = true;
       try {
         const response = await setupAlarmMedia(alarm.id);
@@ -769,8 +752,8 @@ export default {
       this.createDialogVisible = false;
       this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 };
     },
-    getStatusInfo(status: number) {
-      const map: Record<number, { label: string; reason: string; type: string }> = {
+    getStatusInfo(status) {
+      const map = {
         0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
         1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
         2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },

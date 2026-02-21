@@ -128,11 +128,14 @@ func GetUserByUsernameServ(username string) (UserResponse, error) {
 }
 
 func AddUserServ(req UserRequest) error {
+	if req.Username != "" && !isValidUsername(req.Username) {
+		return model.ErrInvalidUsername
+	}
 	if req.Email != "" && !isValidEmail(req.Email) {
-		return model.ErrInvalidInput
+		return model.ErrInvalidEmail
 	}
 	if req.Password != "" && !isStrongPassword(req.Password) {
-		return model.ErrInvalidInput
+		return model.ErrWeakPassword
 	}
 	status := 1
 	if req.Status != nil {
@@ -169,7 +172,7 @@ func UpdateUserServ(id int, req UserRequest) error {
 	}
 	if req.Password != "" {
 		if !isStrongPassword(req.Password) {
-			return model.ErrInvalidInput
+			return model.ErrWeakPassword
 		}
 		user.Password = req.Password
 	}
@@ -182,7 +185,7 @@ func UpdateUserServ(id int, req UserRequest) error {
 
 	if req.Email != "" {
 		if !isValidEmail(req.Email) {
-			return model.ErrInvalidInput
+			return model.ErrInvalidEmail
 		}
 		user.Email = req.Email
 	}
@@ -215,7 +218,7 @@ func UpdateUserProfileServ(username string, req UserRequest) error {
 	}
 	oldAvatar := strings.TrimSpace(user.Avatar)
 	if req.Email != "" && !isValidEmail(req.Email) {
-		return model.ErrInvalidInput
+		return model.ErrInvalidEmail
 	}
 
 	user.Email = req.Email
@@ -454,11 +457,14 @@ func RegisterUserServ(req RegisterRequest) error {
 	if req.Username == "" || req.Password == "" || req.Email == "" || req.Code == "" {
 		return model.ErrInvalidInput
 	}
+	if !isValidUsername(req.Username) {
+		return model.ErrInvalidUsername
+	}
 	if !isValidEmail(req.Email) {
-		return model.ErrInvalidInput
+		return model.ErrInvalidEmail
 	}
 	if !isStrongPassword(req.Password) {
-		return model.ErrInvalidInput
+		return model.ErrWeakPassword
 	}
 
 	// Verify code
@@ -495,7 +501,7 @@ func SendRegistrationCodeServ(email string) error {
 		return model.ErrInvalidInput
 	}
 	if !isValidEmail(email) {
-		return model.ErrInvalidInput
+		return model.ErrInvalidEmail
 	}
 
 	code := generateVerificationCode(6)
@@ -536,7 +542,7 @@ func ResetPasswordServ(req ResetPasswordRequest) error {
 		return model.ErrInvalidInput
 	}
 	if !isStrongPassword(req.NewPassword) {
-		return model.ErrInvalidInput
+		return model.ErrWeakPassword
 	}
 	user, err := repository.GetUserByUsernameDAO(req.Username)
 	if err != nil {
@@ -559,6 +565,15 @@ func privilegeToRole(privileges int) string {
 	default:
 		return "unauthorized"
 	}
+}
+
+func isValidUsername(username string) bool {
+	trimmed := strings.TrimSpace(username)
+	if len(trimmed) < 3 || len(trimmed) > 32 {
+		return false
+	}
+	pattern := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	return pattern.MatchString(trimmed)
 }
 
 func isValidEmail(email string) bool {
