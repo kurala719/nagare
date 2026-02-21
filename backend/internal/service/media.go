@@ -70,14 +70,42 @@ func GetMediaByIDServ(id uint) (MediaResp, error) {
 func TestMediaServ(id uint) error {
 	media, err := repository.GetMediaByIDDAO(id)
 	if err != nil {
-		return err
+		LogService("error", "test media failed to load media", map[string]interface{}{"media_id": id, "error": err.Error()}, nil, "")
+		return fmt.Errorf("failed to load media: %w", err)
 	}
 	if media.Enabled == 0 {
+		LogService("warn", "test media skipped - media disabled", map[string]interface{}{"media_id": id, "media_type": media.Type, "media_name": media.Name}, nil, "")
 		return fmt.Errorf("media is disabled")
 	}
 
 	testMessage := "Nagare Media Test Connection: Your notification system is working correctly."
-	return SendIMReply(media.Type, media.Target, testMessage)
+
+	LogService("info", "test media starting", map[string]interface{}{
+		"media_id":   id,
+		"media_type": media.Type,
+		"media_name": media.Name,
+		"target":     media.Target,
+	}, nil, "")
+
+	err = SendIMReply(media.Type, media.Target, testMessage)
+	if err != nil {
+		LogService("error", "test media failed", map[string]interface{}{
+			"media_id":   id,
+			"media_type": media.Type,
+			"media_name": media.Name,
+			"target":     media.Target,
+			"error":      err.Error(),
+		}, nil, "")
+		return fmt.Errorf("failed to send test message via %s: %w", media.Type, err)
+	}
+
+	LogService("info", "test media succeeded", map[string]interface{}{
+		"media_id":   id,
+		"media_type": media.Type,
+		"media_name": media.Name,
+		"target":     media.Target,
+	}, nil, "")
+	return nil
 }
 
 func AddMediaServ(req MediaReq) (MediaResp, error) {

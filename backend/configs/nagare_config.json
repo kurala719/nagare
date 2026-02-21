@@ -46,7 +46,7 @@
         "availability": true
       },
       "gmail": {
-        "enabled": false,
+        "enabled": true,
         "credentials_file": "configs/gmail_credentials.json",
         "token_file": "configs/gmail_token.json",
         "from": ""

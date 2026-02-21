@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
@@ -24,53 +25,81 @@ func NewGmailProvider() *GmailProvider {
 }
 
 // SendMessage sends an email via Gmail API
+// The message argument is treated as the email body.
+// The subject defaults to "Nagare Monitoring Alert".
 func (p *GmailProvider) SendMessage(ctx context.Context, target, message string) error {
-	enabled := viper.GetBool("gmail.enabled")
-	if !enabled {
-		return nil
+	return sendGmailMessage(ctx, target, "Nagare Monitoring Alert", message, false)
+}
+
+// SendGmailServ sends an email using Gmail API (global version)
+func SendGmailServ(ctx context.Context, to, subject, body string) error {
+	return sendGmailMessage(ctx, to, subject, body, false)
+}
+
+// SendGmailHTMLServ sends an HTML email using Gmail API
+func SendGmailHTMLServ(ctx context.Context, to, subject, htmlBody string) error {
+	return sendGmailMessage(ctx, to, subject, htmlBody, true)
+}
+
+// sendGmailMessage is the core logic for sending emails
+func sendGmailMessage(ctx context.Context, to, subject, body string, isHTML bool) error {
+	// Validate inputs
+	if to == "" {
+		return fmt.Errorf("recipient email address cannot be empty")
+	}
+	if subject == "" {
+		return fmt.Errorf("email subject cannot be empty")
+	}
+	if body == "" {
+		return fmt.Errorf("email body cannot be empty")
 	}
 
+	if !viper.GetBool("gmail.enabled") {
+		return fmt.Errorf("gmail is disabled in configuration (set gmail.enabled=true)")
+	}
+
+	// Get Gmail client
 	client, err := getGmailClient(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to create gmail client: %v", err)
+		return fmt.Errorf("failed to create gmail client: %w", err)
 	}
 
+	// Create Gmail service
 	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return fmt.Errorf("unable to retrieve Gmail client: %v", err)
+		return fmt.Errorf("failed to create gmail service: %w", err)
 	}
 
-	user := "me"
-	var msg gmail.Message
-
-	boundary := "nagare-boundary"
+	// Get sender email from config
 	from := viper.GetString("gmail.from")
 	if from == "" {
 		from = "nagare-system@example.com"
 	}
-	subject := "Nagare Monitoring Alert"
 
-	rawMsg := fmt.Sprintf("From: %s\r\n"+
-		"To: %s\r\n"+
-		"Subject: %s\r\n"+
-		"MIME-Version: 1.0\r\n"+
-		"Content-Type: multipart/alternative; boundary=%s\r\n"+
-		"\r\n"+
-		"--%s\r\n"+
-		"Content-Type: text/plain; charset=\"UTF-8\"\r\n"+
-		"Content-Transfer-Encoding: base64\r\n"+
-		"\r\n"+
-		"%s\r\n"+
-		"--%s--",
-		from, target, subject, boundary, boundary,
-		base64.StdEncoding.EncodeToString([]byte(message)),
-		boundary)
+	// Prepare MIME message
+	contentType := "text/plain"
+	if isHTML {
+		contentType = "text/html"
+	}
 
-	msg.Raw = base64.URLEncoding.EncodeToString([]byte(rawMsg))
+	// Construct the email message
+	var msgBuffer strings.Builder
+	msgBuffer.WriteString(fmt.Sprintf("From: %s\r\n", from))
+	msgBuffer.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	msgBuffer.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	msgBuffer.WriteString("MIME-Version: 1.0\r\n")
+	msgBuffer.WriteString(fmt.Sprintf("Content-Type: %s; charset=\"UTF-8\"\r\n", contentType))
+	msgBuffer.WriteString("Content-Transfer-Encoding: base64\r\n")
+	msgBuffer.WriteString("\r\n")
+	msgBuffer.WriteString(base64.StdEncoding.EncodeToString([]byte(body)))
 
-	_, err = srv.Users.Messages.Send(user, &msg).Do()
+	var msg gmail.Message
+	msg.Raw = base64.URLEncoding.EncodeToString([]byte(msgBuffer.String()))
+
+	// Send message
+	_, err = srv.Users.Messages.Send("me", &msg).Do()
 	if err != nil {
-		return fmt.Errorf("unable to send message: %v", err)
+		return fmt.Errorf("failed to send email to %s: %w", to, err)
 	}
 
 	return nil
@@ -78,33 +107,37 @@ func (p *GmailProvider) SendMessage(ctx context.Context, target, message string)
 
 // getGmailClient retrieves a token, saves the token, then returns the generated client.
 func getGmailClient(ctx context.Context) (*http.Client, error) {
+	// Get credentials file path from config
 	credentialsFile := viper.GetString("gmail.credentials_file")
 	if credentialsFile == "" {
 		credentialsFile = "configs/gmail_credentials.json"
 	}
 
+	// Read credentials file
 	b, err := os.ReadFile(credentialsFile)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read client secret file: %v", err)
+		return nil, fmt.Errorf("unable to read credentials file at %s: %w (ensure gmail.credentials_file is set in config and file exists)", credentialsFile, err)
 	}
 
-	// If modifying these scopes, delete your previously saved token.json.
+	// Parse credentials as Google OAuth2 config
 	config, err := google.ConfigFromJSON(b, gmail.GmailSendScope)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
+		return nil, fmt.Errorf("unable to parse credentials file at %s: %w (ensure file contains valid Google OAuth2 credentials JSON)", credentialsFile, err)
 	}
 
+	// Get token file path from config
 	tokenFile := viper.GetString("gmail.token_file")
 	if tokenFile == "" {
 		tokenFile = "configs/gmail_token.json"
 	}
 
+	// Load token from file
 	tok, err := tokenFromFile(tokenFile)
 	if err != nil {
-		// In a real CLI, we would prompt for authorization here.
-		// For Nagare, we expect the token to be provided or managed externally.
-		return nil, fmt.Errorf("gmail token not found or invalid at %s. Please authorize the application first", tokenFile)
+		return nil, fmt.Errorf("gmail token not found or invalid at %s: %w. Please run Gmail authorization first (provide gmail.token_file path in config)", tokenFile, err)
 	}
+
+	// Create HTTP client with token
 	return config.Client(ctx, tok), nil
 }
 
@@ -112,94 +145,17 @@ func getGmailClient(ctx context.Context) (*http.Client, error) {
 func tokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to open token file at %s: %w", file, err)
 	}
 	defer f.Close()
 	tok := &oauth2.Token{}
 	err = json.NewDecoder(f).Decode(tok)
-	return tok, err
-}
-
-// SendGmailServ sends an email using Gmail API (global version)
-func SendGmailServ(ctx context.Context, to, subject, body string) error {
-	enabled := viper.GetBool("gmail.enabled")
-	if !enabled {
-		return fmt.Errorf("gmail is disabled")
-	}
-
-	client, err := getGmailClient(ctx)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to decode token file at %s: %w", file, err)
 	}
-
-	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		return err
+	// Check for access token but also consider refresh token might be present
+	if tok.AccessToken == "" && tok.RefreshToken == "" {
+		return nil, fmt.Errorf("token file at %s contains no access token or refresh token", file)
 	}
-
-	from := viper.GetString("gmail.from")
-	boundary := "nagare-boundary"
-	rawMsg := fmt.Sprintf("From: %s\r\n"+
-		"To: %s\r\n"+
-		"Subject: %s\r\n"+
-		"MIME-Version: 1.0\r\n"+
-		"Content-Type: multipart/alternative; boundary=%s\r\n"+
-		"\r\n"+
-		"--%s\r\n"+
-		"Content-Type: text/plain; charset=\"UTF-8\"\r\n"+
-		"Content-Transfer-Encoding: base64\r\n"+
-		"\r\n"+
-		"%s\r\n"+
-		"--%s--",
-		from, to, subject, boundary, boundary,
-		base64.StdEncoding.EncodeToString([]byte(body)),
-		boundary)
-
-	var msg gmail.Message
-	msg.Raw = base64.URLEncoding.EncodeToString([]byte(rawMsg))
-
-	_, err = srv.Users.Messages.Send("me", &msg).Do()
-	return err
-}
-
-// SendGmailHTMLServ sends an HTML email using Gmail API
-func SendGmailHTMLServ(ctx context.Context, to, subject, htmlBody string) error {
-	enabled := viper.GetBool("gmail.enabled")
-	if !enabled {
-		return fmt.Errorf("gmail is disabled")
-	}
-
-	client, err := getGmailClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		return err
-	}
-
-	from := viper.GetString("gmail.from")
-	boundary := "nagare-boundary"
-	rawMsg := fmt.Sprintf("From: %s\r\n"+
-		"To: %s\r\n"+
-		"Subject: %s\r\n"+
-		"MIME-Version: 1.0\r\n"+
-		"Content-Type: multipart/alternative; boundary=%s\r\n"+
-		"\r\n"+
-		"--%s\r\n"+
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n"+
-		"Content-Transfer-Encoding: base64\r\n"+
-		"\r\n"+
-		"%s\r\n"+
-		"--%s--",
-		from, to, subject, boundary, boundary,
-		base64.StdEncoding.EncodeToString([]byte(htmlBody)),
-		boundary)
-
-	var msg gmail.Message
-	msg.Raw = base64.URLEncoding.EncodeToString([]byte(rawMsg))
-
-	_, err = srv.Users.Messages.Send("me", &msg).Do()
-	return err
+	return tok, nil
 }

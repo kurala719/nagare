@@ -637,8 +637,35 @@ func HandleIMCommandWithContext(message string, ctx IMCommandContext) (IMCommand
 }
 
 func SendIMReply(mediaType, target, message string) error {
-	if strings.TrimSpace(mediaType) == "" || strings.TrimSpace(target) == "" {
-		return nil
+	mediaType = strings.TrimSpace(mediaType)
+	target = strings.TrimSpace(target)
+	message = strings.TrimSpace(message)
+
+	if mediaType == "" {
+		return fmt.Errorf("media type cannot be empty")
 	}
-	return mediaSvc.GetService().SendMessage(context.Background(), strings.ToLower(mediaType), target, message)
+	if target == "" {
+		return fmt.Errorf("target cannot be empty")
+	}
+	if message == "" {
+		return fmt.Errorf("message cannot be empty")
+	}
+
+	LogService("debug", "sending IM reply", map[string]interface{}{
+		"media_type":  mediaType,
+		"target":      target,
+		"message_len": len(message),
+	}, nil, "")
+
+	err := mediaSvc.GetService().SendMessage(context.Background(), strings.ToLower(mediaType), target, message)
+	if err != nil {
+		LogService("error", "failed to send IM reply", map[string]interface{}{
+			"media_type": mediaType,
+			"target":     target,
+			"error":      err.Error(),
+		}, nil, "")
+		return err
+	}
+
+	return nil
 }

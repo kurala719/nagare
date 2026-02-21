@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllMediaDAO retrieves all media
@@ -83,20 +84,26 @@ func GetMediaByIDDAO(id uint) (model.Media, error) {
 
 // AddMediaDAO creates a new media
 func AddMediaDAO(media model.Media) error {
+	// Ensure params is properly encoded for MySQL
+	if media.Params == nil {
+		media.Params = make(map[string]string)
+	}
 	return database.DB.Create(&media).Error
 }
 
 // UpdateMediaDAO updates media by ID
 func UpdateMediaDAO(id uint, media model.Media) error {
-	return database.DB.Model(&model.Media{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":        media.Name,
-		"type":        media.Type,
-		"target":      media.Target,
-		"params":      media.Params,
-		"enabled":     media.Enabled,
-		"status":      media.Status,
-		"description": media.Description,
-	}).Error
+	// Ensure params is properly initialized
+	if media.Params == nil {
+		media.Params = make(map[string]string)
+	}
+
+	// For MySQL compatibility, use the full model update with Save
+	// which properly triggers GORM hooks and type conversion
+	if err := database.DB.Model(&media).Where("id = ?", id).Save(&media).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteMediaByIDDAO deletes media by ID
@@ -111,6 +118,9 @@ func UpdateMediaStatusDAO(id uint, status int) error {
 
 // UpdateMediaParamsDAO updates media params by ID
 func UpdateMediaParamsDAO(id uint, params map[string]string) error {
+	if params == nil {
+		params = make(map[string]string)
+	}
 	return database.DB.Model(&model.Media{}).Where("id = ?", id).Update("params", params).Error
 }
 

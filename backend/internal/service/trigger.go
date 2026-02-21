@@ -353,6 +353,9 @@ func execTriggersForItem(item model.Item, replacements map[string]string) {
 		if !matchItemTrigger(trigger, item) {
 			continue
 		}
+		// Generate alert if item trigger matches
+		generateAlertFromItemTrigger(trigger, item)
+		// Then execute the associated action for the generated alert
 		invokeItemTriggerAction(trigger, replacements)
 	}
 }
@@ -469,6 +472,67 @@ func matchAlertTrigger(trigger model.Trigger, ctx alertMatchContext) bool {
 		return false
 	}
 	return true
+}
+
+// generateAlertFromItemTrigger creates an alert when an item trigger matches
+func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
+	// Build alert message with item information
+	host, _ := repository.GetHostByIDDAO(item.HID)
+	hostName := "Unknown"
+	if host.ID > 0 {
+		hostName = host.Name
+	}
+
+	message := fmt.Sprintf("Item %s on host %s has value %s%s",
+		item.Name, hostName, item.LastValue, item.Units)
+
+	// Determine severity from trigger settings
+	severity := trigger.SeverityMin
+	if severity == 0 {
+		severity = 1 // Default to warning level
+	}
+
+	// Create the alert
+	alertReq := AlertReq{
+		Message:  message,
+		Severity: severity,
+		HostID:   item.HID,
+		ItemID:   item.ID,
+		Comment: fmt.Sprintf("Triggered by %s: %s operator %v", trigger.Name,
+			describeItemTriggerCondition(trigger), trigger.ItemValueThreshold),
+	}
+
+	_ = AddAlertServ(alertReq)
+	LogService("info", "alert generated from item trigger", map[string]interface{}{
+		"trigger_id":   trigger.ID,
+		"trigger_name": trigger.Name,
+		"item_id":      item.ID,
+		"item_name":    item.Name,
+		"item_value":   item.LastValue,
+		"host_id":      item.HID,
+		"host_name":    hostName,
+	}, nil, "")
+}
+
+// describeItemTriggerCondition creates a human-readable description of the trigger condition
+func describeItemTriggerCondition(trigger model.Trigger) string {
+	if trigger.ItemValueThreshold == nil {
+		return "status check"
+	}
+
+	operator := strings.TrimSpace(trigger.ItemValueOperator)
+	if operator == "" {
+		operator = ">"
+	}
+
+	if operator == "between" || operator == "outside" {
+		if trigger.ItemValueThresholdMax != nil {
+			return fmt.Sprintf("%s between %.2f and %.2f",
+				operator, *trigger.ItemValueThreshold, *trigger.ItemValueThresholdMax)
+		}
+	}
+
+	return fmt.Sprintf("%s %.2f", operator, *trigger.ItemValueThreshold)
 }
 
 func matchLogTrigger(trigger model.Trigger, entry model.LogEntry) bool {
