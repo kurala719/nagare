@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
 )
@@ -8,7 +9,10 @@ import (
 // GetReportConfigDAO retrieves the report configuration
 func GetReportConfigDAO() (model.ReportConfig, error) {
 	var config model.ReportConfig
-	err := database.DB.First(&config).Error
+	err := database.DB.Limit(1).Find(&config).Error
+	if err == nil && config.ID == 0 {
+		return config, gorm.ErrRecordNotFound
+	}
 	return config, err
 }
 

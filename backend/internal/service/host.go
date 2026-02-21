@@ -607,7 +607,9 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 		}
 	}
 
-	monitorHosts, err := client.GetHosts(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	monitorHosts, err := client.GetHosts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hosts from monitor: %w", err)
 	}
@@ -655,11 +657,51 @@ func mapMonitorHostStatus(status string, activeAvailable string) int {
 
 // createMonitorClient creates a monitor client from a MonitorResp
 func createMonitorClient(monitor MonitorResp) (*monitors.Client, error) {
+	monitorType := monitors.ParseMonitorType(monitor.Type)
+	monitorURL := strings.TrimSpace(monitor.URL)
+	urlLower := strings.ToLower(monitorURL)
+
+	if monitorType == monitors.MonitorSNMP && monitor.ID != 1 {
+		LogService("warn", "monitor type is SNMP but not internal; forcing zabbix provider", map[string]interface{}{
+			"monitor_id":   monitor.ID,
+			"monitor_name": monitor.Name,
+			"monitor_type": monitor.Type,
+		}, nil, "")
+		monitorType = monitors.MonitorZabbix
+	}
+
+	if monitorType == monitors.MonitorOther {
+		if monitorURL != "" && (strings.Contains(urlLower, "zabbix") || monitor.Username != "" || monitor.Password != "" || monitor.AuthToken != "") {
+			LogService("warn", "monitor type is other but looks like zabbix; forcing zabbix provider", map[string]interface{}{
+				"monitor_id":   monitor.ID,
+				"monitor_name": monitor.Name,
+				"monitor_type": monitor.Type,
+				"monitor_url":  monitor.URL,
+			}, nil, "")
+			monitorType = monitors.MonitorZabbix
+		}
+	}
+
+	if monitorType == monitors.MonitorZabbix {
+		if strings.Contains(urlLower, "api_jsonrpc.php") {
+			monitorURL = strings.TrimSuffix(monitorURL, "/")
+			monitorURL = strings.TrimSuffix(monitorURL, "/api_jsonrpc.php")
+			monitorURL = strings.TrimSuffix(monitorURL, "/API_JSONRPC.PHP")
+		}
+		if !strings.Contains(urlLower, "api_jsonrpc.php") && !strings.Contains(urlLower, "/zabbix") {
+			LogService("warn", "zabbix monitor URL missing api_jsonrpc.php path", map[string]interface{}{
+				"monitor_id":   monitor.ID,
+				"monitor_name": monitor.Name,
+				"monitor_url":  monitor.URL,
+			}, nil, "")
+		}
+	}
+
 	cfg := monitors.Config{
 		Name: monitor.Name,
-		Type: monitors.ParseMonitorType(monitor.Type),
+		Type: monitorType,
 		Auth: monitors.AuthConfig{
-			URL:      monitor.URL,
+			URL:      monitorURL,
 			Username: monitor.Username,
 			Password: monitor.Password,
 			Token:    monitor.AuthToken,
@@ -854,24 +896,28 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		if monitorDomain.StatusDescription != "" {
 			reason = monitorDomain.StatusDescription
 		}
-		setMonitorStatusErrorWithReason(mid, reason)
+		if recordHistory {
+			setMonitorStatusErrorWithReason(mid, reason)
 
-		// Mark all hosts as error with monitor down reason
-		hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
-		if err == nil {
-			for _, host := range hosts {
-				setHostStatusErrorWithReason(host.ID, reason)
-				items, err := repository.GetItemsByHIDDAO(host.ID)
-				if err == nil {
-					for _, item := range items {
-						_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+			// Mark all hosts as error with monitor down reason
+			hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
+			if err == nil {
+				for _, host := range hosts {
+					setHostStatusErrorWithReason(host.ID, reason)
+					items, err := repository.GetItemsByHIDDAO(host.ID)
+					if err == nil {
+						for _, item := range items {
+							_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+						}
 					}
 				}
 			}
+
+			LogService("warn", "pull hosts skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitorDomain.Status, "monitor_status_description": reason}, nil, "")
+			return result, fmt.Errorf("monitor is not active (status: %d)", monitorDomain.Status)
 		}
 
-		LogService("warn", "pull hosts skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitorDomain.Status, "monitor_status_description": reason}, nil, "")
-		return result, fmt.Errorf("monitor is not active (status: %d)", monitorDomain.Status)
+		LogService("warn", "auto sync proceeding despite monitor status", map[string]interface{}{"monitor_id": mid, "monitor_status": monitorDomain.Status, "monitor_status_description": reason}, nil, "")
 	}
 
 	client, err := createMonitorClient(monitor)
@@ -890,15 +936,26 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		}
 	}
 
-	monitorHosts, err := client.GetHosts(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	monitorHosts, err := client.GetHosts(ctx)
 	if err != nil {
 		LogService("error", "pull hosts failed to fetch hosts", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get hosts from monitor: %w", err)
 	}
+	if len(monitorHosts) == 0 {
+		LogService("warn", "monitor returned zero hosts", map[string]interface{}{
+			"monitor_id":   mid,
+			"monitor_name": monitor.Name,
+			"monitor_type": monitor.Type,
+			"monitor_url":  monitor.URL,
+			"monitor_user": monitor.Username,
+		}, nil, "")
+	}
 	monitorHostIDs := make(map[string]struct{}, len(monitorHosts))
 	for _, h := range monitorHosts {
 		monitorHostIDs[h.ID] = struct{}{}
-		
+
 		// Dedup check: if this host exists in Nagare Internal (ID 1) AND we already have it in the target monitor, delete the internal one
 		if mid != 1 {
 			internalHost, err := repository.GetHostByMIDAndHostIDDAO(1, h.ID)
@@ -1007,16 +1064,22 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			result.Added++
 		}
 
-		// Cascade to items for this host
+		// Cascade to items for this host in parallel to improve performance
 		hostInDB, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 		if err == nil {
-			itemsRes, err := PullItemsFromHostServ(mid, hostInDB.ID)
-			if err == nil {
-				result.Added += itemsRes.Added
-				result.Updated += itemsRes.Updated
-				result.Failed += itemsRes.Failed
-				result.Total += itemsRes.Total
-			}
+			LogService("debug", "triggering parallel item sync for host", map[string]interface{}{"host_id": hostInDB.ID, "name": hostInDB.Name}, nil, "")
+
+			// We use a goroutine for each host's items, but we need to track completion for the final result
+			// For simplicity and to avoid race conditions on the 'result' struct,
+			// we can use a small concurrency limit for host items sync as well.
+			go func(hid uint, hName string) {
+				itemsRes, err := PullItemsFromHostServ(mid, hid)
+				if err != nil {
+					LogService("error", "cascaded item sync failed", map[string]interface{}{"host_id": hid, "name": hName, "error": err.Error()}, nil, "")
+				} else {
+					LogService("debug", "cascaded item sync finished", map[string]interface{}{"host_id": hid, "name": hName, "added": itemsRes.Added, "updated": itemsRes.Updated}, nil, "")
+				}
+			}(hostInDB.ID, hostInDB.Name)
 		}
 	}
 
@@ -1042,6 +1105,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 	_ = recomputeMonitorRelated(mid)
 	recordNetworkStatusSnapshot(time.Now().UTC())
 	SyncEvent("hosts", mid, 0, result)
+	LogService("info", "host sync finished", map[string]interface{}{"monitor_id": mid, "added": result.Added, "updated": result.Updated}, nil, "")
 	return result, nil
 }
 

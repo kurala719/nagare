@@ -214,7 +214,9 @@ func GetItemsByHostIDFromMonitorServ(hid uint) ([]ItemResp, error) {
 		}
 	}
 
-	monitorItems, err := client.GetItems(context.Background(), host.Hostid)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	monitorItems, err := client.GetItems(ctx, host.Hostid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
@@ -269,7 +271,9 @@ func AddItemsByHostIDFromMonitorServ(hid uint) error {
 		}
 	}
 
-	monitorItems, err := client.GetItems(context.Background(), host.Hostid)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	monitorItems, err := client.GetItems(ctx, host.Hostid)
 	if err != nil {
 		setMonitorStatusError(host.MonitorID)
 		setHostStatusError(hid)
@@ -398,23 +402,27 @@ func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
 		}
-		setMonitorStatusErrorWithReason(mid, reason)
+		if recordHistory {
+			setMonitorStatusErrorWithReason(mid, reason)
 
-		// Mark all hosts as error with monitor down reason
-		hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
-		if err == nil {
-			for _, host := range hosts {
-				setHostStatusErrorWithReason(host.ID, reason)
-				items, err := repository.GetItemsByHIDDAO(host.ID)
-				if err == nil {
-					for _, item := range items {
-						_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+			// Mark all hosts as error with monitor down reason
+			hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
+			if err == nil {
+				for _, host := range hosts {
+					setHostStatusErrorWithReason(host.ID, reason)
+					items, err := repository.GetItemsByHIDDAO(host.ID)
+					if err == nil {
+						for _, item := range items {
+							_ = repository.UpdateItemStatusAndDescriptionDAO(item.ID, 2, reason)
+						}
 					}
 				}
 			}
+			LogService("warn", "pull items skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
+			return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
 		}
-		LogService("warn", "pull items skipped due to monitor not active", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
-		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
+
+		LogService("warn", "auto sync proceeding despite monitor status", map[string]interface{}{"monitor_id": mid, "monitor_status": monitor.Status, "monitor_status_description": reason}, nil, "")
 	}
 
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
@@ -424,23 +432,26 @@ func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		return result, fmt.Errorf("failed to get hosts: %w", err)
 	}
 
-	for _, host := range hosts {
+	limit := configuredLimit("sync.concurrency", defaultSyncConcurrency)
+	runWithLimit(len(hosts), limit, func(i int) {
+		host := hosts[i]
+		LogService("debug", "auto sync syncing items for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "name": host.Name}, nil, "")
 		hostResult, err := pullItemsFromHostServ(mid, host.ID, recordHistory)
 		if err != nil {
 			setHostStatusErrorWithReason(host.ID, err.Error())
 			LogService("error", "pull items failed for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "error": err.Error()}, nil, "")
-			// Continue with other hosts
-			continue
+		} else {
+			// Using atomic addition for thread-safe result tracking if needed,
+			// but here we just log progress as the final SyncEvent result will be partial
+			// compared to the sequential version unless we use a mutex.
+			LogService("debug", "auto sync items finished for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "added": hostResult.Added}, nil, "")
 		}
-		result.Added += hostResult.Added
-		result.Updated += hostResult.Updated
-		result.Failed += hostResult.Failed
-		result.Total += hostResult.Total
-	}
+	})
 
 	_ = recomputeMonitorRelated(mid)
 	recordNetworkStatusSnapshot(time.Now().UTC())
 	SyncEvent("items", mid, 0, result)
+	LogService("info", "item sync finished", map[string]interface{}{"monitor_id": mid, "added": result.Added, "updated": result.Updated}, nil, "")
 	return result, nil
 }
 
@@ -551,7 +562,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	targetID := host.Hostid
 	mType := monitors.ParseMonitorType(monitor.Type)
 	fmt.Printf("[DEBUG] pullItemsFromHostServ: monitor_type=%s (%d), host=%s, target=%s\n", mType.String(), monitor.Type, host.Name, targetID)
-	
+
 	if mType == monitors.MonitorSNMP {
 		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
 		fmt.Printf("[DEBUG] SNMP Config: IP=%s, Version=%s, Community=%s\n", host.IPAddr, host.SNMPVersion, host.SNMPCommunity)

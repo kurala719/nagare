@@ -210,9 +210,18 @@ func preSchemaUpdates() error {
 				return err
 			}
 		}
-		// Migrate numeric types: old Zabbix(1)->2, old Other(2)->3, old SNMP(4)->1
-		if err := database.DB.Exec("UPDATE monitors SET type = CASE WHEN type = 1 THEN 2 WHEN type = 2 THEN 3 WHEN type = 4 THEN 1 ELSE type END WHERE type IN (1, 2, 4)").Error; err != nil {
+		// Migrate numeric types only if legacy markers are present to avoid re-mapping on every startup.
+		// Legacy markers: type=4 (old SNMP) or type=1 on non-internal monitors.
+		var legacyCount int64
+		if err := database.DB.Model(&model.Monitor{}).
+			Where("type = 4 OR (type = 1 AND id <> 1)").
+			Count(&legacyCount).Error; err != nil {
 			return err
+		}
+		if legacyCount > 0 {
+			if err := database.DB.Exec("UPDATE monitors SET type = CASE WHEN type = 1 THEN 2 WHEN type = 2 THEN 3 WHEN type = 4 THEN 1 ELSE type END WHERE type IN (1, 2, 4)").Error; err != nil {
+				return err
+			}
 		}
 	}
 	return nil

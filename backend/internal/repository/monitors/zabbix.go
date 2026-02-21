@@ -274,17 +274,18 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 
 // Authenticate implements the Provider interface
 func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
-	// If we already have a token and no credentials, try to verify the token
-	if p.authToken != "" && (p.username == "" || p.password == "") {
+	// If we already have a token, try to verify it first to avoid unnecessary logins
+	if p.authToken != "" {
 		_, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
 			"output": []string{"userid"},
 			"limit":  1,
 		})
 		if err == nil {
-			// Token is valid
+			// Token is still valid, no need to re-authenticate
 			return nil
 		}
-		// If token verification fails, and we have no credentials, we can't do anything
+		
+		// If token verification fails and we have no credentials, we can't do anything
 		if p.username == "" || p.password == "" {
 			return fmt.Errorf("provided token is invalid and no credentials supplied for login")
 		}
