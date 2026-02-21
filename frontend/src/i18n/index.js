@@ -1044,6 +1044,10 @@ const messages = {
       configTitle: 'Report Configuration',
       generateWeekly: 'Generate Weekly',
       generateMonthly: 'Generate Monthly',
+      generateCustom: 'Generate Custom',
+      customTitle: 'Generate Custom Report',
+      titleLabel: 'Title',
+      rangeLabel: 'Range',
       autoGenerate: 'Auto Generate',
       generateDay: 'Generate Day',
       generateTime: 'Generate Time',
@@ -1118,6 +1122,8 @@ const messages = {
       search: 'Search user actions...'
     },
     analytics: {
+      title: 'Trend Analysis',
+      subtitle: 'Insights and statistical trends from your monitoring data',
       chaosTitle: 'Chaos Simulator',
       chaosDesc: 'Trigger a simulated alert storm to test system resilience.',
       triggerChaos: 'Trigger Alert Storm'
@@ -2197,6 +2203,10 @@ const messages = {
       configTitle: '报表配置',
       generateWeekly: '生成周报',
       generateMonthly: '生成月报',
+      generateCustom: '生成自定义报表',
+      customTitle: '生成自定义报表',
+      titleLabel: '标题',
+      rangeLabel: '时间范围',
       autoGenerate: '自动生成',
       generateDay: '生成日',
       generateTime: '生成时间',
@@ -2271,6 +2281,8 @@ const messages = {
       search: '搜索用户操作...'
     },
     analytics: {
+      title: '趋势分析',
+      subtitle: '来自监控数据的见解和统计趋势',
       chaosTitle: '混沌模拟器',
       chaosDesc: '触发模拟告警风暴，测试系统抗压能力。',
       triggerChaos: '触发告警风暴'

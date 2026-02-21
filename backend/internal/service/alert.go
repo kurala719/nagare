@@ -34,14 +34,18 @@ type AlertReq struct {
 
 // AlertRes represents an alert response
 type AlertRes struct {
-	ID       int    `json:"id"`
-	Message  string `json:"message"`
-	Severity int    `json:"severity"`
-	Status   int    `json:"status"`
-	HostID   uint   `json:"host_id"`
-	ItemID   uint   `json:"item_id"`
-	AlarmID  uint   `json:"alarm_id"`
-	Comment  string `json:"comment"`
+	ID        int       `json:"id"`
+	Message   string    `json:"message"`
+	Severity  int       `json:"severity"`
+	Status    int       `json:"status"`
+	HostID    uint      `json:"host_id"`
+	ItemID    uint      `json:"item_id"`
+	AlarmID   uint      `json:"alarm_id"`
+	Comment   string    `json:"comment"`
+	HostName  string    `json:"host_name"`
+	ItemName  string    `json:"item_name"`
+	AlarmName string    `json:"alarm_name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // GetAllAlertsServ retrieves all alerts
@@ -53,14 +57,18 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 	var alertResponses []AlertRes
 	for _, alert := range alerts {
 		alertResponses = append(alertResponses, AlertRes{
-			ID:       int(alert.ID),
-			Message:  alert.Message,
-			Severity: alert.Severity,
-			Status:   alert.Status,
-			AlarmID:  alert.AlarmID,
-			HostID:   alert.HostID,
-			ItemID:   alert.ItemID,
-			Comment:  alert.Comment,
+			ID:        int(alert.ID),
+			Message:   alert.Message,
+			Severity:  alert.Severity,
+			Status:    alert.Status,
+			AlarmID:   alert.AlarmID,
+			HostID:    alert.HostID,
+			ItemID:    alert.ItemID,
+			Comment:   alert.Comment,
+			HostName:  alert.HostName,
+			ItemName:  alert.ItemName,
+			AlarmName: alert.AlarmName,
+			CreatedAt: alert.CreatedAt,
 		})
 	}
 	return alertResponses, nil
@@ -75,14 +83,18 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 	responses := make([]AlertRes, 0, len(alerts))
 	for _, alert := range alerts {
 		responses = append(responses, AlertRes{
-			ID:       int(alert.ID),
-			Message:  alert.Message,
-			Severity: alert.Severity,
-			Status:   alert.Status,
-			AlarmID:  alert.AlarmID,
-			HostID:   alert.HostID,
-			ItemID:   alert.ItemID,
-			Comment:  alert.Comment,
+			ID:        int(alert.ID),
+			Message:   alert.Message,
+			Severity:  alert.Severity,
+			Status:    alert.Status,
+			AlarmID:   alert.AlarmID,
+			HostID:    alert.HostID,
+			ItemID:    alert.ItemID,
+			Comment:   alert.Comment,
+			HostName:  alert.HostName,
+			ItemName:  alert.ItemName,
+			AlarmName: alert.AlarmName,
+			CreatedAt: alert.CreatedAt,
 		})
 	}
 	return responses, nil
@@ -100,26 +112,66 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 		return AlertRes{}, fmt.Errorf("failed to get alert by ID: %w", err)
 	}
 	return AlertRes{
-		ID:       int(alert.ID),
-		Message:  alert.Message,
-		Severity: alert.Severity,
-		Status:   alert.Status,
-		AlarmID:  alert.AlarmID,
-		HostID:   alert.HostID,
-		ItemID:   alert.ItemID,
-		Comment:  alert.Comment,
+		ID:        int(alert.ID),
+		Message:   alert.Message,
+		Severity:  alert.Severity,
+		Status:    alert.Status,
+		AlarmID:   alert.AlarmID,
+		HostID:    alert.HostID,
+		ItemID:    alert.ItemID,
+		Comment:   alert.Comment,
+		HostName:  alert.HostName,
+		ItemName:  alert.ItemName,
+		AlarmName: alert.AlarmName,
+		CreatedAt: alert.CreatedAt,
 	}, nil
 }
 
 // AddAlertServ creates a new alert
 func AddAlertServ(req AlertReq) error {
+	hostID := req.HostID
+	itemID := req.ItemID
+
+	// Resolve Host ID
+	// If it's a large number, it's likely an external ID from Zabbix (e.g. 10780)
+	if hostID > 0 {
+		// Try external ID first if it's large, OR if internal ID not found
+		if hostID > 10000 {
+			if h, err := repository.GetHostByHostIDDAO(fmt.Sprintf("%d", hostID)); err == nil {
+				hostID = h.ID
+			}
+		} else {
+			// Check if internal ID exists, if not try as external
+			if _, err := repository.GetHostByIDDAO(hostID); err != nil {
+				if h, err := repository.GetHostByHostIDDAO(fmt.Sprintf("%d", hostID)); err == nil {
+					hostID = h.ID
+				}
+			}
+		}
+	}
+
+	// Resolve Item ID
+	if itemID > 0 {
+		if itemID > 10000 {
+			if it, err := repository.GetItemByItemIDDAO(fmt.Sprintf("%d", itemID)); err == nil {
+				itemID = it.ID
+			}
+		} else {
+			if _, err := repository.GetItemByIDDAO(itemID); err != nil {
+				if it, err := repository.GetItemByItemIDDAO(fmt.Sprintf("%d", itemID)); err == nil {
+					itemID = it.ID
+				}
+			}
+		}
+	}
+
 	alert := model.Alert{
 		Message:  req.Message,
 		Severity: req.Severity,
 		Status:   0,
 		AlarmID:  req.AlarmID,
-		HostID:   req.HostID,
-		ItemID:   req.ItemID,
+		HostID:   hostID,
+		ItemID:   itemID,
 		Comment:  req.Comment,
 	}
 	if err := repository.AddAlertDAO(&alert); err != nil {

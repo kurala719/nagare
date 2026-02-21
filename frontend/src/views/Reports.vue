@@ -36,6 +36,7 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="monthly">{{ $t('reports.generateMonthly') }}</el-dropdown-item>
+              <el-dropdown-item command="custom">{{ $t('reports.generateCustom') || 'Generate Custom' }}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -48,7 +49,7 @@
       <el-table-column prop="title" :label="$t('reports.reportTitle')" min-width="200" />
       <el-table-column prop="report_type" :label="$t('reports.type')" width="120">
         <template #default="{ row }">
-          <el-tag>{{ row.report_type }}</el-tag>
+          <el-tag :type="row.report_type === 'custom' ? 'warning' : ''">{{ row.report_type }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="generated_at" :label="$t('reports.generatedAt')" width="180">
@@ -71,6 +72,31 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- Custom Report Dialog -->
+    <el-dialog v-model="customDialogVisible" :title="$t('reports.customTitle') || 'Generate Custom Report'" width="500px">
+      <el-form :model="customForm" label-width="100px">
+        <el-form-item :label="$t('reports.titleLabel') || 'Title'">
+          <el-input v-model="customForm.title" placeholder="Custom Report Title" />
+        </el-form-item>
+        <el-form-item :label="$t('reports.rangeLabel') || 'Range'">
+          <el-date-picker
+            v-model="customForm.range"
+            type="daterange"
+            range-separator="To"
+            start-placeholder="Start date"
+            end-placeholder="End date"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="customDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmGenerateCustom" :loading="customLoading">
+          {{ $t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- Config Dialog -->
     <el-dialog v-model="configDialogVisible" :title="$t('reports.configTitle')" width="500px">
@@ -130,7 +156,8 @@ import {
   fetchReports, 
   fetchReportContent,
   generateWeeklyReport, 
-  generateMonthlyReport, 
+  generateMonthlyReport,
+  generateCustomReport,
   deleteReport, 
   bulkDeleteReports,
   getReportConfig, 
@@ -149,12 +176,19 @@ const loading = ref(false)
 const filterType = ref('')
 const configDialogVisible = ref(false)
 const previewDialogVisible = ref(false)
+const customDialogVisible = ref(false)
 const currentReport = ref(null)
 const previewData = ref(null)
 const previewLoading = ref(false)
 const exporting = ref(false)
+const customLoading = ref(false)
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const selectedRows = ref([])
+
+const customForm = reactive({
+  title: '',
+  range: []
+})
 
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection
@@ -261,6 +295,33 @@ const handleGenerateCommand = async (cmd) => {
     } catch (e) {
       ElMessage.error(t('reports.generationFailed') || 'Failed to start generation')
     }
+  } else if (cmd === 'custom') {
+    customForm.title = 'Custom Infrastructure Report - ' + new Date().toLocaleDateString()
+    customForm.range = [new Date(Date.now() - 7 * 24 * 3600 * 1000), new Date()]
+    customDialogVisible.value = true
+  }
+}
+
+const confirmGenerateCustom = async () => {
+  if (!customForm.title || !customForm.range || customForm.range.length < 2) {
+    ElMessage.warning('Please provide a title and time range')
+    return
+  }
+
+  customLoading.value = true
+  try {
+    await generateCustomReport({
+      title: customForm.title,
+      start_time: customForm.range[0].toISOString(),
+      end_time: customForm.range[1].toISOString()
+    })
+    ElMessage.success('Custom report generation started')
+    customDialogVisible.value = false
+    loadReports()
+  } catch (e) {
+    ElMessage.error('Failed to start custom generation')
+  } finally {
+    customLoading.value = false
   }
 }
 

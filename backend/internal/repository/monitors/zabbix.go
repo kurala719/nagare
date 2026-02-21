@@ -46,19 +46,19 @@ type zabbixError struct {
 }
 
 type zabbixHost struct {
-	HostID        string `json:"hostid"`
-	Host          string `json:"host"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	Status        string `json:"status"`
-	Available     string `json:"available"`
-	Error         string `json:"error"`
-	SnmpAvailable string `json:"snmp_available"`
-	SnmpError     string `json:"snmp_error"`
-	IpmiAvailable string `json:"ipmi_available"`
-	IpmiError     string `json:"ipmi_error"`
-	JmxAvailable  string `json:"jmx_available"`
-	JmxError      string `json:"jmx_error"`
+	HostID        string      `json:"hostid"`
+	Host          string      `json:"host"`
+	Name          string      `json:"name"`
+	Description   string      `json:"description"`
+	Status        interface{} `json:"status"`
+	Available     interface{} `json:"available"`
+	Error         string      `json:"error"`
+	SnmpAvailable interface{} `json:"snmp_available"`
+	SnmpError     string      `json:"snmp_error"`
+	IpmiAvailable interface{} `json:"ipmi_available"`
+	IpmiError     string      `json:"ipmi_error"`
+	JmxAvailable  interface{} `json:"jmx_available"`
+	JmxError      string      `json:"jmx_error"`
 	Interfaces    []struct {
 		InterfaceID string `json:"interfaceid"`
 		IP          string `json:"ip"`
@@ -70,37 +70,69 @@ type zabbixHost struct {
 	} `json:"interfaces"`
 }
 
+type zabbixHostWithGroups struct {
+	zabbixHost
+	Groups []struct {
+		GroupID string `json:"groupid"`
+		Name    string `json:"name"`
+	} `json:"groups"`
+	HostGroups []struct {
+		GroupID string `json:"groupid"`
+		Name    string `json:"name"`
+	} `json:"hostgroups"`
+}
+
 type zabbixItem struct {
-	ItemID    string `json:"itemid"`
-	HostID    string `json:"hostid"`
-	Name      string `json:"name"`
-	Key       string `json:"key_"`
-	LastValue string `json:"lastvalue"`
-	Units     string `json:"units"`
-	ValueType string `json:"value_type"`
-	Type      string `json:"type"`
-	Delay     string `json:"delay"`
-	Desc      string `json:"description"`
-	Status    string `json:"status"`
-	LastClock string `json:"lastclock"`
+	ItemID    string      `json:"itemid"`
+	HostID    string      `json:"hostid"`
+	Name      string      `json:"name"`
+	Key       string      `json:"key_"`
+	LastValue interface{} `json:"lastvalue"`
+	Units     string      `json:"units"`
+	ValueType interface{} `json:"value_type"`
+	Type      interface{} `json:"type"`
+	Delay     string      `json:"delay"`
+	Desc      string      `json:"description"`
+	Status    interface{} `json:"status"`
+	LastClock string      `json:"lastclock"`
 }
 
 type zabbixProblem struct {
-	EventID      string `json:"eventid"`
-	ObjectID     string `json:"objectid"`
-	Name         string `json:"name"`
-	Severity     string `json:"severity"`
-	Acknowledged string `json:"acknowledged"`
-	Clock        string `json:"clock"`
+	EventID      string      `json:"eventid"`
+	ObjectID     string      `json:"objectid"`
+	Name         string      `json:"name"`
+	Severity     interface{} `json:"severity"`
+	Acknowledged interface{} `json:"acknowledged"`
+	Clock        string      `json:"clock"`
 }
 
 type zabbixTrigger struct {
-	TriggerID   string `json:"triggerid"`
-	Description string `json:"description"`
-	Expression  string `json:"expression"`
-	Priority    string `json:"priority"`
-	Status      string `json:"status"`
-	Value       string `json:"value"`
+	TriggerID   string      `json:"triggerid"`
+	Description string      `json:"description"`
+	Expression  string      `json:"expression"`
+	Priority    interface{} `json:"priority"`
+	Status      interface{} `json:"status"`
+	Value       interface{} `json:"value"`
+}
+
+type ZabbixWebhookSetupConfig struct {
+	WebhookURL       string
+	EventToken       string
+	ActionName       string
+	UserLookup       string
+	ZabbixUserID     string // Optional: if set, explicitly use this user ID instead of looking up by username
+	MediaTypeName    string
+	UserMediaSendTo  string
+	ActionEscalation string
+}
+
+type ZabbixWebhookSetupResult struct {
+	WebhookURL  string
+	MediaTypeID string
+	ActionID    string
+	ActionName  string
+	UserID      string
+	Username    string
 }
 
 // NewZabbixProvider creates a new Zabbix provider
@@ -289,7 +321,7 @@ func (p *ZabbixProvider) SetAuthToken(token string) {
 // GetHosts implements the Provider interface
 func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
 		"selectHostGroups": "extend",
 		"selectGroups":     "extend",
@@ -306,7 +338,7 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 // GetHostsByGroupID implements the Provider interface
 func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
 		"selectHostGroups": "extend",
 		"selectGroups":     "extend",
@@ -321,20 +353,44 @@ func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) 
 	return p.parseZabbixHosts(resp.Result)
 }
 
+func determineZabbixAvailability(zh zabbixHostWithGroups) (string, string, string) {
+	status := toString(zh.Status)
+	available := toString(zh.Available)
+	snmpAvailable := toString(zh.SnmpAvailable)
+	ipmiAvailable := toString(zh.IpmiAvailable)
+	jmxAvailable := toString(zh.JmxAvailable)
+
+	// status == "1" means Disabled in Zabbix
+	if status == "1" {
+		return "unknown", "0", "" // Mapping to Inactive (0) in mapMonitorHostStatus
+	}
+
+	// Priority: check for any UNAVAILABLE (2) status
+	if available == "2" {
+		return "down", "2", zh.Error
+	}
+	if snmpAvailable == "2" {
+		return "down", "2", zh.SnmpError
+	}
+	if ipmiAvailable == "2" {
+		return "down", "2", zh.IpmiError
+	}
+	if jmxAvailable == "2" {
+		return "down", "2", zh.JmxError
+	}
+
+	// Check if ANY are AVAILABLE (1)
+	if available == "1" || snmpAvailable == "1" || ipmiAvailable == "1" || jmxAvailable == "1" {
+		return "up", "1", ""
+	}
+
+	// Default: Enabled but no availability info (0), mark as Up/Active
+	return "up", "0", ""
+}
+
 // parseZabbixHosts parses Zabbix host.get result into common Host slice
 func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error) {
-	// Define a custom struct to handle groups since standard zabbixHost struct doesn't have it
-	var zabbixHosts []struct {
-		zabbixHost
-		Groups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"groups"`
-		HostGroups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"hostgroups"`
-	}
+	var zabbixHosts []zabbixHostWithGroups
 	if err := json.Unmarshal(result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse hosts: %w", err)
 	}
@@ -346,17 +402,12 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 			ip = zh.Interfaces[0].IP
 		}
 
-		status := "unknown"
-		switch zh.Status {
-		case "0":
-			status = "up"
-		case "1":
-			status = "down"
-		}
+		status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
 		metadata := map[string]string{
-			"host":             zh.Host,
-			"active_available": zh.ActiveAvailable,
+			"host":               zh.Host,
+			"active_available":   activeAvailable,
+			"status_description": statusDesc,
 		}
 		selectedGroups := zh.HostGroups
 		if len(selectedGroups) == 0 {
@@ -393,7 +444,7 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 // GetHostByName implements the Provider interface
 func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
 		"selectHostGroups": "extend",
 		"selectGroups":     "extend",
@@ -407,17 +458,7 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 		return nil, err
 	}
 
-	var zabbixHosts []struct {
-		zabbixHost
-		Groups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"groups"`
-		HostGroups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"hostgroups"`
-	}
+	var zabbixHosts []zabbixHostWithGroups
 	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse host: %w", err)
 	}
@@ -432,17 +473,12 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 		ip = zh.Interfaces[0].IP
 	}
 
-	status := "unknown"
-	switch zh.Status {
-	case "0":
-		status = "up"
-	case "1":
-		status = "down"
-	}
+	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
 	metadata := map[string]string{
-		"host":             zh.Host,
-		"active_available": zh.ActiveAvailable,
+		"host":               zh.Host,
+		"active_available":   activeAvailable,
+		"status_description": statusDesc,
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {
@@ -475,7 +511,7 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 // GetHostByID implements the Provider interface
 func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "active_available"},
+		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
 		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
 		"selectHostGroups": "extend",
 		"selectGroups":     "extend",
@@ -487,17 +523,7 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		return nil, err
 	}
 
-	var zabbixHosts []struct {
-		zabbixHost
-		Groups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"groups"`
-		HostGroups []struct {
-			GroupID string `json:"groupid"`
-			Name    string `json:"name"`
-		} `json:"hostgroups"`
-	}
+	var zabbixHosts []zabbixHostWithGroups
 	if err := json.Unmarshal(resp.Result, &zabbixHosts); err != nil {
 		return nil, fmt.Errorf("failed to parse host: %w", err)
 	}
@@ -512,17 +538,12 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		ip = zh.Interfaces[0].IP
 	}
 
-	status := "unknown"
-	switch zh.Status {
-	case "0":
-		status = "up"
-	case "1":
-		status = "down"
-	}
+	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
 	metadata := map[string]string{
-		"host":             zh.Host,
-		"active_available": zh.ActiveAvailable,
+		"host":               zh.Host,
+		"active_available":   activeAvailable,
+		"status_description": statusDesc,
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {
@@ -577,12 +598,12 @@ func (p *ZabbixProvider) GetItems(ctx context.Context, hostID string) ([]Item, e
 			HostID:      zi.HostID,
 			Name:        zi.Name,
 			Key:         zi.Key,
-			Type:        zi.Type,
-			Value:       zi.LastValue,
+			Type:        toString(zi.Type),
+			Value:       toString(zi.LastValue),
 			Units:       zi.Units,
-			ValueType:   zi.ValueType,
+			ValueType:   toString(zi.ValueType),
 			Delay:       zi.Delay,
-			Status:      zi.Status,
+			Status:      toString(zi.Status),
 			Timestamp:   timestamp,
 			Description: zi.Desc,
 		})
@@ -618,12 +639,12 @@ func (p *ZabbixProvider) GetItemByID(ctx context.Context, itemID string) (*Item,
 		HostID:      zi.HostID,
 		Name:        zi.Name,
 		Key:         zi.Key,
-		Type:        zi.Type,
-		Value:       zi.LastValue,
+		Type:        toString(zi.Type),
+		Value:       toString(zi.LastValue),
 		Units:       zi.Units,
-		ValueType:   zi.ValueType,
+		ValueType:   toString(zi.ValueType),
 		Delay:       zi.Delay,
-		Status:      zi.Status,
+		Status:      toString(zi.Status),
 		Timestamp:   parseUnixClock(zi.LastClock),
 		Description: zi.Desc,
 	}, nil
@@ -948,7 +969,7 @@ func (p *ZabbixProvider) GetAlerts(ctx context.Context) ([]Alert, error) {
 		}
 
 		severity := "information"
-		switch prob.Severity {
+		switch toString(prob.Severity) {
 		case "5":
 			severity = "disaster"
 		case "4":
@@ -996,7 +1017,7 @@ func (p *ZabbixProvider) GetAlertsByHost(ctx context.Context, hostID string) ([]
 	alerts := make([]Alert, 0, len(problems))
 	for _, prob := range problems {
 		severity := "information"
-		switch prob.Severity {
+		switch toString(prob.Severity) {
 		case "5":
 			severity = "disaster"
 		case "4":
@@ -1044,7 +1065,7 @@ func (p *ZabbixProvider) GetTriggers(ctx context.Context) ([]Trigger, error) {
 	triggers := make([]Trigger, 0, len(zabbixTriggers))
 	for _, zt := range zabbixTriggers {
 		priority := "information"
-		switch zt.Priority {
+		switch toString(zt.Priority) {
 		case "5":
 			priority = "disaster"
 		case "4":
@@ -1058,7 +1079,7 @@ func (p *ZabbixProvider) GetTriggers(ctx context.Context) ([]Trigger, error) {
 		}
 
 		status := "ok"
-		if zt.Value == "1" {
+		if toString(zt.Value) == "1" {
 			status = "problem"
 		}
 
@@ -1098,7 +1119,7 @@ func (p *ZabbixProvider) GetTriggersByHost(ctx context.Context, hostID string) (
 	triggers := make([]Trigger, 0, len(zabbixTriggers))
 	for _, zt := range zabbixTriggers {
 		priority := "information"
-		switch zt.Priority {
+		switch toString(zt.Priority) {
 		case "5":
 			priority = "disaster"
 		case "4":
@@ -1112,7 +1133,7 @@ func (p *ZabbixProvider) GetTriggersByHost(ctx context.Context, hostID string) (
 		}
 
 		status := "ok"
-		if zt.Value == "1" {
+		if toString(zt.Value) == "1" {
 			status = "problem"
 		}
 
@@ -1127,6 +1148,464 @@ func (p *ZabbixProvider) GetTriggersByHost(ctx context.Context, hostID string) (
 	}
 
 	return triggers, nil
+}
+
+func (p *ZabbixProvider) SetupWebhookMediaActionAndUser(ctx context.Context, cfg ZabbixWebhookSetupConfig) (ZabbixWebhookSetupResult, error) {
+	if strings.TrimSpace(cfg.WebhookURL) == "" {
+		return ZabbixWebhookSetupResult{}, fmt.Errorf("webhook URL is required")
+	}
+	if strings.TrimSpace(cfg.EventToken) == "" {
+		return ZabbixWebhookSetupResult{}, fmt.Errorf("event token is required")
+	}
+	if strings.TrimSpace(cfg.UserLookup) == "" && strings.TrimSpace(cfg.ZabbixUserID) == "" {
+		return ZabbixWebhookSetupResult{}, fmt.Errorf("user lookup or ZabbixUserID is required")
+	}
+	if strings.TrimSpace(cfg.MediaTypeName) == "" {
+		cfg.MediaTypeName = "Nagare Webhook"
+	}
+	if strings.TrimSpace(cfg.ActionName) == "" {
+		cfg.ActionName = "Nagare Alert Push"
+	}
+	if strings.TrimSpace(cfg.UserMediaSendTo) == "" {
+		cfg.UserMediaSendTo = "nagare-webhook"
+	}
+	if strings.TrimSpace(cfg.ActionEscalation) == "" {
+		cfg.ActionEscalation = "1m"
+	}
+
+	if strings.TrimSpace(p.GetAuthToken()) == "" {
+		if err := p.Authenticate(ctx); err != nil {
+			return ZabbixWebhookSetupResult{}, fmt.Errorf("failed to authenticate with zabbix: %w", err)
+		}
+	}
+
+	mediaTypeID, err := p.ensureWebhookMediaType(ctx, cfg)
+	if err != nil {
+		return ZabbixWebhookSetupResult{}, err
+	}
+
+	var userID, username string
+	if strings.TrimSpace(cfg.ZabbixUserID) != "" {
+		userID, username, err = p.getUserByID(ctx, cfg.ZabbixUserID)
+	} else {
+		userID, username, err = p.findUserByLogin(ctx, cfg.UserLookup)
+	}
+	if err != nil {
+		return ZabbixWebhookSetupResult{}, err
+	}
+
+	if err := p.ensureUserMedia(ctx, userID, mediaTypeID, cfg.UserMediaSendTo); err != nil {
+		return ZabbixWebhookSetupResult{}, err
+	}
+
+	actionID, actionName, err := p.ensureActionBound(ctx, cfg.ActionName, mediaTypeID, userID, cfg.ActionEscalation)
+	if err != nil {
+		return ZabbixWebhookSetupResult{}, err
+	}
+
+	return ZabbixWebhookSetupResult{
+		WebhookURL:  cfg.WebhookURL,
+		MediaTypeID: mediaTypeID,
+		ActionID:    actionID,
+		ActionName:  actionName,
+		UserID:      userID,
+		Username:    username,
+	}, nil
+}
+
+func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixWebhookSetupConfig) (string, error) {
+	getParams := map[string]interface{}{
+		"output": []string{"mediatypeid", "name"},
+		"filter": map[string]interface{}{"name": []string{cfg.MediaTypeName}},
+	}
+
+	getResp, err := p.sendRequest(ctx, "mediatype.get", getParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to query zabbix media type: %w", err)
+	}
+
+	var existing []struct {
+		MediaTypeID string `json:"mediatypeid"`
+		Name        string `json:"name"`
+	}
+	if err := json.Unmarshal(getResp.Result, &existing); err != nil {
+		return "", fmt.Errorf("failed to parse zabbix media type list: %w", err)
+	}
+	if len(existing) > 0 {
+		return existing[0].MediaTypeID, nil
+	}
+
+	script := "var req = new HttpRequest();\n" +
+		"req.addHeader('Content-Type: application/json');\n" +
+		"var params = JSON.parse(value);\n" +
+		"var payload = {\n" +
+		"  message: (params.Subject || '') + ' ' + (params.Message || ''),\n" +
+		"  subject: params.Subject || '',\n" +
+		"  severity: params.Severity || '',\n" +
+		"  host_id: params.HostID || '',\n" +
+		"  event_token: params.EventToken\n" +
+		"};\n" +
+		"var response = req.post(params.URL, JSON.stringify(payload));\n" +
+		"return response;"
+
+	createParams := map[string]interface{}{
+		"name":   cfg.MediaTypeName,
+		"type":   4,
+		"status": 0,
+		"parameters": []map[string]interface{}{
+			{"name": "URL", "value": cfg.WebhookURL},
+			{"name": "EventToken", "value": cfg.EventToken},
+			{"name": "Subject", "value": "{ALERT.SUBJECT}"},
+			{"name": "Message", "value": "{ALERT.MESSAGE}"},
+			{"name": "Severity", "value": "{EVENT.NSEVERITY}"},
+			{"name": "HostID", "value": "{HOST.ID}"},
+		},
+		"script": script,
+	}
+
+	createResp, err := p.sendRequest(ctx, "mediatype.create", createParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to create zabbix media type: %w", err)
+	}
+
+	var created struct {
+		MediaTypeIDs []string `json:"mediatypeids"`
+	}
+	if err := json.Unmarshal(createResp.Result, &created); err != nil {
+		return "", fmt.Errorf("failed to parse zabbix media type create result: %w", err)
+	}
+	if len(created.MediaTypeIDs) == 0 {
+		return "", fmt.Errorf("zabbix media type created but no mediatypeid returned")
+	}
+
+	return created.MediaTypeIDs[0], nil
+}
+
+func (p *ZabbixProvider) findUserByLogin(ctx context.Context, lookup string) (string, string, error) {
+	type zabbixUser struct {
+		UserID   string `json:"userid"`
+		Username string `json:"username"`
+		Alias    string `json:"alias"`
+	}
+
+	// Try filters one by one to avoid errors if a field doesn't exist in the current Zabbix version
+	fieldNames := []string{"username", "alias"}
+	for _, field := range fieldNames {
+		resp, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+			"output": "extend",
+			"filter": map[string]interface{}{
+				field: []string{lookup},
+			},
+		})
+		if err != nil {
+			// Continue if this specific field filter is not supported
+			continue
+		}
+
+		var users []zabbixUser
+		if err := json.Unmarshal(resp.Result, &users); err != nil {
+			continue
+		}
+		if len(users) > 0 {
+			name := users[0].Username
+			if strings.TrimSpace(name) == "" {
+				name = users[0].Alias
+			}
+			return users[0].UserID, name, nil
+		}
+	}
+
+	// If exact match not found, try to get all users using 'extend' to be safe across versions
+	availableUsers, err := p.getAvailableUsers(ctx)
+	if err == nil && len(availableUsers) > 0 {
+		// Try to pick a sensible default - look for Admin first (case-insensitive)
+		for _, user := range availableUsers {
+			uName := user.Username
+			if uName == "" {
+				uName = user.Alias
+			}
+			if strings.EqualFold(uName, "admin") || strings.EqualFold(uName, "Admin") {
+				return user.UserID, uName, nil
+			}
+		}
+
+		// If no Admin, use first available user
+		name := availableUsers[0].Username
+		if strings.TrimSpace(name) == "" {
+			name = availableUsers[0].Alias
+		}
+
+		return availableUsers[0].UserID, name, nil
+	}
+
+	// Last resort fallback: query all users without any filter and look for matches in the code
+	resp, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+		"output": "extend",
+	})
+	if err == nil {
+		var users []zabbixUser
+		if err := json.Unmarshal(resp.Result, &users); err == nil && len(users) > 0 {
+			for _, user := range users {
+				uName := user.Username
+				if uName == "" {
+					uName = user.Alias
+				}
+				if strings.EqualFold(uName, lookup) || strings.EqualFold(uName, "admin") {
+					return user.UserID, uName, nil
+				}
+			}
+			// Just return the first one if we found anything
+			uName := users[0].Username
+			if uName == "" {
+				uName = users[0].Alias
+			}
+			return users[0].UserID, uName, nil
+		}
+	}
+
+	// If all else fails, return detailed error
+	return "", "", fmt.Errorf("zabbix user '%s' not found: unable to lookup user or retrieve user list from zabbix", lookup)
+}
+
+func (p *ZabbixProvider) getUserByID(ctx context.Context, userID string) (string, string, error) {
+	if strings.TrimSpace(userID) == "" {
+		return "", "", fmt.Errorf("user ID is required")
+	}
+
+	resp, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+		"output":  "extend",
+		"userids": []string{userID},
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to query zabbix user by ID: %w", err)
+	}
+
+	type zabbixUser struct {
+		UserID   string `json:"userid"`
+		Username string `json:"username"`
+		Alias    string `json:"alias"`
+	}
+
+	var users []zabbixUser
+	if err := json.Unmarshal(resp.Result, &users); err != nil {
+		return "", "", fmt.Errorf("failed to parse zabbix user: %w", err)
+	}
+
+	if len(users) == 0 {
+		return "", "", fmt.Errorf("zabbix user with ID '%s' not found", userID)
+	}
+
+	username := users[0].Username
+	if strings.TrimSpace(username) == "" {
+		username = users[0].Alias
+	}
+
+	return users[0].UserID, username, nil
+}
+
+func (p *ZabbixProvider) getAvailableUsers(ctx context.Context) ([]struct {
+	UserID   string
+	Username string
+	Alias    string
+}, error) {
+	resp, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+		"output": "extend",
+		"limit":  100,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query zabbix users: %w", err)
+	}
+
+	type zabbixUser struct {
+		UserID   string `json:"userid"`
+		Username string `json:"username"`
+		Alias    string `json:"alias"`
+	}
+
+	var users []zabbixUser
+	if err := json.Unmarshal(resp.Result, &users); err != nil {
+		return nil, fmt.Errorf("failed to parse zabbix users: %w", err)
+	}
+
+	// Build result with same struct type as return type
+	result := make([]struct {
+		UserID   string
+		Username string
+		Alias    string
+	}, len(users))
+
+	for i, user := range users {
+		result[i].UserID = user.UserID
+		// Map correctly based on which field is populated
+		result[i].Username = user.Username
+		if result[i].Username == "" {
+			result[i].Username = user.Alias
+		}
+		result[i].Alias = user.Alias
+	}
+
+	return result, nil
+}
+
+func (p *ZabbixProvider) ensureUserMedia(ctx context.Context, userID, mediaTypeID, sendTo string) error {
+	resp, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+		"output":       []string{"userid"},
+		"userids":      []string{userID},
+		"selectMedias": "extend",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to load zabbix user medias: %w", err)
+	}
+
+	var users []struct {
+		UserID string                   `json:"userid"`
+		Medias []map[string]interface{} `json:"medias"`
+	}
+	if err := json.Unmarshal(resp.Result, &users); err != nil {
+		return fmt.Errorf("failed to parse zabbix user medias: %w", err)
+	}
+	if len(users) == 0 {
+		return fmt.Errorf("zabbix user not found for userid: %s", userID)
+	}
+
+	medias := users[0].Medias
+	for _, media := range medias {
+		if toString(media["mediatypeid"]) == mediaTypeID {
+			return nil
+		}
+	}
+
+	// Clean up existing medias to include only supported fields for update
+	// This prevents errors like "unexpected parameter 'provisioned'"
+	cleanedMedias := make([]map[string]interface{}, 0, len(medias)+1)
+	for _, m := range medias {
+		cleanedMedia := map[string]interface{}{
+			"mediatypeid": m["mediatypeid"],
+			"sendto":      m["sendto"],
+			"active":      m["active"],
+			"severity":    m["severity"],
+			"period":      m["period"],
+		}
+		cleanedMedias = append(cleanedMedias, cleanedMedia)
+	}
+
+	// Add new Nagare media
+	cleanedMedias = append(cleanedMedias, map[string]interface{}{
+		"mediatypeid": mediaTypeID,
+		"sendto":      sendTo,
+		"active":      0,
+		"severity":    63,
+		"period":      "1-7,00:00-24:00",
+	})
+
+	if _, err := p.sendRequest(ctx, "user.update", map[string]interface{}{
+		"userid": userID,
+		"medias": cleanedMedias,
+	}); err != nil {
+		return fmt.Errorf("failed to bind media type to zabbix user: %w", err)
+	}
+
+	return nil
+}
+
+func (p *ZabbixProvider) ensureActionBound(ctx context.Context, actionName, mediaTypeID, userID, escPeriod string) (string, string, error) {
+	existingID, existingName, err := p.findActionByName(ctx, actionName)
+	if err == nil && strings.TrimSpace(existingID) != "" {
+		return existingID, existingName, nil
+	}
+
+	baseFilter, err := p.findBaseTriggerActionFilter(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	createParams := map[string]interface{}{
+		"name":        actionName,
+		"eventsource": 0,
+		"status":      0,
+		"esc_period":  escPeriod,
+		"filter":      baseFilter,
+		"operations": []map[string]interface{}{
+			{
+				"operationtype": 0,
+				"opmessage": map[string]interface{}{
+					"default_msg": 1,
+					"mediatypeid": mediaTypeID,
+				},
+				"opmessage_usr": []map[string]interface{}{{"userid": userID}},
+			},
+		},
+	}
+
+	createResp, err := p.sendRequest(ctx, "action.create", createParams)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create zabbix action: %w", err)
+	}
+
+	var created struct {
+		ActionIDs []string `json:"actionids"`
+	}
+	if err := json.Unmarshal(createResp.Result, &created); err != nil {
+		return "", "", fmt.Errorf("failed to parse zabbix action create result: %w", err)
+	}
+	if len(created.ActionIDs) == 0 {
+		return "", "", fmt.Errorf("zabbix action created but no actionid returned")
+	}
+
+	return created.ActionIDs[0], actionName, nil
+}
+
+func (p *ZabbixProvider) findActionByName(ctx context.Context, actionName string) (string, string, error) {
+	resp, err := p.sendRequest(ctx, "action.get", map[string]interface{}{
+		"output": []string{"actionid", "name"},
+		"filter": map[string]interface{}{"name": []string{actionName}},
+		"limit":  1,
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	var actions []struct {
+		ActionID string `json:"actionid"`
+		Name     string `json:"name"`
+	}
+	if err := json.Unmarshal(resp.Result, &actions); err != nil {
+		return "", "", err
+	}
+	if len(actions) == 0 {
+		return "", "", fmt.Errorf("action not found")
+	}
+
+	return actions[0].ActionID, actions[0].Name, nil
+}
+
+func (p *ZabbixProvider) findBaseTriggerActionFilter(ctx context.Context) (map[string]interface{}, error) {
+	resp, err := p.sendRequest(ctx, "action.get", map[string]interface{}{
+		"output":       []string{"actionid", "name", "eventsource", "status"},
+		"eventsource":  0,
+		"selectFilter": "extend",
+		"sortfield":    "actionid",
+		"sortorder":    "ASC",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query zabbix base action: %w", err)
+	}
+
+	var actions []struct {
+		Status interface{}            `json:"status"`
+		Filter map[string]interface{} `json:"filter"`
+	}
+	if err := json.Unmarshal(resp.Result, &actions); err != nil {
+		return nil, fmt.Errorf("failed to parse zabbix base action: %w", err)
+	}
+
+	for _, action := range actions {
+		if toString(action.Status) == "0" && len(action.Filter) > 0 {
+			return action.Filter, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no enabled trigger action found in zabbix; please create one action first")
 }
 
 // Name returns the provider name

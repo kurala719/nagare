@@ -152,6 +152,23 @@ func LoginAlarmCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, alarm)
 }
 
+// SetupAlarmMediaCtrl handles POST /alarms/:id/setup-media
+// One-click initialization for Zabbix alarm source (media type + user + action binding)
+func SetupAlarmMediaCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid alarm ID")
+		return
+	}
+
+	result, err := service.SetupAlarmMediaServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, result)
+}
+
 // RefreshAlarmEventTokenCtrl handles POST /alarms/:id/event-token/refresh (public)
 // Allows the alarm source to refresh its own event token using the current token
 func RefreshAlarmEventTokenCtrl(c *gin.Context) {

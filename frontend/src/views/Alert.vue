@@ -20,12 +20,16 @@
           <el-option :label="$t('alerts.severityInfo')" value="info" />
         </el-select>
 
-        <el-select v-model="statusFilter" :placeholder="$t('alerts.filterStatus')" style="width: 140px">
+        <el-select v-model="statusFilter" :placeholder="$t('alerts.statusLabel')" style="width: 140px">
           <el-option :label="$t('alerts.filterAll')" value="all" />
           <el-option :label="$t('alerts.statusOpen')" value="open" />
           <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
           <el-option :label="$t('alerts.statusResolved')" value="resolved" />
           <el-option :label="$t('alerts.statusClosed')" value="closed" />
+        </el-select>
+
+        <el-select v-model="hostFilter" :placeholder="$t('hosts.monitor')" clearable filterable style="width: 180px">
+          <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
         </el-select>
 
         <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
@@ -100,25 +104,60 @@
       <div v-if="alerts.length > 0" class="alerts-list">
           <el-card v-for="alert in alerts" :key="alert.id" class="alert-card" shadow="hover">
               <div class="alert-card-header">
-                  <el-checkbox :model-value="isSelected(alert.id)" @change="toggleSelection(alert.id, $event)" />
-                  <span class="alert-card-title">{{ $t('alerts.alertLabel', { id: alert.id }) }}</span>
+                  <div class="header-left">
+                    <el-checkbox :model-value="isSelected(alert.id)" @change="toggleSelection(alert.id, $event)" />
+                    <span class="alert-card-title">{{ $t('alerts.alertLabel', { id: alert.id }) }}</span>
+                  </div>
+                  <div class="header-right">
+                    <el-tag :type="getSeverityType(alert.severity)" effect="dark" size="small">{{ alert.severity }}</el-tag>
+                    <el-tag :type="getStatusType(alert.status)" style="margin-left: 8px" size="small">{{ alert.status }}</el-tag>
+                  </div>
               </div>
-              <el-descriptions :column="2" border>
-                  <el-descriptions-item :label="$t('alerts.messageLabel')" :span="2">{{ alert.message }}</el-descriptions-item>
-                  <el-descriptions-item :label="$t('alerts.severityLabel')">
-                      <el-tag :type="getSeverityType(alert.severity)" size="small">{{ alert.severity }}</el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('alerts.statusLabel')">
-                      <el-tooltip :content="alert.status_reason || alert.message || alert.status" placement="top">
-                          <el-tag :type="getStatusType(alert.status)" size="small">{{ alert.status }}</el-tag>
-                      </el-tooltip>
-                  </el-descriptions-item>
-                  <el-descriptions-item :label="$t('alerts.createdAt')" :span="2">{{ alert.created_at }}</el-descriptions-item>
-              </el-descriptions>
-              <div style="margin-top: 16px; text-align: right;">
-                  <el-button type="primary" @click="consultAI(alert)">{{ $t('alerts.consult') }}</el-button>
-                  <el-button type="warning" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
-                  <el-button type="danger" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
+              
+              <div class="alert-content">
+                <div class="alert-message">{{ alert.message }}</div>
+                
+                <el-row :gutter="20" class="alert-meta">
+                  <el-col :span="8">
+                    <div class="meta-item">
+                      <el-icon><Monitor /></el-icon>
+                      <span class="meta-label">Host:</span>
+                      <router-link v-if="alert.host_id" :to="'/hosts/' + alert.host_id" class="meta-value link">
+                        {{ alert.host_name || 'Host #' + alert.host_id }}
+                      </router-link>
+                      <span v-else class="meta-value">N/A</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="meta-item">
+                      <el-icon><Document /></el-icon>
+                      <span class="meta-label">Metric:</span>
+                      <router-link v-if="alert.item_id" :to="'/items/' + alert.item_id" class="meta-value link">
+                        {{ alert.item_name || 'Item #' + alert.item_id }}
+                      </router-link>
+                      <span v-else class="meta-value">N/A</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="8">
+                    <div class="meta-item">
+                      <el-icon><Bell /></el-icon>
+                      <span class="meta-label">Source:</span>
+                      <span class="meta-value">{{ alert.alarm_name || 'Manual' }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+
+                <div class="alert-footer">
+                  <div class="alert-time">
+                    <el-icon><Clock /></el-icon>
+                    {{ alert.created_at ? new Date(alert.created_at).toLocaleString() : 'N/A' }}
+                  </div>
+                  <div class="alert-actions">
+                    <el-button type="primary" link :icon="ChatLineRound" @click="consultAI(alert)">{{ $t('alerts.consult') }}</el-button>
+                    <el-button type="warning" link :icon="Edit" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
+                    <el-button type="danger" link :icon="Delete" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
+                  </div>
+                </div>
               </div>
           </el-card>
       </div>
@@ -146,10 +185,10 @@
             </el-form-item>
             <el-form-item :label="$t('alerts.severityLabel')" prop="severity">
                 <el-select v-model="alertForm.severity" :placeholder="$t('alerts.selectSeverity')" style="width: 100%;">
-                    <el-option :label="$t('alerts.severityCritical')" :value="3" />
-                    <el-option :label="$t('alerts.severityHigh')" :value="2" />
-                    <el-option :label="$t('alerts.severityMedium')" :value="1" />
-                    <el-option :label="$t('alerts.severityLow')" :value="0" />
+                    <el-option :label="$t('alerts.severityCritical')" :value="4" />
+                    <el-option :label="$t('alerts.severityHigh')" :value="3" />
+                    <el-option :label="$t('alerts.severityMedium')" :value="2" />
+                    <el-option :label="$t('alerts.severityLow')" :value="1" />
                     <el-option :label="$t('alerts.severityInfo')" :value="0" />
                 </el-select>
             </el-form-item>
@@ -159,6 +198,16 @@
                     <el-option :label="$t('alerts.statusAcknowledged')" value="acknowledged" />
                     <el-option :label="$t('alerts.statusResolved')" value="resolved" />
                     <el-option :label="$t('alerts.statusClosed')" value="closed" />
+                </el-select>
+            </el-form-item>
+            <el-form-item :label="$t('hosts.monitor')" prop="host_id">
+                <el-select v-model="alertForm.host_id" clearable filterable @change="onHostChange" style="width: 100%;">
+                    <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
+                </el-select>
+            </el-form-item>
+            <el-form-item :label="$t('menu.item')" prop="item_id">
+                <el-select v-model="alertForm.item_id" clearable filterable :disabled="!alertForm.host_id" style="width: 100%;">
+                    <el-option v-for="it in filteredItems" :key="it.id" :label="it.name" :value="it.id" />
                 </el-select>
             </el-form-item>
         </el-form>
@@ -234,9 +283,11 @@
 
 <script>
 import { fetchAlertData, addAlert, updateAlert, deleteAlert, consultAlertAI } from '@/api/alerts';
+import { fetchHostData } from '@/api/hosts';
+import { fetchItemData } from '@/api/items';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document } from '@element-plus/icons-vue';
+import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound } from '@element-plus/icons-vue';
 
 export default {
     name: 'Alert',
@@ -247,7 +298,11 @@ export default {
         Edit,
         Delete,
         ArrowDown,
-        Document
+        Document,
+        Monitor,
+        Bell,
+        Clock,
+        ChatLineRound
     },
     data() {
       return {
@@ -268,6 +323,9 @@ export default {
                 search: '',
                 severityFilter: 'all',
                 statusFilter: 'all',
+                hostFilter: '',
+                allHosts: [],
+                filteredItems: [],
         dialogVisible: false,
                 selectedAlertIds: [],
         deleteDialogVisible: false,
@@ -284,6 +342,8 @@ export default {
             message: '',
             severity: 0,
             status: 'open',
+            host_id: null,
+            item_id: null,
         },
         formRules: {},
         // Icons for template usage
@@ -293,6 +353,10 @@ export default {
         Delete: markRaw(Delete),
         ArrowDown: markRaw(ArrowDown),
         Document: markRaw(Document),
+        Monitor: markRaw(Monitor),
+        Bell: markRaw(Bell),
+        Clock: markRaw(Clock),
+        ChatLineRound: markRaw(ChatLineRound),
         Loading: markRaw(Loading)
       };
     },
@@ -320,6 +384,10 @@ export default {
             this.currentPage = 1;
             this.loadAlerts(true);
         },
+        hostFilter() {
+            this.currentPage = 1;
+            this.loadAlerts(true);
+        },
         sortKey() {
             this.currentPage = 1;
             this.loadAlerts(true);
@@ -339,9 +407,18 @@ export default {
             status: [{ required: true, message: this.$t('alerts.validationStatus'), trigger: 'change' }],
         };
         this.applySearchFromQuery();
+        this.loadAllHosts();
         this.loadAlerts(true);
     },
     methods: {
+        async loadAllHosts() {
+            try {
+                const res = await fetchHostData({ limit: 1000 });
+                this.allHosts = res.data?.items || res.items || res.data || [];
+            } catch (err) {
+                console.error('Failed to load hosts for filter', err);
+            }
+        },
         applySearchFromQuery() {
             const queryValue = this.$route.query.q;
             const nextQuery = queryValue ? String(queryValue) : '';
@@ -447,6 +524,7 @@ export default {
                     q: this.search || undefined,
                     severity: this.severityFilterValue(),
                     status: this.statusFilterValue(),
+                    host_id: this.hostFilter || undefined,
                     limit: this.pageSize,
                     offset: (this.currentPage - 1) * this.pageSize,
                     sort: sortBy,
@@ -458,12 +536,18 @@ export default {
                     : (response.data?.items || response.items || response.data || response.alerts || []);
                 const total = response?.data?.total ?? response?.total ?? payload.length;
                 const mapped = payload.map((a) => ({
-                    id: a.ID || a.id,
-                    message: a.Message || a.message || '',
-                    severity: this.normalizeSeverity(a.Severity ?? a.severity ?? ''),
-                    status: this.normalizeStatus(a.Status ?? a.status ?? ''),
-                    status_reason: a.Reason || a.reason || a.Error || a.error || a.ErrorMessage || a.error_message || a.LastError || a.last_error || '',
-                    created_at: a.CreatedAt || a.created_at || '',
+                    id: a.id,
+                    message: a.message || '',
+                    severity: this.normalizeSeverity(a.severity ?? ''),
+                    status: this.normalizeStatus(a.status ?? ''),
+                    status_reason: a.comment || '',
+                    created_at: a.created_at || '',
+                    host_id: a.host_id,
+                    host_name: a.host_name,
+                    item_id: a.item_id,
+                    item_name: a.item_name,
+                    alarm_id: a.alarm_id,
+                    alarm_name: a.alarm_name
                 }));
                 this.alerts = mapped;
                 this.totalAlerts = Number.isFinite(total) ? total : mapped.length;
@@ -511,6 +595,18 @@ export default {
             }
             return String(value || '');
         },
+        async onHostChange(hostId) {
+            this.alertForm.item_id = null;
+            this.filteredItems = [];
+            if (!hostId) return;
+            
+            try {
+                const res = await fetchItemData({ host_id: hostId, limit: 1000 });
+                this.filteredItems = res.data?.items || res.items || res.data || [];
+            } catch (err) {
+                console.error('Failed to load items for host', err);
+            }
+        },
         openAddDialog() {
             this.isEditing = false;
             this.editingId = null;
@@ -518,7 +614,10 @@ export default {
                 message: '',
                 severity: 0,
                 status: 'open',
+                host_id: null,
+                item_id: null,
             };
+            this.filteredItems = [];
             this.dialogVisible = true;
         },
         openEditDialog(alert) {
@@ -526,10 +625,21 @@ export default {
             this.editingId = alert.id;
             this.alertForm = {
                 message: alert.message,
-                severity: parseInt(alert.severity) || 0,
+                severity: this.severityLabelToInt(alert.severity),
                 status: alert.status,
+                host_id: alert.host_id,
+                item_id: alert.item_id,
             };
+            if (alert.host_id) {
+                this.onHostChange(alert.host_id).then(() => {
+                    this.alertForm.item_id = alert.item_id;
+                });
+            }
             this.dialogVisible = true;
+        },
+        severityLabelToInt(label) {
+            const map = { 'info': 0, 'low': 1, 'medium': 2, 'high': 3, 'critical': 4 };
+            return map[label.toLowerCase()] ?? 0;
         },
         async saveAlert() {
             try {
@@ -646,25 +756,106 @@ export default {
 .alerts-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   margin-top: 8px;
 }
 
 .alert-card {
-  border: 1px solid var(--border-1);
+  border: 1px solid var(--el-border-color-lighter);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .alert-card-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
+}
+
+.header-left {
+  display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
 }
 
 .alert-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.alert-message {
   font-size: 16px;
-  font-weight: 700;
-  color: var(--text-strong);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.alert-meta {
+  background: var(--el-fill-color-blank);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--el-border-color-extra-light);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.meta-item .el-icon {
+  color: var(--el-text-color-secondary);
+}
+
+.meta-label {
+  color: var(--el-text-color-secondary);
+  margin-right: 4px;
+}
+
+.meta-value {
+  color: var(--el-text-color-primary);
+  font-weight: 500;
+}
+
+.meta-value.link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.meta-value.link:hover {
+  text-decoration: underline;
+}
+
+.alert-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px dashed var(--el-border-color-extra-light);
+}
+
+.alert-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.alert-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .alerts-pagination {
@@ -674,17 +865,17 @@ export default {
 }
 
 .ai-response-content {
-  background: var(--surface-2);
-  border-radius: var(--radius-md);
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
   padding: 20px;
   max-height: 400px;
   overflow-y: auto;
   line-height: 1.7;
-  border: 1px solid var(--border-1);
+  border: 1px solid var(--el-border-color-lighter);
 }
 
 .ai-response-content p {
   margin: 0;
-  color: var(--text-strong);
+  color: var(--el-text-color-primary);
 }
 </style>

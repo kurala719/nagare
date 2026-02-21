@@ -146,13 +146,16 @@ type NetworkStatusHistory struct {
 // Alert represents an alert/notification
 type Alert struct {
 	gorm.Model
-	Message  string
-	Severity int
-	Status   int  // 0 = active, 1 = acknowledged, 2 = resolved
-	AlarmID  uint `gorm:"column:alarm_id"`
-	HostID   uint
-	ItemID   uint
-	Comment  string
+	Message   string
+	Severity  int
+	Status    int  // 0 = active, 1 = acknowledged, 2 = resolved
+	AlarmID   uint `gorm:"column:alarm_id"`
+	HostID    uint
+	ItemID    uint
+	Comment   string
+	HostName  string `gorm:"-"`
+	ItemName  string `gorm:"-"`
+	AlarmName string `gorm:"-"`
 }
 
 // Media represents a notification delivery target

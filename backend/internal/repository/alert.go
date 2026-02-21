@@ -1,18 +1,20 @@
 package repository
 
 import (
-	"errors"
-
 	"nagare/internal/database"
 	"nagare/internal/model"
-
-	"gorm.io/gorm"
 )
 
 // GetAllAlertsDAO retrieves all alerts from the database
 func GetAllAlertsDAO() ([]model.Alert, error) {
 	var alerts []model.Alert
-	if err := database.DB.Find(&alerts).Error; err != nil {
+	if err := database.DB.Model(&model.Alert{}).
+		Select("alerts.*, hosts.name as host_name, items.name as item_name, alarms.name as alarm_name").
+		Joins("left join hosts on hosts.id = alerts.host_id").
+		Joins("left join items on items.id = alerts.item_id").
+		Joins("left join alarms on alarms.id = alerts.alarm_id").
+		Order("alerts.id desc").
+		Scan(&alerts).Error; err != nil {
 		return nil, err
 	}
 	return alerts, nil
@@ -20,34 +22,39 @@ func GetAllAlertsDAO() ([]model.Alert, error) {
 
 // SearchAlertsDAO retrieves alerts by filter
 func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
-	query := database.DB.Model(&model.Alert{})
+	query := database.DB.Model(&model.Alert{}).
+		Select("alerts.*, hosts.name as host_name, items.name as item_name, alarms.name as alarm_name").
+		Joins("left join hosts on hosts.id = alerts.host_id").
+		Joins("left join items on items.id = alerts.item_id").
+		Joins("left join alarms on alarms.id = alerts.alarm_id")
+
 	if filter.Query != "" {
-		query = query.Where("message LIKE ?", "%"+filter.Query+"%")
+		query = query.Where("alerts.message LIKE ?", "%"+filter.Query+"%")
 	}
 	if filter.Severity != nil {
-		query = query.Where("severity = ?", *filter.Severity)
+		query = query.Where("alerts.severity = ?", *filter.Severity)
 	}
 	if filter.Status != nil {
-		query = query.Where("status = ?", *filter.Status)
+		query = query.Where("alerts.status = ?", *filter.Status)
 	}
 	if filter.AlarmID != nil {
-		query = query.Where("alarm_id = ?", *filter.AlarmID)
+		query = query.Where("alerts.alarm_id = ?", *filter.AlarmID)
 	}
 	if filter.HostID != nil {
-		query = query.Where("host_id = ?", *filter.HostID)
+		query = query.Where("alerts.host_id = ?", *filter.HostID)
 	}
 	if filter.ItemID != nil {
-		query = query.Where("item_id = ?", *filter.ItemID)
+		query = query.Where("alerts.item_id = ?", *filter.ItemID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "message",
-		"message":    "message",
-		"severity":   "severity",
-		"status":     "status",
-		"created_at": "created_at",
-		"updated_at": "updated_at",
-		"id":         "id",
-	}, "id desc")
+		"name":       "alerts.message",
+		"message":    "alerts.message",
+		"severity":   "alerts.severity",
+		"status":     "alerts.status",
+		"created_at": "alerts.created_at",
+		"updated_at": "alerts.updated_at",
+		"id":         "alerts.id",
+	}, "alerts.id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}
@@ -55,7 +62,7 @@ func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 		query = query.Offset(filter.Offset)
 	}
 	var alerts []model.Alert
-	if err := query.Find(&alerts).Error; err != nil {
+	if err := query.Scan(&alerts).Error; err != nil {
 		return nil, err
 	}
 	return alerts, nil
@@ -92,11 +99,17 @@ func CountAlertsDAO(filter model.AlertFilter) (int64, error) {
 // GetAlertByIDDAO retrieves an alert by ID
 func GetAlertByIDDAO(id int) (model.Alert, error) {
 	var alert model.Alert
-	err := database.DB.First(&alert, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return alert, model.ErrNotFound
+	err := database.DB.Model(&model.Alert{}).
+		Select("alerts.*, hosts.name as host_name, items.name as item_name, alarms.name as alarm_name").
+		Joins("left join hosts on hosts.id = alerts.host_id").
+		Joins("left join items on items.id = alerts.item_id").
+		Joins("left join alarms on alarms.id = alerts.alarm_id").
+		Where("alerts.id = ?", id).
+		Scan(&alert).Error
+	if err != nil {
+		return alert, err
 	}
-	return alert, err
+	return alert, nil
 }
 
 // AddAlertDAO creates a new alert

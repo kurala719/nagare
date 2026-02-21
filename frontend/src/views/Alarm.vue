@@ -749,17 +749,18 @@ export default {
     async onSetupMedia(alarm: Alarm) {
       alarm.setting_up_media = true;
       try {
-        await setupAlarmMedia(alarm.id);
+        const response = await setupAlarmMedia(alarm.id);
+        const result = response?.data || response;
         ElMessage({
           type: 'success',
-          message: 'Media type setup successfully in Zabbix!',
+          message: result?.message || 'Zabbix initialization completed (media/user/action bound)!',
         });
       } catch (err) {
         ElMessage({
           type: 'error',
-          message: 'Failed to setup media type: ' + (err.response?.data?.error || err.message || 'Unknown error'),
+          message: 'Failed to initialize Zabbix alarm integration: ' + (err.response?.data?.error || err.message || 'Unknown error'),
         });
-        console.error('Error setting up media type:', err);
+        console.error('Error initializing Zabbix alarm integration:', err);
       } finally {
         alarm.setting_up_media = false;
       }

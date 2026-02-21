@@ -613,9 +613,13 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 	hosts := make([]HostResp, 0, len(monitorHosts))
 	for _, h := range monitorHosts {
 		activeAvailable := ""
+		statusDesc := ""
 		if h.Metadata != nil {
 			if value, ok := h.Metadata["active_available"]; ok {
 				activeAvailable = value
+			}
+			if value, ok := h.Metadata["status_description"]; ok {
+				statusDesc = value
 			}
 		}
 		status := mapMonitorHostStatus(h.Status, activeAvailable)
@@ -626,7 +630,7 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 			IPAddr:      h.IPAddress,
 			Enabled:     1,
 			Status:      status,
-			StatusDesc:  "",
+			StatusDesc:  statusDesc,
 		})
 	}
 	return hosts, nil
@@ -902,6 +906,12 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			}
 		}
 		status := mapMonitorHostStatus(h.Status, activeAvailable)
+		statusDesc := ""
+		if h.Metadata != nil {
+			if value, ok := h.Metadata["status_description"]; ok {
+				statusDesc = value
+			}
+		}
 
 		existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 
@@ -914,19 +924,20 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		if err == nil {
 			// Host exists, update it
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-				Name:           h.Name,
-				Hostid:         h.ID,
-				MonitorID:      mid,
-				GroupID:        groupID,
-				Description:    h.Description,
-				Enabled:        existingHost.Enabled,
-				Status:         status,
-				IPAddr:         h.IPAddress,
-				SSHUser:        existingHost.SSHUser,
-				SSHPassword:    "", // UpdateHostDAO won't update if empty
-				SSHPort:        existingHost.SSHPort,
-				LastSyncAt:     &now,
-				ExternalSource: monitor.Name,
+				Name:              h.Name,
+				Hostid:            h.ID,
+				MonitorID:         mid,
+				GroupID:           groupID,
+				Description:       h.Description,
+				Enabled:           existingHost.Enabled,
+				Status:            status,
+				StatusDescription: statusDesc,
+				IPAddr:            h.IPAddress,
+				SSHUser:           existingHost.SSHUser,
+				SSHPassword:       "", // UpdateHostDAO won't update if empty
+				SSHPort:           existingHost.SSHPort,
+				LastSyncAt:        &now,
+				ExternalSource:    monitor.Name,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -942,16 +953,17 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		} else {
 			// Host doesn't exist, add it
 			if err := repository.AddHostDAO(model.Host{
-				Name:           h.Name,
-				Hostid:         h.ID,
-				MonitorID:      mid,
-				GroupID:        groupID,
-				Description:    h.Description,
-				Enabled:        1,
-				Status:         status,
-				IPAddr:         h.IPAddress,
-				LastSyncAt:     &now,
-				ExternalSource: monitor.Name,
+				Name:              h.Name,
+				Hostid:            h.ID,
+				MonitorID:         mid,
+				GroupID:           groupID,
+				Description:       h.Description,
+				Enabled:           1,
+				Status:            status,
+				StatusDescription: statusDesc,
+				IPAddr:            h.IPAddress,
+				LastSyncAt:        &now,
+				ExternalSource:    monitor.Name,
 			}); err != nil {
 				setMonitorStatusError(mid)
 				LogService("error", "pull hosts failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")

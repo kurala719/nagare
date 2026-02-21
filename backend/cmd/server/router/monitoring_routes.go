@@ -42,6 +42,7 @@ func setupAlarmRoutes(rg *gin.RouterGroup) {
 		alarms.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteAlarmByIDCtrl)
 		alarms.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateAlarmCtrl)
 		alarms.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
+		alarms.POST(":id/setup-media", api.PrivilegesMiddleware(2), api.SetupAlarmMediaCtrl)
 		alarms.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
 	}
 }

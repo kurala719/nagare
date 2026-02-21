@@ -43,6 +43,7 @@ func setupReportRoutes(rg *gin.RouterGroup) {
 		reports.PUT("/config", api.UpdateReportConfigCtrl)
 		reports.POST("/generate/weekly", api.GenerateWeeklyReportCtrl)
 		reports.POST("/generate/monthly", api.GenerateMonthlyReportCtrl)
+		reports.POST("/generate/custom", api.GenerateCustomReportCtrl)
 		reports.DELETE("/:id", api.DeleteReportCtrl)
 		reports.GET("/:id/download", api.DownloadReportCtrl)
 	}

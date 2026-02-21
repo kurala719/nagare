@@ -92,6 +92,14 @@ func GetMonitorByIDServ(id uint) (MonitorResp, error) {
 	return monitorToResp(monitor), nil
 }
 
+// GetMonitorByEventTokenServ retrieves a monitor by event token
+func GetMonitorByEventTokenServ(eventToken string) (model.Monitor, error) {
+	if strings.TrimSpace(eventToken) == "" {
+		return model.Monitor{}, model.ErrUnauthorized
+	}
+	return repository.GetMonitorByEventTokenDAO(eventToken)
+}
+
 // TestMonitorStatusServ performs a live status check for a monitor.
 func TestMonitorStatusServ(id uint) (StatusCheckResult, error) {
 	result, err := CheckMonitorStatusServ(id)

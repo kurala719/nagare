@@ -11,6 +11,8 @@ import (
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
+
+	"github.com/spf13/viper"
 )
 
 // AlarmReq represents an alarm request
@@ -40,6 +42,49 @@ type AlarmResp struct {
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
 	StatusDesc  string `json:"status_description"`
+}
+
+type AlarmSetupMediaResp struct {
+	AlarmID     int    `json:"alarm_id"`
+	WebhookURL  string `json:"webhook_url"`
+	MediaTypeID string `json:"media_type_id"`
+	ActionID    string `json:"action_id"`
+	ActionName  string `json:"action_name"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	EventToken  string `json:"event_token"`
+	Integration string `json:"integration"`
+	Message     string `json:"message"`
+}
+
+func mapAlarmTypeToMonitorType(alarmType int) monitors.MonitorType {
+	switch alarmType {
+	case 1:
+		return monitors.MonitorZabbix
+	case 2, 3:
+		return monitors.MonitorOther
+	default:
+		return monitors.MonitorOther
+	}
+}
+
+func buildAlarmWebhookURL() string {
+	host := strings.TrimSpace(viper.GetString("system.ip_address"))
+	port := viper.GetInt("system.port")
+	if port == 0 {
+		port = 8080
+	}
+
+	if host == "" {
+		host = "localhost"
+	}
+
+	base := strings.TrimRight(host, "/")
+	if strings.HasPrefix(base, "http://") || strings.HasPrefix(base, "https://") {
+		return base + "/api/v1/alerts/webhook"
+	}
+
+	return fmt.Sprintf("http://%s:%d/api/v1/alerts/webhook", base, port)
 }
 
 func generateAlarmEventToken() (string, error) {
@@ -162,16 +207,16 @@ func UpdateAlarmServ(id int, a AlarmReq) error {
 		eventToken = existing.EventToken
 	}
 	updated := model.Alarm{
-		Name:        a.Name,
-		URL:         a.URL,
-		Username:    a.Username,
-		Password:    a.Password,
-		AuthToken:   a.AuthToken,
-		EventToken:  eventToken,
-		Description: a.Description,
-		Type:        a.Type,
-		Enabled:     a.Enabled,
-		Status:      existing.Status,
+		Name:              a.Name,
+		URL:               a.URL,
+		Username:          a.Username,
+		Password:          a.Password,
+		AuthToken:         a.AuthToken,
+		EventToken:        eventToken,
+		Description:       a.Description,
+		Type:              a.Type,
+		Enabled:           a.Enabled,
+		Status:            existing.Status,
 		StatusDescription: existing.StatusDesc,
 	}
 	// Preserve status and description unless enabled state changed
@@ -225,7 +270,7 @@ func LoginAlarmServ(id uint) (AlarmResp, error) {
 
 	client, err := monitors.NewClient(monitors.Config{
 		Name: alarm.Name,
-		Type: monitors.ParseMonitorType(alarm.Type),
+		Type: mapAlarmTypeToMonitorType(alarm.Type),
 		Auth: monitors.AuthConfig{
 			URL:      alarm.URL,
 			Username: alarm.Username,
@@ -259,6 +304,71 @@ func LoginAlarmServ(id uint) (AlarmResp, error) {
 	}
 
 	return updatedAlarm, nil
+}
+
+func SetupAlarmMediaServ(id uint) (AlarmSetupMediaResp, error) {
+	alarm, err := GetAlarmByIDServ(id)
+	if err != nil {
+		return AlarmSetupMediaResp{}, err
+	}
+
+	if alarm.Type != 1 {
+		return AlarmSetupMediaResp{}, fmt.Errorf("%w: setup-media currently supports Zabbix alarm sources only", model.ErrInvalidInput)
+	}
+
+	if strings.TrimSpace(alarm.Username) == "" {
+		return AlarmSetupMediaResp{}, fmt.Errorf("%w: alarm username is required", model.ErrInvalidInput)
+	}
+
+	if strings.TrimSpace(alarm.EventToken) == "" {
+		updatedAlarm, regenErr := RegenerateAlarmEventTokenServ(id)
+		if regenErr != nil {
+			return AlarmSetupMediaResp{}, fmt.Errorf("failed to ensure event token: %w", regenErr)
+		}
+		alarm.EventToken = updatedAlarm.EventToken
+	}
+
+	provider, err := monitors.NewZabbixProvider(monitors.Config{
+		Name: alarm.Name,
+		Type: monitors.MonitorZabbix,
+		Auth: monitors.AuthConfig{
+			URL:      alarm.URL,
+			Username: alarm.Username,
+			Password: alarm.Password,
+			Token:    alarm.AuthToken,
+		},
+		Timeout: 30,
+	})
+	if err != nil {
+		return AlarmSetupMediaResp{}, fmt.Errorf("failed to create zabbix provider: %w", err)
+	}
+
+	ctx := context.Background()
+	result, err := provider.SetupWebhookMediaActionAndUser(ctx, monitors.ZabbixWebhookSetupConfig{
+		WebhookURL:       buildAlarmWebhookURL(),
+		EventToken:       alarm.EventToken,
+		ActionName:       fmt.Sprintf("Nagare Alert Push [%s]", alarm.Name),
+		UserLookup:       alarm.Username,
+		MediaTypeName:    fmt.Sprintf("Nagare Webhook [%s]", alarm.Name),
+		UserMediaSendTo:  "nagare-webhook",
+		ActionEscalation: "1m",
+	})
+	if err != nil {
+		return AlarmSetupMediaResp{}, fmt.Errorf("failed to setup zabbix webhook integration: %w", err)
+	}
+
+	return AlarmSetupMediaResp{
+		AlarmID:     int(id),
+		WebhookURL:  result.WebhookURL,
+		MediaTypeID: result.MediaTypeID,
+		ActionID:    result.ActionID,
+		ActionName:  result.ActionName,
+		UserID:      result.UserID,
+		Username:    result.Username,
+		EventToken:  alarm.EventToken,
+		Integration: "zabbix",
+		Message:     "Zabbix one-click initialization completed: media type created/bound to user/action.",
+	}, nil
 }
 
 // alarmToResp converts a domain Alarm to AlarmResp

@@ -36,6 +36,14 @@ export function generateMonthlyReport() {
   })
 }
 
+export function generateCustomReport(data) {
+  return request({
+    url: '/reports/generate/custom',
+    method: 'post',
+    data
+  })
+}
+
 export function deleteReport(id) {
   return request({
     url: `/reports/${id}`,

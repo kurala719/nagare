@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"nagare/internal/service"
 
@@ -102,6 +103,48 @@ func GenerateWeeklyReportCtrl(c *gin.Context) {
 // GenerateMonthlyReportCtrl handles POST /reports/generate/monthly
 func GenerateMonthlyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateMonthlyReportServ()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	resp := service.ReportResp{
+		ID:         report.ID,
+		ReportType: report.ReportType,
+		Title:      report.Title,
+		Status:     "pending",
+		StatusCode: report.Status,
+	}
+
+	respondSuccess(c, http.StatusCreated, resp)
+}
+
+// GenerateCustomReportCtrl handles POST /reports/generate/custom
+func GenerateCustomReportCtrl(c *gin.Context) {
+	var req struct {
+		Title     string `json:"title"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, "invalid request body")
+		return
+	}
+
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
+	if err != nil {
+		respondBadRequest(c, "invalid start_time format (RFC3339 required)")
+		return
+	}
+
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
+	if err != nil {
+		respondBadRequest(c, "invalid end_time format (RFC3339 required)")
+		return
+	}
+
+	report, err := service.GenerateCustomReportServ(req.Title, startTime, endTime)
 	if err != nil {
 		respondError(c, err)
 		return

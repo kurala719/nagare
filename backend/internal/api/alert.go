@@ -90,12 +90,21 @@ func AlertWebhookCtrl(c *gin.Context) {
 		alarmID = alarm.ID
 		service.LogService("debug", "webhook alarm identified", map[string]interface{}{"alarm_id": alarmID}, nil, "")
 	} else if errors.Is(err, model.ErrNotFound) || errors.Is(err, model.ErrUnauthorized) {
-		if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
-			service.LogService("warn", "webhook token validation failed", map[string]interface{}{"error": err.Error()}, nil, "")
-			respondError(c, err)
-			return
+		// Try to find if it's a monitor token
+		if monitor, mErr := service.GetMonitorByEventTokenServ(eventToken); mErr == nil {
+			service.LogService("debug", "webhook monitor identified from token", map[string]interface{}{"monitor_id": monitor.ID}, nil, "")
+			// Try to find a matching alarm for this monitor by name
+			if alarms, aErr := service.SearchAlarmsServ(model.AlarmFilter{Query: monitor.Name}); aErr == nil && len(alarms) > 0 {
+				alarmID = uint(alarms[0].ID)
+			}
+		} else {
+			if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
+				service.LogService("warn", "webhook token validation failed", map[string]interface{}{"error": err.Error()}, nil, "")
+				respondError(c, err)
+				return
+			}
+			service.LogService("debug", "webhook monitor token validated", nil, nil, "")
 		}
-		service.LogService("debug", "webhook monitor token validated", nil, nil, "")
 	} else {
 		service.LogService("error", "webhook token lookup failed", map[string]interface{}{"error": err.Error()}, nil, "")
 		respondError(c, err)
@@ -228,12 +237,16 @@ func payloadSeverity(payload map[string]interface{}, keys ...string) int {
 func parseSeverityLabel(value string) int {
 	lower := strings.ToLower(strings.TrimSpace(value))
 	switch lower {
-	case "disaster", "critical", "high":
+	case "disaster", "critical":
+		return 4
+	case "high":
 		return 3
 	case "average", "warning", "warn", "medium":
 		return 2
-	case "information", "info", "low", "normal":
+	case "low":
 		return 1
+	case "information", "info", "normal":
+		return 0
 	default:
 		return 0
 	}

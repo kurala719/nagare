@@ -1,8 +1,13 @@
 <template>
   <div class="analytics-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('analytics.title') || 'Trend Analysis' }}</h1>
+      <p class="page-subtitle">{{ $t('analytics.subtitle') || 'Insights and statistical trends from your monitoring data' }}</p>
+    </div>
+
     <el-row :gutter="20">
       <el-col :span="24">
-        <el-card class="chaos-card" bg-color="var(--el-color-danger-light-9)">
+        <el-card class="chaos-card">
           <div class="chaos-header">
             <div class="chaos-info">
               <h3>{{ $t('analytics.chaosTitle') || 'Chaos Simulator' }}</h3>
@@ -18,14 +23,60 @@
     </el-row>
 
     <el-row :gutter="20" class="chart-row">
+      <el-col :span="16">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Alert Trend (Last 14 Days)</span>
+            </div>
+          </template>
+          <div ref="trendChart" class="chart"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Severity Distribution</span>
+            </div>
+          </template>
+          <div ref="severityChart" class="chart"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="chart-row">
       <el-col :span="12">
-        <el-card header="Top Alert Keywords">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Top Alert Keywords</span>
+            </div>
+          </template>
           <div ref="wordChart" class="chart"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card header="Alert Intensity (Heatmap)">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Alert Intensity (Heatmap)</span>
+            </div>
+          </template>
           <div ref="heatmapChart" class="chart"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="chart-row">
+      <el-col :span="24">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Top Noisy Hosts</span>
+            </div>
+          </template>
+          <div ref="hostChart" class="chart" style="height: 300px"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -39,10 +90,18 @@ import * as echarts from 'echarts'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
+const trendChart = ref(null)
+const severityChart = ref(null)
 const wordChart = ref(null)
 const heatmapChart = ref(null)
+const hostChart = ref(null)
+
+let trendChartInstance = null
+let severityChartInstance = null
 let wordChartInstance = null
 let heatmapChartInstance = null
+let hostChartInstance = null
+
 const chaosLoading = ref(false)
 
 const fetchAnalytics = async () => {
@@ -57,25 +116,101 @@ const fetchAnalytics = async () => {
 }
 
 const updateCharts = (data) => {
-  // Update Bar Chart (Top Words)
-  const topWords = data.wordCloud.sort((a, b) => b.value - a.value).slice(0, 10).reverse()
-  wordChartInstance.setOption({
-    yAxis: { data: topWords.map(w => w.name) },
-    series: [{ data: topWords.map(w => w.value) }]
-  })
+  // 1. Trend Chart
+  if (data.trend) {
+    trendChartInstance.setOption({
+      xAxis: { data: data.trend.map(t => t.Date) },
+      series: [{ data: data.trend.map(t => t.Count) }]
+    })
+  }
 
-  // Update Heatmap
-  heatmapChartInstance.setOption({
-    series: [{ data: data.heatmap }]
-  })
+  // 2. Severity Chart
+  if (data.severityDist) {
+    const sevMap = { 0: 'Info', 1: 'Warning', 2: 'Average', 3: 'High', 4: 'Disaster' }
+    const sevColors = ['#909399', '#E6A23C', '#F56C6C', '#CF4444', '#000000']
+    severityChartInstance.setOption({
+      series: [{
+        data: data.severityDist.map(s => ({
+          name: sevMap[s.Severity] || `Level ${s.Severity}`,
+          value: s.Count
+        }))
+      }]
+    })
+  }
+
+  // 3. Word Chart
+  if (data.wordCloud) {
+    const topWords = data.wordCloud.sort((a, b) => b.value - a.value).slice(0, 10).reverse()
+    wordChartInstance.setOption({
+      yAxis: { data: topWords.map(w => w.name) },
+      series: [{ data: topWords.map(w => w.value) }]
+    })
+  }
+
+  // 4. Heatmap
+  if (data.heatmap) {
+    heatmapChartInstance.setOption({
+      series: [{ data: data.heatmap }]
+    })
+  }
+
+  // 5. Host Chart
+  if (data.topHosts) {
+    hostChartInstance.setOption({
+      xAxis: { data: data.topHosts.map(h => h.Name || `Host ${h.HostID}`) },
+      series: [{ data: data.topHosts.map(h => h.Count) }]
+    })
+  }
 }
 
 const initCharts = () => {
+  trendChartInstance = echarts.init(trendChart.value)
+  severityChartInstance = echarts.init(severityChart.value)
   wordChartInstance = echarts.init(wordChart.value)
   heatmapChartInstance = echarts.init(heatmapChart.value)
+  hostChartInstance = echarts.init(hostChart.value)
 
+  // Trend Chart Config
+  trendChartInstance.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', boundaryGap: false, data: [] },
+    yAxis: { type: 'value' },
+    series: [{
+      name: 'Alerts',
+      type: 'line',
+      smooth: true,
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+          { offset: 1, color: 'rgba(24, 144, 255, 0)' }
+        ])
+      },
+      itemStyle: { color: '#1890ff' },
+      data: []
+    }]
+  })
+
+  // Severity Chart Config
+  severityChartInstance.setOption({
+    tooltip: { trigger: 'item' },
+    legend: { bottom: '5%', left: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false, position: 'center' },
+      emphasis: { label: { show: true, fontSize: '20', fontWeight: 'bold' } },
+      labelLine: { show: false },
+      data: []
+    }]
+  })
+
+  // Word Chart Config
   wordChartInstance.setOption({
     tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: [] },
     series: [{ 
@@ -90,6 +225,7 @@ const initCharts = () => {
     }]
   })
 
+  // Heatmap Config
   heatmapChartInstance.setOption({
     tooltip: { position: 'top' },
     visualMap: {
@@ -115,6 +251,19 @@ const initCharts = () => {
       data: []
     }
   })
+
+  // Host Chart Config
+  hostChartInstance.setOption({
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: [], axisLabel: { interval: 0, rotate: 30 } },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      barWidth: '40%',
+      itemStyle: { color: '#f56c6c' },
+      data: []
+    }]
+  })
 }
 
 const triggerChaosStorm = async () => {
@@ -131,18 +280,27 @@ const triggerChaosStorm = async () => {
   }
 }
 
+const handleResize = () => {
+  trendChartInstance?.resize()
+  severityChartInstance?.resize()
+  wordChartInstance?.resize()
+  heatmapChartInstance?.resize()
+  hostChartInstance?.resize()
+}
+
 onMounted(() => {
   initCharts()
   fetchAnalytics()
-  window.addEventListener('resize', () => {
-    wordChartInstance.resize()
-    heatmapChartInstance.resize()
-  })
+  window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
-  wordChartInstance.dispose()
-  heatmapChartInstance.dispose()
+  window.removeEventListener('resize', handleResize)
+  trendChartInstance?.dispose()
+  severityChartInstance?.dispose()
+  wordChartInstance?.dispose()
+  heatmapChartInstance?.dispose()
+  hostChartInstance?.dispose()
 })
 </script>
 
@@ -154,6 +312,7 @@ onBeforeUnmount(() => {
 .chaos-card {
   margin-bottom: 20px;
   border-left: 5px solid var(--el-color-danger);
+  background-color: var(--el-color-danger-light-9);
 }
 
 .chaos-header {
@@ -178,7 +337,15 @@ onBeforeUnmount(() => {
 }
 
 .chart {
-  height: 400px;
+  height: 350px;
   width: 100%;
 }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
 </style>
+

@@ -103,6 +103,16 @@ func GetItemByIDDAO(id uint) (model.Item, error) {
 	return item, err
 }
 
+// GetItemByItemIDDAO retrieves an item by external item ID
+func GetItemByItemIDDAO(itemID string) (model.Item, error) {
+	var item model.Item
+	err := database.DB.Where("itemid = ?", itemID).First(&item).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return item, model.ErrNotFound
+	}
+	return item, err
+}
+
 // GetItemsByHIDDAO retrieves all items for a specific host
 func GetItemsByHIDDAO(hid uint) ([]model.Item, error) {
 	var items []model.Item

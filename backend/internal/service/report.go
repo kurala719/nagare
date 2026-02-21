@@ -39,15 +39,20 @@ type ReportResp struct {
 
 // GenerateWeeklyReportServ triggers a weekly report generation
 func GenerateWeeklyReportServ() (model.Report, error) {
-	return createAndProcessReport("weekly", "Weekly Operations Analytics - "+time.Now().Format("2006-01-02"))
+	return createAndProcessReport("weekly", "Weekly Operations Analytics - "+time.Now().Format("2006-01-02"), nil, nil)
 }
 
 // GenerateMonthlyReportServ triggers a monthly report generation
 func GenerateMonthlyReportServ() (model.Report, error) {
-	return createAndProcessReport("monthly", "Monthly Infrastructure Insight - "+time.Now().Format("2006-01"))
+	return createAndProcessReport("monthly", "Monthly Infrastructure Insight - "+time.Now().Format("2006-01"), nil, nil)
 }
 
-func createAndProcessReport(rtype, title string) (model.Report, error) {
+// GenerateCustomReportServ triggers a custom report generation with specific timeframe
+func GenerateCustomReportServ(title string, start, end time.Time) (model.Report, error) {
+	return createAndProcessReport("custom", title, &start, &end)
+}
+
+func createAndProcessReport(rtype, title string, start, end *time.Time) (model.Report, error) {
 	report := model.Report{
 		ReportType:  rtype,
 		Title:       title,
@@ -59,12 +64,12 @@ func createAndProcessReport(rtype, title string) (model.Report, error) {
 	}
 
 	// Process asynchronously
-	go processReport(report)
+	go processReport(report, start, end)
 
 	return report, nil
 }
 
-func processReport(report model.Report) {
+func processReport(report model.Report, customStart, customEnd *time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
 			LogService("error", "panic in report generation", map[string]interface{}{"panic": r, "report_id": report.ID}, nil, "")
@@ -73,7 +78,7 @@ func processReport(report model.Report) {
 	}()
 
 	// 1. Fetch Aggregated Data
-	data := aggregateAdvancedReportData(report.ReportType)
+	data := aggregateAdvancedReportData(report.ReportType, customStart, customEnd)
 
 	// 2. Save Data to JSON for preview
 	dataJSON, err := json.Marshal(data)
@@ -83,7 +88,6 @@ func processReport(report model.Report) {
 		report.ContentData = string(dataJSON)
 		if err := repository.UpdateReportContentDAO(report.ID, report.ContentData); err != nil {
 			LogService("error", "failed to update report content in DB", map[string]interface{}{"error": err.Error(), "report_id": report.ID}, nil, "")
-			// This might be the column missing error. We continue to try PDF generation.
 		}
 	}
 
@@ -109,7 +113,13 @@ func processReport(report model.Report) {
 
 	// Pie Chart & Line Chart
 	pieBytes, errPie := utils.GeneratePieChart("Host Status", data.StatusDistribution)
-	lineBytes, errLine := utils.GenerateLineChart("Alert Trend", []string{"M", "T", "W", "T", "F", "S", "S"}, data.AlertTrend)
+	
+	// Labels for trend
+	labels := []string{"M", "T", "W", "T", "F", "S", "S"}
+	if report.ReportType == "custom" && customStart != nil && customEnd != nil {
+		labels = []string{"Start", "...", "End"} // Simplified
+	}
+	lineBytes, errLine := utils.GenerateLineChart("Alert Trend", labels, data.AlertTrend)
 
 	if errPie == nil && errLine == nil {
 		m.AddRow(80,
@@ -118,7 +128,7 @@ func processReport(report model.Report) {
 		)
 		m.AddRow(10,
 			text.NewCol(6, "Status Distribution", props.Text{Align: align.Center, Size: 9}),
-			text.NewCol(6, "Weekly Alert Trend", props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, "Alert Trend in Period", props.Text{Align: align.Center, Size: 9}),
 		)
 	} else {
 		m.AddAutoRow(text.NewCol(12, "[Chart Generation Skipped due to data issues]", props.Text{Size: 10, Color: &props.Color{Red: 255}}))
@@ -180,12 +190,24 @@ type AdvancedReportData struct {
 	Summary              string
 }
 
-func aggregateAdvancedReportData(reportType string) AdvancedReportData {
-	days := 7
-	if reportType == "monthly" {
-		days = 30
+func aggregateAdvancedReportData(reportType string, customStart, customEnd *time.Time) AdvancedReportData {
+	var startTime time.Time
+	if customStart != nil {
+		startTime = *customStart
+	} else {
+		days := 7
+		if reportType == "monthly" {
+			days = 30
+		}
+		startTime = time.Now().AddDate(0, 0, -days)
 	}
-	startTime := time.Now().AddDate(0, 0, -days)
+
+	var endTime time.Time
+	if customEnd != nil {
+		endTime = *customEnd
+	} else {
+		endTime = time.Now()
+	}
 
 	data := AdvancedReportData{
 		StatusDistribution: make(map[string]float64),
@@ -195,7 +217,7 @@ func aggregateAdvancedReportData(reportType string) AdvancedReportData {
 
 	// 1. Total Alerts in period
 	var totalAlerts int64
-	database.DB.Model(&model.Alert{}).Where("created_at >= ?", startTime).Count(&totalAlerts)
+	database.DB.Model(&model.Alert{}).Where("created_at >= ? AND created_at <= ?", startTime, endTime).Count(&totalAlerts)
 	data.TotalAlerts = int(totalAlerts)
 
 	// 2. Status Distribution (current)
@@ -215,13 +237,14 @@ func aggregateAdvancedReportData(reportType string) AdvancedReportData {
 		data.StatusDistribution[status]++
 	}
 
-	// 3. Alert Trend (last 7 days)
+	// 3. Alert Trend (split into 7 points for the period)
+	duration := endTime.Sub(startTime)
+	interval := duration / 7
 	for i := 0; i < 7; i++ {
-		dStart := time.Now().AddDate(0, 0, -6+i)
-		dStart = time.Date(dStart.Year(), dStart.Month(), dStart.Day(), 0, 0, 0, 0, dStart.Location())
-		dEnd := dStart.Add(24 * time.Hour)
+		pStart := startTime.Add(interval * time.Duration(i))
+		pEnd := pStart.Add(interval)
 		var count int64
-		database.DB.Model(&model.Alert{}).Where("created_at >= ? AND created_at < ?", dStart, dEnd).Count(&count)
+		database.DB.Model(&model.Alert{}).Where("created_at >= ? AND created_at < ?", pStart, pEnd).Count(&count)
 		data.AlertTrend[i] = float64(count)
 	}
 
@@ -233,7 +256,7 @@ func aggregateAdvancedReportData(reportType string) AdvancedReportData {
 	var frequencies []freqRes
 	database.DB.Model(&model.Alert{}).
 		Select("host_id, count(*) as count").
-		Where("created_at >= ? AND host_id > 0", startTime).
+		Where("created_at >= ? AND created_at <= ? AND host_id > 0", startTime, endTime).
 		Group("host_id").
 		Order("count desc").
 		Limit(5).
