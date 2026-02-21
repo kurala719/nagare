@@ -1,6 +1,6 @@
 {
   "ai": {
-    "analysis_enabled": true,
+    "analysis_enabled": false,
     "notification_guard_enabled": false,
     "provider_id": 1,
     "model": "",
@@ -87,7 +87,7 @@
     "enabled": true,
     "credentials_file": "configs/gmail_credentials.json",
     "token_file": "configs/gmail_token.json",
-    "from": ""
+    "from": "kurala719@gmail.com"
   },
   "jwt": {
     "jwt_ttl": 7200,

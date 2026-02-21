@@ -14,7 +14,7 @@ export function fetchItemData(params) {
 
 export function fetchItemsByHost(hostId) {
   return request({
-    url: `/items?hid=${hostId}`,
+    url: `/items?hid=${hostId}&limit=1000`,
     method: 'get'
   })
 }

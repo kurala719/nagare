@@ -531,6 +531,10 @@ const loadMetricHistory = async () => {
   })
 
   console.log('[HostDetail] All items:', items.value)
+  console.log('[HostDetail] First 10 item names:')
+  items.value.slice(0, 10).forEach((item, idx) => {
+    console.log(`  ${idx}: "${item.name}"`)
+  })
   console.log('[HostDetail] CPU items:', cpuItems)
   console.log('[HostDetail] Memory items:', memItems)
   console.log('[HostDetail] Network items:', netItems)
@@ -776,8 +780,7 @@ const loadData = async () => {
     console.log('[HostDetail] Loaded items:', items.value)
     
     await Promise.allSettled([
-      loadHistory(),
-      loadMetricHistory()
+      loadHistory()
     ])
   } catch (err) {
     console.error('Failed to load host detail data', err)
@@ -785,6 +788,13 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+  
+  // Wait for DOM to update after loading state changes
+  await nextTick()
+  
+  // Load metric history after charts are rendered
+  console.log('[HostDetail] Loading metric history after DOM update...')
+  loadMetricHistory()
 }
 
 const onResize = () => {

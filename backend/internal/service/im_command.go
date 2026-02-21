@@ -16,7 +16,17 @@ func init() {
 		// Whitelist check
 		if strings.HasPrefix(strings.TrimSpace(message), "/") {
 			if !CheckQQWhitelistForCommand(qqID, isGroup) {
-				return "You are not authorized to execute commands.", nil
+				// Fallback check for registered users if not a group
+				allowed := false
+				if !isGroup {
+					if u, err := repository.GetUserByQQDAO(qqID); err == nil && u.ID > 0 {
+						allowed = true
+					}
+				}
+				
+				if !allowed {
+					return "You are not authorized to execute commands.", nil
+				}
 			}
 		}
 
@@ -90,63 +100,54 @@ func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
 	// Check the appropriate whitelist entry
 	whitelist, err := getQQWhitelist(qqID, whitelistType)
 	if err != nil {
-		LogService("warn", "whitelist lookup failed", map[string]interface{}{
+		LogService("info", "whitelist lookup info", map[string]interface{}{
 			"qqID":      qqID,
 			"type":      whitelistType,
 			"error":     err.Error(),
-			"errorType": fmt.Sprintf("%T", err),
 		}, nil, "")
-		return false
-	}
-
-	if whitelist == nil {
-		LogService("warn", "QQ ID not in whitelist (nil)", map[string]interface{}{
-			"qqID": qqID,
-			"type": whitelistType,
-		}, nil, "")
-		return false
-	}
-
-	LogService("info", "whitelist entry found", map[string]interface{}{
-		"qqID":        qqID,
-		"type":        whitelistType,
-		"enabled":     whitelist.Enabled,
-		"can_command": whitelist.CanCommand,
-		"can_receive": whitelist.CanReceive,
-		"nickname":    whitelist.Nickname,
-	}, nil, "")
-
-	// Check if whitelist entry is enabled
-	if whitelist.Enabled == 0 {
-		LogService("info", "whitelist entry disabled", map[string]interface{}{
-			"qqID": qqID,
-			"type": whitelistType,
-		}, nil, "")
-		return false
-	}
-
-	// Check appropriate permission flag
-	if isCommand {
-		allowed := whitelist.CanCommand == 1
-		LogService("info", "whitelist command check", map[string]interface{}{
+		// Don't return false yet, proceed to fallback logic below
+	} else if whitelist != nil {
+		LogService("info", "whitelist entry found", map[string]interface{}{
 			"qqID":        qqID,
 			"type":        whitelistType,
+			"enabled":     whitelist.Enabled,
 			"can_command": whitelist.CanCommand,
-			"allowed":     allowed,
-		}, nil, "")
-		if allowed {
-			return true
-		}
-	} else {
-		allowed := whitelist.CanReceive == 1
-		LogService("info", "whitelist alert check", map[string]interface{}{
-			"qqID":        qqID,
-			"type":        whitelistType,
 			"can_receive": whitelist.CanReceive,
-			"allowed":     allowed,
+			"nickname":    whitelist.Nickname,
 		}, nil, "")
-		if allowed {
-			return true
+
+		// Check if whitelist entry is enabled
+		if whitelist.Enabled == 0 {
+			LogService("info", "whitelist entry disabled", map[string]interface{}{
+				"qqID": qqID,
+				"type": whitelistType,
+			}, nil, "")
+			return false
+		}
+
+		// Check appropriate permission flag
+		if isCommand {
+			allowed := whitelist.CanCommand == 1
+			LogService("info", "whitelist command check", map[string]interface{}{
+				"qqID":        qqID,
+				"type":        whitelistType,
+				"can_command": whitelist.CanCommand,
+				"allowed":     allowed,
+			}, nil, "")
+			if allowed {
+				return true
+			}
+		} else {
+			allowed := whitelist.CanReceive == 1
+			LogService("info", "whitelist alert check", map[string]interface{}{
+				"qqID":        qqID,
+				"type":        whitelistType,
+				"can_receive": whitelist.CanReceive,
+				"allowed":     allowed,
+			}, nil, "")
+			if allowed {
+				return true
+			}
 		}
 	}
 

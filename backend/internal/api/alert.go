@@ -25,6 +25,9 @@ func GetAllAlertsCtrl(c *gin.Context) {
 
 // AlertWebhookCtrl handles POST /alerts/webhook
 func AlertWebhookCtrl(c *gin.Context) {
+	// High-level entry log
+	service.LogService("info", "webhook entry", map[string]interface{}{"method": c.Request.Method, "url": c.Request.URL.String()}, nil, "")
+
 	// Ensure we always respond to prevent Zabbix timeout
 	defer func() {
 		if r := recover(); r != nil {

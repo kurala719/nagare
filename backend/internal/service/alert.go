@@ -131,6 +131,8 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 
 // AddAlertServ creates a new alert
 func AddAlertServ(req AlertReq) error {
+	LogService("info", "AddAlertServ entry", map[string]interface{}{"message": req.Message, "host_id": req.HostID}, nil, "")
+	
 	hostID := req.HostID
 	itemID := req.ItemID
 
@@ -216,24 +218,29 @@ func AddAlertServ(req AlertReq) error {
 	// Trigger Site Message
 	_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
 
+	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	go analyzeAndNotifyAlert(alert)
 	return nil
 }
 
 func analyzeAndNotifyAlert(alert model.Alert) {
+	LogService("info", "starting alert analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
+	
 	if !aiAnalysisEnabled() {
+		LogService("info", "AI analysis disabled, executing actions directly", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 		ExecuteActionsForAlert(alert)
 		return
 	}
 	if alert.Severity < aiAnalysisMinSeverity() {
-		LogService("info", "alert analysis skipped", map[string]interface{}{"alert_id": alert.ID, "severity": alert.Severity, "min_severity": aiAnalysisMinSeverity()}, nil, "")
+		LogService("info", "alert analysis skipped (severity too low)", map[string]interface{}{"alert_id": alert.ID, "severity": alert.Severity, "min_severity": aiAnalysisMinSeverity()}, nil, "")
 		ExecuteActionsForAlert(alert)
 		return
 	}
 
+	LogService("info", "performing AI alert analysis", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	analysis, err := analyzeAlertWithAI(alert)
 	if err != nil {
-		LogService("warn", "alert analysis skipped", map[string]interface{}{"alert_id": alert.ID, "error": err.Error()}, nil, "")
+		LogService("warn", "alert AI analysis failed", map[string]interface{}{"alert_id": alert.ID, "error": err.Error()}, nil, "")
 		ExecuteActionsForAlert(alert)
 		return
 	}
@@ -260,6 +267,7 @@ func analyzeAndNotifyAlert(alert model.Alert) {
 		}, nil, "")
 	}
 
+	LogService("info", "executing actions after analysis", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	ExecuteActionsForAlert(alert)
 }
 

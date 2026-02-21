@@ -52,6 +52,7 @@ func run() error {
 	service.StartAutoSync()
 	service.StartStatusChecks()
 	service.InitQQWSServ()
+	service.LogSystem("info", "background services started", nil, nil, "")
 
 	fmt.Println(">>> Recomputing Action and Trigger statuses...")
 	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
@@ -64,6 +65,7 @@ func run() error {
 		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
 
+	service.LogSystem("info", "initializing router", nil, nil, "")
 	fmt.Println(">>> Initializing Router and starting server...")
 	router.InitRouter()
 	return nil
