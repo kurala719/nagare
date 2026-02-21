@@ -79,7 +79,10 @@ func InitDBTables() error {
 	if err := ensureDefaultAdmin(); err != nil {
 		return err
 	}
-	return ensureDefaultMonitor()
+	if err := ensureDefaultMonitor(); err != nil {
+		return err
+	}
+	return ensureDefaultReportConfig()
 }
 
 func ensureDefaultAdmin() error {
@@ -121,6 +124,29 @@ func ensureDefaultMonitor() error {
 
 	// Enforce Type 1 (SNMP) for ID 1 if it exists
 	return database.DB.Model(&model.Monitor{}).Where("id = ?", 1).Update("type", 1).Error
+}
+
+func ensureDefaultReportConfig() error {
+	var count int64
+	if err := database.DB.Model(&model.ReportConfig{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		config := model.ReportConfig{
+			AutoGenerateWeekly:  0,
+			WeeklyGenerateDay:   "Monday",
+			WeeklyGenerateTime:  "09:00",
+			AutoGenerateMonthly: 0,
+			MonthlyGenerateDate: 1,
+			MonthlyGenerateTime: "09:00",
+			IncludeAlerts:       1,
+			IncludeMetrics:      1,
+			TopHostsCount:       5,
+			EnableLLMSummary:    1,
+		}
+		return database.DB.Create(&config).Error
+	}
+	return nil
 }
 
 func preSchemaUpdates() error {

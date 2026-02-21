@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -26,11 +27,13 @@ func main() {
 
 func run() error {
 	configPath := getConfigPath()
+	fmt.Printf(">>> Loading config from: %s\n", configPath)
 
 	if err := repository.InitConfig(configPath); err != nil {
 		return err
 	}
 
+	fmt.Println(">>> Initializing Database...")
 	if err := database.InitDBFromConfig(); err != nil {
 		return err
 	}
@@ -40,21 +43,27 @@ func run() error {
 
 	service.LogSystem("info", "database connection established", nil, nil, "")
 
+	fmt.Println(">>> Running Database Migrations...")
 	if err := migration.InitDBTables(); err != nil {
 		return err
 	}
+	
+	fmt.Println(">>> Starting Background Services...")
+	service.StartAutoSync()
+	service.StartStatusChecks()
+
+	fmt.Println(">>> Recomputing Action and Trigger statuses...")
 	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
 		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
 
-	service.StartAutoSync()
-	service.StartStatusChecks()
-
 	// Initialize cron scheduler for automated reports
+	fmt.Println(">>> Initializing Cron Scheduler...")
 	if err := service.InitCronScheduler(); err != nil {
 		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
 
+	fmt.Println(">>> Initializing Router and starting server...")
 	router.InitRouter()
 	return nil
 }

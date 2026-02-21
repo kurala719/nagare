@@ -289,7 +289,8 @@ func LoginAlarmServ(id uint) (AlarmResp, error) {
 	}
 
 	authToken := client.GetAuthToken()
-	if authToken == "" {
+	// Only Zabbix currently requires a central auth token from this process
+	if authToken == "" && mapAlarmTypeToMonitorType(alarm.Type) == monitors.MonitorZabbix {
 		return AlarmResp{}, fmt.Errorf("authentication succeeded but no token received")
 	}
 

@@ -95,7 +95,16 @@ func AlertWebhookCtrl(c *gin.Context) {
 			service.LogService("debug", "webhook monitor identified from token", map[string]interface{}{"monitor_id": monitor.ID}, nil, "")
 			// Try to find a matching alarm for this monitor by name
 			if alarms, aErr := service.SearchAlarmsServ(model.AlarmFilter{Query: monitor.Name}); aErr == nil && len(alarms) > 0 {
-				alarmID = uint(alarms[0].ID)
+				for _, a := range alarms {
+					if strings.EqualFold(a.Name, monitor.Name) {
+						alarmID = uint(a.ID)
+						break
+					}
+				}
+			}
+			// If still 0, use the monitor ID. The repository join supports COALESCE(alarms.name, monitors.name).
+			if alarmID == 0 {
+				alarmID = monitor.ID
 			}
 		} else {
 			if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
@@ -112,24 +121,51 @@ func AlertWebhookCtrl(c *gin.Context) {
 	}
 
 	message := payloadString(payload, "message", "msg", "title", "subject", "alert", "alert_message")
-	if strings.TrimSpace(message) == "" {
-		// Try to construct a message from problem/trigger name if message is empty
+	// If message looks like unexpanded Zabbix macros or is empty, try fallback fields
+	if strings.TrimSpace(message) == "" || strings.Contains(message, "{ALERT.") || strings.Contains(message, "{EVENT.") {
 		if name := payloadString(payload, "name", "problem", "trigger_name", "trigger", "event_name"); name != "" {
 			message = name
-		} else {
-			service.LogService("warn", "webhook missing message", map[string]interface{}{"payload_keys": getMapKeys(payload)}, nil, "")
-			respondBadRequest(c, "missing message")
-			return
 		}
+	}
+
+	if strings.TrimSpace(message) == "" {
+		service.LogService("warn", "webhook missing message", map[string]interface{}{"payload_keys": getMapKeys(payload)}, nil, "")
+		respondBadRequest(c, "missing message")
+		return
 	}
 
 	severity := payloadInt(payload, "severity", "level", "event_nseverity", "trigger_severity")
 	hostID := payloadUint(payload, "host_id", "hostid")
 	itemID := payloadUint(payload, "item_id", "itemid")
+	hostName := payloadString(payload, "host", "hostname", "host_name")
+	itemName := payloadString(payload, "item", "itemname", "item_name")
 	comment := payloadString(payload, "comment", "detail", "details")
 	if alarmID == 0 {
 		alarmID = payloadUint(payload, "alarm_id", "alarmid")
 	}
+
+	// Normalize severity if it's from Zabbix
+	if alarmID > 0 {
+		if alarm, err := service.GetAlarmByIDServ(alarmID); err == nil {
+			if alarm.Type == 1 { // Zabbix
+				switch severity {
+				case 5:
+					severity = 4 // Disaster -> Critical
+				case 4:
+					severity = 3 // High -> High
+				case 3:
+					severity = 2 // Average -> Medium
+				case 2:
+					severity = 2 // Warning -> Medium
+				case 1:
+					severity = 1 // Information -> Low
+				case 0:
+					severity = 0 // Not classified -> Info
+				}
+			}
+		}
+	}
+
 	if severity == 0 {
 		severity = payloadSeverity(payload, "severity", "level", "priority", "event_severity", "trigger_severity")
 	}
@@ -137,19 +173,37 @@ func AlertWebhookCtrl(c *gin.Context) {
 		comment = buildAlertContext(payload)
 	}
 
+	statusStr := payloadString(payload, "status", "state", "event_value")
+	status := 0 // Default to open
+	if statusStr != "" {
+		switch strings.ToLower(statusStr) {
+		case "resolved", "ok", "0":
+			status = 2 // Resolved
+		case "acknowledged", "ack":
+			status = 1
+		case "problem", "open", "1":
+			status = 0
+		}
+	}
+
 	service.LogService("info", "webhook creating alert", map[string]interface{}{
 		"alarm_id": alarmID,
 		"severity": severity,
 		"host_id":  hostID,
+		"host_name": hostName,
+		"status":   status,
 		"message":  message[:min(100, len(message))],
 	}, nil, "")
 
 	req := service.AlertReq{
 		Message:  message,
 		Severity: severity,
+		Status:   status,
 		AlarmID:  alarmID,
 		HostID:   hostID,
 		ItemID:   itemID,
+		HostName: hostName,
+		ItemName: itemName,
 		Comment:  comment,
 	}
 
@@ -203,6 +257,10 @@ func payloadInt(payload map[string]interface{}, keys ...string) int {
 			case int64:
 				return int(v)
 			case string:
+				// If it's a macro placeholder, return 0 instead of trying to parse
+				if strings.Contains(v, "{") && strings.Contains(v, "}") {
+					return 0
+				}
 				if parsed, err := strconv.Atoi(v); err == nil {
 					return parsed
 				}

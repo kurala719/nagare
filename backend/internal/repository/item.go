@@ -11,7 +11,11 @@ import (
 // GetAllItemsDAO retrieves all items from the database
 func GetAllItemsDAO() ([]model.Item, error) {
 	var items []model.Item
-	if err := database.DB.Find(&items).Error; err != nil {
+	if err := database.DB.Model(&model.Item{}).
+		Select("items.*, hosts.name as host_name").
+		Joins("left join hosts on hosts.id = items.hid").
+		Order("items.id desc").
+		Scan(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -19,34 +23,37 @@ func GetAllItemsDAO() ([]model.Item, error) {
 
 // SearchItemsDAO retrieves items by filter
 func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
-	query := database.DB.Model(&model.Item{})
+	query := database.DB.Model(&model.Item{}).
+		Select("items.*, hosts.name as host_name").
+		Joins("left join hosts on hosts.id = items.hid")
+
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 	}
 	if filter.HID != nil {
-		query = query.Where("hid = ?", *filter.HID)
+		query = query.Where("items.hid = ?", *filter.HID)
 	}
 	if filter.ValueType != nil {
-		query = query.Where("value_type = ?", *filter.ValueType)
+		query = query.Where("items.value_type = ?", *filter.ValueType)
 	}
 	if filter.Status != nil {
-		query = query.Where("status = ?", *filter.Status)
+		query = query.Where("items.status = ?", *filter.Status)
 	}
 	if filter.HostID != nil {
-		query = query.Where("hostid = ?", *filter.HostID)
+		query = query.Where("items.hostid = ?", *filter.HostID)
 	}
 	if filter.ItemID != nil {
-		query = query.Where("itemid = ?", *filter.ItemID)
+		query = query.Where("items.itemid = ?", *filter.ItemID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "name",
-		"status":     "status",
-		"enabled":    "enabled",
-		"id":         "id",
-		"value":      "last_value",
-		"created_at": "created_at",
-		"updated_at": "updated_at",
-	}, "id desc")
+		"name":       "items.name",
+		"status":     "items.status",
+		"enabled":    "items.enabled",
+		"id":         "items.id",
+		"value":      "items.last_value",
+		"created_at": "items.created_at",
+		"updated_at": "items.updated_at",
+	}, "items.id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}
@@ -54,7 +61,7 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 		query = query.Offset(filter.Offset)
 	}
 	var items []model.Item
-	if err := query.Find(&items).Error; err != nil {
+	if err := query.Scan(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -96,7 +103,11 @@ func GetItems() ([]model.Item, error) {
 // GetItemByIDDAO retrieves an item by ID
 func GetItemByIDDAO(id uint) (model.Item, error) {
 	var item model.Item
-	err := database.DB.First(&item, id).Error
+	err := database.DB.Model(&model.Item{}).
+		Select("items.*, hosts.name as host_name").
+		Joins("left join hosts on hosts.id = items.hid").
+		Where("items.id = ?", id).
+		First(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return item, model.ErrNotFound
 	}

@@ -20,7 +20,12 @@ type HostWithItems struct {
 // GetAllHostsDAO retrieves all hosts from the database
 func GetAllHostsDAO() ([]model.Host, error) {
 	var hosts []model.Host
-	if err := database.DB.Find(&hosts).Error; err != nil {
+	if err := database.DB.Model(&model.Host{}).
+		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
+		Joins("left join `groups` on `groups`.id = hosts.group_id").
+		Joins("left join monitors on monitors.id = hosts.m_id").
+		Order("hosts.id desc").
+		Scan(&hosts).Error; err != nil {
 		return nil, err
 	}
 	return hosts, nil
@@ -28,34 +33,38 @@ func GetAllHostsDAO() ([]model.Host, error) {
 
 // SearchHostsDAO retrieves hosts by filter
 func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
-	query := database.DB.Model(&model.Host{})
+	query := database.DB.Model(&model.Host{}).
+		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
+		Joins("left join `groups` on `groups`.id = hosts.group_id").
+		Joins("left join monitors on monitors.id = hosts.m_id")
+
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR hostid LIKE ? OR ip_addr LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 	}
 	if filter.MID != nil {
-		query = query.Where("m_id = ?", *filter.MID)
+		query = query.Where("hosts.m_id = ?", *filter.MID)
 	}
 	if filter.GroupID != nil {
-		query = query.Where("group_id = ?", *filter.GroupID)
+		query = query.Where("hosts.group_id = ?", *filter.GroupID)
 	}
 	if filter.Status != nil {
-		query = query.Where("status = ?", *filter.Status)
+		query = query.Where("hosts.status = ?", *filter.Status)
 	}
 	if filter.IPAddr != nil {
-		query = query.Where("ip_addr = ?", *filter.IPAddr)
+		query = query.Where("hosts.ip_addr = ?", *filter.IPAddr)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "name",
-		"status":     "status",
-		"enabled":    "enabled",
-		"m_id":       "m_id",
-		"group_id":   "group_id",
-		"hostid":     "hostid",
-		"ip_addr":    "ip_addr",
-		"created_at": "created_at",
-		"updated_at": "updated_at",
-		"id":         "id",
-	}, "id desc")
+		"name":       "hosts.name",
+		"status":     "hosts.status",
+		"enabled":    "hosts.enabled",
+		"m_id":       "hosts.m_id",
+		"group_id":   "hosts.group_id",
+		"hostid":     "hosts.hostid",
+		"ip_addr":    "hosts.ip_addr",
+		"created_at": "hosts.created_at",
+		"updated_at": "hosts.updated_at",
+		"id":         "hosts.id",
+	}, "hosts.id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}
@@ -63,7 +72,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		query = query.Offset(filter.Offset)
 	}
 	var hosts []model.Host
-	if err := query.Find(&hosts).Error; err != nil {
+	if err := query.Scan(&hosts).Error; err != nil {
 		return nil, err
 	}
 	return hosts, nil
@@ -73,19 +82,19 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 func CountHostsDAO(filter model.HostFilter) (int64, error) {
 	query := database.DB.Model(&model.Host{})
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR hostid LIKE ? OR ip_addr LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 	}
 	if filter.MID != nil {
-		query = query.Where("m_id = ?", *filter.MID)
+		query = query.Where("hosts.m_id = ?", *filter.MID)
 	}
 	if filter.GroupID != nil {
-		query = query.Where("group_id = ?", *filter.GroupID)
+		query = query.Where("hosts.group_id = ?", *filter.GroupID)
 	}
 	if filter.Status != nil {
-		query = query.Where("status = ?", *filter.Status)
+		query = query.Where("hosts.status = ?", *filter.Status)
 	}
 	if filter.IPAddr != nil {
-		query = query.Where("ip_addr = ?", *filter.IPAddr)
+		query = query.Where("hosts.ip_addr = ?", *filter.IPAddr)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -97,7 +106,12 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 // GetHostByIDDAO retrieves a host by ID
 func GetHostByIDDAO(id uint) (model.Host, error) {
 	var host model.Host
-	err := database.DB.First(&host, id).Error
+	err := database.DB.Model(&model.Host{}).
+		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
+		Joins("left join `groups` on `groups`.id = hosts.group_id").
+		Joins("left join monitors on monitors.id = hosts.m_id").
+		Where("hosts.id = ?", id).
+		First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return host, model.ErrNotFound
 	}

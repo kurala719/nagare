@@ -30,6 +30,8 @@ type AlertReq struct {
 	ItemID   uint   `json:"item_id"`
 	AlarmID  uint   `json:"alarm_id"`
 	Comment  string `json:"comment"`
+	HostName string `json:"host_name"`
+	ItemName string `json:"item_name"`
 }
 
 // AlertRes represents an alert response
@@ -150,6 +152,19 @@ func AddAlertServ(req AlertReq) error {
 		}
 	}
 
+	// Fallback to resolving host by Name if ID resolution failed or was 0
+	if hostID == 0 && req.HostName != "" {
+		hosts, err := repository.SearchHostsDAO(model.HostFilter{Query: req.HostName})
+		if err == nil && len(hosts) > 0 {
+			for _, h := range hosts {
+				if strings.EqualFold(h.Name, req.HostName) {
+					hostID = h.ID
+					break
+				}
+			}
+		}
+	}
+
 	// Resolve Item ID
 	if itemID > 0 {
 		if itemID > 10000 {
@@ -165,10 +180,23 @@ func AddAlertServ(req AlertReq) error {
 		}
 	}
 
+	// Fallback to resolving item by Name (scoped to host if available)
+	if itemID == 0 && req.ItemName != "" {
+		items, err := repository.SearchItemsDAO(model.ItemFilter{Query: req.ItemName, HID: &hostID})
+		if err == nil && len(items) > 0 {
+			for _, it := range items {
+				if strings.EqualFold(it.Name, req.ItemName) {
+					itemID = it.ID
+					break
+				}
+			}
+		}
+	}
+
 	alert := model.Alert{
 		Message:  req.Message,
 		Severity: req.Severity,
-		Status:   0,
+		Status:   req.Status,
 		AlarmID:  req.AlarmID,
 		HostID:   hostID,
 		ItemID:   itemID,

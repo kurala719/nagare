@@ -284,8 +284,8 @@ func LoginMonitorServ(id uint) (MonitorResp, error) {
 	}
 
 	authToken := client.GetAuthToken()
-	// SNMP and some other monitor types might not return a central auth token
-	if authToken == "" && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
+	// Only Zabbix currently requires a central auth token from this process
+	if authToken == "" && monitors.ParseMonitorType(monitor.Type) == monitors.MonitorZabbix {
 		return MonitorResp{}, fmt.Errorf("authentication succeeded but no token received")
 	}
 

@@ -122,9 +122,10 @@
                     <div class="meta-item">
                       <el-icon><Monitor /></el-icon>
                       <span class="meta-label">Host:</span>
-                      <router-link v-if="alert.host_id" :to="'/hosts/' + alert.host_id" class="meta-value link">
-                        {{ alert.host_name || 'Host #' + alert.host_id }}
+                      <router-link v-if="alert.host_name" :to="'/hosts/' + alert.host_id" class="meta-value link">
+                        {{ alert.host_name }}
                       </router-link>
+                      <span v-else-if="alert.host_id" class="meta-value">{{ 'Host #' + alert.host_id }}</span>
                       <span v-else class="meta-value">N/A</span>
                     </div>
                   </el-col>
@@ -132,9 +133,10 @@
                     <div class="meta-item">
                       <el-icon><Document /></el-icon>
                       <span class="meta-label">Metric:</span>
-                      <router-link v-if="alert.item_id" :to="'/items/' + alert.item_id" class="meta-value link">
-                        {{ alert.item_name || 'Item #' + alert.item_id }}
+                      <router-link v-if="alert.item_name" :to="'/items/' + alert.item_id" class="meta-value link">
+                        {{ alert.item_name }}
                       </router-link>
+                      <span v-else-if="alert.item_id" class="meta-value">{{ 'Item #' + alert.item_id }}</span>
                       <span v-else class="meta-value">N/A</span>
                     </div>
                   </el-col>
@@ -142,7 +144,7 @@
                     <div class="meta-item">
                       <el-icon><Bell /></el-icon>
                       <span class="meta-label">Source:</span>
-                      <span class="meta-value">{{ alert.alarm_name || 'Manual' }}</span>
+                      <span class="meta-value">{{ alert.alarm_name || 'System' }}</span>
                     </div>
                   </el-col>
                 </el-row>
@@ -543,11 +545,11 @@ export default {
                     status_reason: a.comment || '',
                     created_at: a.created_at || '',
                     host_id: a.host_id,
-                    host_name: a.host_name,
+                    host_name: a.host_name || '',
                     item_id: a.item_id,
-                    item_name: a.item_name,
+                    item_name: a.item_name || '',
                     alarm_id: a.alarm_id,
-                    alarm_name: a.alarm_name
+                    alarm_name: a.alarm_name || ''
                 }));
                 this.alerts = mapped;
                 this.totalAlerts = Number.isFinite(total) ? total : mapped.length;

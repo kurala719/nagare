@@ -73,6 +73,10 @@ func logEntry(logType string, severity int, message string, context map[string]i
 			ctx = string(b)
 		}
 	}
+
+	// Also print to console so it's visible in logs/stdout
+	log.Printf("[%s] [%d] %s %s", logType, severity, message, ctx)
+
 	entry := model.LogEntry{
 		Type:     logType,
 		Severity: severity,

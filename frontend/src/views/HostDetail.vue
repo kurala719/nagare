@@ -1,9 +1,12 @@
 <template>
-  <div class="detail-page">
+  <div class="nagare-container animate-fade-in">
     <div class="detail-header">
-      <div>
-        <h2>{{ host.name || $t('hosts.detailTitle') }}</h2>
-        <p class="subtitle">{{ host.ip_addr || host.hostid || '-' }}</p>
+      <div v-if="host.name">
+        <h1 class="page-title">{{ host.name }}</h1>
+        <p class="page-subtitle">{{ host.ip_addr || host.hostid || '-' }}</p>
+      </div>
+      <div v-else class="page-header">
+        <h1 class="page-title">{{ $t('hosts.detailTitle') }}</h1>
       </div>
       <div class="detail-actions">
         <el-button type="info" @click="$router.push(`/host/${host.id}/terminal`)">
@@ -16,164 +19,185 @@
       </div>
     </div>
 
-    <el-row :gutter="16" class="stats-row">
-      <el-col :xs="12" :md="4">
-        <el-card>
-          <div class="stat-label">Health</div>
-          <div class="stat-value">
-            <el-progress type="circle" :percentage="host.health_score || 0" :width="40" :stroke-width="4" :status="getHealthStatus(host.health_score)" />
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="5">
-        <el-card>
-          <div class="stat-label">{{ $t('items.total') }}</div>
-          <div class="stat-value">{{ stats.totalItems }}</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="5">
-        <el-card>
-          <div class="stat-label">{{ $t('common.statusActive') }}</div>
-          <div class="stat-value">{{ stats.active }}</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="5">
-        <el-card>
-          <div class="stat-label">{{ $t('common.statusError') }}</div>
-          <div class="stat-value">{{ stats.error }}</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="5">
-        <el-card>
-          <div class="stat-label">{{ $t('common.statusSyncing') }}</div>
-          <div class="stat-value">{{ stats.syncing }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div v-if="loading" style="text-align: center; padding: 100px;">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
+      <p style="margin-top: 16px; color: #909399;">{{ $t('common.loading') }}</p>
+    </div>
 
-    <el-row :gutter="16" class="metrics-row">
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>{{ $t('hosts.cpuUsage') || 'CPU' }}</span>
-              <el-tag size="small" type="primary">{{ currentCpu }}%</el-tag>
-            </div>
-          </template>
-          <div ref="cpuChartRef" class="mini-chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>{{ $t('hosts.memoryUsage') || 'Memory' }}</span>
-              <el-tag size="small" type="success">{{ currentMem }}%</el-tag>
-            </div>
-          </template>
-          <div ref="memChartRef" class="mini-chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>{{ $t('hosts.networkTraffic') || 'Network' }}</span>
-              <el-tag size="small" type="warning">{{ currentNet }} KB/s</el-tag>
-            </div>
-          </template>
-          <div ref="netChartRef" class="mini-chart"></div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div v-else-if="error" style="padding: 40px;">
+      <el-alert :title="error" type="error" show-icon :closable="false">
+        <template #default>
+          <el-button size="small" @click="loadData">{{ $t('common.refresh') }}</el-button>
+        </template>
+      </el-alert>
+    </div>
 
-    <el-row :gutter="16">
-      <el-col :xs="24" :lg="12">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>{{ $t('hosts.itemStatusChart') }}</span>
-              <div class="card-actions">
-                <el-switch
-                  v-model="compareMode"
-                  size="small"
-                  :active-text="$t('common.comparePrevious')"
-                  style="margin-right: 8px;"
-                />
-                <el-date-picker
-                  v-model="historyRange"
-                  type="datetimerange"
-                  :shortcuts="historyShortcuts"
-                  :start-placeholder="$t('common.startTime')"
-                  :end-placeholder="$t('common.endTime')"
-                  size="small"
-                  class="range-picker"
-                />
-                <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+    <div v-else>
+      <el-row :gutter="16" class="stats-row">
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">Health</div>
+            <div class="stat-value">
+              <el-progress type="circle" :percentage="host.health_score || 0" :width="40" :stroke-width="4" :status="getHealthStatus(host.health_score)" />
+            </div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">Monitor</div>
+            <div class="stat-value" style="font-size: 14px;">{{ host.monitor_name || '-' }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">Group</div>
+            <div class="stat-value" style="font-size: 14px;">{{ host.group_name || '-' }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('items.total') }}</div>
+            <div class="stat-value">{{ stats.totalItems }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('common.statusActive') }}</div>
+            <div class="stat-value" style="color: var(--el-color-success)">{{ stats.active }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="4">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('common.statusError') }}</div>
+            <div class="stat-value" style="color: var(--el-color-danger)">{{ stats.error }}</div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="16" class="metrics-row">
+        <el-col :xs="24" :lg="8">
+          <el-card shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('hosts.cpuUsage') || 'CPU' }}</span>
+                <el-tag size="small" type="primary">{{ currentCpu }}%</el-tag>
+              </div>
+            </template>
+            <div ref="cpuChartRef" class="mini-chart"></div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :lg="8">
+          <el-card shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('hosts.memoryUsage') || 'Memory' }}</span>
+                <el-tag size="small" type="success">{{ currentMem }}%</el-tag>
+              </div>
+            </template>
+            <div ref="memChartRef" class="mini-chart"></div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :lg="8">
+          <el-card shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('hosts.networkTraffic') || 'Network' }}</span>
+                <el-tag size="small" type="warning">{{ currentNet }} KB/s</el-tag>
+              </div>
+            </template>
+            <div ref="netChartRef" class="mini-chart"></div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="16">
+        <el-col :xs="24" :lg="12">
+          <el-card>
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('hosts.itemStatusChart') }}</span>
+                <div class="card-actions">
+                  <el-switch
+                    v-model="compareMode"
+                    size="small"
+                    :active-text="$t('common.comparePrevious')"
+                    style="margin-right: 8px;"
+                  />
+                  <el-date-picker
+                    v-model="historyRange"
+                    type="datetimerange"
+                    :shortcuts="historyShortcuts"
+                    :start-placeholder="$t('common.startTime')"
+                    :end-placeholder="$t('common.endTime')"
+                    size="small"
+                    class="range-picker"
+                  />
+                  <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+                </div>
+              </div>
+            </template>
+            <el-skeleton v-if="historyLoading" animated :rows="8" />
+            <el-alert
+              v-else-if="historyError"
+              :title="historyError"
+              type="error"
+              show-icon
+              :closable="false"
+              class="chart-alert"
+            />
+            <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
+            <div v-else>
+              <div ref="statusChartRef" class="chart"></div>
+              <div class="status-legend">
+                <span class="legend-title">{{ $t('hosts.statusLegendTitle') }}:</span>
+                <span class="legend-item">
+                  <span class="legend-dot" style="background: #909399;"></span>
+                  0 - {{ $t('common.statusInactive') }}
+                </span>
+                <span class="legend-item">
+                  <span class="legend-dot" style="background: #67C23A;"></span>
+                  1 - {{ $t('common.statusActive') }}
+                </span>
+                <span class="legend-item">
+                  <span class="legend-dot" style="background: #F56C6C;"></span>
+                  2 - {{ $t('common.statusError') }}
+                </span>
+                <span class="legend-item">
+                  <span class="legend-dot" style="background: #E6A23C;"></span>
+                  3 - {{ $t('common.statusSyncing') }}
+                </span>
               </div>
             </div>
-          </template>
-          <el-skeleton v-if="historyLoading" animated :rows="8" />
-          <el-alert
-            v-else-if="historyError"
-            :title="historyError"
-            type="error"
-            show-icon
-            :closable="false"
-            class="chart-alert"
-          />
-          <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
-          <div v-else>
-            <div ref="statusChartRef" class="chart"></div>
-            <div class="status-legend">
-              <span class="legend-title">{{ $t('hosts.statusLegendTitle') }}:</span>
-              <span class="legend-item">
-                <span class="legend-dot" style="background: #909399;"></span>
-                0 - {{ $t('common.statusInactive') }}
-              </span>
-              <span class="legend-item">
-                <span class="legend-dot" style="background: #67C23A;"></span>
-                1 - {{ $t('common.statusActive') }}
-              </span>
-              <span class="legend-item">
-                <span class="legend-dot" style="background: #F56C6C;"></span>
-                2 - {{ $t('common.statusError') }}
-              </span>
-              <span class="legend-item">
-                <span class="legend-dot" style="background: #E6A23C;"></span>
-                3 - {{ $t('common.statusSyncing') }}
-              </span>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="12">
-        <el-card>
-          <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <span>{{ $t('hosts.itemList') }}</span>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="filter-label">{{ $t('hosts.importantOnly') }}</span>
-                <el-switch v-model="showImportantOnly" :active-value="true" :inactive-value="false" />
-                <el-button link size="small" @click="showColumnDialog = true">{{ $t('common.columns') }}</el-button>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :lg="12">
+          <el-card>
+            <template #header>
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span>{{ $t('hosts.itemList') }}</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="filter-label">{{ $t('hosts.importantOnly') }}</span>
+                  <el-switch v-model="showImportantOnly" :active-value="true" :inactive-value="false" />
+                  <el-button link size="small" @click="showColumnDialog = true">{{ $t('common.columns') }}</el-button>
+                </div>
               </div>
-            </div>
-          </template>
-          <el-table :data="displayItems" height="320" border>
-            <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('items.name')" min-width="160" sortable />
-            <el-table-column v-if="visibleColumns.includes('value')" prop="value" :label="$t('items.value')" min-width="140" sortable />
-            <el-table-column v-if="visibleColumns.includes('units')" prop="units" :label="$t('items.units')" min-width="100" sortable />
-            <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('items.status')" min-width="120" sortable>
-              <template #default="{ row }">
-                <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
-                  <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
-                </el-tooltip>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
+            </template>
+            <el-table :data="displayItems" height="320" border>
+              <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('items.name')" min-width="160" sortable />
+              <el-table-column v-if="visibleColumns.includes('value')" prop="value" :label="$t('items.value')" min-width="140" sortable />
+              <el-table-column v-if="visibleColumns.includes('units')" prop="units" :label="$t('items.units')" min-width="100" sortable />
+              <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('items.status')" min-width="120" sortable>
+                <template #default="{ row }">
+                  <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
+                    <el-tag :type="statusTag(row.status)">{{ statusLabel(row.status) }}</el-tag>
+                  </el-tooltip>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
   </div>
 
   <!-- Columns Dialog -->
@@ -256,6 +280,8 @@ const compareMode = ref(false)
 const reportGenerating = ref(false)
 const reportSnapshot = ref(null)
 const reportCanvasRef = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
 const currentCpu = ref(0)
 const currentMem = ref(0)
@@ -660,28 +686,43 @@ const setDefaultHistoryRange = () => {
 const loadData = async () => {
   const hostId = Number(route.params.id)
   if (!hostId) return
-  const hostResp = await getHostById(hostId)
-  const hostData = hostResp.data || hostResp
-  host.value = {
-    id: hostData.id || hostData.ID || hostId,
-    name: hostData.name || hostData.Name || '',
-    ip_addr: hostData.ip_addr || hostData.IPAddr || '',
-    hostid: hostData.hostid || hostData.Hostid || '',
-    health_score: hostData.health_score || hostData.HealthScore || 100,
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    const hostResp = await getHostById(hostId)
+    const hostData = hostResp.data || hostResp
+    host.value = {
+      id: hostData.id || hostData.ID || hostId,
+      name: hostData.name || hostData.Name || '',
+      ip_addr: hostData.ip_addr || hostData.IPAddr || '',
+      hostid: hostData.hostid || hostData.Hostid || '',
+      group_name: hostData.group_name || hostData.GroupName || '',
+      monitor_name: hostData.monitor_name || hostData.MonitorName || '',
+      health_score: hostData.health_score || hostData.HealthScore || 100,
+    }
+    
+    const itemsResp = await fetchItemsByHost(hostId)
+    const itemsData = Array.isArray(itemsResp) ? itemsResp : (itemsResp.data || itemsResp.items || [])
+    items.value = itemsData.map((i) => ({
+      id: i.id || i.ID,
+      name: i.name || i.Name || '',
+      value: i.value || i.Value || '',
+      status: i.status ?? i.Status ?? 0,
+      status_reason: i.Reason || i.reason || i.Error || i.error || i.ErrorMessage || i.error_message || i.LastError || i.last_error || i.Comment || i.comment || '',
+    }))
+    
+    await Promise.allSettled([
+      loadHistory(),
+      loadMetricHistory()
+    ])
+  } catch (err) {
+    console.error('Failed to load host detail data', err)
+    error.value = err.message || 'Failed to load host data'
+  } finally {
+    loading.value = false
   }
-  const itemsResp = await fetchItemsByHost(hostId)
-  const itemsData = Array.isArray(itemsResp) ? itemsResp : (itemsResp.data || itemsResp.items || [])
-  items.value = itemsData.map((i) => ({
-    id: i.id || i.ID,
-    name: i.name || i.Name || '',
-    value: i.value || i.Value || '',
-    status: i.status ?? i.Status ?? 0,
-    status_reason: i.Reason || i.reason || i.Error || i.error || i.ErrorMessage || i.error_message || i.LastError || i.last_error || i.Comment || i.comment || '',
-  }))
-  await Promise.all([
-    loadHistory(),
-    loadMetricHistory()
-  ])
 }
 
 const onResize = () => {

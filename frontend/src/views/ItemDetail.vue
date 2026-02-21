@@ -1,98 +1,122 @@
 <template>
-  <div class="detail-page">
+  <div class="nagare-container animate-fade-in">
     <div class="detail-header">
-      <div>
-        <h2>{{ item.name || $t('items.detailTitle') }}</h2>
-        <p class="subtitle">{{ item.value || '-' }}</p>
+      <div v-if="item.name">
+        <h1 class="page-title">{{ item.name }}</h1>
+        <p class="subtitle">{{ item.value || '-' }} {{ item.units || '' }}</p>
+      </div>
+      <div v-else class="page-header">
+        <h1 class="page-title">{{ $t('items.detailTitle') }}</h1>
       </div>
       <el-button @click="$router.back()">{{ $t('common.back') }}</el-button>
     </div>
 
-    <el-row :gutter="16" class="stats-row">
-      <el-col :xs="12" :md="6">
-        <el-card>
-          <div class="stat-label">{{ $t('items.status') }}</div>
-          <el-tooltip :content="item.status_reason || statusLabel(item.status)" placement="top">
-            <div class="stat-value">{{ statusLabel(item.status) }}</div>
-          </el-tooltip>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="6">
-        <el-card>
-          <div class="stat-label">{{ $t('common.enabled') }}</div>
-          <div class="stat-value">{{ item.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="6">
-        <el-card>
-          <div class="stat-label">{{ $t('items.host') }}</div>
-          <div class="stat-value">{{ item.hid || '-' }}</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :md="6">
-        <el-card>
-          <div class="stat-label">{{ $t('items.comment') }}</div>
-          <div class="stat-value">{{ item.comment || '-' }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div v-if="loading" style="text-align: center; padding: 100px;">
+      <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
+      <p style="margin-top: 16px; color: #909399;">{{ $t('common.loading') }}</p>
+    </div>
 
-    <el-row :gutter="16">
-      <el-col :xs="24" :lg="12">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>{{ $t('items.statusChart') }}</span>
-              <div class="card-actions">
-                <el-switch
-                  v-model="compareMode"
-                  size="small"
-                  :active-text="$t('common.comparePrevious')"
-                  style="margin-right: 8px;"
-                />
-                <el-date-picker
-                  v-model="historyRange"
-                  type="datetimerange"
-                  :shortcuts="historyShortcuts"
-                  :start-placeholder="$t('common.startTime')"
-                  :end-placeholder="$t('common.endTime')"
-                  size="small"
-                  class="range-picker"
-                />
-                <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+    <div v-else-if="error" style="padding: 40px;">
+      <el-alert :title="error" type="error" show-icon :closable="false">
+        <template #default>
+          <el-button size="small" @click="loadData">{{ $t('common.refresh') }}</el-button>
+        </template>
+      </el-alert>
+    </div>
+
+    <div v-else>
+      <el-row :gutter="16" class="stats-row">
+        <el-col :xs="12" :md="6">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('items.status') }}</div>
+            <el-tooltip :content="item.status_reason || statusLabel(item.status)" placement="top">
+              <div class="stat-value">
+                <el-tag :type="statusTag(item.status)" effect="dark">{{ statusLabel(item.status) }}</el-tag>
               </div>
+            </el-tooltip>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="6">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('common.enabled') }}</div>
+            <div class="stat-value">{{ item.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="6">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('items.host') }}</div>
+            <div class="stat-value">
+              <router-link :to="'/host/' + item.hid + '/detail'" class="detail-link">
+                {{ item.host_name || '#' + item.hid }}
+              </router-link>
             </div>
-          </template>
-          <el-skeleton v-if="historyLoading" animated :rows="8" />
-          <el-alert
-            v-else-if="historyError"
-            :title="historyError"
-            type="error"
-            show-icon
-            :closable="false"
-            class="chart-alert"
-          />
-          <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
-          <div v-else ref="statusChartRef" class="chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="12">
-        <el-card>
-          <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <span>{{ $t('items.details') }}</span>
-              <el-button link size="small" @click="showColumnDialog = true">{{ $t('common.columns') }}</el-button>
-            </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item v-if="visibleColumns.includes('name')" :label="$t('items.name')">{{ item.name || '-' }}</el-descriptions-item>
-            <el-descriptions-item v-if="visibleColumns.includes('value')" :label="$t('items.value')">{{ item.value || '-' }}</el-descriptions-item>
-            <el-descriptions-item v-if="visibleColumns.includes('status')" :label="$t('items.status')">{{ statusLabel(item.status) }}</el-descriptions-item>
-            <el-descriptions-item v-if="visibleColumns.includes('comment')" :label="$t('items.comment')">{{ item.comment || '-' }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
+          </el-card>
+        </el-col>
+        <el-col :xs="12" :md="6">
+          <el-card shadow="never">
+            <div class="stat-label">{{ $t('items.comment') }}</div>
+            <div class="stat-value">{{ item.comment || '-' }}</div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="16">
+        <el-col :xs="24" :lg="12">
+          <el-card>
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('items.statusChart') }}</span>
+                <div class="card-actions">
+                  <el-switch
+                    v-model="compareMode"
+                    size="small"
+                    :active-text="$t('common.comparePrevious')"
+                    style="margin-right: 8px;"
+                  />
+                  <el-date-picker
+                    v-model="historyRange"
+                    type="datetimerange"
+                    :shortcuts="historyShortcuts"
+                    :start-placeholder="$t('common.startTime')"
+                    :end-placeholder="$t('common.endTime')"
+                    size="small"
+                    class="range-picker"
+                  />
+                  <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+                </div>
+              </div>
+            </template>
+            <el-skeleton v-if="historyLoading" animated :rows="8" />
+            <el-alert
+              v-else-if="historyError"
+              :title="historyError"
+              type="error"
+              show-icon
+              :closable="false"
+              class="chart-alert"
+            />
+            <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
+            <div v-else ref="statusChartRef" class="chart"></div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :lg="12">
+          <el-card>
+            <template #header>
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span>{{ $t('items.details') }}</span>
+                <el-button link size="small" @click="showColumnDialog = true">{{ $t('common.columns') }}</el-button>
+              </div>
+            </template>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item v-if="visibleColumns.includes('name')" :label="$t('items.name')">{{ item.name || '-' }}</el-descriptions-item>
+              <el-descriptions-item v-if="visibleColumns.includes('value')" :label="$t('items.value')">{{ item.value || '-' }} {{ item.units || '' }}</el-descriptions-item>
+              <el-descriptions-item v-if="visibleColumns.includes('status')" :label="$t('items.status')">{{ statusLabel(item.status) }}</el-descriptions-item>
+              <el-descriptions-item v-if="visibleColumns.includes('comment')" :label="$t('items.comment')">{{ item.comment || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
   </div>
 
   <!-- Columns Dialog -->
@@ -121,6 +145,8 @@ const historyLoading = ref(false)
 const historyError = ref(null)
 const historyEmpty = ref(false)
 const compareMode = ref(false)
+const loading = ref(false)
+const error = ref(null)
 const historyShortcuts = [
   {
     text: '1h',
@@ -203,6 +229,19 @@ const statusLabel = (status) => {
       return t('common.statusSyncing')
     default:
       return t('common.statusInactive')
+  }
+}
+
+const statusTag = (status) => {
+  switch (status) {
+    case 1:
+      return 'success'
+    case 2:
+      return 'danger'
+    case 3:
+      return 'warning'
+    default:
+      return 'info'
   }
 }
 
@@ -383,19 +422,31 @@ const setDefaultHistoryRange = () => {
 const loadData = async () => {
   const itemId = Number(route.params.id)
   if (!itemId) return
-  const resp = await getItemById(itemId)
-  const data = resp.data || resp
-  item.value = {
-    id: data.id || data.ID,
-    name: data.name || data.Name || '',
-    value: data.value || data.Value || '',
-    status: data.status ?? data.Status ?? 0,
-    enabled: data.enabled ?? data.Enabled ?? 1,
-    hid: data.hid || data.HID,
-    comment: data.comment || data.Comment || '',
-    status_reason: data.Reason || data.reason || data.Error || data.error || data.ErrorMessage || data.error_message || data.LastError || data.last_error || '',
+  
+  loading.value = true
+  error.value = null
+  
+  try {
+    const resp = await getItemById(itemId)
+    const data = resp.data || resp
+    item.value = {
+      id: data.id || data.ID,
+      name: data.name || data.Name || '',
+      value: data.value || data.Value || '',
+      units: data.units || data.Units || '',
+      status: data.status ?? data.Status ?? 0,
+      enabled: data.enabled ?? data.Enabled ?? 1,
+      hid: data.hid || data.HID,
+      comment: data.comment || data.Comment || '',
+      status_reason: data.Reason || data.reason || data.Error || data.error || data.ErrorMessage || data.error_message || data.LastError || data.last_error || '',
+    }
+    await loadHistory()
+  } catch (err) {
+    console.error('Failed to load item detail data', err)
+    error.value = err.message || 'Failed to load item data'
+  } finally {
+    loading.value = false
   }
-  await loadHistory()
 }
 
 const onResize = () => {

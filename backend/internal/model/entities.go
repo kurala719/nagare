@@ -39,6 +39,8 @@ type Host struct {
 	LastSyncAt          *time.Time
 	ExternalSource      string `gorm:"column:external_source"`
 	HealthScore         int    `gorm:"column:health_score;default:100"`
+	GroupName           string `gorm:"->"`
+	MonitorName         string `gorm:"->"`
 }
 
 // Group represents a logical group of hosts
@@ -104,6 +106,7 @@ type Item struct {
 	Comment           string
 	LastSyncAt        *time.Time
 	ExternalSource    string `gorm:"column:external_source"`
+	HostName          string `gorm:"->"`
 }
 
 // ItemHistory tracks item metric values over time.
@@ -153,9 +156,9 @@ type Alert struct {
 	HostID    uint
 	ItemID    uint
 	Comment   string
-	HostName  string `gorm:"-"`
-	ItemName  string `gorm:"-"`
-	AlarmName string `gorm:"-"`
+	HostName  string `gorm:"->"`
+	ItemName  string `gorm:"->"`
+	AlarmName string `gorm:"->"`
 }
 
 // Media represents a notification delivery target

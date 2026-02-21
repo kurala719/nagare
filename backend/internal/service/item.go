@@ -33,6 +33,7 @@ type ItemResp struct {
 	ID             uint       `json:"id"`
 	Name           string     `json:"name"`
 	HID            uint       `json:"hid"`
+	HostName       string     `json:"host_name"`
 	Value          string     `json:"value"`
 	Units          string     `json:"units"`
 	Enabled        int        `json:"enabled"`
@@ -258,15 +259,13 @@ func AddItemsByHostIDFromMonitorServ(hid uint) error {
 		return fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
-	// Use existing auth token if available
-	if monitor.AuthToken != "" {
-		client.SetAuthToken(monitor.AuthToken)
-	} else if monitor.ID != 1 {
-		if err := client.Authenticate(context.Background()); err != nil {
-			setMonitorStatusError(host.MonitorID)
-			setHostStatusError(hid)
-			LogService("error", "import items failed to authenticate", map[string]interface{}{"monitor_id": host.MonitorID, "host_id": hid, "error": err.Error()}, nil, "")
-			return fmt.Errorf("failed to authenticate with monitor: %w", err)
+	// Always attempt authentication to refresh token if needed
+	if err := client.Authenticate(context.Background()); err != nil {
+		LogService("warn", "authentication failed, attempting with existing token", map[string]interface{}{"monitor_id": host.MonitorID, "error": err.Error()}, nil, "")
+		if monitor.AuthToken != "" {
+			client.SetAuthToken(monitor.AuthToken)
+		} else if monitor.ID != 1 {
+			return fmt.Errorf("authentication failed and no existing token: %w", err)
 		}
 	}
 
@@ -361,6 +360,7 @@ func itemToResp(item model.Item) ItemResp {
 		ID:             item.ID,
 		Name:           item.Name,
 		HID:            item.HID,
+		HostName:       item.HostName,
 		Value:          item.LastValue,
 		Units:          item.Units,
 		Enabled:        item.Enabled,
@@ -377,6 +377,7 @@ func PullItemsFromMonitorServ(mid uint) (SyncResult, error) {
 }
 
 func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
+	LogService("info", "item sync started", map[string]interface{}{"monitor_id": mid}, nil, "")
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
 	if mid != 1 {
@@ -535,14 +536,14 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
-	// Use existing auth token if available
-	if monitor.AuthToken != "" {
-		client.SetAuthToken(monitor.AuthToken)
-	} else {
-		if err := client.Authenticate(context.Background()); err != nil {
+	// Always attempt authentication to refresh token if needed
+	if err := client.Authenticate(context.Background()); err != nil {
+		LogService("warn", "authentication failed, attempting with existing token", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
+		if monitor.AuthToken != "" {
+			client.SetAuthToken(monitor.AuthToken)
+		} else if mid != 1 {
 			setHostStatusErrorWithReason(hid, err.Error())
-			LogService("error", "pull items failed to authenticate", map[string]interface{}{"monitor_id": mid, "host_id": hid, "error": err.Error()}, nil, "")
-			return result, fmt.Errorf("failed to authenticate with monitor: %w", err)
+			return result, fmt.Errorf("authentication failed and no existing token: %w", err)
 		}
 	}
 

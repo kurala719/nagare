@@ -60,13 +60,13 @@ type zabbixHost struct {
 	JmxAvailable  interface{} `json:"jmx_available"`
 	JmxError      string      `json:"jmx_error"`
 	Interfaces    []struct {
-		InterfaceID string `json:"interfaceid"`
-		IP          string `json:"ip"`
-		DNS         string `json:"dns"`
-		Port        string `json:"port"`
-		Type        string `json:"type"`
-		Main        string `json:"main"`
-		UseIP       string `json:"useip"`
+		InterfaceID interface{} `json:"interfaceid"`
+		IP          string      `json:"ip"`
+		DNS         string      `json:"dns"`
+		Port        interface{} `json:"port"`
+		Type        interface{} `json:"type"`
+		Main        interface{} `json:"main"`
+		UseIP       interface{} `json:"useip"`
 	} `json:"interfaces"`
 }
 
@@ -274,6 +274,23 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 
 // Authenticate implements the Provider interface
 func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
+	// If we already have a token and no credentials, try to verify the token
+	if p.authToken != "" && (p.username == "" || p.password == "") {
+		_, err := p.sendRequest(ctx, "user.get", map[string]interface{}{
+			"output": []string{"userid"},
+			"limit":  1,
+		})
+		if err == nil {
+			// Token is valid
+			return nil
+		}
+		// If token verification fails, and we have no credentials, we can't do anything
+		if p.username == "" || p.password == "" {
+			return fmt.Errorf("provided token is invalid and no credentials supplied for login")
+		}
+	}
+
+	// Otherwise, proceed with normal user.login
 	params := map[string]interface{}{
 		"username": p.username,
 		"password": p.password,
@@ -301,7 +318,17 @@ func (p *ZabbixProvider) Authenticate(ctx context.Context) error {
 
 	var token string
 	if err := json.Unmarshal(resp.Result, &token); err != nil {
-		return fmt.Errorf("failed to parse auth token: %w", err)
+		// Some Zabbix versions might return the token wrapped in a different way or 
+		// if it's already an API token used as password, we might need different handling.
+		// For now, try to catch empty result.
+		if string(resp.Result) == "null" || string(resp.Result) == "" {
+			return fmt.Errorf("authentication succeeded but Zabbix returned an empty token")
+		}
+		return fmt.Errorf("failed to parse auth token: %w (result: %s)", err, string(resp.Result))
+	}
+
+	if token == "" {
+		return fmt.Errorf("authentication succeeded but received empty token string")
 	}
 
 	p.authToken = token
@@ -321,9 +348,8 @@ func (p *ZabbixProvider) SetAuthToken(token string) {
 // GetHosts implements the Provider interface
 func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
-		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
-		"selectHostGroups": "extend",
+		"output":           "extend",
+		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
 	}
 
@@ -338,9 +364,8 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 // GetHostsByGroupID implements the Provider interface
 func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
-		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
-		"selectHostGroups": "extend",
+		"output":           "extend",
+		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
 		"groupids":         groupID,
 	}
@@ -444,9 +469,8 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 // GetHostByName implements the Provider interface
 func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host, error) {
 	params := map[string]interface{}{
-		"output":           []string{"hostid", "host", "name", "description", "status", "available", "error", "snmp_available", "snmp_error", "ipmi_available", "ipmi_error", "jmx_available", "jmx_error"},
-		"selectInterfaces": []string{"interfaceid", "ip", "dns", "port", "type", "main", "useip"},
-		"selectHostGroups": "extend",
+		"output":           "extend",
+		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
 		"filter": map[string]interface{}{
 			"host": []string{name},
@@ -907,7 +931,7 @@ func (p *ZabbixProvider) getPrimaryInterface(ctx context.Context, hostID string)
 	}
 	selected := zabbixHosts[0].Interfaces[0]
 	for _, iface := range zabbixHosts[0].Interfaces {
-		if iface.Main == "1" {
+		if toString(iface.Main) == "1" {
 			selected = iface
 			break
 		}
@@ -921,13 +945,13 @@ func (p *ZabbixProvider) getPrimaryInterface(ctx context.Context, hostID string)
 		Main        string
 		UseIP       string
 	}{
-		InterfaceID: selected.InterfaceID,
+		InterfaceID: toString(selected.InterfaceID),
 		IP:          selected.IP,
 		DNS:         selected.DNS,
-		Port:        selected.Port,
-		Type:        selected.Type,
-		Main:        selected.Main,
-		UseIP:       selected.UseIP,
+		Port:        toString(selected.Port),
+		Type:        toString(selected.Type),
+		Main:        toString(selected.Main),
+		UseIP:       toString(selected.UseIP),
 	}, nil
 }
 
@@ -947,14 +971,14 @@ func (p *ZabbixProvider) GetAlerts(ctx context.Context) ([]Alert, error) {
 	}
 
 	var problems []struct {
-		EventID      string `json:"eventid"`
-		ObjectID     string `json:"objectid"`
-		Name         string `json:"name"`
-		Severity     string `json:"severity"`
-		Acknowledged string `json:"acknowledged"`
-		Clock        string `json:"clock"`
+		EventID      string      `json:"eventid"`
+		ObjectID     string      `json:"objectid"`
+		Name         string      `json:"name"`
+		Severity     interface{} `json:"severity"`
+		Acknowledged interface{} `json:"acknowledged"`
+		Clock        interface{} `json:"clock"`
 		Hosts        []struct {
-			HostID string `json:"hostid"`
+			HostID interface{} `json:"hostid"`
 		} `json:"hosts"`
 	}
 	if err := json.Unmarshal(resp.Result, &problems); err != nil {
@@ -965,7 +989,7 @@ func (p *ZabbixProvider) GetAlerts(ctx context.Context) ([]Alert, error) {
 	for _, prob := range problems {
 		hostID := ""
 		if len(prob.Hosts) > 0 {
-			hostID = prob.Hosts[0].HostID
+			hostID = toString(prob.Hosts[0].HostID)
 		}
 
 		severity := "information"
@@ -1239,11 +1263,16 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 		"req.addHeader('Content-Type: application/json');\n" +
 		"var params = JSON.parse(value);\n" +
 		"var payload = {\n" +
-		"  message: (params.Subject || '') + ' ' + (params.Message || ''),\n" +
-		"  subject: params.Subject || '',\n" +
-		"  severity: params.Severity || '',\n" +
-		"  host_id: params.HostID || '',\n" +
-		"  event_token: params.EventToken\n" +
+		"  message: params.Subject,\n" +
+		"  details: params.Message,\n" +
+		"  severity: params.Severity,\n" +
+		"  host_id: params.HostID,\n" +
+		"  item_id: params.ItemID,\n" +
+		"  host_name: params.HostName,\n" +
+		"  item_name: params.ItemName,\n" +
+		"  event_id: params.EventID,\n" +
+		"  status: params.EventValue == '1' ? 'open' : 'resolved',\n" +
+		"  token: params.EventToken\n" +
 		"};\n" +
 		"var response = req.post(params.URL, JSON.stringify(payload));\n" +
 		"return response;"
@@ -1255,10 +1284,35 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 		"parameters": []map[string]interface{}{
 			{"name": "URL", "value": cfg.WebhookURL},
 			{"name": "EventToken", "value": cfg.EventToken},
-			{"name": "Subject", "value": "{ALERT.SUBJECT}"},
-			{"name": "Message", "value": "{ALERT.MESSAGE}"},
+			{"name": "Subject", "value": "{EVENT.NAME}"},
+			{"name": "Message", "value": "Value: {EVENT.OPDATA}"},
 			{"name": "Severity", "value": "{EVENT.NSEVERITY}"},
 			{"name": "HostID", "value": "{HOST.ID}"},
+			{"name": "HostName", "value": "{HOST.NAME}"},
+			{"name": "ItemID", "value": "{ITEM.ID}"},
+			{"name": "ItemName", "value": "{ITEM.NAME}"},
+			{"name": "EventID", "value": "{EVENT.ID}"},
+			{"name": "EventValue", "value": "{EVENT.VALUE}"},
+		},
+		"message_templates": []map[string]interface{}{
+			{
+				"eventsource": 0, // Triggers
+				"recovery":    0, // Problem
+				"subject":     "{EVENT.NAME}",
+				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
+			},
+			{
+				"eventsource": 0, // Triggers
+				"recovery":    1, // Recovery
+				"subject":     "Resolved: {EVENT.NAME}",
+				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
+			},
+			{
+				"eventsource": 0, // Triggers
+				"recovery":    2, // Update
+				"subject":     "Updated: {EVENT.NAME}",
+				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
+			},
 		},
 		"script": script,
 	}
@@ -1601,11 +1655,35 @@ func (p *ZabbixProvider) findBaseTriggerActionFilter(ctx context.Context) (map[s
 
 	for _, action := range actions {
 		if toString(action.Status) == "0" && len(action.Filter) > 0 {
+			// Clean up read-only fields from filter to prevent action.create failure
+			delete(action.Filter, "eval_formula")
+			delete(action.Filter, "formula")
+			if conds, ok := action.Filter["conditions"].([]interface{}); ok {
+				for i, c := range conds {
+					if condMap, ok := c.(map[string]interface{}); ok {
+						delete(condMap, "conditionid")
+						delete(condMap, "actionid")
+						conds[i] = condMap
+					}
+				}
+				action.Filter["conditions"] = conds
+			}
 			return action.Filter, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no enabled trigger action found in zabbix; please create one action first")
+	// Default fallback: Trigger severity >= Not classified (conditiontype 4, operator 5, value 0)
+	// This ensures setup works even if no actions exist yet, and is compatible with Zabbix 6.0+.
+	return map[string]interface{}{
+		"evaltype": 0, // AND/OR
+		"conditions": []map[string]interface{}{
+			{
+				"conditiontype": 4,
+				"operator":      5,
+				"value":         "0",
+			},
+		},
+	}, nil
 }
 
 // Name returns the provider name

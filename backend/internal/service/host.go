@@ -301,6 +301,8 @@ type HostResp struct {
 	Name        string `json:"name"`
 	MID         uint   `json:"m_id"`
 	GroupID     uint   `json:"group_id"`
+	GroupName   string `json:"group_name"`
+	MonitorName string `json:"monitor_name"`
 	Hostid      string `json:"hostid"`
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
@@ -682,6 +684,8 @@ func hostToResp(h model.Host) HostResp {
 		Name:                h.Name,
 		MID:                 h.MonitorID,
 		GroupID:             h.GroupID,
+		GroupName:           h.GroupName,
+		MonitorName:         h.MonitorName,
 		Hostid:              h.Hostid,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
@@ -826,6 +830,7 @@ func PullHostsFromMonitorServ(mid uint) (SyncResult, error) {
 }
 
 func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
+	LogService("info", "host sync started", map[string]interface{}{"monitor_id": mid}, nil, "")
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
 
@@ -875,12 +880,13 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		return result, fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
-	if monitor.AuthToken != "" {
-		client.SetAuthToken(monitor.AuthToken)
-	} else {
-		if err := client.Authenticate(context.Background()); err != nil {
-			LogService("error", "pull hosts failed to authenticate", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
-			return result, fmt.Errorf("failed to authenticate with monitor: %w", err)
+	// Always attempt authentication to refresh token if needed
+	if err := client.Authenticate(context.Background()); err != nil {
+		LogService("warn", "authentication failed, attempting with existing token", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
+		if monitor.AuthToken != "" {
+			client.SetAuthToken(monitor.AuthToken)
+		} else {
+			return result, fmt.Errorf("authentication failed and no existing token: %w", err)
 		}
 	}
 
@@ -892,6 +898,18 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 	monitorHostIDs := make(map[string]struct{}, len(monitorHosts))
 	for _, h := range monitorHosts {
 		monitorHostIDs[h.ID] = struct{}{}
+		
+		// Dedup check: if this host exists in Nagare Internal (ID 1) AND we already have it in the target monitor, delete the internal one
+		if mid != 1 {
+			internalHost, err := repository.GetHostByMIDAndHostIDDAO(1, h.ID)
+			if err == nil {
+				targetHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+				if err == nil && targetHost.ID != internalHost.ID {
+					LogService("info", "deleting duplicate internal host", map[string]interface{}{"host_name": h.Name, "internal_id": internalHost.ID, "target_id": targetHost.ID}, nil, "")
+					_ = repository.DeleteHostByIDDAO(internalHost.ID)
+				}
+			}
+		}
 	}
 
 	result.Total = len(monitorHosts)
@@ -914,6 +932,17 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		}
 
 		existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+		if err != nil {
+			// Try global search by external ID to prevent duplicates from other monitors (like Nagare Internal)
+			if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
+				// If found globally and it's either in Nagare Internal (ID 1) or has no monitor, adopt it
+				if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
+					existingHost = globalHost
+					err = nil
+					LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": globalHost.MonitorID, "new_mid": mid}, nil, "")
+				}
+			}
+		}
 
 		groupID := uint(0)
 		if err == nil {
@@ -1081,6 +1110,16 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 
 	// Check if host already exists
 	existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+	if err != nil {
+		// Try global search by external ID to prevent duplicates
+		if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
+			if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
+				existingHost = globalHost
+				err = nil
+				LogService("info", "adopting host during single sync", map[string]interface{}{"host_name": h.Name, "new_mid": mid}, nil, "")
+			}
+		}
+	}
 
 	groupID := uint(0)
 	if err == nil {
