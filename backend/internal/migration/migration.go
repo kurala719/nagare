@@ -142,8 +142,8 @@ func preSchemaUpdates() error {
 
 func applySchemaUpdates() error {
 	// Explicitly remove deprecated columns that AutoMigrate does not drop.
-	if database.DB.Migrator().HasColumn(&model.Action{}, "severity_min") {
-		if err := database.DB.Migrator().DropColumn(&model.Action{}, "severity_min"); err != nil {
+	if database.DB.Migrator().HasColumn(&model.Trigger{}, "action_id") {
+		if err := database.DB.Migrator().DropColumn(&model.Trigger{}, "action_id"); err != nil {
 			return err
 		}
 	}

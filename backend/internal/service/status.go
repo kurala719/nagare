@@ -108,17 +108,12 @@ func determineActionStatus(a model.Action, media model.Media) int {
 	return 1
 }
 
-func determineTriggerStatus(t model.Trigger, action model.Action) int {
+func determineTriggerStatus(t model.Trigger) int {
 	if t.Enabled == 0 {
 		return 0
 	}
+	// Entity must be valid (defaults to "item" now)
 	if t.Entity != "" && t.Entity != "alert" && t.Entity != "log" && t.Entity != "item" {
-		return 2
-	}
-	if t.ActionID == 0 || action.ID == 0 {
-		return 2
-	}
-	if action.Status == 2 {
 		return 2
 	}
 	return 1
@@ -456,12 +451,7 @@ func recomputeTriggerStatus(id uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	action, err := repository.GetActionByIDDAO(trigger.ActionID)
-	if err != nil {
-		status := determineTriggerStatus(trigger, model.Action{})
-		return status, repository.UpdateTriggerStatusDAO(id, status)
-	}
-	status := determineTriggerStatus(trigger, action)
+	status := determineTriggerStatus(trigger)
 	if err := repository.UpdateTriggerStatusDAO(id, status); err != nil {
 		return status, err
 	}

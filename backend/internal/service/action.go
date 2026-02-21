@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -17,6 +18,12 @@ type ActionReq struct {
 	Template    string `json:"template"`
 	Enabled     int    `json:"enabled"`
 	Description string `json:"description"`
+	// Filter conditions
+	SeverityMin *int  `json:"severity_min"`
+	TriggerID   *uint `json:"trigger_id"`
+	HostID      *uint `json:"host_id"`
+	GroupID     *uint `json:"group_id"`
+	AlertStatus *int  `json:"alert_status"`
 }
 
 // ActionResp represents an action response
@@ -28,6 +35,12 @@ type ActionResp struct {
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
 	Description string `json:"description"`
+	// Filter conditions
+	SeverityMin *int  `json:"severity_min"`
+	TriggerID   *uint `json:"trigger_id"`
+	HostID      *uint `json:"host_id"`
+	GroupID     *uint `json:"group_id"`
+	AlertStatus *int  `json:"alert_status"`
 }
 
 func GetAllActionsServ() ([]ActionResp, error) {
@@ -74,6 +87,11 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 		Template:    req.Template,
 		Enabled:     req.Enabled,
 		Description: req.Description,
+		SeverityMin: req.SeverityMin,
+		TriggerID:   req.TriggerID,
+		HostID:      req.HostID,
+		GroupID:     req.GroupID,
+		AlertStatus: req.AlertStatus,
 	}
 	if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
 		action.Status = determineActionStatus(action, media)
@@ -98,6 +116,11 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		Enabled:     req.Enabled,
 		Description: req.Description,
 		Status:      existing.Status,
+		SeverityMin: req.SeverityMin,
+		TriggerID:   req.TriggerID,
+		HostID:      req.HostID,
+		GroupID:     req.GroupID,
+		AlertStatus: req.AlertStatus,
 	}
 	// Preserve status unless enabled state or media changed
 	if req.Enabled != existing.Enabled || req.MediaID != existing.MediaID {
@@ -127,6 +150,41 @@ func actionToResp(action model.Action) ActionResp {
 		Enabled:     action.Enabled,
 		Status:      action.Status,
 		Description: action.Description,
+		SeverityMin: action.SeverityMin,
+		TriggerID:   action.TriggerID,
+		HostID:      action.HostID,
+		GroupID:     action.GroupID,
+		AlertStatus: action.AlertStatus,
+	}
+}
+
+// ExecuteActionsForAlert evaluates all active actions against the alert and executes matching ones
+func ExecuteActionsForAlert(alert model.Alert) {
+	// Fetch all enabled actions
+	// Ideally we would have a repository method to get enabled actions only
+	actions, err := repository.GetAllActionsDAO()
+	if err != nil {
+		LogService("error", "failed to load actions for alert execution", map[string]interface{}{"error": err.Error()}, nil, "")
+		return
+	}
+
+	// Prepare context for matching
+	context := buildAlertMatchContext(alert)
+	replacements := buildAlertReplacements(context)
+
+	for _, action := range actions {
+		if action.Enabled == 0 {
+			continue
+		}
+		if matchActionFilter(action, context) {
+			// Get Media
+			media, err := repository.GetMediaByIDDAO(action.MediaID)
+			if err != nil || media.Enabled == 0 {
+				continue
+			}
+			// Execute
+			_ = ExecuteAction(action, media, replacements)
+		}
 	}
 }
 
@@ -141,26 +199,94 @@ func ExecuteAction(action model.Action, media model.Media, replacements map[stri
 	return sendMediaMessage(media, msg)
 }
 
-// ExecuteLogAction sends a log message via the action's media
-func ExecuteLogAction(action model.Action, media model.Media, replacements map[string]string) error {
-	msg := action.Template
-	if msg == "" {
-		msg = "Log: {{message}}"
-	}
-	msg = renderMessageTemplate(msg, replacements)
-	msg = appendLogDetails(msg, replacements)
-	return sendMediaMessage(media, msg)
+type alertMatchContext struct {
+	alert     model.Alert
+	host      *model.Host
+	item      *model.Item
+	monitorID uint
+	groupID   uint
 }
 
-// ExecuteItemAction sends an item update message via the action's media
-func ExecuteItemAction(action model.Action, media model.Media, replacements map[string]string) error {
-	msg := action.Template
-	if msg == "" {
-		msg = "Item: {{name}} = {{value}}{{units}}"
+func buildAlertMatchContext(alert model.Alert) alertMatchContext {
+	ctx := alertMatchContext{alert: alert}
+	if alert.ItemID > 0 {
+		if item, err := repository.GetItemByIDDAO(alert.ItemID); err == nil {
+			ctx.item = &item
+		}
 	}
-	msg = renderMessageTemplate(msg, replacements)
-	msg = appendItemDetails(msg, replacements)
-	return sendMediaMessage(media, msg)
+	if alert.HostID > 0 {
+		if host, err := repository.GetHostByIDDAO(alert.HostID); err == nil {
+			ctx.host = &host
+		}
+	}
+	if ctx.host == nil && ctx.item != nil && ctx.item.HID > 0 {
+		if host, err := repository.GetHostByIDDAO(ctx.item.HID); err == nil {
+			ctx.host = &host
+		}
+	}
+	if ctx.host != nil {
+		ctx.monitorID = ctx.host.MonitorID
+		ctx.groupID = ctx.host.GroupID
+	}
+	return ctx
+}
+
+func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
+	alert := ctx.alert
+	
+	// Severity Check
+	if action.SeverityMin != nil && alert.Severity < *action.SeverityMin {
+		return false
+	}
+	
+	// Status Check
+	if action.AlertStatus != nil && alert.Status != *action.AlertStatus {
+		return false
+	}
+	
+	// Host Check
+	if action.HostID != nil {
+		// Alert must be associated with this host
+		hostID := alert.HostID
+		if ctx.host != nil {
+			hostID = ctx.host.ID
+		}
+		if hostID != *action.HostID {
+			return false
+		}
+	}
+	
+	// Group Check
+	if action.GroupID != nil {
+		if ctx.groupID != *action.GroupID {
+			return false
+		}
+	}
+	
+	// Trigger ID Check - Not applicable as Alert model doesn't store TriggerID directly currently,
+	// but we could infer it if needed. For now, skipping TriggerID match unless we add TriggerID to Alert model.
+	// Since we removed ActionID from Trigger, there is no direct link back unless Alert stores "CreatedByTriggerID".
+	// The current Alert model has AlarmID but not TriggerID.
+	// We will skip this check for now or assume it always passes if set (feature limitation).
+	
+	return true
+}
+
+func buildAlertReplacements(ctx alertMatchContext) map[string]string {
+	alert := ctx.alert
+	return map[string]string{
+		"{{alert_id}}":       fmt.Sprintf("%d", alert.ID),
+		"{{message}}":        alert.Message,
+		"{{severity}}":       fmt.Sprintf("%d", alert.Severity),
+		"{{severity_label}}": severityLabel(alert.Severity),
+		"{{status}}":         fmt.Sprintf("%d", alert.Status),
+		"{{host_id}}":        fmt.Sprintf("%d", alert.HostID),
+		"{{item_id}}":        fmt.Sprintf("%d", alert.ItemID),
+		"{{monitor_id}}":     fmt.Sprintf("%d", ctx.monitorID),
+		"{{group_id}}":       fmt.Sprintf("%d", ctx.groupID),
+		"{{analysis}}":       alert.Comment,
+		"{{created_at}}":     alert.CreatedAt.Format(time.RFC3339),
+	}
 }
 
 func renderMessageTemplate(template string, replacements map[string]string) string {
@@ -184,36 +310,6 @@ func appendAlertDetails(message string, replacements map[string]string) string {
 		"created_at={{created_at}}",
 		"group_id={{group_id}}",
 		"analysis={{analysis}}",
-	}, "\n")
-	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))
-}
-
-func appendLogDetails(message string, replacements map[string]string) string {
-	detailsTemplate := strings.Join([]string{
-		"",
-		"Details:",
-		"log_id={{log_id}}",
-		"type={{type}}",
-		"level={{level}}",
-		"severity={{severity}} ({{severity_label}})",
-		"created_at={{created_at}}",
-		"context={{context}}",
-	}, "\n")
-	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))
-}
-
-func appendItemDetails(message string, replacements map[string]string) string {
-	detailsTemplate := strings.Join([]string{
-		"",
-		"Details:",
-		"item_id={{item_id}}",
-		"name={{name}}",
-		"value={{value}}",
-		"units={{units}}",
-		"status={{status}}",
-		"host_id={{host_id}}",
-		"host_name={{host_name}}",
-		"created_at={{created_at}}",
 	}, "\n")
 	return strings.TrimSpace(message + "\n" + renderMessageTemplate(detailsTemplate, replacements))
 }
@@ -293,4 +389,14 @@ func parseQQTarget(target string) (string, bool) {
 
 func resolveMediaTypeKeyForSend(media model.Media) string {
 	return strings.TrimSpace(media.Type)
+}
+
+func severityLabel(severity int) string {
+	if severity >= 3 {
+		return "Critical"
+	}
+	if severity == 2 {
+		return "Warning"
+	}
+	return "Normal"
 }

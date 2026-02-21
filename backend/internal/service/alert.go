@@ -25,6 +25,7 @@ const (
 type AlertReq struct {
 	Message  string `json:"message" binding:"required"`
 	Severity int    `json:"severity"`
+	Status   int    `json:"status"`
 	HostID   uint   `json:"host_id"`
 	ItemID   uint   `json:"item_id"`
 	AlarmID  uint   `json:"alarm_id"`
@@ -134,19 +135,19 @@ func AddAlertServ(req AlertReq) error {
 
 func analyzeAndNotifyAlert(alert model.Alert) {
 	if !aiAnalysisEnabled() {
-		ExecuteTriggersForAlert(alert)
+		ExecuteActionsForAlert(alert)
 		return
 	}
 	if alert.Severity < aiAnalysisMinSeverity() {
 		LogService("info", "alert analysis skipped", map[string]interface{}{"alert_id": alert.ID, "severity": alert.Severity, "min_severity": aiAnalysisMinSeverity()}, nil, "")
-		ExecuteTriggersForAlert(alert)
+		ExecuteActionsForAlert(alert)
 		return
 	}
 
 	analysis, err := analyzeAlertWithAI(alert)
 	if err != nil {
 		LogService("warn", "alert analysis skipped", map[string]interface{}{"alert_id": alert.ID, "error": err.Error()}, nil, "")
-		ExecuteTriggersForAlert(alert)
+		ExecuteActionsForAlert(alert)
 		return
 	}
 
@@ -172,7 +173,7 @@ func analyzeAndNotifyAlert(alert model.Alert) {
 		}, nil, "")
 	}
 
-	ExecuteTriggersForAlert(alert)
+	ExecuteActionsForAlert(alert)
 }
 
 func parseAIAlertDecision(analysis string) (bool, string) {
@@ -305,10 +306,19 @@ func UpdateAlertServ(id int, req AlertReq) error {
 	if err != nil {
 		return err
 	}
+
+	// Use provided status or keep existing status if not provided
+	status := req.Status
+	if status == 0 && alert.Status != 0 {
+		// Only use default status if the alert previously had a different status
+		// This allows explicit status updates
+		status = alert.Status
+	}
+
 	return repository.UpdateAlertDAO(id, model.Alert{
 		Message:  req.Message,
 		Severity: req.Severity,
-		Status:   alert.Status,
+		Status:   status,
 		AlarmID:  req.AlarmID,
 		HostID:   req.HostID,
 		ItemID:   req.ItemID,

@@ -146,11 +146,11 @@
             </el-form-item>
             <el-form-item :label="$t('alerts.severityLabel')" prop="severity">
                 <el-select v-model="alertForm.severity" :placeholder="$t('alerts.selectSeverity')" style="width: 100%;">
-                    <el-option :label="$t('alerts.severityCritical')" value="critical" />
-                    <el-option :label="$t('alerts.severityHigh')" value="high" />
-                    <el-option :label="$t('alerts.severityMedium')" value="medium" />
-                    <el-option :label="$t('alerts.severityLow')" value="low" />
-                    <el-option :label="$t('alerts.severityInfo')" value="info" />
+                    <el-option :label="$t('alerts.severityCritical')" :value="3" />
+                    <el-option :label="$t('alerts.severityHigh')" :value="2" />
+                    <el-option :label="$t('alerts.severityMedium')" :value="1" />
+                    <el-option :label="$t('alerts.severityLow')" :value="0" />
+                    <el-option :label="$t('alerts.severityInfo')" :value="0" />
                 </el-select>
             </el-form-item>
             <el-form-item :label="$t('alerts.statusLabel')" prop="status">
@@ -282,7 +282,7 @@ export default {
                 },
         alertForm: {
             message: '',
-            severity: '',
+            severity: 0,
             status: 'open',
         },
         formRules: {},
@@ -398,6 +398,15 @@ export default {
             this.bulkForm = { status: 'nochange' };
             this.bulkDialogVisible = true;
         },
+        statusStringToInt(statusStr) {
+            const statusMap = {
+                'open': 0,
+                'acknowledged': 1,
+                'resolved': 2,
+                'closed': 2
+            };
+            return statusMap[statusStr] !== undefined ? statusMap[statusStr] : 0;
+        },
         async applyBulkUpdate() {
             if (this.selectedCount === 0) return;
             if (this.bulkForm.status === 'nochange') {
@@ -407,11 +416,11 @@ export default {
 
             this.bulkUpdating = true;
             try {
-                const statusOverride = this.bulkForm.status;
+                const statusOverride = this.statusStringToInt(this.bulkForm.status);
                 await Promise.all(this.alerts.filter((alert) => this.selectedAlertIds.includes(alert.id)).map((alert) => {
                     const payload = {
                         message: alert.message,
-                        severity: alert.severity,
+                        severity: parseInt(alert.severity) || 0,
                         status: statusOverride,
                     };
                     return updateAlert(alert.id, payload);
@@ -507,7 +516,7 @@ export default {
             this.editingId = null;
             this.alertForm = {
                 message: '',
-                severity: '',
+                severity: 0,
                 status: 'open',
             };
             this.dialogVisible = true;
@@ -517,7 +526,7 @@ export default {
             this.editingId = alert.id;
             this.alertForm = {
                 message: alert.message,
-                severity: alert.severity,
+                severity: parseInt(alert.severity) || 0,
                 status: alert.status,
             };
             this.dialogVisible = true;
@@ -531,11 +540,18 @@ export default {
 
             this.saving = true;
             try {
+                // Convert status string to integer and ensure severity is integer for API
+                const payload = {
+                    ...this.alertForm,
+                    severity: parseInt(this.alertForm.severity) || 0,
+                    status: this.statusStringToInt(this.alertForm.status)
+                };
+                
                 if (this.isEditing) {
-                    await updateAlert(this.editingId, this.alertForm);
+                    await updateAlert(this.editingId, payload);
                     ElMessage.success('Alert updated successfully');
                 } else {
-                    await addAlert(this.alertForm);
+                    await addAlert(payload);
                     ElMessage.success('Alert created successfully');
                 }
                 this.dialogVisible = false;

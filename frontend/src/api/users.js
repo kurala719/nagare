@@ -148,6 +148,19 @@ export function updateUserProfile(data) {
     })
 }
 
+export function uploadAvatar(formData, onUploadProgress) {
+    return request({
+        method: 'POST',
+        url: '/user-info/me/avatar',
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress
+    })
+}
+
+
 // ============= Legacy/Redundant Profile APIs (Admin) =============
 // These are kept for backward compatibility if needed, but they map to the same backend logic
 

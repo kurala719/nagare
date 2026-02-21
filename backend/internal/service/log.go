@@ -98,21 +98,6 @@ func logEntry(logType string, severity int, message string, context map[string]i
 		log.Printf("log write failed: %v", err)
 		return
 	}
-	if !shouldSkipLogTrigger(context) {
-		ExecuteTriggersForLog(entry)
-	}
-}
-
-func shouldSkipLogTrigger(context map[string]interface{}) bool {
-	if context == nil {
-		return false
-	}
-	if v, ok := context["skip_trigger"]; ok {
-		if b, ok := v.(bool); ok {
-			return b
-		}
-	}
-	return false
 }
 
 func logSeverityFromString(value string) int {

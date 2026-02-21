@@ -109,7 +109,6 @@ func ListTools() []ToolDefinition {
 				"status":           schemaInt("Trigger status."),
 				"severity_min":     schemaInt("Minimum severity."),
 				"entity":           schemaString("Entity type (alert, log)."),
-				"action_id":        schemaInt("Action id."),
 				"alert_id":         schemaInt("Alert id."),
 				"alert_monitor_id": schemaInt("Alert monitor id."),
 				"alert_group_id":   schemaInt("Alert group id."),
@@ -327,10 +326,6 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			return GetAllTriggersServ()
 		}
 		limit, offset := withDefaultLimitOffset(args.Limit, args.Offset)
-		actionID, err := toUintPtr(args.ActionID)
-		if err != nil {
-			return nil, err
-		}
 		alertID, err := toUintPtr(args.AlertID)
 		if err != nil {
 			return nil, err
@@ -356,7 +351,6 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			Status:         args.Status,
 			SeverityMin:    args.SeverityMin,
 			Entity:         args.Entity,
-			ActionID:       actionID,
 			AlertID:        alertID,
 			AlertMonitorID: alertMonitorID,
 			AlertGroupID:   alertGroupID,
@@ -524,7 +518,6 @@ type triggerArgs struct {
 	Status         *int    `json:"status"`
 	SeverityMin    *int    `json:"severity_min"`
 	Entity         *string `json:"entity"`
-	ActionID       *int    `json:"action_id"`
 	AlertID        *int    `json:"alert_id"`
 	AlertMonitorID *int    `json:"alert_monitor_id"`
 	AlertGroupID   *int    `json:"alert_group_id"`

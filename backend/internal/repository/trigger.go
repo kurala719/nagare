@@ -33,9 +33,6 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 	if filter.Entity != nil {
 		query = query.Where("entity = ?", *filter.Entity)
 	}
-	if filter.ActionID != nil {
-		query = query.Where("action_id = ?", *filter.ActionID)
-	}
 	if filter.AlertID != nil {
 		query = query.Where("alert_id = ?", *filter.AlertID)
 	}
@@ -57,7 +54,6 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 		"enabled":      "enabled",
 		"entity":       "entity",
 		"severity_min": "severity_min",
-		"action_id":    "action_id",
 		"created_at":   "created_at",
 		"updated_at":   "updated_at",
 		"id":           "id",
@@ -89,9 +85,6 @@ func CountTriggersDAO(filter model.TriggerFilter) (int64, error) {
 	}
 	if filter.Entity != nil {
 		query = query.Where("entity = ?", *filter.Entity)
-	}
-	if filter.ActionID != nil {
-		query = query.Where("action_id = ?", *filter.ActionID)
 	}
 	if filter.AlertID != nil {
 		query = query.Where("alert_id = ?", *filter.AlertID)
@@ -136,7 +129,6 @@ func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 		"name":                     trigger.Name,
 		"entity":                   trigger.Entity,
 		"severity_min":             trigger.SeverityMin,
-		"action_id":                trigger.ActionID,
 		"alert_id":                 trigger.AlertID,
 		"alert_status":             trigger.AlertStatus,
 		"alert_group_id":           trigger.AlertGroupID,

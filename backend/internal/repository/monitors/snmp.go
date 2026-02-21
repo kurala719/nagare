@@ -154,8 +154,10 @@ func (p *SnmpProvider) GetItems(ctx context.Context, hostID string) ([]Item, err
 	}
 
 	// Memory Percentage (S5700 Fix)
-	if memSize > 0 && memFree > 0 {
+	if memSize > 0 && memFree >= 0 {
 		if memFree > memSize { memFree = memFree / 1024 }
+		// Ensure memFree is not larger than memSize after correction
+		if memFree > memSize { memFree = memSize }
 		usage := ((memSize - memFree) / memSize) * 100
 		items = append(items, Item{
 			ID: "calculated.mem.usage", Name: "Memory Usage (%)", Key: "mem_usage_pct", Value: fmt.Sprintf("%.2f", usage), Units: "%", Timestamp: time.Now().Unix(), Status: "0",
@@ -325,7 +327,8 @@ func (p *SnmpProvider) discoverInterfaces(gs *gosnmp.GoSNMP) ([]Item, error) {
 		lowerName := strings.ToLower(name)
 		if !strings.Contains(lowerName, "gigabit") && !strings.Contains(lowerName, "ten-gigabit") && 
 		   !strings.Contains(lowerName, "eth-trunk") && !strings.Contains(lowerName, "ge") && 
-		   !strings.Contains(lowerName, "xge") && !strings.Contains(lowerName, "meth") {
+		   !strings.Contains(lowerName, "xge") && !strings.Contains(lowerName, "meth") &&
+		   !strings.Contains(lowerName, "ethernet") {
 			continue
 		}
 		// Huawei V5 Instant Rate OIDs (match display interface exactly)
@@ -389,9 +392,20 @@ func (p *SnmpProvider) discoverSFPDetails(gs *gosnmp.GoSNMP, entityMap map[strin
 	var items []Item
 	_ = gs.Walk(".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.22", func(v gosnmp.SnmpPDU) error {
 		val := formatSnmpValue(v); normOid := normalizeOID(v.Name)
-		if val == "" || val == "N/A" || val == "0" { return nil }
-		numVal := 0.0; fmt.Sscanf(val, "%f", &numVal)
-		if numVal != 0 { val = fmt.Sprintf("%.2f dBm", numVal/100.0) }
+		if val == "" || val == "N/A" { return nil }
+		
+		// Parse SFP power (Unit is 0.01 dBm)
+		numVal := 0.0
+		n, _ := fmt.Sscanf(val, "%f", &numVal)
+		// If valid number parsed
+		if n > 0 {
+			// Convert to dBm
+			val = fmt.Sprintf("%.2f", numVal/100.0)
+		} else if val == "0" {
+			// If exactly 0, it likely means no signal or unplugged, keep as 0.00
+			val = "0.00"
+		}
+		
 		idx := normOid[strings.LastIndex(normOid, ".")+1:]
 		pretty := entityMap[idx]; if pretty == "" { pretty = "SFP Port " + idx }
 		items = append(items, Item{ID: normOid, Name: pretty + " RX Power Level", Key: normOid, Value: val, Units: "dBm", Status: "0", Timestamp: time.Now().Unix()})
@@ -415,11 +429,32 @@ func (p *SnmpProvider) pollViaWalk(gs *gosnmp.GoSNMP, oidNames map[string]string
 func formatSnmpValue(variable gosnmp.SnmpPDU) string {
 	switch variable.Type {
 	case gosnmp.OctetString:
-		if bytes, ok := variable.Value.([]byte); ok { return string(bytes) }
-		return fmt.Sprintf("%v", variable.Value)
+		bytes, ok := variable.Value.([]byte)
+		if !ok {
+			return ""
+		}
+		// Check if it contains binary data (non-printable)
+		isBinary := false
+		for _, b := range bytes {
+			if (b < 32 && b != 9 && b != 10 && b != 13) || b > 126 {
+				isBinary = true
+				break
+			}
+		}
+		if isBinary {
+			return fmt.Sprintf("%x", bytes)
+		}
+		return string(bytes)
 	case gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32, gosnmp.Counter64, gosnmp.TimeTicks:
-		return fmt.Sprintf("%v", gosnmp.ToBigInt(variable.Value))
-	default: return "N/A"
+		return fmt.Sprintf("%d", gosnmp.ToBigInt(variable.Value))
+	case gosnmp.ObjectIdentifier:
+		return fmt.Sprintf("%s", variable.Value)
+	case gosnmp.IPAddress:
+		return fmt.Sprintf("%s", variable.Value)
+	case gosnmp.Null:
+		return "N/A"
+	default:
+		return fmt.Sprintf("%v", variable.Value)
 	}
 }
 

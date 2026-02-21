@@ -8,25 +8,8 @@ import (
 // SyncEvent sends a notification for sync results
 func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
 	go func() {
-		severity := syncSeverity(result)
-		status := 1
-		if result.Failed > 0 {
-			status = 2
-		}
 		message := fmt.Sprintf("sync %s: total=%d added=%d updated=%d failed=%d", entity, result.Total, result.Added, result.Updated, result.Failed)
-		ExecuteTriggersForEvent(AlertEvent{
-			Severity:  severity,
-			Status:    status,
-			Message:   message,
-			MonitorID: monitorID,
-			HostID:    hostID,
-			Entity:    entity,
-			Added:     result.Added,
-			Updated:   result.Updated,
-			Failed:    result.Failed,
-			Total:     result.Total,
-		})
-
+		
 		// Add Site Message
 		title := fmt.Sprintf("Sync %s Finished", entity)
 		msgSeverity := 1 // success

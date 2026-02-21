@@ -1,8 +1,9 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"nagare/internal/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupUserRoutes(rg *gin.RouterGroup) {
@@ -60,6 +61,7 @@ func setupUserInformationRoutes(rg *gin.RouterGroup) {
 		authenticated.GET("/me", api.GetMyProfileCtrl)
 		authenticated.PUT("/me", api.UpdateMyProfileCtrl)
 		authenticated.POST("/me", api.UpdateMyProfileCtrl) // Map POST to update for compatibility
+		authenticated.POST("/me/avatar", api.UploadAvatarCtrl)
 	}
 
 	// Admin routes - manage other users' information (privilege 3)

@@ -48,7 +48,25 @@
           </el-row>
 
           <el-form-item :label="$t('profile.avatar')">
-            <el-input v-model="form.avatar" placeholder="https://example.com/avatar.png" :prefix-icon="Link" />
+            <div class="avatar-upload-wrapper">
+              <el-upload
+                class="avatar-uploader"
+                action="#"
+                :http-request="handleAvatarUpload"
+                :show-file-list="false"
+                :file-list="[]"
+                :auto-upload="true"
+                :disabled="uploading"
+                accept="image/*"
+              >
+                <img v-if="form.avatar" :src="form.avatar" class="avatar-preview" />
+                <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+              </el-upload>
+              <div v-if="uploading" class="upload-loading">
+                <el-progress type="circle" :percentage="uploadProgress" :width="60" />
+              </div>
+            </div>
+            <p class="avatar-help">{{ $t('profile.avatarHelp') }}</p>
           </el-form-item>
 
           <el-form-item :label="$t('profile.address')">
@@ -75,11 +93,13 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Edit, Message, Phone, Link, Location } from '@element-plus/icons-vue'
-import { getUserProfile, updateUserProfile } from '@/api/users'
+import { Edit, Message, Phone, Location, Plus } from '@element-plus/icons-vue'
+import { getUserProfile, updateUserProfile, uploadAvatar } from '@/api/users'
 import { getUserClaims, getUserPrivileges } from '@/utils/auth'
 
 const saving = ref(false)
+const uploading = ref(false)
+const uploadProgress = ref(0)
 const { t } = useI18n()
 const profile = reactive({
   username: '',
@@ -135,6 +155,77 @@ const loadProfile = async () => {
     }
   } finally {
     setDefaultsFromClaims()
+  }
+}
+
+const handleAvatarUpload = async (options) => {
+  const { file, onSuccess, onError, onProgress } = options
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    const err = new Error('Invalid avatar file type')
+    if (onError) {
+      onError(err)
+    }
+    ElMessage.error(t('profile.avatarUploadFailed') || 'Invalid avatar file type')
+    return
+  }
+
+  // Validate file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    const err = new Error('Avatar file is too large')
+    if (onError) {
+      onError(err)
+    }
+    ElMessage.error(t('profile.avatarTooLarge') || 'Avatar file is too large (max 5MB)')
+    return
+  }
+
+  uploading.value = true
+  uploadProgress.value = 0
+  if (onProgress) {
+    onProgress({ percent: 10 })
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    const response = await uploadAvatar(formData, (progressEvent) => {
+      if (!progressEvent.total) return
+      const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+      uploadProgress.value = percent
+      if (onProgress) {
+        onProgress({ percent })
+      }
+    })
+    const avatarURL = response.data.data?.avatar_url || response.data.avatar_url
+
+    if (avatarURL) {
+      form.avatar = avatarURL
+      profile.avatar = avatarURL
+      if (onProgress) {
+        onProgress({ percent: 100 })
+      }
+      if (onSuccess) {
+        onSuccess(response)
+      }
+      ElMessage.success(t('profile.avatarUploadSuccess') || 'Avatar uploaded successfully')
+    } else {
+      const err = new Error('Missing avatar URL in response')
+      if (onError) {
+        onError(err)
+      }
+      ElMessage.error(t('profile.avatarUploadFailed') || 'Failed to upload avatar')
+    }
+  } catch (err) {
+    if (onError) {
+      onError(err)
+    }
+    ElMessage.error(err?.response?.data?.error || err.message || t('profile.avatarUploadFailed'))
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
   }
 }
 
@@ -250,4 +341,64 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+.avatar-upload-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.avatar-uploader {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+:deep(.avatar-uploader .el-upload) {
+  width: 100%;
+  height: 100%;
+}
+
+:deep(.avatar-uploader .el-upload-dragger) {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-uploader-icon {
+  width: 60%;
+  height: 60%;
+  font-size: 32px;
+  color: #8c939d;
+}
+
+.upload-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+.avatar-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 </style>

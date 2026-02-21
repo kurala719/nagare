@@ -89,6 +89,7 @@
           {{ mediaName(row.media_id) }}
         </template>
       </el-table-column>
+      <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" width="140" align="center" sortable="custom" />
       <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip sortable="custom" />
       <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
         <template #default="{ row }">
@@ -137,6 +138,25 @@
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
         </el-select>
       </el-form-item>
+      <el-form-item :label="$t('triggers.severityMin')">
+        <el-input-number v-model="newAction.severity_min" :min="0" :max="10" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertStatus')">
+        <el-select v-model="newAction.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
+          <el-option :label="$t('alerts.statusOpen')" :value="0" />
+          <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
+          <el-option :label="$t('alerts.statusResolved')" :value="2" />
+        </el-select>
+      </el-form-item>
+      <el-form-item :label="$t('triggers.itemHostId')">
+        <el-input-number v-model="newAction.host_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Host ID" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertGroupId')">
+        <el-input-number v-model="newAction.group_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Group ID" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertId')">
+        <el-input-number v-model="newAction.trigger_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Trigger ID" />
+      </el-form-item>
       <el-form-item :label="$t('actions.template')">
         <el-input v-model="newAction.template" type="textarea" :placeholder="$t('actions.templateHint')" />
       </el-form-item>
@@ -162,6 +182,25 @@
         <el-select v-model="selectedAction.media_id" style="width: 100%;">
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
         </el-select>
+      </el-form-item>
+      <el-form-item :label="$t('triggers.severityMin')">
+        <el-input-number v-model="selectedAction.severity_min" :min="0" :max="10" style="width: 100%;" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertStatus')">
+        <el-select v-model="selectedAction.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
+          <el-option :label="$t('alerts.statusOpen')" :value="0" />
+          <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
+          <el-option :label="$t('alerts.statusResolved')" :value="2" />
+        </el-select>
+      </el-form-item>
+      <el-form-item :label="$t('triggers.itemHostId')">
+        <el-input-number v-model="selectedAction.host_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Host ID" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertGroupId')">
+        <el-input-number v-model="selectedAction.group_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Group ID" />
+      </el-form-item>
+      <el-form-item :label="$t('triggers.alertId')">
+        <el-input-number v-model="selectedAction.trigger_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Trigger ID" />
       </el-form-item>
       <el-form-item :label="$t('actions.template')">
         <el-input v-model="selectedAction.template" type="textarea" />
@@ -254,8 +293,33 @@ export default {
       bulkUpdating: false,
       bulkDeleting: false,
       selectedActions: [],
-      newAction: { name: '', media_id: 0, template: '', enabled: 1, status: 1, description: '' },
-      selectedAction: { id: 0, name: '', media_id: 0, template: '', enabled: 1, status: 1, description: '' },
+      newAction: {
+        name: '',
+        media_id: 0,
+        template: '',
+        enabled: 1,
+        status: 1,
+        description: '',
+        severity_min: 0,
+        host_id: null,
+        group_id: null,
+        trigger_id: null,
+        alert_status: null
+      },
+      selectedAction: {
+        id: 0,
+        name: '',
+        media_id: 0,
+        template: '',
+        enabled: 1,
+        status: 1,
+        description: '',
+        severity_min: 0,
+        host_id: null,
+        group_id: null,
+        trigger_id: null,
+        alert_status: null
+      },
       bulkForm: {
         enabled: 'nochange',
         status: 'nochange',
@@ -373,6 +437,11 @@ export default {
             enabled: enabledOverride === 'nochange' ? action.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? action.status : statusOverride,
             description: action.description,
+            severity_min: action.severity_min,
+            host_id: action.host_id,
+            group_id: action.group_id,
+            trigger_id: action.trigger_id,
+            alert_status: action.alert_status
           };
           return updateAction(action.id, payload);
         }));
@@ -424,6 +493,11 @@ export default {
           status: a.Status ?? a.status ?? 0,
           status_reason: a.Reason || a.reason || a.Error || a.error || a.ErrorMessage || a.error_message || a.LastError || a.last_error || '',
           description: a.Description || a.description || '',
+          severity_min: a.severity_min ?? a.SeverityMin ?? 0,
+          host_id: a.host_id ?? a.HostID ?? null,
+          group_id: a.group_id ?? a.GroupID ?? null,
+          trigger_id: a.trigger_id ?? a.TriggerID ?? null,
+          alert_status: a.alert_status ?? a.AlertStatus ?? null,
         }));
         this.actions = mapped;
         this.totalActions = Number.isFinite(total) ? total : mapped.length;
@@ -449,7 +523,19 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newAction = { name: '', media_id: 0, template: '', enabled: 1, status: 1, description: '' };
+      this.newAction = {
+        name: '',
+        media_id: 0,
+        template: '',
+        enabled: 1,
+        status: 1,
+        description: '',
+        severity_min: 0,
+        host_id: null,
+        group_id: null,
+        trigger_id: null,
+        alert_status: null
+      };
     },
     async onCreate() {
       if (!this.newAction.name) {
@@ -460,7 +546,7 @@ export default {
         await addAction(this.newAction);
         await this.loadActions(true);
         this.createDialogVisible = false;
-        this.newAction = { name: '', media_id: 0, template: '', enabled: 1, status: 1, description: '' };
+        this.cancelCreate();
         ElMessage.success(this.$t('actions.created'));
       } catch (err) {
         ElMessage.error(this.$t('actions.createFailed') + ': ' + (err.message || ''));
@@ -482,6 +568,11 @@ export default {
           enabled: this.selectedAction.enabled,
           status: this.selectedAction.status,
           description: this.selectedAction.description,
+          severity_min: this.selectedAction.severity_min,
+          host_id: this.selectedAction.host_id,
+          group_id: this.selectedAction.group_id,
+          trigger_id: this.selectedAction.trigger_id,
+          alert_status: this.selectedAction.alert_status
         });
         await this.loadActions(true);
         this.propertiesDialogVisible = false;

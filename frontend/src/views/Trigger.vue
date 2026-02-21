@@ -84,17 +84,8 @@
     >
       <el-table-column type="selection" width="50" align="center" />
       <el-table-column prop="name" :label="$t('triggers.name')" min-width="160" sortable="custom" />
-      <el-table-column :label="$t('triggers.entity')" min-width="120" prop="entity" sortable="custom">
-        <template #default="{ row }">
-          {{ entityLabel(row.entity) }}
-        </template>
-      </el-table-column>
+      <!-- Entity column removed as it's always 'item' -->
       <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" width="140" align="center" sortable="custom" />
-      <el-table-column :label="$t('triggers.action')" min-width="160" prop="action_id" sortable="custom">
-        <template #default="{ row }">
-          {{ actionName(row.action_id) }}
-        </template>
-      </el-table-column>
       <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
         <template #default="{ row }">
           <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
@@ -137,58 +128,14 @@
       <el-form-item :label="$t('triggers.name')">
         <el-input v-model="newTrigger.name" :placeholder="$t('triggers.name')" />
       </el-form-item>
-      <el-form-item :label="$t('triggers.entity')">
-        <el-select v-model="newTrigger.entity" style="width: 100%;">
-          <el-option :label="$t('triggers.entityAlert')" value="alert" />
-          <el-option :label="$t('triggers.entityLog')" value="log" />
-          <el-option :label="$t('triggers.entityItem')" value="item" />
-        </el-select>
-      </el-form-item>
+      
+      <!-- Entity is strictly 'item', hidden from UI -->
+      
       <el-form-item :label="$t('triggers.severityMin')">
         <el-input-number v-model="newTrigger.severity_min" :min="0" :max="10" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertStatus')">
-        <el-select v-model="newTrigger.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('alerts.statusOpen')" :value="0" />
-          <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
-          <el-option :label="$t('alerts.statusResolved')" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertQuery')">
-        <el-input v-model="newTrigger.alert_query" :placeholder="$t('triggers.alertQuery')" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertId')">
-        <el-input-number v-model="newTrigger.alert_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertMonitorId')">
-        <el-input-number v-model="newTrigger.alert_monitor_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertGroupId')">
-        <el-input-number v-model="newTrigger.alert_group_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertHostId')">
-        <el-input-number v-model="newTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(newTrigger)" :label="$t('triggers.alertItemId')">
-        <el-input-number v-model="newTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(newTrigger)" :label="$t('triggers.logType')">
-        <el-select v-model="newTrigger.log_type" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('logs.systemTitle')" value="system" />
-          <el-option :label="$t('logs.serviceTitle')" value="service" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(newTrigger)" :label="$t('triggers.logSeverity')">
-        <el-select v-model="newTrigger.log_severity" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('logs.levelInfo')" :value="0" />
-          <el-option :label="$t('logs.levelWarn')" :value="1" />
-          <el-option :label="$t('logs.levelError')" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(newTrigger)" :label="$t('triggers.logQuery')">
-        <el-input v-model="newTrigger.log_query" :placeholder="$t('triggers.logQuery')" />
-      </el-form-item>
-      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemStatus')">
+
+      <el-form-item :label="$t('triggers.itemStatus')">
         <el-select v-model="newTrigger.item_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
@@ -196,18 +143,18 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemHostId')">
+      <el-form-item :label="$t('triggers.itemHostId')">
         <el-input-number v-model="newTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemId')">
+      <el-form-item :label="$t('triggers.itemId')">
         <el-input-number v-model="newTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemValueOperator')">
+      <el-form-item :label="$t('triggers.itemValueOperator')">
         <el-select v-model="newTrigger.item_value_operator" clearable :placeholder="$t('triggers.itemValueOperatorHint')" style="width: 100%;">
           <el-option v-for="op in itemOperators" :key="op.value" :label="op.label" :value="op.value" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(newTrigger)" :label="$t('triggers.itemValueThreshold')">
+      <el-form-item :label="$t('triggers.itemValueThreshold')">
         <div class="threshold-row">
           <el-input-number v-model="newTrigger.item_value_threshold" :min="0" :controls="false" style="width: 100%;" />
           <el-input-number
@@ -219,21 +166,9 @@
           />
         </div>
       </el-form-item>
-      <el-form-item :label="$t('triggers.action')" required>
-        <el-select v-model="newTrigger.action_id" style="width: 100%;">
-          <el-option v-for="action in actionOptions" :key="action.id" :label="action.name" :value="action.id" />
-        </el-select>
-      </el-form-item>
+      
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newTrigger.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('triggers.status')">
-        <el-select v-model="newTrigger.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -247,58 +182,12 @@
       <el-form-item :label="$t('triggers.name')">
         <el-input v-model="selectedTrigger.name" />
       </el-form-item>
-      <el-form-item :label="$t('triggers.entity')">
-        <el-select v-model="selectedTrigger.entity" style="width: 100%;">
-          <el-option :label="$t('triggers.entityAlert')" value="alert" />
-          <el-option :label="$t('triggers.entityLog')" value="log" />
-          <el-option :label="$t('triggers.entityItem')" value="item" />
-        </el-select>
-      </el-form-item>
+      
       <el-form-item :label="$t('triggers.severityMin')">
         <el-input-number v-model="selectedTrigger.severity_min" :min="0" :max="10" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertStatus')">
-        <el-select v-model="selectedTrigger.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('alerts.statusOpen')" :value="0" />
-          <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
-          <el-option :label="$t('alerts.statusResolved')" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertQuery')">
-        <el-input v-model="selectedTrigger.alert_query" :placeholder="$t('triggers.alertQuery')" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertId')">
-        <el-input-number v-model="selectedTrigger.alert_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertMonitorId')">
-        <el-input-number v-model="selectedTrigger.alert_monitor_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertGroupId')">
-        <el-input-number v-model="selectedTrigger.alert_group_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertHostId')">
-        <el-input-number v-model="selectedTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isAlertTrigger(selectedTrigger)" :label="$t('triggers.alertItemId')">
-        <el-input-number v-model="selectedTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(selectedTrigger)" :label="$t('triggers.logType')">
-        <el-select v-model="selectedTrigger.log_type" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('logs.systemTitle')" value="system" />
-          <el-option :label="$t('logs.serviceTitle')" value="service" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(selectedTrigger)" :label="$t('triggers.logSeverity')">
-        <el-select v-model="selectedTrigger.log_severity" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
-          <el-option :label="$t('logs.levelInfo')" :value="0" />
-          <el-option :label="$t('logs.levelWarn')" :value="1" />
-          <el-option :label="$t('logs.levelError')" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="isLogTrigger(selectedTrigger)" :label="$t('triggers.logQuery')">
-        <el-input v-model="selectedTrigger.log_query" :placeholder="$t('triggers.logQuery')" />
-      </el-form-item>
-      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemStatus')">
+
+      <el-form-item :label="$t('triggers.itemStatus')">
         <el-select v-model="selectedTrigger.item_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
@@ -306,18 +195,18 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemHostId')">
+      <el-form-item :label="$t('triggers.itemHostId')">
         <el-input-number v-model="selectedTrigger.alert_host_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemId')">
+      <el-form-item :label="$t('triggers.itemId')">
         <el-input-number v-model="selectedTrigger.alert_item_id" :min="0" :controls="false" style="width: 100%;" />
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemValueOperator')">
+      <el-form-item :label="$t('triggers.itemValueOperator')">
         <el-select v-model="selectedTrigger.item_value_operator" clearable :placeholder="$t('triggers.itemValueOperatorHint')" style="width: 100%;">
           <el-option v-for="op in itemOperators" :key="op.value" :label="op.label" :value="op.value" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="isItemTrigger(selectedTrigger)" :label="$t('triggers.itemValueThreshold')">
+      <el-form-item :label="$t('triggers.itemValueThreshold')">
         <div class="threshold-row">
           <el-input-number v-model="selectedTrigger.item_value_threshold" :min="0" :controls="false" style="width: 100%;" />
           <el-input-number
@@ -329,21 +218,9 @@
           />
         </div>
       </el-form-item>
-      <el-form-item :label="$t('triggers.action')" required>
-        <el-select v-model="selectedTrigger.action_id" style="width: 100%;">
-          <el-option v-for="action in actionOptions" :key="action.id" :label="action.name" :value="action.id" />
-        </el-select>
-      </el-form-item>
+      
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedTrigger.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('triggers.status')">
-        <el-select v-model="selectedTrigger.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -360,15 +237,6 @@
           <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
           <el-option :label="$t('common.enabled')" value="enable" />
           <el-option :label="$t('common.disabled')" value="disable" />
-        </el-select>
-      </el-form-item>
-      <el-form-item :label="$t('triggers.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
       </el-form-item>
     </el-form>
@@ -394,7 +262,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchTriggerData, addTrigger, updateTrigger, deleteTrigger } from '@/api/triggers';
-import { fetchActionData } from '@/api/actions';
 
 export default {
   name: 'Trigger',
@@ -410,7 +277,6 @@ export default {
   data() {
     return {
       triggers: [],
-      actionOptions: [],
       loading: false,
       error: null,
       search: '',
@@ -429,42 +295,23 @@ export default {
       selectedTriggers: [],
       newTrigger: {
         name: '',
-        entity: 'alert',
+        entity: 'item',
         severity_min: 1,
-        action_id: 0,
-        alert_status: null,
-        alert_query: '',
-        alert_id: null,
-        alert_monitor_id: null,
-        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
-        log_type: '',
-        log_severity: null,
-        log_query: '',
         item_status: null,
         item_value_threshold: null,
         item_value_threshold_max: null,
         item_value_operator: '',
         enabled: 1,
-        status: 1,
       },
       selectedTrigger: {
         id: 0,
         name: '',
-        entity: 'alert',
+        entity: 'item',
         severity_min: 1,
-        action_id: 0,
-        alert_status: null,
-        alert_query: '',
-        alert_id: null,
-        alert_monitor_id: null,
-        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
-        log_type: '',
-        log_severity: null,
-        log_query: '',
         item_status: null,
         item_value_threshold: null,
         item_value_threshold_max: null,
@@ -623,8 +470,7 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const [triggerResp, actionResp] = await Promise.all([
-          fetchTriggerData({
+        const triggerResp = await fetchTriggerData({
             q: this.search || undefined,
             status: this.statusFilter === 'all' ? undefined : this.statusFilter,
             limit: this.pageSize,
@@ -632,9 +478,7 @@ export default {
             sort: this.sortBy || undefined,
             order: this.sortOrder || undefined,
             with_total: 1,
-          }),
-          this.actionOptions.length === 0 ? fetchActionData({ limit: 100, offset: 0 }) : Promise.resolve(null),
-        ]);
+          });
         const triggerData = Array.isArray(triggerResp)
           ? triggerResp
           : (triggerResp.data?.items || triggerResp.items || triggerResp.data || triggerResp.triggers || []);
@@ -642,19 +486,10 @@ export default {
         const mapped = triggerData.map((t) => ({
           id: t.ID || t.id || 0,
           name: t.Name || t.name || '',
-          entity: t.Entity || t.entity || 'alert',
+          entity: t.Entity || t.entity || 'item',
           severity_min: t.SeverityMin ?? t.severity_min ?? 0,
-          action_id: t.ActionID || t.action_id || 0,
-          alert_status: t.AlertStatus ?? t.alert_status ?? null,
-          alert_query: t.AlertQuery || t.alert_query || '',
-          alert_id: t.AlertID ?? t.alert_id ?? null,
-          alert_monitor_id: t.AlertMonitorID ?? t.alert_monitor_id ?? null,
-          alert_group_id: t.alertGroupId ?? t.alert_group_id ?? null,
           alert_host_id: t.AlertHostID ?? t.alert_host_id ?? null,
           alert_item_id: t.AlertItemID ?? t.alert_item_id ?? null,
-          log_type: t.LogType || t.log_type || '',
-          log_severity: this.coerceLogSeverity(t.LogSeverity ?? t.log_severity),
-          log_query: t.LogQuery || t.log_query || '',
           item_status: t.ItemStatus ?? t.item_status ?? null,
           item_value_threshold: t.ItemValueThreshold ?? t.item_value_threshold ?? null,
           item_value_threshold_max: t.ItemValueThresholdMax ?? t.item_value_threshold_max ?? null,
@@ -665,22 +500,11 @@ export default {
         }));
         this.triggers = mapped;
         this.totalTriggers = Number.isFinite(total) ? total : mapped.length;
-        if (actionResp) {
-          const actionData = Array.isArray(actionResp) ? actionResp : (actionResp.data || actionResp.actions || []);
-          this.actionOptions = actionData.map((a) => ({
-            id: a.ID || a.id || 0,
-            name: a.Name || a.name || '',
-          }));
-        }
       } catch (err) {
         this.error = err.message || this.$t('triggers.loadFailed');
       } finally {
         this.loading = false;
       }
-    },
-    actionName(id) {
-      const found = this.actionOptions.find((a) => a.id === id);
-      return found ? found.name : id;
     },
     openCreate() {
       this.createDialogVisible = true;
@@ -689,19 +513,10 @@ export default {
       this.createDialogVisible = false;
       this.newTrigger = {
         name: '',
-        entity: 'alert',
+        entity: 'item',
         severity_min: 1,
-        action_id: 0,
-        alert_status: null,
-        alert_query: '',
-        alert_id: null,
-        alert_monitor_id: null,
-        alert_group_id: null,
         alert_host_id: null,
         alert_item_id: null,
-        log_type: '',
-        log_severity: null,
-        log_query: '',
         item_status: null,
         item_value_threshold: null,
         item_value_threshold_max: null,
@@ -715,29 +530,16 @@ export default {
         ElMessage.warning(this.$t('triggers.validationName'));
         return;
       }
-      if (!this.newTrigger.action_id) {
-        ElMessage.warning(this.$t('triggers.validationAction'));
-        return;
-      }
       try {
         await addTrigger(this.buildTriggerPayload(this.newTrigger));
         await this.loadTriggers(true);
         this.createDialogVisible = false;
         this.newTrigger = {
           name: '',
-          entity: 'alert',
+          entity: 'item',
           severity_min: 1,
-          action_id: 0,
-          alert_status: null,
-          alert_query: '',
-          alert_id: null,
-          alert_monitor_id: null,
-          alert_group_id: null,
           alert_host_id: null,
           alert_item_id: null,
-          log_type: '',
-          log_severity: null,
-          log_query: '',
           item_status: null,
           item_value_threshold: null,
           item_value_threshold_max: null,
@@ -758,10 +560,6 @@ export default {
       this.propertiesDialogVisible = false;
     },
     async saveProperties() {
-      if (!this.selectedTrigger.action_id) {
-        ElMessage.warning(this.$t('triggers.validationAction'));
-        return;
-      }
       try {
         await updateTrigger(this.selectedTrigger.id, this.buildTriggerPayload(this.selectedTrigger));
         await this.loadTriggers(true);
@@ -804,63 +602,19 @@ export default {
     buildTriggerPayload(trigger, overrides = {}) {
       const payload = {
         name: trigger.name,
-        entity: trigger.entity,
+        entity: 'item',
         severity_min: trigger.severity_min,
-        action_id: trigger.action_id,
         enabled: trigger.enabled,
         status: trigger.status,
-        alert_status: trigger.alert_status,
-        alert_query: trigger.alert_query,
-        alert_id: trigger.alert_id,
-        alert_monitor_id: trigger.alert_monitor_id,
-        alert_group_id: trigger.alert_group_id,
         alert_host_id: trigger.alert_host_id,
         alert_item_id: trigger.alert_item_id,
-        log_type: trigger.log_type,
-        log_severity: this.coerceLogSeverity(trigger.log_severity),
-        log_query: trigger.log_query,
         item_status: trigger.item_status,
         item_value_threshold: trigger.item_value_threshold,
         item_value_threshold_max: trigger.item_value_threshold_max,
         item_value_operator: trigger.item_value_operator,
         ...overrides,
       };
-      if (payload.entity === 'log') {
-        delete payload.alert_status;
-        delete payload.alert_query;
-        delete payload.alert_id;
-        delete payload.alert_monitor_id;
-        delete payload.alert_group_id;
-        delete payload.alert_host_id;
-        delete payload.alert_item_id;
-        delete payload.item_status;
-        delete payload.item_value_threshold;
-        delete payload.item_value_threshold_max;
-        delete payload.item_value_operator;
-      }
-      if (payload.entity === 'alert') {
-        delete payload.log_type;
-        delete payload.log_severity;
-        delete payload.log_query;
-        delete payload.item_status;
-        delete payload.item_value_threshold;
-        delete payload.item_value_threshold_max;
-        delete payload.item_value_operator;
-      }
-      if (payload.entity === 'item') {
-        delete payload.alert_status;
-        delete payload.alert_query;
-        delete payload.alert_id;
-        delete payload.alert_monitor_id;
-        delete payload.alert_group_id;
-        delete payload.log_type;
-        delete payload.log_severity;
-        delete payload.log_query;
-      }
       const optionalKeys = [
-        'alert_id',
-        'alert_monitor_id',
-        'alert_group_id',
         'alert_host_id',
         'alert_item_id',
       ];
@@ -876,32 +630,8 @@ export default {
       });
       return payload;
     },
-    isAlertTrigger(trigger) {
-      return !trigger?.entity || trigger.entity === 'alert';
-    },
-    isLogTrigger(trigger) {
-      return trigger?.entity === 'log';
-    },
-    isItemTrigger(trigger) {
-      return trigger?.entity === 'item';
-    },
     isBetweenOperator(operator) {
       return operator === 'between' || operator === 'outside';
-    },
-    entityLabel(entity) {
-      if (entity === 'log') return this.$t('triggers.entityLog');
-      if (entity === 'item') return this.$t('triggers.entityItem');
-      return this.$t('triggers.entityAlert');
-    },
-    coerceLogSeverity(value) {
-      if (value === null || value === undefined || value === '') return null;
-      if (typeof value === 'number') return value;
-      const text = String(value).toLowerCase();
-      if (!Number.isNaN(Number(text))) return Number(text);
-      if (text === 'error') return 2;
-      if (text === 'warn' || text === 'warning') return 1;
-      if (text === 'info') return 0;
-      return null;
     },
   },
 };
@@ -938,5 +668,3 @@ export default {
   background-color: var(--brand-50) !important;
 }
 </style>
-
-

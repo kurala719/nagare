@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func LoginUserCtrl(c *gin.Context) {
@@ -122,7 +123,7 @@ func SearchUsersCtrl(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	
+
 	if withTotal != nil && *withTotal {
 		total, err := service.CountUsersServ(filter)
 		if err != nil {
@@ -265,6 +266,36 @@ func UpdateMyProfileCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccessMessage(c, http.StatusOK, "profile updated")
+}
+
+// UploadAvatarCtrl handles POST /user-info/me/avatar
+func UploadAvatarCtrl(c *gin.Context) {
+	username, ok := c.Get("username")
+	if !ok {
+		respondError(c, model.ErrUnauthorized)
+		return
+	}
+
+	// Parse multipart form with max file size of 5MB
+	if err := c.Request.ParseMultipartForm(5 << 20); err != nil {
+		respondBadRequest(c, "failed to parse form: "+err.Error())
+		return
+	}
+
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		respondBadRequest(c, "no file part in the request")
+		return
+	}
+
+	// Upload file and get URL
+	avatarURL, err := service.UploadAvatarServ(username.(string), file)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	respondSuccess(c, http.StatusOK, gin.H{"avatar_url": avatarURL})
 }
 
 func getRequesterPrivileges(c *gin.Context) int {

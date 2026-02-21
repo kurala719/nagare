@@ -176,6 +176,12 @@ type Action struct {
 	Enabled     int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
 	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	Description string
+	// Filter conditions for executing this action
+	SeverityMin *int  `gorm:"default:0"` // Filter alerts with severity >= this
+	TriggerID   *uint `gorm:"index"`     // Optional: specific trigger
+	HostID      *uint `gorm:"index"`     // Optional: specific host
+	GroupID     *uint `gorm:"index"`     // Optional: specific group
+	AlertStatus *int  `gorm:"default:0"` // Filter by alert status (0=active, 1=ack, 2=resolved)
 }
 
 // Trigger represents a rule that filters alerts or logs to invoke an action
@@ -184,7 +190,6 @@ type Trigger struct {
 	Name                  string
 	Entity                string // "alert" or "log"
 	SeverityMin           int
-	ActionID              uint
 	AlertID               *uint `gorm:"column:alert_id"`
 	AlertStatus           *int  `gorm:"column:alert_status"`
 	AlertGroupID          *uint `gorm:"column:alert_group_id"`

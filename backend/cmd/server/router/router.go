@@ -26,6 +26,7 @@ func InitRouter() {
 	r.RedirectTrailingSlash = true
 	r.Use(api.RequestIDMiddleware())
 	r.Use(api.AccessLogMiddleware())
+	r.Static("/avatars", "./public/avatars")
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, api.APIResponse{

@@ -71,17 +71,11 @@ func SearchTriggersCtrl(c *gin.Context) {
 	if entity != "" {
 		entityPtr = &entity
 	}
-	var actionIDPtr *uint
-	if actionID, err := strconv.Atoi(c.Query("action_id")); err == nil && actionID > 0 {
-		id := uint(actionID)
-		actionIDPtr = &id
-	}
 	filter := model.TriggerFilter{
 		Query:          c.Query("q"),
 		Status:         status,
 		SeverityMin:    severityMin,
 		Entity:         entityPtr,
-		ActionID:       actionIDPtr,
 		AlertID:        alertID,
 		AlertMonitorID: alertMonitorID,
 		AlertGroupID:   alertGroupID,
@@ -131,10 +125,6 @@ func AddTriggerCtrl(c *gin.Context) {
 		respondBadRequest(c, err.Error())
 		return
 	}
-	if req.ActionID == 0 {
-		respondBadRequest(c, "action_id is required")
-		return
-	}
 	trigger, err := service.AddTriggerServ(req)
 	if err != nil {
 		respondError(c, err)
@@ -153,10 +143,6 @@ func UpdateTriggerCtrl(c *gin.Context) {
 	var req service.TriggerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondBadRequest(c, err.Error())
-		return
-	}
-	if req.ActionID == 0 {
-		respondBadRequest(c, "action_id is required")
 		return
 	}
 	if err := service.UpdateTriggerServ(uint(id), req); err != nil {

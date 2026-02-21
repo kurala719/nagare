@@ -45,7 +45,6 @@ type TriggerFilter struct {
 	Status         *int
 	SeverityMin    *int
 	Entity         *string
-	ActionID       *uint
 	AlertID        *uint
 	AlertMonitorID *uint
 	AlertGroupID   *uint
