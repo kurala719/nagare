@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -14,6 +15,33 @@ func InitDBTables() error {
 	if err := preSchemaUpdates(); err != nil {
 		return err
 	}
+	// Create users table manually only if it doesn't exist
+	if !database.DB.Migrator().HasTable("users") {
+		if err := database.DB.Exec(`CREATE TABLE users (
+			id bigint unsigned NOT NULL auto_increment,
+			created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			deleted_at timestamp NULL,
+			username varchar(100) NOT NULL,
+			password longtext NOT NULL,
+			privileges int default 1,
+			status int default 1,
+			email varchar(255),
+			phone varchar(20),
+			avatar varchar(255),
+			address varchar(255),
+			introduction text,
+			nickname varchar(100),
+			PRIMARY KEY (id),
+			KEY idx_users_deleted_at (deleted_at),
+			UNIQUE KEY idx_username (username(100))
+		) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`).Error; err != nil {
+			return fmt.Errorf("failed to create users table: %w", err)
+		}
+	}
+
+	// Now run AutoMigrate on all models. 
+	// Since we enabled Username in the struct, GORM will handle it.
 	if err := database.DB.AutoMigrate(
 		&model.User{},
 		&model.Monitor{},
@@ -48,7 +76,28 @@ func InitDBTables() error {
 	if err := applySchemaUpdates(); err != nil {
 		return err
 	}
+	if err := ensureDefaultAdmin(); err != nil {
+		return err
+	}
 	return ensureDefaultMonitor()
+}
+
+func ensureDefaultAdmin() error {
+	var count int64
+	if err := database.DB.Model(&model.User{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		admin := model.User{
+			Username:   "admin",
+			Password:   "password", // Initial default password
+			Privileges: 3,          // Superadmin
+			Status:     1,          // Active
+			Nickname:   "System Administrator",
+		}
+		return database.DB.Create(&admin).Error
+	}
+	return nil
 }
 
 func ensureDefaultMonitor() error {
@@ -60,7 +109,7 @@ func ensureDefaultMonitor() error {
 		defaultMonitor := model.Monitor{
 			Name:        "Nagare Internal",
 			URL:         "localhost",
-			Type:        4, // SNMP
+			Type:        1, // SNMP
 			Enabled:     1,
 			Status:      1,
 			Description: "System default internal monitoring engine",
@@ -74,16 +123,11 @@ func preSchemaUpdates() error {
 	// Deduplicate users before adding unique index if table exists
 	if database.DB.Migrator().HasTable("users") {
 		// This query finds duplicates and deletes all but the one with the smallest ID
-		err := database.DB.Exec(`
+		_ = database.DB.Exec(`
 			DELETE u1 FROM users u1
 			INNER JOIN users u2 
 			WHERE u1.id > u2.id AND u1.username = u2.username
-		`).Error
-		if err != nil {
-			// Log error but continue - migration might fail later if duplicates persist
-			// but we don't want to stop the whole process if this specific MySQL syntax fails
-			// (though it's standard for MySQL/MariaDB)
-		}
+		`)
 	}
 
 	if database.DB.Migrator().HasTable("sites") && !database.DB.Migrator().HasTable("groups") {

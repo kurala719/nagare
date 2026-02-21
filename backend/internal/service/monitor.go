@@ -114,6 +114,13 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 		}
 		eventToken = generated
 	}
+	description := m.Description
+	monitorType := m.Type
+	// Only Nagare Internal can be SNMP (1)
+	if monitorType == 1 {
+		monitorType = 2 // Default to Zabbix
+	}
+
 	monitor := model.Monitor{
 		Name:        m.Name,
 		URL:         m.URL,
@@ -121,8 +128,8 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 		Password:    m.Password,
 		AuthToken:   m.AuthToken,
 		EventToken:  eventToken,
-		Description: m.Description,
-		Type:        m.Type,
+		Description: description,
+		Type:        monitorType,
 		Enabled:     m.Enabled,
 		Status:      determineMonitorStatus(model.Monitor{Enabled: m.Enabled, AuthToken: m.AuthToken, Username: m.Username, Password: m.Password}),
 	}
@@ -173,6 +180,13 @@ func UpdateMonitorServ(id int, m MonitorReq) error {
 	if eventToken == "" {
 		eventToken = existing.EventToken
 	}
+
+	monitorType := m.Type
+	// Only Nagare Internal (ID 1) can be SNMP (1)
+	if id != 1 && monitorType == 1 {
+		monitorType = 2 // Default to Zabbix
+	}
+
 	updated := model.Monitor{
 		Name:        m.Name,
 		URL:         m.URL,
@@ -181,7 +195,7 @@ func UpdateMonitorServ(id int, m MonitorReq) error {
 		AuthToken:   m.AuthToken,
 		EventToken:  eventToken,
 		Description: m.Description,
-		Type:        m.Type,
+		Type:        monitorType,
 		Enabled:     m.Enabled,
 		Status:      existing.Status,
 		StatusDescription: existing.StatusDesc,
@@ -232,6 +246,9 @@ func ValidateMonitorEventTokenServ(eventToken string) error {
 
 // LoginMonitorServ authenticates with a monitor and stores the auth token
 func LoginMonitorServ(id uint) (MonitorResp, error) {
+	if id == 1 {
+		return GetMonitorByIDServ(id)
+	}
 	monitor, err := GetMonitorByIDServ(id)
 	if err != nil {
 		return MonitorResp{}, err
@@ -283,7 +300,7 @@ func LoginMonitorServ(id uint) (MonitorResp, error) {
 
 // monitorToResp converts a domain Monitor to MonitorResp
 func monitorToResp(m model.Monitor) MonitorResp {
-	return MonitorResp{
+	resp := MonitorResp{
 		ID:          int(m.ID),
 		Name:        m.Name,
 		URL:         m.URL,
@@ -298,4 +315,13 @@ func monitorToResp(m model.Monitor) MonitorResp {
 		StatusDesc:  m.StatusDescription,
 		HealthScore: m.HealthScore,
 	}
+
+	// Nagare Internal (ID 1) is always active
+	if resp.ID == 1 {
+		resp.Enabled = 1
+		resp.Status = 1
+		resp.StatusDesc = "Nagare Internal Monitoring Service (Active)"
+		resp.HealthScore = 100
+	}
+	return resp
 }

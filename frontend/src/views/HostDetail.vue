@@ -236,13 +236,16 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { fetchHostHistory, getHostById } from '@/api/hosts'
-import { fetchItemsByHost } from '@/api/items'
+import { fetchItemsByHost, fetchItemHistory } from '@/api/items'
 
 const route = useRoute()
 const { t } = useI18n()
 const host = ref({})
 const items = ref([])
 const statusChartRef = ref(null)
+const cpuChartRef = ref(null)
+const memChartRef = ref(null)
+const netChartRef = ref(null)
 const showColumnDialog = ref(false)
 const showImportantOnly = ref(true)
 const historyRange = ref([])
@@ -253,6 +256,11 @@ const compareMode = ref(false)
 const reportGenerating = ref(false)
 const reportSnapshot = ref(null)
 const reportCanvasRef = ref(null)
+
+const currentCpu = ref(0)
+const currentMem = ref(0)
+const currentNet = ref(0)
+
 const historyShortcuts = [
   {
     text: '1h',
@@ -296,6 +304,9 @@ const historyShortcuts = [
   },
 ]
 let statusChart
+let cpuChart
+let memChart
+let netChart
 
 // Column configuration for items table
 const availableColumns = [
@@ -397,6 +408,92 @@ const resolveRangeWindow = () => {
   const end = new Date()
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
   return [start, end]
+}
+
+const initMetricCharts = () => {
+  if (cpuChartRef.value && !cpuChart) {
+    cpuChart = echarts.init(cpuChartRef.value)
+  }
+  if (memChartRef.value && !memChart) {
+    memChart = echarts.init(memChartRef.value)
+  }
+  if (netChartRef.value && !netChart) {
+    netChart = echarts.init(netChartRef.value)
+  }
+}
+
+const setMetricChartOption = (chart, name, data, color, unit = '%') => {
+  if (!chart) return
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const p = params[0]
+        const time = new Date(p.data[0]).toLocaleString()
+        return `${time}<br/>${p.seriesName}: ${p.data[1]}${unit}`
+      }
+    },
+    grid: { left: 40, right: 10, top: 10, bottom: 20 },
+    xAxis: { type: 'time', splitLine: { show: false } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
+    series: [{
+      name,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: color + '80' },
+          { offset: 1, color: color + '00' }
+        ])
+      },
+      itemStyle: { color },
+      data
+    }]
+  })
+}
+
+const loadMetricHistory = async () => {
+  initMetricCharts()
+  const [start, end] = resolveRangeWindow()
+  const from = Math.floor(start.getTime() / 1000)
+  const to = Math.floor(end.getTime() / 1000)
+
+  // Categorize items
+  const cpuItems = items.value.filter(i => {
+    const n = i.name.toLowerCase()
+    return (n.includes('cpu') || n.includes('load')) && !n.includes('temp')
+  })
+  const memItems = items.value.filter(i => {
+    const n = i.name.toLowerCase()
+    return n.includes('mem') || n.includes('ram') || n.includes('memory')
+  })
+  const netItems = items.value.filter(i => {
+    const n = i.name.toLowerCase()
+    return n.includes('net') || n.includes('eth') || n.includes('if') || n.includes('traffic') || n.includes('bps')
+  })
+
+  // Helper to fetch and plot
+  const fetchAndPlot = async (itemList, chart, name, color, unit, currentRef) => {
+    if (itemList.length === 0 || !chart) return
+    // Pick the most representative item (e.g., the first one for now)
+    const item = itemList[0]
+    currentRef.value = item.value || 0
+    try {
+      const resp = await fetchItemHistory(item.id, { from, to, limit: 100 })
+      const rows = Array.isArray(resp.data) ? resp.data : (Array.isArray(resp) ? resp : [])
+      const data = rows.map(r => [new Date(r.sampled_at || r.SampledAt).getTime(), parseFloat(r.value || r.Value || 0)])
+      setMetricChartOption(chart, name, data, color, unit)
+    } catch (e) {
+      console.warn(`Failed to fetch history for ${item.name}`, e)
+    }
+  }
+
+  await Promise.all([
+    fetchAndPlot(cpuItems, cpuChart, t('hosts.cpuUsage'), '#409EFF', '%', currentCpu),
+    fetchAndPlot(memItems, memChart, t('hosts.memoryUsage'), '#67C23A', '%', currentMem),
+    fetchAndPlot(netItems, netChart, t('hosts.networkTraffic'), '#E6A23C', ' KB/s', currentNet)
+  ])
 }
 
 const buildStatusChart = (series, prevSeries = []) => {
@@ -581,11 +678,17 @@ const loadData = async () => {
     status: i.status ?? i.Status ?? 0,
     status_reason: i.Reason || i.reason || i.Error || i.error || i.ErrorMessage || i.error_message || i.LastError || i.last_error || i.Comment || i.comment || '',
   }))
-  await loadHistory()
+  await Promise.all([
+    loadHistory(),
+    loadMetricHistory()
+  ])
 }
 
 const onResize = () => {
   if (statusChart) statusChart.resize()
+  if (cpuChart) cpuChart.resize()
+  if (memChart) memChart.resize()
+  if (netChart) netChart.resize()
 }
 
 onMounted(() => {
@@ -598,14 +701,19 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   if (statusChart) statusChart.dispose()
+  if (cpuChart) cpuChart.dispose()
+  if (memChart) memChart.dispose()
+  if (netChart) netChart.dispose()
 })
 
 watch(historyRange, () => {
   loadHistory()
+  loadMetricHistory()
 })
 
 watch(compareMode, () => {
   loadHistory()
+  loadMetricHistory()
 })
 
 async function generateReport() {
@@ -684,6 +792,13 @@ async function generateReport() {
   font-size: 22px;
   font-weight: 600;
   margin-top: 6px;
+}
+.metrics-row {
+  margin-bottom: 16px;
+}
+.mini-chart {
+  width: 100%;
+  height: 180px;
 }
 .chart {
   width: 100%;

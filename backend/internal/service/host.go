@@ -568,7 +568,11 @@ func PullHostsFromMonitorServ(mid uint) (SyncResult, error) {
 func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
-	_, _ = TestMonitorStatusServ(mid)
+	
+	// Nagare Internal (ID 1) is always healthy
+	if mid != 1 {
+		_, _ = TestMonitorStatusServ(mid)
+	}
 
 	monitor, err := GetMonitorByIDServ(mid)
 	if err != nil {
@@ -578,7 +582,9 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	// Monitor must be active (status == 1 or syncing) to pull hosts
 	monitorDomain, _ := repository.GetMonitorByIDDAO(mid)
-	if monitorDomain.Status == 0 || monitorDomain.Status == 2 {
+	
+	// Skip status block for Nagare Internal
+	if mid != 1 && (monitorDomain.Status == 0 || monitorDomain.Status == 2) {
 		reason := "monitor is not active"
 		if monitorDomain.StatusDescription != "" {
 			reason = monitorDomain.StatusDescription
@@ -895,7 +901,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 		return result, fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	if monitor.Status == 2 {
+	if mid != 1 && monitor.Status == 2 {
 		reason := "monitor is in error state"
 		if monitor.StatusDesc != "" {
 			reason = monitor.StatusDesc
@@ -1046,7 +1052,9 @@ func TestSNMPServ(hid uint) (SyncResult, error) {
 func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
-	_, _ = TestMonitorStatusServ(mid)
+	if mid != 1 {
+		_, _ = TestMonitorStatusServ(mid)
+	}
 
 	// Check monitor status before proceeding with host push
 	monitor, err := repository.GetMonitorByIDDAO(mid)
@@ -1057,7 +1065,7 @@ func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	}
 
 	// Monitor must be active or inactive (not error) to push hosts
-	if monitor.Status == 2 {
+	if mid != 1 && monitor.Status == 2 {
 		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription

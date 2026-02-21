@@ -67,7 +67,6 @@
       </el-form-item>
       <el-form-item :label="$t('monitors.type')">
         <el-select v-model="newMonitor.type" style="width: 100%;">
-          <el-option label="SNMP" :value="1" />
           <el-option label="Zabbix" :value="2" />
           <el-option label="Other" :value="3" />
         </el-select>
@@ -138,31 +137,31 @@
           <div class="monitor-card-body">
             <p class="monitor-desc">{{ monitor.description || $t('monitors.noDescription') }}</p>
             <div class="monitor-status-row">
-              <el-tag :type="monitor.enabled === 1 ? 'success' : 'info'" size="small">
-                {{ monitor.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
+              <el-tag :type="(monitor.id === 1 || monitor.enabled === 1) ? 'success' : 'info'" size="small">
+                {{ (monitor.id === 1 || monitor.enabled === 1) ? $t('common.enabled') : $t('common.disabled') }}
               </el-tag>
-              <el-tooltip :content="monitor.status_reason || getStatusInfo(monitor.status).reason" placement="top">
-                <el-tag :type="getStatusInfo(monitor.status).type" size="small" effect="dark">
-                  {{ getStatusInfo(monitor.status).label }}
+              <el-tooltip :content="monitor.id === 1 ? $t('common.reasonActive') : (monitor.status_reason || getStatusInfo(monitor.status).reason)" placement="top">
+                <el-tag :type="monitor.id === 1 ? 'success' : getStatusInfo(monitor.status).type" size="small" effect="dark">
+                  {{ monitor.id === 1 ? $t('common.statusActive') : getStatusInfo(monitor.status).label }}
                 </el-tag>
               </el-tooltip>
             </div>
             <div style="margin-top: 12px">
               <span style="font-size: 12px; color: var(--text-muted)">Health</span>
-              <el-progress :percentage="monitor.health_score" :status="getHealthStatus(monitor.health_score)" :stroke-width="4" />
+              <el-progress :percentage="monitor.id === 1 ? 100 : monitor.health_score" :status="getHealthStatus(monitor.id === 1 ? 100 : monitor.health_score)" :stroke-width="4" />
             </div>
           </div>
 
           <div class="monitor-card-footer">
             <el-button-group>
               <el-tooltip :content="$t('monitors.properties')" placement="bottom">
-                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
+                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" :disabled="monitor.id === 1" />
               </el-tooltip>
               <el-tooltip v-if="monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
-                <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
+                <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" :disabled="monitor.id === 1" />
               </el-tooltip>
               <el-tooltip :content="$t('monitors.delete')" placement="bottom">
-                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" />
+                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" :disabled="monitor.id === 1" />
               </el-tooltip>
             </el-button-group>
           </div>
@@ -203,13 +202,11 @@
         </div>
       </el-form-item>
       <el-form-item :label="$t('monitors.type')">
-      <el-form-item :label="$t('monitors.type')">
         <el-select v-model="selectedMonitor.type" style="width: 100%;">
-          <el-option label="SNMP" :value="1" />
+          <el-option v-if="selectedMonitor.id === 1" label="SNMP" :value="1" />
           <el-option label="Zabbix" :value="2" />
           <el-option label="Other" :value="3" />
         </el-select>
-      </el-form-item>
       </el-form-item>
       <el-form-item :label="$t('monitors.description')">
         <el-input type="textarea" v-model="selectedMonitor.description" />
@@ -320,7 +317,7 @@ export default {
         monitors: [],
         createDialogVisible: false,
         propertiesDialogVisible: false,
-        newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 },
+        newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 },
         selectedMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 },
         loading: false,
         error: null,
@@ -718,7 +715,7 @@ export default {
             event_token: createdMonitor.event_token,
           });
           
-          this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: '' };
+          this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 };
           this.createDialogVisible = false;
           
           if (createdMonitor.auth_token) {
@@ -786,7 +783,7 @@ export default {
       },
       cancelCreate() {
         this.createDialogVisible = false;
-        this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: '' };
+        this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 };
       },
       getStatusInfo(status: number) {
         const map: Record<number, { label: string; reason: string; type: string }> = {

@@ -5,8 +5,20 @@ import router from '../router'
 import { ElMessageBox } from 'element-plus'
 import { getToken, clearToken } from './auth'
 import i18n from '../i18n'
+
+// Determine API base URL based on environment
+const getApiBaseURL = () => {
+  // In development, use the proxy (empty baseURL)
+  // In production or preview, use the full backend URL
+  if (import.meta.env.DEV) {
+    return ''
+  }
+  // For preview or production, communicate directly with backend
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+}
+
 const request = axios.create({
-    baseURL: '', // Handled by interceptor to avoid double prefixing
+    baseURL: getApiBaseURL(),
     timeout: 30000, // 30 seconds timeout
     withCredentials: false, // 表示请求可以携带cookie
     headers: {

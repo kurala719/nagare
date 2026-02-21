@@ -102,6 +102,11 @@ func DeleteMonitorByIDCtrl(c *gin.Context) {
 		return
 	}
 
+	if id == 1 {
+		respondBadRequest(c, "cannot delete internal monitor")
+		return
+	}
+
 	if err := service.DeleteMonitorServByID(id); err != nil {
 		respondError(c, err)
 		return
@@ -114,6 +119,11 @@ func UpdateMonitorCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		respondBadRequest(c, "invalid monitor ID")
+		return
+	}
+
+	if id == 1 {
+		respondBadRequest(c, "cannot update internal monitor")
 		return
 	}
 

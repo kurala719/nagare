@@ -207,7 +207,7 @@ func GetItemsByHostIDFromMonitorServ(hid uint) ([]ItemResp, error) {
 	// Use existing auth token if available
 	if monitor.AuthToken != "" {
 		client.SetAuthToken(monitor.AuthToken)
-	} else {
+	} else if monitor.ID != 1 {
 		if err := client.Authenticate(context.Background()); err != nil {
 			return nil, fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
@@ -261,7 +261,7 @@ func AddItemsByHostIDFromMonitorServ(hid uint) error {
 	// Use existing auth token if available
 	if monitor.AuthToken != "" {
 		client.SetAuthToken(monitor.AuthToken)
-	} else {
+	} else if monitor.ID != 1 {
 		if err := client.Authenticate(context.Background()); err != nil {
 			setMonitorStatusError(host.MonitorID)
 			setHostStatusError(hid)
@@ -379,7 +379,9 @@ func PullItemsFromMonitorServ(mid uint) (SyncResult, error) {
 func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
-	_, _ = TestMonitorStatusServ(mid)
+	if mid != 1 {
+		_, _ = TestMonitorStatusServ(mid)
+	}
 
 	// Check monitor status before proceeding with host pull
 	monitor, err := repository.GetMonitorByIDDAO(mid)
@@ -390,7 +392,7 @@ func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 	}
 
 	// Monitor must be active (status == 1 or syncing) to pull items
-	if monitor.Status == 0 || monitor.Status == 2 {
+	if mid != 1 && (monitor.Status == 0 || monitor.Status == 2) {
 		reason := "monitor is not active"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
@@ -477,7 +479,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		}
 	}
 
-	if monitor.Status == 0 || monitor.Status == 2 {
+	if mid != 1 && (monitor.Status == 0 || monitor.Status == 2) {
 		reason := "monitor is not active"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
@@ -917,7 +919,7 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 		return fmt.Errorf("failed to get monitor: %w", err)
 	}
 
-	if monitor.Status == 2 {
+	if mid != 1 && monitor.Status == 2 {
 		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription
@@ -1056,7 +1058,9 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
-	_, _ = TestMonitorStatusServ(mid)
+	if mid != 1 {
+		_, _ = TestMonitorStatusServ(mid)
+	}
 
 	// Check monitor status before proceeding with item push
 	monitor, err := repository.GetMonitorByIDDAO(mid)
@@ -1067,7 +1071,7 @@ func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 	}
 
 	// Monitor must be active or inactive (not error) to push items
-	if monitor.Status == 2 {
+	if mid != 1 && monitor.Status == 2 {
 		reason := "monitor is in error state"
 		if monitor.StatusDescription != "" {
 			reason = monitor.StatusDescription

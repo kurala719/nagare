@@ -266,17 +266,21 @@ type AuditLog struct {
 
 // User represents the unified authentication and profile information
 type User struct {
-	gorm.Model
-	Username     string `gorm:"uniqueIndex;size:100"`
-	Password     string `json:"-"`         // Hashed password, excluded from JSON by default
-	Privileges   int    `gorm:"default:1"` // 0=unauthorized, 1=user, 2=admin, 3=superadmin
-	Status       int    `gorm:"default:1"` // 0=inactive, 1=active
-	Email        string `gorm:"size:255"`
-	Phone        string `gorm:"size:20"`
-	Avatar       string `gorm:"size:255"`
-	Address      string `gorm:"size:255"`
-	Introduction string `gorm:"type:text"`
-	Nickname     string `gorm:"size:100"`
+	// Fields managed manually in migration.go to avoid GORM schema issues
+	ID           uint `gorm:"primaryKey"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    *time.Time `gorm:"index"`
+	Username     string     `gorm:"size:100;uniqueIndex:idx_username"`
+	Password     string     `json:"-"`         // Hashed password, excluded from JSON by default
+	Privileges   int        `gorm:"default:1"` // 0=unauthorized, 1=user, 2=admin, 3=superadmin
+	Status       int        `gorm:"default:1"` // 0=inactive, 1=active
+	Email        string     `gorm:"size:255"`
+	Phone        string     `gorm:"size:20"`
+	Avatar       string     `gorm:"size:255"`
+	Address      string     `gorm:"size:255"`
+	Introduction string     `gorm:"type:text"`
+	Nickname     string     `gorm:"size:100"`
 }
 
 // RegisterApplication represents a pending registration request from an unregistered user

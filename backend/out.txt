@@ -1,0 +1,3 @@
+
+2026/02/21 14:39:51 [31;1mD:/Nagare_Project/nagare/backend/cmd/server/main.go:104 [35;1mError 1170 (42000): BLOB/TEXT column 'username' used in key specification without a key length
+[0m[33m[1.417ms] [34;1m[rows:0][0m ALTER TABLE `users` MODIFY COLUMN `username` longtext

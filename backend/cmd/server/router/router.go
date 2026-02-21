@@ -19,19 +19,24 @@ import (
 
 // InitRouter initializes and starts the HTTP router
 func InitRouter() {
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode) // Enable debug mode to see route registration
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(api.CORSMiddleware()) // Add CORS support
 
-	r.RedirectTrailingSlash = true
+	r.RedirectTrailingSlash = false
 	r.Use(api.RequestIDMiddleware())
 	r.Use(api.AccessLogMiddleware())
 	r.Static("/avatars", "./public/avatars")
 
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
+
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, api.APIResponse{
 			Success: false,
-			Error:   "resource not found",
+			Error:   "api route not found",
 		})
 	})
 	r.NoMethod(func(c *gin.Context) {
@@ -53,12 +58,13 @@ func InitRouter() {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})
 
-	// Direct SNMP poll route
-	r.POST("/api/v1/snmp-poll-direct/:id", api.TestSNMPCtrl)
+	// Direct SNMP poll route (moved inside setupAllRoutes)
+	// r.POST("/api/v1/snmp-poll-direct/:id", api.TestSNMPCtrl)
 
 	// Setup all routes
 	apiGroup := r.Group("/api/v1")
 	apiGroup.Use(api.AuditLogMiddleware())
+	apiGroup.POST("/snmp-poll-direct/:id", api.TestSNMPCtrl)
 	setupAllRoutes(apiGroup)
 	setupMcpRoutes(apiGroup)
 
