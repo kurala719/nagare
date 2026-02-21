@@ -247,10 +247,11 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 
 	// Create the alert
 	alertReq := AlertReq{
-		Message:  message,
-		Severity: severity,
-		HostID:   item.HID,
-		ItemID:   item.ID,
+		Message:   message,
+		Severity:  severity,
+		HostID:    item.HID,
+		ItemID:    item.ID,
+		TriggerID: &trigger.ID,
 		Comment: fmt.Sprintf("Triggered by %s: %s operator %v", trigger.Name,
 			describeItemTriggerCondition(trigger), trigger.ItemValueThreshold),
 	}

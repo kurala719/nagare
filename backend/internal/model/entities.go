@@ -153,6 +153,7 @@ type Alert struct {
 	Severity  int
 	Status    int  // 0 = active, 1 = acknowledged, 2 = resolved
 	AlarmID   uint `gorm:"column:alarm_id"`
+	TriggerID uint `gorm:"column:trigger_id"`
 	HostID    uint
 	ItemID    uint
 	Comment   string

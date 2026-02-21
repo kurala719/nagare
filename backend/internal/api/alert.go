@@ -140,6 +140,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 	severity := payloadInt(payload, "severity", "level", "event_nseverity", "trigger_severity")
 	hostID := payloadUint(payload, "host_id", "hostid")
 	itemID := payloadUint(payload, "item_id", "itemid")
+	triggerID := payloadUint(payload, "trigger_id", "triggerid", "event_objectid")
 	hostName := payloadString(payload, "host", "hostname", "host_name")
 	itemName := payloadString(payload, "item", "itemname", "item_name")
 	comment := payloadString(payload, "comment", "detail", "details")
@@ -199,15 +200,16 @@ func AlertWebhookCtrl(c *gin.Context) {
 	}, nil, "")
 
 	req := service.AlertReq{
-		Message:  message,
-		Severity: severity,
-		Status:   status,
-		AlarmID:  alarmID,
-		HostID:   hostID,
-		ItemID:   itemID,
-		HostName: hostName,
-		ItemName: itemName,
-		Comment:  comment,
+		Message:   message,
+		Severity:  severity,
+		Status:    status,
+		AlarmID:   alarmID,
+		TriggerID: &triggerID,
+		HostID:    hostID,
+		ItemID:    itemID,
+		HostName:  hostName,
+		ItemName:  itemName,
+		Comment:   comment,
 	}
 
 	if err := service.AddAlertServ(req); err != nil {

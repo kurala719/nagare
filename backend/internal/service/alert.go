@@ -26,12 +26,13 @@ type AlertReq struct {
 	Message  string `json:"message" binding:"required"`
 	Severity int    `json:"severity"`
 	Status   int    `json:"status"`
-	HostID   uint   `json:"host_id"`
-	ItemID   uint   `json:"item_id"`
-	AlarmID  uint   `json:"alarm_id"`
-	Comment  string `json:"comment"`
-	HostName string `json:"host_name"`
-	ItemName string `json:"item_name"`
+	HostID    uint   `json:"host_id"`
+	ItemID    uint   `json:"item_id"`
+	AlarmID   uint   `json:"alarm_id"`
+	TriggerID *uint  `json:"trigger_id"`
+	Comment   string `json:"comment"`
+	HostName  string `json:"host_name"`
+	ItemName  string `json:"item_name"`
 }
 
 // AlertRes represents an alert response
@@ -43,6 +44,7 @@ type AlertRes struct {
 	HostID    uint      `json:"host_id"`
 	ItemID    uint      `json:"item_id"`
 	AlarmID   uint      `json:"alarm_id"`
+	TriggerID uint      `json:"trigger_id"`
 	Comment   string    `json:"comment"`
 	HostName  string    `json:"host_name"`
 	ItemName  string    `json:"item_name"`
@@ -64,6 +66,7 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 			Severity:  alert.Severity,
 			Status:    alert.Status,
 			AlarmID:   alert.AlarmID,
+			TriggerID: alert.TriggerID,
 			HostID:    alert.HostID,
 			ItemID:    alert.ItemID,
 			Comment:   alert.Comment,
@@ -90,6 +93,7 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 			Severity:  alert.Severity,
 			Status:    alert.Status,
 			AlarmID:   alert.AlarmID,
+			TriggerID: alert.TriggerID,
 			HostID:    alert.HostID,
 			ItemID:    alert.ItemID,
 			Comment:   alert.Comment,
@@ -196,13 +200,16 @@ func AddAlertServ(req AlertReq) error {
 	}
 
 	alert := model.Alert{
-		Message:  req.Message,
-		Severity: req.Severity,
-		Status:   req.Status,
-		AlarmID:  req.AlarmID,
-		HostID:   hostID,
-		ItemID:   itemID,
-		Comment:  req.Comment,
+		Message:   req.Message,
+		Severity:  req.Severity,
+		Status:    req.Status,
+		AlarmID:   req.AlarmID,
+		HostID:    hostID,
+		ItemID:    itemID,
+		Comment:   req.Comment,
+	}
+	if req.TriggerID != nil {
+		alert.TriggerID = *req.TriggerID
 	}
 	if err := repository.AddAlertDAO(&alert); err != nil {
 		return err

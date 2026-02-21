@@ -200,10 +200,22 @@ func ExecuteActionsForAlert(alert model.Alert) {
 	}
 
 	LogService("info", "evaluating actions for alert", map[string]interface{}{
-		"alert_id": alert.ID,
-		"total_actions": len(actions),
+		"alert_id":        alert.ID,
+		"alert_message":   alert.Message,
+		"total_actions":   len(actions),
 		"enabled_actions": enabledCount,
 	}, nil, "")
+
+	// Safeguard: Only process alerts created in the last 10 minutes to avoid accidental historical storms
+	// (Unless it's a test alert or similar)
+	if time.Since(alert.CreatedAt) > 10*time.Minute {
+		LogService("info", "action evaluation skipped: alert too old", map[string]interface{}{
+			"alert_id":   alert.ID,
+			"created_at": alert.CreatedAt,
+			"age":        time.Since(alert.CreatedAt).String(),
+		}, nil, "")
+		return
+	}
 
 	// Prepare context for matching
 	matchCtx := buildAlertMatchContext(alert)
@@ -216,9 +228,9 @@ func ExecuteActionsForAlert(alert model.Alert) {
 		}
 		if matchActionFilter(action, matchCtx) {
 			LogService("info", "action matched for alert", map[string]interface{}{
-				"action_id": action.ID,
+				"action_id":   action.ID,
 				"action_name": action.Name,
-				"alert_id": alert.ID,
+				"alert_id":    alert.ID,
 			}, nil, "")
 
 			// Get Media
@@ -226,54 +238,68 @@ func ExecuteActionsForAlert(alert model.Alert) {
 			if err != nil {
 				LogService("error", "failed to load media for action", map[string]interface{}{
 					"action_id": action.ID,
-					"media_id": action.MediaID,
-					"error": err.Error(),
+					"media_id":  action.MediaID,
+					"error":     err.Error(),
 				}, nil, "")
 				continue
 			}
 			if media.Enabled == 0 {
 				LogService("warn", "media disabled for action", map[string]interface{}{
-					"action_id": action.ID,
-					"media_id": action.MediaID,
+					"action_id":  action.ID,
+					"media_id":   action.MediaID,
 					"media_name": media.Name,
 				}, nil, "")
 				continue
 			}
 
 			// Execute default target
-			if err := ExecuteAction(action, media, replacements); err != nil {
-				LogService("error", "action execution failed", map[string]interface{}{
-					"action_id": action.ID,
-					"media_id": media.ID,
-					"target": media.Target,
-					"error": err.Error(),
-				}, nil, "")
+			if media.Target != "" {
+				if err := ExecuteAction(action, media, replacements); err != nil {
+					LogService("error", "action execution failed", map[string]interface{}{
+						"action_id": action.ID,
+						"media_id":  media.ID,
+						"target":    media.Target,
+						"error":     err.Error(),
+					}, nil, "")
+				} else {
+					LogService("info", "action execution succeeded", map[string]interface{}{
+						"action_id": action.ID,
+						"media_id":  media.ID,
+						"target":    media.Target,
+					}, nil, "")
+				}
 			} else {
-				LogService("info", "action execution succeeded", map[string]interface{}{
+				LogService("debug", "action default target empty", map[string]interface{}{
 					"action_id": action.ID,
-					"media_id": media.ID,
-					"target": media.Target,
+					"media_id":  media.ID,
 				}, nil, "")
 			}
 
-			// Also send to specifically associated users if it's a QQ media
-			lowerType := strings.ToLower(media.Type)
-			if (lowerType == "qq" || lowerType == "qrobot") && len(action.Users) > 0 {
+			// Also send to specifically associated users
+			if len(action.Users) > 0 {
+				lowerType := strings.ToLower(media.Type)
 				for _, user := range action.Users {
-					if user.QQ != "" {
+					userTarget := ""
+					if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
+						userTarget = "user:" + user.QQ
+					} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
+						userTarget = user.Email
+					}
+
+					if userTarget != "" {
 						userMedia := media
-						userMedia.Target = "user:" + user.QQ
+						userMedia.Target = userTarget
 						LogService("debug", "sending alert to associated user", map[string]interface{}{
 							"action_id": action.ID,
-							"user_id": user.ID,
-							"qq": user.QQ,
+							"user_id":   user.ID,
+							"target":    userTarget,
 						}, nil, "")
 						if err := ExecuteAction(action, userMedia, replacements); err != nil {
 							LogService("error", "user action execution failed", map[string]interface{}{
 								"action_id": action.ID,
-								"user_id": user.ID,
-								"qq": user.QQ,
-								"error": err.Error(),
+								"user_id":   user.ID,
+								"target":    userTarget,
+								"error":     err.Error(),
 							}, nil, "")
 						}
 					}
@@ -368,8 +394,14 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 	
 	// Trigger ID Check
 	if action.TriggerID != nil && *action.TriggerID > 0 {
-		if alert.AlarmID != *action.TriggerID {
-			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{"action_id": action.ID, "alert_alarm_id": alert.AlarmID, "filter_trigger_id": *action.TriggerID}, nil, "")
+		matched := (alert.TriggerID == *action.TriggerID) || (alert.AlarmID == *action.TriggerID)
+		if !matched {
+			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
+				"action_id":         action.ID,
+				"alert_trigger_id":  alert.TriggerID,
+				"alert_alarm_id":    alert.AlarmID,
+				"filter_trigger_id": *action.TriggerID,
+			}, nil, "")
 			return false
 		}
 	}
