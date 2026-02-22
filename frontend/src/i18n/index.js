@@ -769,7 +769,8 @@ const messages = {
       log: 'System Logs',
       auditLog: 'Audit Logs',
       configuration: 'System Config',
-      profile: 'User Profile'
+      profile: 'User Profile',
+      about: 'About'
     },
     media: {
       title: 'Media',
@@ -1168,6 +1169,17 @@ const messages = {
         reports: 'Generated Reports',
         site_messages: 'Site Messages'
       }
+    },
+    about: {
+      title: 'About Nagare',
+      subtitle: 'Open-source infrastructure intelligence platform',
+      description: 'Nagare is a deep-dive infrastructure intelligence and automated operations platform designed to provide comprehensive visibility and AI-assisted troubleshooting for modern environments.',
+      contact: 'Contact Information',
+      github: 'GitHub Repository',
+      author: 'Author',
+      email: 'Email',
+      version: 'Version',
+      license: 'License'
     },
     details: 'Log Details',
     clear: 'Clear Logs',
@@ -1941,7 +1953,8 @@ const messages = {
       log: '系统日志',
       auditLog: '审计日志',
       configuration: '系统配置',
-      profile: '个人资料'
+      profile: '个人资料',
+      about: '关于'
     },
     media: {
       title: '媒介',
@@ -2337,6 +2350,17 @@ const messages = {
         reports: '生成的报表',
         site_messages: '站内消息'
       }
+    },
+    about: {
+      title: '关于 Nagare',
+      subtitle: '开源基础设施智能平台',
+      description: 'Nagare 是一个深度基础设施洞见与自动化运维平台，旨在为现代环境提供全面的可见性和 AI 辅助的故障排查。',
+      contact: '联系方式',
+      github: 'GitHub 仓库',
+      author: '作者',
+      email: '电子邮箱',
+      version: '版本',
+      license: '许可协议'
     },
     details: '日志详情',
     clear: '清空日志',

@@ -181,6 +181,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/config-settings',
     name: 'Configuration',
     component: () => import('@/views/Configuration.vue'),
