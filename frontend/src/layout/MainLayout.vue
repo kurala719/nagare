@@ -144,7 +144,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools, PieChart } from '@element-plus/icons-vue'
+import { Expand, Fold, DArrowLeft, DArrowRight, Monitor, Setting, Moon, Sunny, Tools, PieChart, InfoFilled } from '@element-plus/icons-vue'
 import SideBarChat from '@/components/Customed/SideBarChat.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import SiteMessageCenter from '@/components/SiteMessageCenter.vue'
@@ -166,7 +166,8 @@ export default defineComponent({
     Moon,
     Sunny,
     Tools,
-    PieChart
+    PieChart,
+    InfoFilled
   },
   setup() {
     const route = useRoute()
@@ -272,6 +273,7 @@ export default defineComponent({
         { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},
       { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1, icon: 'User' },
+      { key: 'about', path: '/about', label: 'menu.about', minPrivilege: 1, icon: 'InfoFilled' },
     ])
 
     const visibleMenuItems = computed(() => {

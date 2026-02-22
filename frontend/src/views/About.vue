@@ -15,6 +15,7 @@
               </div>
               <h2 class="brand-name">Nagare</h2>
               <p class="brand-description">{{ $t('about.description') }}</p>
+              <p class="brand-disclaimer">{{ $t('about.disclaimer') }}</p>
             </div>
 
             <el-divider />
@@ -22,11 +23,11 @@
             <div class="info-grid">
               <div class="info-item">
                 <div class="info-label">{{ $t('about.version') }}</div>
-                <div class="info-value">v1.1.0</div>
+                <div class="info-value">v1.0</div>
               </div>
               <div class="info-item">
                 <div class="info-label">{{ $t('about.license') }}</div>
-                <div class="info-value">MIT License</div>
+                <div class="info-value">Apache 2.0</div>
               </div>
               <div class="info-item">
                 <div class="info-label">{{ $t('about.github') }}</div>
@@ -138,10 +139,23 @@ import { Monitor, User, Message, Link, Share } from '@element-plus/icons-vue'
 
 .brand-description {
   max-width: 600px;
-  margin: 0 auto;
+  margin: 0 auto 16px auto;
   line-height: 1.6;
   color: var(--text-muted);
   font-size: 16px;
+}
+
+.brand-disclaimer {
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  font-style: italic;
+  background: var(--surface-2);
+  padding: 16px;
+  border-radius: 12px;
+  border-left: 4px solid var(--brand-400);
 }
 
 .info-grid {
