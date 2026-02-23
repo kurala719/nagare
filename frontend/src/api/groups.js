@@ -42,9 +42,9 @@ export function updateGroup(id, data) {
   })
 }
 
-export function deleteGroup(id) {
+export function deleteGroup(id, push = false) {
   return request({
-    url: `/groups/${id}`,
+    url: `/groups/${id}${push ? '?push=true' : ''}`,
     method: 'delete'
   })
 }

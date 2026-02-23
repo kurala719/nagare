@@ -172,14 +172,14 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 }
 
 // DeleteMonitorServByID deletes a monitor by ID and all its associated groups, hosts and items
-func DeleteMonitorServByID(id int) error {
+func DeleteMonitorServByID(id int, deleteFromMonitor bool) error {
 	// 1. Delete all groups belonging to this monitor (cascades to hosts and items)
-	if err := DeleteGroupsByMIDServ(uint(id)); err != nil {
+	if err := DeleteGroupsByMIDServ(uint(id), deleteFromMonitor); err != nil {
 		LogService("error", "failed to delete groups during monitor cascading delete", map[string]interface{}{"monitor_id": id, "error": err.Error()}, nil, "")
 	}
 
 	// 2. Delete any remaining hosts belonging to this monitor (those without a group)
-	if err := DeleteHostsByMIDServ(uint(id)); err != nil {
+	if err := DeleteHostsByMIDServ(uint(id), deleteFromMonitor); err != nil {
 		LogService("error", "failed to delete hosts during monitor cascading delete", map[string]interface{}{"monitor_id": id, "error": err.Error()}, nil, "")
 	}
 

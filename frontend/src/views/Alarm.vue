@@ -527,11 +527,12 @@ export default {
           username: this.selectedAlarm.username,
           password: this.selectedAlarm.password,
           auth_token: this.selectedAlarm.auth_token,
-                      type: this.selectedAlarm.type,
-                      description: this.selectedAlarm.description,
-                      enabled: this.selectedAlarm.enabled,
-                    };
-                    await updateAlarm(this.selectedAlarm.id, updateData);        const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
+          type: this.selectedAlarm.type,
+          description: this.selectedAlarm.description,
+          enabled: this.selectedAlarm.enabled,
+        };
+        await updateAlarm(this.selectedAlarm.id, updateData);
+        const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
         if (idx !== -1) {
           this.alarms.splice(idx, 1, Object.assign({}, this.selectedAlarm));
         }

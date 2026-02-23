@@ -368,13 +368,25 @@ func GetHostByIDServ(id uint) (HostResp, error) {
 }
 
 // DeleteHostsByMIDServ deletes all hosts by monitor ID and their items
-func DeleteHostsByMIDServ(mid uint) error {
+func DeleteHostsByMIDServ(mid uint, deleteFromMonitor bool) error {
 	// 1. Delete all items belonging to hosts of this monitor
 	if err := repository.DeleteItemsByMIDDAO(mid); err != nil {
 		LogService("error", "failed to delete items during monitor cascading delete", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
 	}
 
-	// 2. Delete all hosts of this monitor
+	// 2. Delete from monitor if requested
+	if deleteFromMonitor {
+		hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
+		if err == nil {
+			for _, h := range hosts {
+				if h.Hostid != "" {
+					_ = DeleteHostFromMonitorServ(mid, h.Hostid)
+				}
+			}
+		}
+	}
+
+	// 3. Delete all hosts of this monitor
 	return repository.DeleteHostByMIDDAO(mid)
 }
 
@@ -594,15 +606,45 @@ func GetHostConnectionDetails(id uint) (string, int, string, string, error) {
 }
 
 // DeleteHostByIDServ deletes a host by ID and all its items
-func DeleteHostByIDServ(id uint) error {
+func DeleteHostByIDServ(id uint, deleteFromMonitor bool) error {
+	host, err := repository.GetHostByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
 	// 1. Delete associated items first (cascading)
 	if err := repository.DeleteItemsByHIDDAO(id); err != nil {
 		LogService("error", "failed to delete host items during cascading delete", map[string]interface{}{"host_id": id, "error": err.Error()}, nil, "")
 		// Continue anyway to try and delete the host
 	}
 
-	// 2. Delete the host itself
+	// 2. Delete from monitor if requested
+	if deleteFromMonitor && host.MonitorID > 0 && host.Hostid != "" {
+		_ = DeleteHostFromMonitorServ(host.MonitorID, host.Hostid)
+	}
+
+	// 3. Delete the host itself
 	return repository.DeleteHostByIDDAO(id)
+}
+
+// DeleteHostFromMonitorServ deletes a host from the external monitor
+func DeleteHostFromMonitorServ(mid uint, hostid string) error {
+	monitor, err := GetMonitorByIDServ(mid)
+	if err != nil {
+		return err
+	}
+	client, err := createMonitorClient(monitor)
+	if err != nil {
+		return err
+	}
+	if monitor.AuthToken != "" {
+		client.SetAuthToken(monitor.AuthToken)
+	} else {
+		if err := client.Authenticate(context.Background()); err != nil {
+			return err
+		}
+	}
+	return client.DeleteHost(context.Background(), hostid)
 }
 
 // GetHostsFromMonitorServ retrieves hosts from an external monitor

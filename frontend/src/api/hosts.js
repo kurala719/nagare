@@ -28,9 +28,9 @@ export function updateHost(id, data) {
   })
 }
 
-export function deleteHost(id) {
+export function deleteHost(id, push = false) {
   return request({
-    url: `/hosts/${id}`,
+    url: `/hosts/${id}${push ? '?push=true' : ''}`,
     method: 'delete'
   })
 }

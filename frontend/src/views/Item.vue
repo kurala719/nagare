@@ -37,9 +37,6 @@
         <el-button type="primary" :icon="Plus" @click="openAddDialog">
           {{ $t('items.add') }}
         </el-button>
-        <el-button type="warning" :icon="Download" :disabled="(!hostFilter && selectedCount === 0) || pulling" :loading="pulling" @click="pullItems">
-          {{ $t('items.pull') }}
-        </el-button>
         <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
@@ -195,12 +192,13 @@
         </el-dialog>
 
         <!-- Delete Confirmation Dialog -->
-        <el-dialog v-model="deleteDialogVisible" :title="$t('items.confirmDelete')" width="400px">
+        <el-dialog v-model="deleteDialogVisible" :title="$t('items.confirmDelete')" width="420px">
             <p>{{ $t('items.confirmDeleteText') }}</p>
             <p v-if="itemToDelete"><strong>{{ itemToDelete.name }}</strong></p>
             <template #footer>
                 <el-button @click="deleteDialogVisible = false">{{ $t('items.cancel') }}</el-button>
-                <el-button type="danger" @click="deleteItemConfirmed" :loading="deleting">{{ $t('items.delete') }}</el-button>
+                <el-button type="danger" plain @click="deleteItemConfirmed(false)" :loading="deleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+                <el-button type="danger" @click="deleteItemConfirmed(true)" :loading="deleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
             </template>
         </el-dialog>
 
@@ -217,7 +215,8 @@
             </el-form>
             <template #footer>
                 <el-button @click="bulkDialogVisible = false">{{ $t('items.cancel') }}</el-button>
-                <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('items.apply') }}</el-button>
+                <el-button @click="applyBulkUpdate(false)" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+                <el-button type="primary" @click="applyBulkUpdate(true)" :loading="bulkUpdating">{{ $t('common.saveAndPush') }}</el-button>
             </template>
         </el-dialog>
 
@@ -226,7 +225,8 @@
             <p>{{ $t('items.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
             <template #footer>
                 <el-button @click="bulkDeleteDialogVisible = false">{{ $t('items.cancel') }}</el-button>
-                <el-button type="danger" @click="deleteSelectedItems" :loading="bulkDeleting">{{ $t('items.delete') }}</el-button>
+                <el-button type="danger" plain @click="deleteSelectedItems(false)" :loading="bulkDeleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+                <el-button type="danger" @click="deleteSelectedItems(true)" :loading="bulkDeleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
             </template>
         </el-dialog>
 
@@ -290,7 +290,6 @@ export default {
         saving: false,
         deleting: false,
         bulkDeleting: false,
-        pulling: false,
         pushing: false,
         consultingAI: false,
         error: null,
@@ -553,12 +552,12 @@ export default {
             this.itemToDelete = item;
             this.deleteDialogVisible = true;
         },
-        async deleteItemConfirmed() {
+        async deleteItemConfirmed(push = false) {
             if (!this.itemToDelete) return;
             
             this.deleting = true;
             try {
-                await deleteItem(this.itemToDelete.id);
+                await deleteItem(this.itemToDelete.id, push);
                 ElMessage.success(this.$t('items.deleted'));
                 this.deleteDialogVisible = false;
                 this.itemToDelete = null;
@@ -568,36 +567,6 @@ export default {
                 console.error('Error deleting item:', err);
             } finally {
                 this.deleting = false;
-            }
-        },
-        async pullItems() {
-            this.pulling = true;
-            try {
-                if (this.selectedCount > 0) {
-                    const results = await this.batchSyncSelectedItems('pull');
-                    ElMessage({
-                        type: results.success > 0 ? 'success' : 'warning',
-                        message: this.$t('items.pullSuccess') + ` (${results.success}/${results.total}${results.skipped ? `, ${this.$t('common.skipped') || 'skipped'}: ${results.skipped}` : ''})`,
-                    });
-                } else {
-                    if (!this.hostFilter) {
-                        ElMessage.warning(this.$t('items.pullSelectHost'));
-                        return;
-                    }
-                    const host = this.hosts.find((h) => h.id === this.hostFilter);
-                    if (!host || !host.mid) {
-                        ElMessage.error(this.$t('items.pullFailed'));
-                        return;
-                    }
-                    await pullItemsFromHost(host.mid, this.hostFilter);
-                    ElMessage.success(this.$t('items.pullSuccess'));
-                }
-                await this.loadItems(true);
-                this.clearSelection();
-            } catch (err) {
-                ElMessage.error(err.message || this.$t('items.pullFailed'));
-            } finally {
-                this.pulling = false;
             }
         },
         async pushItems() {
@@ -682,12 +651,12 @@ export default {
             }
             this.bulkDeleteDialogVisible = true;
         },
-        async deleteSelectedItems() {
+        async deleteSelectedItems(push = false) {
             if (this.selectedCount === 0) return;
 
             this.bulkDeleting = true;
             try {
-                await Promise.all(this.selectedItems.map((item) => deleteItem(item.id)));
+                await Promise.all(this.selectedItems.map((item) => deleteItem(item.id, push)));
                 ElMessage.success(this.$t('items.bulkDeleteSuccess', { count: this.selectedCount }));
                 this.bulkDeleteDialogVisible = false;
                 this.clearSelection();
@@ -709,26 +678,27 @@ export default {
             };
             this.bulkDialogVisible = true;
         },
-        async applyBulkUpdate() {
-      if (this.selectedCount === 0) return;
-      if (this.bulkForm.enabled === 'nochange') {
-        ElMessage.warning(this.$t('items.bulkUpdateNoChanges'));
-        return;
-      }
+            async applyBulkUpdate(pushToMonitor = false) {
+            if (this.selectedCount === 0) return;
+            if (this.bulkForm.enabled === 'nochange') {
+                ElMessage.warning(this.$t('items.bulkUpdateNoChanges'));
+                return;
+            }
 
-      this.bulkUpdating = true;
-      try {
-        const enabledOverride = this.bulkForm.enabled;
-        await Promise.all(this.selectedItems.map((item) => {
-          const payload = {
-            name: item.name,
-            value: item.value,
-            enabled: enabledOverride === 'nochange' ? item.enabled : (enabledOverride === 'enable' ? 1 : 0),
-            comment: item.description,
-            hid: item.host_id,
-          };
-          return updateItem(item.id, payload);
-        }));
+            this.bulkUpdating = true;
+            try {
+                const enabledOverride = this.bulkForm.enabled;
+                await Promise.all(this.selectedItems.map((item) => {
+                    const payload = {
+                        name: item.name,
+                        value: item.value,
+                        enabled: enabledOverride === 'nochange' ? item.enabled : (enabledOverride === 'enable' ? 1 : 0),
+                        comment: item.description,
+                        hid: item.host_id,
+                        push_to_monitor: pushToMonitor
+                    };
+                    return updateItem(item.id, payload);
+                }));
                 ElMessage.success(this.$t('items.bulkUpdateSuccess', { count: this.selectedCount }));
                 this.bulkDialogVisible = false;
                 this.clearSelection();

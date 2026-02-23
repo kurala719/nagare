@@ -143,7 +143,8 @@ func DeleteGroupByIDCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid group ID")
 		return
 	}
-	if err := service.DeleteGroupByIDServ(uint(id)); err != nil {
+	pushToMonitor := c.Query("push") == "true"
+	if err := service.DeleteGroupByIDServ(uint(id), pushToMonitor); err != nil {
 		respondError(c, err)
 		return
 	}

@@ -420,6 +420,16 @@
     </template>
   </el-dialog>
 
+  <!-- Delete Dialog -->
+  <el-dialog v-model="deleteDialogVisible" :title="$t('hosts.delete')" width="420px">
+    <p v-if="hostToDelete">{{ $t('hosts.deleteConfirmText', { name: hostToDelete.name }) }}</p>
+    <template #footer>
+      <el-button @click="deleteDialogVisible = false">{{ $t('hosts.cancel') }}</el-button>
+      <el-button type="danger" plain @click="performDelete(hostToDelete.id, false)" :loading="deleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+      <el-button type="danger" @click="performDelete(hostToDelete.id, true)" :loading="deleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
+    </template>
+  </el-dialog>
+
   <!-- Bulk Update Dialog -->
   <el-dialog v-model="bulkDialogVisible" :title="$t('common.bulkUpdateTitle')" width="460px">
     <el-form :model="bulkForm" label-width="140px">
@@ -433,16 +443,17 @@
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('hosts.cancel') }}</el-button>
-      <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button @click="applyBulkUpdate(false)" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button type="primary" @click="applyBulkUpdate(true)" :loading="bulkUpdating">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
-  <!-- Bulk Delete Confirmation Dialog -->
   <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
     <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
     <template #footer>
       <el-button @click="bulkDeleteDialogVisible = false">{{ $t('hosts.cancel') }}</el-button>
-      <el-button type="danger" @click="deleteSelectedHosts" :loading="bulkDeleting">{{ $t('hosts.delete') }}</el-button>
+      <el-button type="danger" plain @click="deleteSelectedHosts(false)" :loading="bulkDeleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+      <el-button type="danger" @click="deleteSelectedHosts(true)" :loading="bulkDeleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
     </template>
   </el-dialog>
 
@@ -511,6 +522,9 @@ export default {
       consultingAI: false,
       currentHostForAI: null,
       aiResponse: '',
+      deleteDialogVisible: false,
+      hostToDelete: null,
+      deleting: false,
       selectedHosts: [],
       saving: false,
       bulkDialogVisible: false,
@@ -1000,12 +1014,12 @@ export default {
       }
       this.bulkDeleteDialogVisible = true;
     },
-    async deleteSelectedHosts() {
+    async deleteSelectedHosts(push = false) {
       if (this.selectedCount === 0) return;
 
       this.bulkDeleting = true;
       try {
-        await Promise.all(this.selectedHosts.map((host) => deleteHost(host.id)));
+        await Promise.all(this.selectedHosts.map((host) => deleteHost(host.id, push)));
         ElMessage.success(this.$t('common.bulkDeleteSuccess', { count: this.selectedCount }));
         this.bulkDeleteDialogVisible = false;
         this.clearSelection();
@@ -1027,7 +1041,7 @@ export default {
       };
       this.bulkDialogVisible = true;
     },
-    async applyBulkUpdate() {
+    async applyBulkUpdate(pushToMonitor = false) {
       if (this.selectedCount === 0) return;
       if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
@@ -1045,6 +1059,7 @@ export default {
             group_id: host.group_id,
             description: host.description,
             enabled: enabledOverride === 'nochange' ? host.enabled : (enabledOverride === 'enable' ? 1 : 0),
+            push_to_monitor: pushToMonitor
           };
           return updateHost(host.id, payload);
         }));
@@ -1254,38 +1269,28 @@ export default {
       }
     },
     onDelete(host) {
-      ElMessageBox.confirm(
-        this.$t('hosts.deleteConfirmText', { name: host.name }),
-        this.$t('hosts.deleteConfirmTitle'),
-        {
-          confirmButtonText: this.$t('hosts.confirm'),
-          cancelButtonText: this.$t('hosts.cancel'),
-          type: 'warning',
-        }
-      ).then(async () => {
-        try {
-          await deleteHost(host.id);
-          const index = this.hosts.findIndex((h) => h.id === host.id);
-          if (index !== -1) {
-            this.hosts.splice(index, 1);
-          }
-          ElMessage({
-            type: 'success',
-            message: this.$t('hosts.deleted'),
-          });
-        } catch (err) {
-          ElMessage({
-            type: 'error',
-            message: this.$t('hosts.deleteFailed') + ': ' + (err.message || this.$t('hosts.unknownError')),
-          });
-          console.error('Error deleting host:', err);
-        }
-      }).catch(() => {
+      this.hostToDelete = host;
+      this.deleteDialogVisible = true;
+    },
+    async performDelete(id, push = false) {
+      this.deleting = true;
+      try {
+        await deleteHost(id, push);
+        this.deleteDialogVisible = false;
+        await this.loadHosts(true);
         ElMessage({
-          type: 'info',
-          message: this.$t('hosts.deleteCanceled'),
+          type: 'success',
+          message: this.$t('hosts.deleted'),
         });
-      });
+      } catch (err) {
+        ElMessage({
+          type: 'error',
+          message: this.$t('hosts.deleteFailed') + ': ' + (err.message || this.$t('hosts.unknownError')),
+        });
+        console.error('Error deleting host:', err);
+      } finally {
+        this.deleting = false;
+      }
     },
     async onCreate(pushToMonitor = false) {
       try {

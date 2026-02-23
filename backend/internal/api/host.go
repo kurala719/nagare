@@ -165,7 +165,8 @@ func DeleteHostByIDCtrl(c *gin.Context) {
 		return
 	}
 
-	if err := service.DeleteHostByIDServ(uint(id)); err != nil {
+	pushToMonitor := c.Query("push") == "true"
+	if err := service.DeleteHostByIDServ(uint(id), pushToMonitor); err != nil {
 		respondError(c, err)
 		return
 	}

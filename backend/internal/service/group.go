@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -202,28 +203,58 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 }
 
 // DeleteGroupByIDServ deletes a group by ID and all its associated hosts and items
-func DeleteGroupByIDServ(id uint) error {
+func DeleteGroupByIDServ(id uint, deleteFromMonitor bool) error {
+	group, err := repository.GetGroupByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
 	// 1. Get all hosts in this group to perform cascading delete
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
 	if err == nil {
 		for _, h := range hosts {
 			// Call service-level delete to handle Host -> Item cascade
-			if err := DeleteHostByIDServ(h.ID); err != nil {
+			if err := DeleteHostByIDServ(h.ID, deleteFromMonitor); err != nil {
 				LogService("error", "failed to delete host during group cascading delete", map[string]interface{}{"group_id": id, "host_id": h.ID, "error": err.Error()}, nil, "")
 			}
 		}
 	}
 
-	// 2. Delete the group itself
+	// 2. Delete from monitor if requested
+	if deleteFromMonitor && group.MonitorID > 0 && group.ExternalID != "" {
+		_ = DeleteGroupFromMonitorServ(group.MonitorID, group.ExternalID)
+	}
+
+	// 3. Delete the group itself
 	return repository.DeleteGroupByIDDAO(id)
 }
 
+// DeleteGroupFromMonitorServ deletes a group from the external monitor
+func DeleteGroupFromMonitorServ(mid uint, externalID string) error {
+	monitor, err := GetMonitorByIDServ(mid)
+	if err != nil {
+		return err
+	}
+	client, err := createMonitorClient(monitor)
+	if err != nil {
+		return err
+	}
+	if monitor.AuthToken != "" {
+		client.SetAuthToken(monitor.AuthToken)
+	} else {
+		if err := client.Authenticate(context.Background()); err != nil {
+			return err
+		}
+	}
+	return client.DeleteHostGroup(context.Background(), externalID)
+}
+
 // DeleteGroupsByMIDServ deletes all groups by monitor ID and their associated hosts/items
-func DeleteGroupsByMIDServ(mid uint) error {
+func DeleteGroupsByMIDServ(mid uint, deleteFromMonitor bool) error {
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
 	if err == nil {
 		for _, g := range groups {
-			if err := DeleteGroupByIDServ(g.ID); err != nil {
+			if err := DeleteGroupByIDServ(g.ID, deleteFromMonitor); err != nil {
 				LogService("error", "failed to delete group during monitor cascading delete", map[string]interface{}{"monitor_id": mid, "group_id": g.ID, "error": err.Error()}, nil, "")
 			}
 		}

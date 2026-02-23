@@ -197,8 +197,40 @@ func UpdateItemServ(id uint, req ItemReq) error {
 }
 
 // DeleteItemByIDServ deletes an item by ID
-func DeleteItemByIDServ(id uint) error {
+func DeleteItemByIDServ(id uint, deleteFromMonitor bool) error {
+	item, err := repository.GetItemByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
+	if deleteFromMonitor && item.ItemID != "" {
+		host, err := repository.GetHostByIDDAO(item.HID)
+		if err == nil && host.MonitorID > 0 {
+			_ = DeleteItemFromMonitorServ(host.MonitorID, item.ItemID)
+		}
+	}
+
 	return repository.DeleteItemByIDDAO(id)
+}
+
+// DeleteItemFromMonitorServ deletes an item from the external monitor
+func DeleteItemFromMonitorServ(mid uint, itemID string) error {
+	monitor, err := repository.GetMonitorByIDDAO(mid)
+	if err != nil {
+		return err
+	}
+	client, err := createMonitorClientFromDomain(monitor)
+	if err != nil {
+		return err
+	}
+	if monitor.AuthToken != "" {
+		client.SetAuthToken(monitor.AuthToken)
+	} else {
+		if err := client.Authenticate(context.Background()); err != nil {
+			return err
+		}
+	}
+	return client.DeleteItem(context.Background(), itemID)
 }
 
 // GetItemsByHostIDFromMonitorServ retrieves items from an external monitor for a host

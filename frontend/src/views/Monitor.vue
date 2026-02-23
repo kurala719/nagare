@@ -221,6 +221,16 @@
     </template>
   </el-dialog>
 
+  <!-- Delete Dialog -->
+  <el-dialog v-model="deleteDialogVisible" :title="$t('monitors.delete')" width="420px">
+    <p v-if="monitorToDelete">Are you sure you want to delete {{ monitorToDelete.name }}? This will also delete all associated groups, hosts and items.</p>
+    <template #footer>
+      <el-button @click="deleteDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
+      <el-button type="danger" plain @click="performDelete(monitorToDelete.id, false)" :loading="deleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+      <el-button type="danger" @click="performDelete(monitorToDelete.id, true)" :loading="deleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
+    </template>
+  </el-dialog>
+
   <!-- Bulk Update Dialog -->
   <el-dialog v-model="bulkDialogVisible" :title="$t('common.bulkUpdateTitle')" width="460px">
     <el-form :model="bulkForm" label-width="140px">
@@ -234,16 +244,17 @@
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
-      <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button @click="applyBulkUpdate(false)" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button type="primary" @click="applyBulkUpdate(true)" :loading="bulkUpdating">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
-  <!-- Bulk Delete Confirmation Dialog -->
   <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
     <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
         <template #footer>
           <el-button @click="bulkDeleteDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
-          <el-button type="danger" @click="deleteSelectedMonitors" :loading="bulkDeleting">{{ $t('monitors.delete') }}</el-button>
+          <el-button type="danger" plain @click="deleteSelectedMonitors(false)" :loading="bulkDeleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+          <el-button type="danger" @click="deleteSelectedMonitors(true)" :loading="bulkDeleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
         </template>
       </el-dialog>
       </div>
@@ -293,6 +304,9 @@ export default {
         monitors: [],
         createDialogVisible: false,
         propertiesDialogVisible: false,
+        deleteDialogVisible: false,
+        monitorToDelete: null,
+        deleting: false,
         newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 2 },
         selectedMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
         loading: false,
@@ -413,12 +427,12 @@ export default {
         }
         this.bulkDeleteDialogVisible = true;
       },
-      async deleteSelectedMonitors() {
+      async deleteSelectedMonitors(push = false) {
         if (this.selectedCount === 0) return;
 
         this.bulkDeleting = true;
         try {
-          await Promise.all(this.selectedMonitorIds.map((id) => deleteMonitor(id)));
+          await Promise.all(this.selectedMonitorIds.map((id) => deleteMonitor(id, push)));
           ElMessage.success(this.$t('common.bulkDeleteSuccess', { count: this.selectedCount }));
           this.bulkDeleteDialogVisible = false;
           this.selectedMonitorIds = [];
@@ -440,7 +454,7 @@ export default {
         };
         this.bulkDialogVisible = true;
       },
-      async applyBulkUpdate() {
+      async applyBulkUpdate(pushToMonitor = false) {
         if (this.selectedCount === 0) return;
         if (this.bulkForm.enabled === 'nochange') {
           ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
@@ -452,7 +466,15 @@ export default {
           const enabledOverride = this.bulkForm.enabled;
           await Promise.all(this.monitors.filter((m) => this.selectedMonitorIds.includes(m.id)).map((monitor) => {
             const payload = {
+              name: monitor.name,
+              url: monitor.url,
+              username: monitor.username,
+              password: monitor.password,
+              auth_token: monitor.auth_token,
+              type: monitor.type,
+              description: monitor.description,
               enabled: enabledOverride === 'nochange' ? monitor.enabled : (enabledOverride === 'enable' ? 1 : 0),
+              push_to_monitor: pushToMonitor
             };
             return updateMonitor(monitor.id, payload);
           }));
@@ -619,39 +641,29 @@ export default {
           this.monitors.splice(index, 1);
         }
       },
-      async onDelete(monitor) {
-        ElMessageBox.confirm(
-          `Are you sure you want to delete ${monitor.name}?`,
-          'Warning',
-          {
-            confirmButtonText: 'Yes',
-            cancelButtonText: 'No',
-            type: 'warning',
-          }
-        ).then(async () => {
-          try {
-            await deleteMonitor(monitor.id);
-            const index = this.monitors.findIndex((m) => m.id === monitor.id);
-            if (index !== -1) {
-              this.monitors.splice(index, 1);
-            }
-            ElMessage({
-              type: 'success',
-              message: 'Monitor deleted successfully!',
-            });
-          } catch (err) {
-            ElMessage({
-              type: 'error',
-              message: 'Failed to delete monitor: ' + (err.message || 'Unknown error'),
-            });
-            console.error('Error deleting monitor:', err);
-          }
-        }).catch(() => {
+      onDelete(monitor) {
+        this.monitorToDelete = monitor;
+        this.deleteDialogVisible = true;
+      },
+      async performDelete(id, push = false) {
+        this.deleting = true;
+        try {
+          await deleteMonitor(id, push);
+          this.deleteDialogVisible = false;
+          await this.loadMonitors(true);
           ElMessage({
-            type: 'info',
-            message: 'Delete canceled',
+            type: 'success',
+            message: 'Monitor deleted successfully!',
           });
-        });
+        } catch (err) {
+          ElMessage({
+            type: 'error',
+            message: 'Failed to delete monitor: ' + (err.message || 'Unknown error'),
+          });
+          console.error('Error deleting monitor:', err);
+        } finally {
+          this.deleting = false;
+        }
       },
       async onCreate() {
         if (!this.newMonitor.name) {

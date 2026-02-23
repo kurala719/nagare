@@ -42,9 +42,9 @@ export function updateItem(id, data) {
   })
 }
 
-export function deleteItem(id) {
+export function deleteItem(id, push = false) {
   return request({
-    url: `/items/${id}`,
+    url: `/items/${id}${push ? '?push=true' : ''}`,
     method: 'delete'
   })
 }

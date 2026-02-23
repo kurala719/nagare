@@ -2,7 +2,7 @@
   <div class="nagare-container">
     <div class="page-header">
       <h1 class="page-title">{{ $t('groups.title') }}</h1>
-      <p class="page-subtitle">{{ $t('groups.loading') }}</p>
+      <p class="page-subtitle">{{ totalGroups }} {{ $t('dashboard.groups') }}</p>
     </div>
 
     <div class="standard-toolbar">
@@ -205,6 +205,16 @@
     </template>
   </el-dialog>
 
+  <!-- Delete Dialog -->
+  <el-dialog v-model="deleteDialogVisible" :title="$t('groups.delete')" width="420px">
+    <p v-if="groupToDelete">{{ $t('hosts.deleteConfirmText', { name: groupToDelete.name }) }}</p>
+    <template #footer>
+      <el-button @click="deleteDialogVisible = false">{{ $t('groups.cancel') }}</el-button>
+      <el-button type="danger" plain @click="performDelete(groupToDelete.id, false)" :loading="deleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+      <el-button type="danger" @click="performDelete(groupToDelete.id, true)" :loading="deleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
+    </template>
+  </el-dialog>
+
   <!-- Bulk Update Dialog -->
   <el-dialog v-model="bulkDialogVisible" :title="$t('common.bulkUpdateTitle')" width="460px">
     <el-form :model="bulkForm" label-width="140px">
@@ -218,16 +228,17 @@
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('groups.cancel') }}</el-button>
-      <el-button type="primary" @click="applyBulkUpdate" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button @click="applyBulkUpdate(false)" :loading="bulkUpdating">{{ $t('common.apply') }}</el-button>
+      <el-button type="primary" @click="applyBulkUpdate(true)" :loading="bulkUpdating">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
-  <!-- Bulk Delete Confirmation Dialog -->
   <el-dialog v-model="bulkDeleteDialogVisible" :title="$t('common.bulkDeleteConfirmTitle')" width="420px">
     <p>{{ $t('common.bulkDeleteConfirmText', { count: selectedCount }) }}</p>
     <template #footer>
       <el-button @click="bulkDeleteDialogVisible = false">{{ $t('groups.cancel') }}</el-button>
-      <el-button type="danger" @click="deleteSelectedGroups" :loading="bulkDeleting">{{ $t('groups.delete') }}</el-button>
+      <el-button type="danger" plain @click="deleteSelectedGroups(false)" :loading="bulkDeleting">{{ $t('common.saveLocally') || 'Delete Locally' }}</el-button>
+      <el-button type="danger" @click="deleteSelectedGroups(true)" :loading="bulkDeleting">{{ $t('common.saveAndPush') || 'Delete and Push' }}</el-button>
     </template>
   </el-dialog>
 
@@ -309,6 +320,9 @@ export default {
       detailDialogVisible: false,
       detailLoading: false,
       groupDetail: null,
+      deleteDialogVisible: false,
+      groupToDelete: null,
+      deleting: false,
       bulkDialogVisible: false,
       bulkDeleteDialogVisible: false,
       bulkUpdating: false,
@@ -439,11 +453,11 @@ export default {
       }
       this.bulkDeleteDialogVisible = true;
     },
-    async deleteSelectedGroups() {
+    async deleteSelectedGroups(push = false) {
       if (this.selectedCount === 0) return;
       this.bulkDeleting = true;
       try {
-        await Promise.all(this.selectedGroupRows.map((group) => deleteGroup(group.id)));
+        await Promise.all(this.selectedGroupRows.map((group) => deleteGroup(group.id, push)));
         ElMessage.success(this.$t('common.bulkDeleteSuccess', { count: this.selectedCount }));
         this.bulkDeleteDialogVisible = false;
         this.clearSelection();
@@ -465,7 +479,7 @@ export default {
       };
       this.bulkDialogVisible = true;
     },
-    async applyBulkUpdate() {
+    async applyBulkUpdate(pushToMonitor = false) {
       if (this.selectedCount === 0) return;
       if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
@@ -481,6 +495,7 @@ export default {
             description: group.description,
             enabled: enabledOverride === 'nochange' ? group.enabled : (enabledOverride === 'enable' ? 1 : 0),
             monitor_id: group.monitor_id,
+            push_to_monitor: pushToMonitor
           };
           return updateGroup(group.id, payload);
         }));
@@ -681,25 +696,21 @@ export default {
       return { total: tasks.length + skipped, success, skipped };
     },
     onDelete(group) {
-      ElMessageBox.confirm(
-        `${this.$t('groups.delete')} ${group.name}?`,
-        this.$t('groups.delete'),
-        {
-          confirmButtonText: this.$t('groups.delete'),
-          cancelButtonText: this.$t('groups.cancel'),
-          type: 'warning',
-        }
-      ).then(async () => {
-        try {
-          await deleteGroup(group.id);
-          await this.loadGroups();
-          ElMessage.success(this.$t('groups.deleted'));
-        } catch (err) {
-          ElMessage.error(this.$t('groups.deleteFailed') + ': ' + (err.message || ''));
-        }
-      }).catch(() => {
-        ElMessage.info(this.$t('groups.deleteCanceled'));
-      });
+      this.groupToDelete = group;
+      this.deleteDialogVisible = true;
+    },
+    async performDelete(id, push = false) {
+      this.deleting = true;
+      try {
+        await deleteGroup(id, push);
+        ElMessage.success(this.$t('groups.deleted'));
+        this.deleteDialogVisible = false;
+        await this.loadGroups(true);
+      } catch (err) {
+        ElMessage.error(this.$t('groups.deleteFailed') + ': ' + (err.message || ''));
+      } finally {
+        this.deleting = false;
+      }
     },
     getStatusInfo(status) {
       const map = {

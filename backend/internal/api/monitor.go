@@ -107,7 +107,8 @@ func DeleteMonitorByIDCtrl(c *gin.Context) {
 		return
 	}
 
-	if err := service.DeleteMonitorServByID(id); err != nil {
+	pushToMonitor := c.Query("push") == "true"
+	if err := service.DeleteMonitorServByID(id, pushToMonitor); err != nil {
 		respondError(c, err)
 		return
 	}

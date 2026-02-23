@@ -160,7 +160,8 @@ func DeleteItemByIDCtrl(c *gin.Context) {
 		return
 	}
 
-	if err := service.DeleteItemByIDServ(uint(id)); err != nil {
+	pushToMonitor := c.Query("push") == "true"
+	if err := service.DeleteItemByIDServ(uint(id), pushToMonitor); err != nil {
 		respondError(c, err)
 		return
 	}
