@@ -26,6 +26,7 @@ type ItemReq struct {
 	Comment        string     `json:"comment"`
 	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
 	ExternalSource string     `json:"external_source,omitempty"`
+	PushToMonitor  bool       `json:"push_to_monitor"`
 }
 
 // ItemResp represents an item response
@@ -122,7 +123,7 @@ func AddItemServ(req ItemReq) (ItemResp, error) {
 	if err := repository.AddItemDAO(item); err != nil {
 		return ItemResp{}, fmt.Errorf("failed to add item: %w", err)
 	}
-	if host.ID > 0 && host.MonitorID > 0 {
+	if host.ID > 0 && host.MonitorID > 0 && req.PushToMonitor {
 		if err := PushItemToMonitorServ(host.MonitorID, host.ID, item.ID); err == nil {
 			if refreshed, err := repository.GetItemByIDDAO(item.ID); err == nil {
 				item = refreshed
@@ -177,6 +178,15 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	if err := repository.UpdateItemDAO(id, updated); err != nil {
 		return err
 	}
+
+	// Auto-push to monitor only if PushToMonitor is true
+	if req.PushToMonitor {
+		host, err := repository.GetHostByIDDAO(updated.HID)
+		if err == nil && host.MonitorID > 0 {
+			_ = PushItemToMonitorServ(host.MonitorID, host.ID, id)
+		}
+	}
+
 	if refreshed, err := repository.GetItemByIDDAO(id); err == nil {
 		recordItemHistory(refreshed, time.Now().UTC())
 		ExecuteTriggersForItem(refreshed)

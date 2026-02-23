@@ -293,6 +293,7 @@ type HostReq struct {
 	SNMPV3SecurityLevel string     `json:"snmp_v3_security_level"`
 	LastSyncAt          *time.Time `json:"last_sync_at,omitempty"`
 	ExternalSource      string     `json:"external_source,omitempty"`
+	PushToMonitor       bool       `json:"push_to_monitor"`
 }
 
 // HostResp represents a host response
@@ -366,8 +367,14 @@ func GetHostByIDServ(id uint) (HostResp, error) {
 	return hostToResp(host), nil
 }
 
-// DeleteHostsByMIDServ deletes all hosts by monitor ID
+// DeleteHostsByMIDServ deletes all hosts by monitor ID and their items
 func DeleteHostsByMIDServ(mid uint) error {
+	// 1. Delete all items belonging to hosts of this monitor
+	if err := repository.DeleteItemsByMIDDAO(mid); err != nil {
+		LogService("error", "failed to delete items during monitor cascading delete", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
+	}
+
+	// 2. Delete all hosts of this monitor
 	return repository.DeleteHostByMIDDAO(mid)
 }
 
@@ -458,8 +465,8 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
 	}
 
-	// Auto-push to monitor if MID is set (either from request or resolved to "Nagare Internal")
-	if newHost.MonitorID > 0 {
+	// Auto-push to monitor if MID is set AND PushToMonitor is true
+	if newHost.MonitorID > 0 && h.PushToMonitor {
 		LogService("info", "auto-pushing new host to monitor", map[string]interface{}{"host_id": newHost.ID, "monitor_id": newHost.MonitorID}, nil, "")
 		if _, pushErr := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); pushErr != nil {
 			LogService("error", "auto-push failed for new host", map[string]interface{}{"host_id": newHost.ID, "error": pushErr.Error()}, nil, "")
@@ -585,8 +592,8 @@ func UpdateHostServ(id uint, h HostReq) error {
 		return err
 	}
 
-	// Auto-push to monitor if MID is set and critical fields changed
-	if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.IPAddr != existing.IPAddr || updated.MonitorID != existing.MonitorID) {
+	// Auto-push to monitor only if PushToMonitor is true
+	if updated.MonitorID > 0 && h.PushToMonitor {
 		_, _ = PushHostToMonitorServ(updated.MonitorID, id)
 	}
 
@@ -621,8 +628,15 @@ func GetHostConnectionDetails(id uint) (string, int, string, string, error) {
 	return host.IPAddr, host.SSHPort, host.SSHUser, password, nil
 }
 
-// DeleteHostByIDServ deletes a host by ID
+// DeleteHostByIDServ deletes a host by ID and all its items
 func DeleteHostByIDServ(id uint) error {
+	// 1. Delete associated items first (cascading)
+	if err := repository.DeleteItemsByHIDDAO(id); err != nil {
+		LogService("error", "failed to delete host items during cascading delete", map[string]interface{}{"host_id": id, "error": err.Error()}, nil, "")
+		// Continue anyway to try and delete the host
+	}
+
+	// 2. Delete the host itself
 	return repository.DeleteHostByIDDAO(id)
 }
 

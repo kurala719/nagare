@@ -185,7 +185,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('groups.cancel') }}</el-button>
-      <el-button type="primary" @click="onCreate">{{ $t('groups.save') }}</el-button>
+      <el-button @click="onCreate(false)">{{ $t('common.saveLocally') }}</el-button>
+      <el-button type="primary" @click="onCreate(true)">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
@@ -217,7 +218,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelProperties">{{ $t('groups.cancel') }}</el-button>
-      <el-button type="primary" @click="saveProperties">{{ $t('groups.save') }}</el-button>
+      <el-button @click="saveProperties(false)">{{ $t('common.saveLocally') }}</el-button>
+      <el-button type="primary" @click="saveProperties(true)">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
@@ -575,7 +577,7 @@ export default {
     cancelProperties() {
       this.propertiesDialogVisible = false;
     },
-    async saveProperties() {
+    async saveProperties(pushToMonitor = false) {
       try {
         await updateGroup(this.selectedGroup.id, {
           name: this.selectedGroup.name,
@@ -583,10 +585,12 @@ export default {
           enabled: this.selectedGroup.enabled,
           status: this.selectedGroup.status,
           monitor_id: this.selectedGroup.monitor_id,
+          push_to_monitor: pushToMonitor
         });
         await this.loadGroups(true);
         this.propertiesDialogVisible = false;
-        ElMessage.success(this.$t('groups.updated'));
+        const msg = pushToMonitor ? this.$t('groups.updated') + ' & Pushed' : this.$t('groups.updated');
+        ElMessage.success(msg);
       } catch (err) {
         ElMessage.error(this.$t('groups.updateFailed') + ': ' + (err.message || ''));
       }
@@ -595,18 +599,21 @@ export default {
       this.createDialogVisible = false;
       this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
     },
-    async onCreate() {
+    async onCreate(pushToMonitor = false) {
       if (!this.newGroup.name) {
         ElMessage.warning(this.$t('groups.name'));
         return;
       }
       try {
         const mid = this.newGroup.monitor_id;
-        await addGroup(this.newGroup);
+        const payload = { ...this.newGroup, push_to_monitor: pushToMonitor };
+        await addGroup(payload);
         await this.loadGroups(true);
         this.createDialogVisible = false;
         
-        const msg = this.$t('groups.created') + (mid > 0 ? ' & Automatically synced to monitor' : '');
+        const msg = (pushToMonitor && mid > 0)
+          ? this.$t('groups.created') + ' & Automatically synced to monitor'
+          : this.$t('groups.created');
         this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
         ElMessage.success(msg);
       } catch (err) {

@@ -134,3 +134,8 @@ func UpdateGroupStatusAndDescriptionDAO(id uint, status int, statusDesc string) 
 func DeleteGroupByIDDAO(id uint) error {
 	return database.DB.Delete(&model.Group{}, id).Error
 }
+
+// DeleteGroupsByMIDDAO deletes all groups associated with a specific monitor
+func DeleteGroupsByMIDDAO(mid uint) error {
+	return database.DB.Where("m_id = ?", mid).Delete(&model.Group{}).Error
+}

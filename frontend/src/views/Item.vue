@@ -191,8 +191,9 @@
             </el-form>
             <template #footer>
                 <el-button @click="dialogVisible = false">{{ $t('items.cancel') }}</el-button>
-                <el-button type="primary" @click="saveItem" :loading="saving">
-                    {{ isEditing ? $t('items.update') : $t('items.create') }}
+                <el-button @click="saveItem(false)">{{ $t('common.saveLocally') }}</el-button>
+                <el-button type="primary" @click="saveItem(true)" :loading="saving">
+                    {{ $t('common.saveAndPush') }}
                 </el-button>
             </template>
         </el-dialog>
@@ -531,7 +532,7 @@ export default {
             };
             this.dialogVisible = true;
         },
-        async saveItem() {
+        async saveItem(pushToMonitor = false) {
             try {
                 await this.$refs.itemFormRef.validate();
             } catch {
@@ -547,6 +548,7 @@ export default {
                     status: this.itemForm.status,
                     comment: this.itemForm.description,
                     hid: this.itemForm.host_id,
+                    push_to_monitor: pushToMonitor
                 };
                 if (this.isEditing) {
                     await updateItem(this.editingId, payload);

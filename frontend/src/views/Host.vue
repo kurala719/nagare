@@ -153,8 +153,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('hosts.cancel') }}</el-button>
-      <el-button type="primary" plain @click="onCreateAndPush" :loading="saving">{{ $t('hosts.createAndPush') || 'Create & Push' }}</el-button>
-      <el-button type="primary" @click="onCreate" :loading="saving">{{ $t('hosts.createBtn') }}</el-button>
+      <el-button @click="onCreate(false)" :loading="saving">{{ $t('common.saveLocally') }}</el-button>
+      <el-button type="primary" @click="onCreate(true)" :loading="saving">{{ $t('common.saveAndPush') }}</el-button>
     </template>  
   </el-dialog>
 
@@ -1096,6 +1096,12 @@ export default {
       this.snmpQuickResults = [];
     },
     async saveProperties() {
+      await this.performSaveProperties(false);
+    },
+    async savePropertiesAndPush() {
+      await this.performSaveProperties(true);
+    },
+    async performSaveProperties(pushToMonitor = false) {
       try {
         const updateData = {
           name: this.selectedHost.name,
@@ -1118,21 +1124,33 @@ export default {
           snmp_v3_auth_protocol: this.selectedHost.snmp_v3_auth_protocol,
           snmp_v3_priv_protocol: this.selectedHost.snmp_v3_priv_protocol,
           snmp_v3_security_level: this.selectedHost.snmp_v3_security_level,
+          push_to_monitor: pushToMonitor
         };
         await updateHost(this.selectedHost.id, updateData);
+        
+        if (pushToMonitor && this.selectedHost.mid > 0) {
+           await pushHostToMonitor(this.selectedHost.mid, this.selectedHost.id);
+        }
+
         const idx = this.hosts.findIndex((h) => h.id === this.selectedHost.id);
         if (idx !== -1) {
           this.hosts.splice(idx, 1, { ...this.selectedHost, ssh_password: '', snmp_v3_auth_pass: '', snmp_v3_priv_pass: '' });
         }
         this.propertiesDialogVisible = false;
+        
+        const msg = (pushToMonitor && this.selectedHost.mid > 0)
+          ? this.$t('hosts.updated') + ' & Pushed to monitor'
+          : this.$t('hosts.updated');
+          
         ElMessage({
           type: 'success',
-          message: this.$t('hosts.updated'),
+          message: msg,
         });
+        await this.loadHosts();
       } catch (err) {
         ElMessage({
           type: 'error',
-          message: this.$t('hosts.updateFailed') + ': ' + (err.message || this.$t('hosts.unknownError')),
+          message: (pushToMonitor ? 'Push failed: ' : this.$t('hosts.updateFailed') + ': ') + (err.message || this.$t('hosts.unknownError')),
         });
         console.error('Error updating host:', err);
       }
@@ -1294,7 +1312,7 @@ export default {
         });
       });
     },
-    async onCreate() {
+    async onCreate(pushToMonitor = false) {
       if (!this.newHost.name) {
         ElMessage({
           type: 'warning',
@@ -1325,6 +1343,7 @@ export default {
           snmp_v3_auth_protocol: this.newHost.snmp_v3_auth_protocol,
           snmp_v3_priv_protocol: this.newHost.snmp_v3_priv_protocol,
           snmp_v3_security_level: this.newHost.snmp_v3_security_level,
+          push_to_monitor: pushToMonitor
         };
         
         // Call API to add host to database
@@ -1336,7 +1355,9 @@ export default {
         this.resetNewHost();
         this.createDialogVisible = false;
         
-        const msg = this.$t('hosts.created') + (hostData.mid > 0 ? ' & Automatically synced to monitor' : '');
+        const msg = (pushToMonitor && hostData.m_id > 0)
+          ? this.$t('hosts.created') + ' & Automatically synced to monitor'
+          : this.$t('hosts.created');
         ElMessage({
           type: 'success',
           message: msg,

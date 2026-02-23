@@ -148,6 +148,11 @@ func DeleteHostByIDDAO(id uint) error {
 	return database.DB.Delete(&model.Host{}, id).Error
 }
 
+// DeleteHostsByGroupIDDAO deletes all hosts associated with a specific group
+func DeleteHostsByGroupIDDAO(groupID uint) error {
+	return database.DB.Where("group_id = ?", groupID).Delete(&model.Host{}).Error
+}
+
 // DeleteHostByMIDDAO deletes all hosts associated with a monitor
 func DeleteHostByMIDDAO(mid uint) error {
 	return database.DB.Where("m_id = ?", mid).Delete(&model.Host{}).Error

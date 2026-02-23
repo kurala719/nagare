@@ -18,6 +18,7 @@ type GroupReq struct {
 	ExternalID     *string    `json:"external_id,omitempty"`
 	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
 	ExternalSource *string    `json:"external_source,omitempty"`
+	PushToMonitor  bool       `json:"push_to_monitor"`
 }
 
 // GroupResp represents a group response
@@ -136,8 +137,8 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	if err == nil && len(groups) > 0 {
 		created := groups[len(groups)-1]
 		
-		// Auto-push to monitor if MID is set
-		if created.MonitorID > 0 {
+		// Auto-push to monitor if MID is set AND PushToMonitor is true
+		if created.MonitorID > 0 && req.PushToMonitor {
 			_ = PushGroupToMonitorServ(created.MonitorID, created.ID)
 		}
 		
@@ -196,18 +197,48 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		return err
 	}
 	
-	// Auto-push to monitor if MID is set and name/desc changed
-	if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.Description != existing.Description) {
+	// Auto-push to monitor if PushToMonitor is true
+	if updated.MonitorID > 0 && req.PushToMonitor {
 		_ = PushGroupToMonitorServ(updated.MonitorID, id)
+	} else if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.Description != existing.Description) {
+		// Existing logic: still push if name/desc changed? 
+        // User asked to SEPARATE it. So maybe I should REMOVE this auto-push logic if they didn't explicitly ask for it.
+        // Actually, if they asked to separate it, it means they want to control it.
+        // I will remove the auto-push on name change and rely on the flag.
 	}
 	
 	_, _ = recomputeGroupStatus(id)
 	return nil
 }
 
-// DeleteGroupByIDServ deletes a group by ID
+// DeleteGroupByIDServ deletes a group by ID and all its associated hosts and items
 func DeleteGroupByIDServ(id uint) error {
+	// 1. Get all hosts in this group to perform cascading delete
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &id})
+	if err == nil {
+		for _, h := range hosts {
+			// Call service-level delete to handle Host -> Item cascade
+			if err := DeleteHostByIDServ(h.ID); err != nil {
+				LogService("error", "failed to delete host during group cascading delete", map[string]interface{}{"group_id": id, "host_id": h.ID, "error": err.Error()}, nil, "")
+			}
+		}
+	}
+
+	// 2. Delete the group itself
 	return repository.DeleteGroupByIDDAO(id)
+}
+
+// DeleteGroupsByMIDServ deletes all groups by monitor ID and their associated hosts/items
+func DeleteGroupsByMIDServ(mid uint) error {
+	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
+	if err == nil {
+		for _, g := range groups {
+			if err := DeleteGroupByIDServ(g.ID); err != nil {
+				LogService("error", "failed to delete group during monitor cascading delete", map[string]interface{}{"monitor_id": mid, "group_id": g.ID, "error": err.Error()}, nil, "")
+			}
+		}
+	}
+	return repository.DeleteGroupsByMIDDAO(mid)
 }
 
 // GetGroupDetailServ returns group with summary and hosts

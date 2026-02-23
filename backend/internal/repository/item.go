@@ -153,6 +153,17 @@ func DeleteItemByIDDAO(id uint) error {
 	return database.DB.Delete(&model.Item{}, id).Error
 }
 
+// DeleteItemsByHIDDAO deletes all items associated with a specific host
+func DeleteItemsByHIDDAO(hid uint) error {
+	return database.DB.Where("hid = ?", hid).Delete(&model.Item{}).Error
+}
+
+// DeleteItemsByMIDDAO deletes all items associated with hosts of a specific monitor
+func DeleteItemsByMIDDAO(mid uint) error {
+	// Subquery to find items where host belongs to monitor
+	return database.DB.Where("hid IN (SELECT id FROM hosts WHERE m_id = ?)", mid).Delete(&model.Item{}).Error
+}
+
 // UpdateItemDAO updates an item by ID
 func UpdateItemDAO(id uint, item model.Item) error {
 	return database.DB.Model(&model.Item{}).Where("id = ?", id).Updates(map[string]interface{}{
