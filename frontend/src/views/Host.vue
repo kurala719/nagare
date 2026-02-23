@@ -11,7 +11,15 @@
           <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
         </el-select>
 
-        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable style="width: 240px">
+        <el-input v-model="search" :placeholder="$t('hosts.search')" clearable style="width: 320px" class="search-with-select">
+          <template #prepend>
+            <el-select v-model="searchField" style="width: 110px">
+              <el-option :label="$t('monitors.searchAll') || 'All'" value="all" />
+              <el-option :label="$t('hosts.name')" value="name" />
+              <el-option :label="$t('hosts.ip')" value="ip_addr" />
+              <el-option :label="$t('hosts.hostId')" value="hostid" />
+            </el-select>
+          </template>
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
@@ -649,6 +657,10 @@ export default {
       this.currentPage = 1;
       this.loadHosts(true);
     },
+    searchField() {
+      this.currentPage = 1;
+      this.loadHosts(true);
+    },
     statusFilter() {
       this.currentPage = 1;
       this.loadHosts(true);
@@ -770,6 +782,7 @@ export default {
       try {
         const response = await fetchHostData({
           q: this.search || undefined,
+          search_field: this.searchField !== 'all' ? this.searchField : undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           m_id: this.monitorFilter || undefined,
           group_id: this.groupFilter || undefined,

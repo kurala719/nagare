@@ -74,6 +74,36 @@
         </el-col>
       </el-row>
 
+      <el-row :gutter="16" class="network-info-row" style="margin-bottom: 16px;">
+        <el-col :span="24">
+          <el-card shadow="never">
+            <template #header>
+              <div class="card-header">
+                <span>{{ $t('hosts.networkInfo') }}</span>
+              </div>
+            </template>
+            <el-descriptions :column="3" border>
+              <el-descriptions-item :label="$t('hosts.ip')">{{ host.ip_addr || '-' }}</el-descriptions-item>
+              <el-descriptions-item :label="$t('hosts.location')">
+                <el-tag v-if="geoInfo" size="small" type="success">
+                  {{ geoInfo.country }} - {{ geoInfo.city }}
+                </el-tag>
+                <span v-else-if="geoLoading" style="color: var(--el-text-color-secondary)">
+                  <el-icon class="is-loading"><Loading /></el-icon> {{ $t('hosts.geolocationLoading') }}
+                </span>
+                <span v-else style="color: var(--el-text-color-secondary)">-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="ISP / ASN">
+                <el-tag v-if="geoInfo" size="small" type="info">
+                  {{ geoInfo.isp }} ({{ geoInfo.as }})
+                </el-tag>
+                <span v-else style="color: var(--el-text-color-secondary)">-</span>
+              </el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </el-col>
+      </el-row>
+
       <el-row :gutter="16" class="metrics-row">
         <el-col :xs="24" :lg="8">
           <el-card shadow="hover">
@@ -282,6 +312,8 @@ const reportSnapshot = ref(null)
 const reportCanvasRef = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const geoInfo = ref(null)
+const geoLoading = ref(false)
 
 const currentCpu = ref(0)
 const currentMem = ref(0)
@@ -746,6 +778,22 @@ const setDefaultHistoryRange = () => {
   historyRange.value = [start, end]
 }
 
+const fetchGeoInfo = async (ip) => {
+  if (!ip || ip === '127.0.0.1' || ip === 'localhost') return
+  geoLoading.value = true
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}`)
+    const data = await res.json()
+    if (data && data.status === 'success') {
+      geoInfo.value = data
+    }
+  } catch (e) {
+    console.error("Failed to fetch IP geolocation:", e)
+  } finally {
+    geoLoading.value = false
+  }
+}
+
 const loadData = async () => {
   const hostId = Number(route.params.id)
   if (!hostId) return
@@ -764,6 +812,10 @@ const loadData = async () => {
       group_name: hostData.group_name || hostData.GroupName || '',
       monitor_name: hostData.monitor_name || hostData.MonitorName || '',
       health_score: hostData.health_score || hostData.HealthScore || 100,
+    }
+
+    if (host.value.ip_addr) {
+      fetchGeoInfo(host.value.ip_addr)
     }
     
     const itemsResp = await fetchItemsByHost(hostId)

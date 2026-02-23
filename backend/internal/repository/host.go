@@ -39,7 +39,22 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		Joins("left join monitors on monitors.id = hosts.m_id")
 
 	if filter.Query != "" {
-		query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
+			case "hostid":
+				query = query.Where("hosts.hostid LIKE ?", "%"+filter.Query+"%")
+			case "ip_addr":
+				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")
+			case "description":
+				query = query.Where("hosts.description LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.MID != nil {
 		query = query.Where("hosts.m_id = ?", *filter.MID)
@@ -82,7 +97,22 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 func CountHostsDAO(filter model.HostFilter) (int64, error) {
 	query := database.DB.Model(&model.Host{})
 	if filter.Query != "" {
-		query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
+			case "hostid":
+				query = query.Where("hosts.hostid LIKE ?", "%"+filter.Query+"%")
+			case "ip_addr":
+				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")
+			case "description":
+				query = query.Where("hosts.description LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.MID != nil {
 		query = query.Where("hosts.m_id = ?", *filter.MID)

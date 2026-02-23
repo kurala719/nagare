@@ -1,12 +1,16 @@
 <template>
   <div class="system-status-container">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('systemStatus.title') }}</h1>
+    </div>
+
     <el-row :gutter="20">
-      <el-col :span="6" v-for="card in summaryCards" :key="card.title">
+      <el-col :span="6" v-for="card in summaryCards" :key="card.key">
         <el-card shadow="hover" class="summary-card">
           <div class="summary-content">
             <el-icon :size="32" :color="card.color"><component :is="card.icon" /></el-icon>
             <div class="summary-text">
-              <div class="summary-title">{{ card.title }}</div>
+              <div class="summary-title">{{ $t('systemStatus.' + card.key) }}</div>
               <div class="summary-value">{{ card.value }}</div>
             </div>
           </div>
@@ -16,12 +20,12 @@
 
     <el-row :gutter="20" class="chart-row">
       <el-col :span="12">
-        <el-card header="Memory Usage (MB)">
+        <el-card :header="$t('systemStatus.memoryUsage')">
           <div ref="memoryChart" class="chart"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card header="Goroutines">
+        <el-card :header="$t('systemStatus.goroutines')">
           <div ref="goroutineChart" class="chart"></div>
         </el-card>
       </el-col>
@@ -29,14 +33,14 @@
 
     <el-row :gutter="20" class="chart-row">
       <el-col :span="24">
-        <el-card header="System Information">
+        <el-card :header="$t('systemStatus.systemInfo')">
           <el-descriptions :column="3" border>
-            <el-descriptions-item label="Go Version">{{ status.go_version }}</el-descriptions-item>
-            <el-descriptions-item label="CPUs">{{ status.num_cpu }}</el-descriptions-item>
-            <el-descriptions-item label="Uptime">{{ formatUptime(status.uptime) }}</el-descriptions-item>
-            <el-descriptions-item label="Total Alloc">{{ formatBytes(status.memory_total) }}</el-descriptions-item>
-            <el-descriptions-item label="System Memory">{{ formatBytes(status.memory_sys) }}</el-descriptions-item>
-            <el-descriptions-item label="GC Count">{{ status.num_gc }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.goVersion')">{{ status.go_version }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.cpus')">{{ status.num_cpu }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.uptime')">{{ formatUptime(status.uptime) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.totalAlloc')">{{ formatBytes(status.memory_total) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.systemMemory')">{{ formatBytes(status.memory_sys) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('systemStatus.gcCount')">{{ status.num_gc }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
       </el-col>
@@ -46,10 +50,12 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from '@/utils/request'
 import * as echarts from 'echarts'
 import { Timer, Connection, PieChart, Cpu } from '@element-plus/icons-vue'
 
+const { t } = useI18n()
 const status = ref({})
 const memoryChart = ref(null)
 const goroutineChart = ref(null)
@@ -62,10 +68,10 @@ const goroutineHistory = ref([])
 const timeLabels = ref([])
 
 const summaryCards = computed(() => [
-  { title: 'Uptime', value: formatUptime(status.value.uptime), icon: Timer, color: '#409eff' },
-  { title: 'Goroutines', value: status.value.goroutines, icon: Connection, color: '#67c23a' },
-  { title: 'Allocated Mem', value: formatBytes(status.value.memory_alloc), icon: PieChart, color: '#e6a23c' },
-  { title: 'CPUs', value: status.value.num_cpu, icon: Cpu, color: '#f56c6c' }
+  { key: 'uptime', value: formatUptime(status.value.uptime), icon: Timer, color: '#409eff' },
+  { key: 'goroutines', value: status.value.goroutines, icon: Connection, color: '#67c23a' },
+  { key: 'allocatedMem', value: formatBytes(status.value.memory_alloc), icon: PieChart, color: '#e6a23c' },
+  { key: 'cpus', value: status.value.num_cpu, icon: Cpu, color: '#f56c6c' }
 ])
 
 const fetchStatus = async () => {
@@ -127,12 +133,18 @@ const formatBytes = (bytes) => {
 }
 
 const formatUptime = (seconds) => {
-  if (!seconds) return '0s'
+  if (!seconds) return '0' + t('common.secondUnit')
   const d = Math.floor(seconds / (3600 * 24))
   const h = Math.floor((seconds % (3600 * 24)) / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = Math.floor(seconds % 60)
-  return `${d}d ${h}h ${m}m ${s}s`
+  
+  let res = ''
+  if (d > 0) res += d + t('common.dayUnit') + ' '
+  if (h > 0) res += h + t('common.hourUnit') + ' '
+  if (m > 0) res += m + t('common.minuteUnit') + ' '
+  if (s > 0 || res === '') res += s + t('common.secondUnit')
+  return res.trim()
 }
 
 onMounted(() => {

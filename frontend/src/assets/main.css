@@ -42,11 +42,26 @@
   border-color: var(--brand-200) !important;
 }
 
+.dark .el-card:hover {
+  border-color: var(--brand-500) !important;
+}
+
 .el-button {
   border-radius: 12px !important;
   font-weight: 600 !important;
   transition: all 0.3s ease !important;
   padding: 10px 20px !important;
+}
+
+.dark .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):not(.el-button--warning):not(.el-button--info) {
+  background-color: var(--surface-2) !important;
+  border-color: var(--border-1) !important;
+  color: var(--text-strong) !important;
+}
+
+.dark .el-button:not(.el-button--primary):hover {
+  background-color: var(--surface-3) !important;
+  border-color: var(--brand-500) !important;
 }
 
 .el-button--primary {
@@ -76,6 +91,26 @@
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
+}
+
+.dark .el-table {
+  --el-table-bg-color: var(--surface-1);
+  --el-table-tr-bg-color: var(--surface-1);
+  --el-table-header-bg-color: var(--surface-3);
+  --el-table-border-color: var(--border-1);
+}
+
+.dark .el-table th.el-table__cell {
+  background-color: var(--surface-3) !important;
+}
+
+.dark .el-table tr, 
+.dark .el-table td.el-table__cell {
+  background-color: var(--surface-1) !important;
+}
+
+.dark .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--surface-3) !important;
 }
 
 .el-input__wrapper {
@@ -126,6 +161,85 @@
   border: 1px solid var(--border-1);
 }
 
+.dark .el-dropdown-menu {
+  background-color: var(--surface-1) !important;
+  border-color: var(--border-1) !important;
+}
+
+.dark .el-dropdown-menu__item {
+  color: var(--text-strong) !important;
+}
+
+.dark .el-dropdown-menu__item:hover {
+  background-color: var(--surface-3) !important;
+  color: var(--brand-500) !important;
+}
+
+.dark .el-select__selection {
+  background-color: transparent !important;
+}
+
+.dark .el-select-dropdown__item.is-hovering {
+  background-color: var(--surface-3) !important;
+}
+
+.dark .el-pagination button:disabled,
+.dark .el-pagination .btn-next, 
+.dark .el-pagination .btn-prev,
+.dark .el-pagination .el-pager li {
+  background-color: var(--surface-2) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border-1) !important;
+}
+
+.dark .el-pagination .el-pager li.is-active {
+  background-color: var(--brand-600) !important;
+  color: #ffffff !important;
+  border-color: var(--brand-600) !important;
+}
+
+.dark .el-picker-panel,
+.dark .el-date-range-picker {
+  background-color: var(--surface-1) !important;
+  border-color: var(--border-1) !important;
+  color: var(--text-strong) !important;
+}
+
+.dark .el-date-table th {
+  border-bottom: 1px solid var(--border-1) !important;
+}
+
+.dark .el-input__inner {
+  color: var(--text-strong) !important;
+}
+
+.dark .el-progress__text {
+  color: var(--text-strong) !important;
+}
+
+.dark .el-tabs__item {
+  color: var(--text-muted) !important;
+}
+
+.dark .el-tabs__item.is-active {
+  color: var(--brand-500) !important;
+}
+
+/* Auth Page Dark Mode Overrides */
+.dark .auth-container {
+  background-color: var(--surface-1) !important;
+  border-color: var(--border-1) !important;
+}
+
+.dark .auth-main {
+  background-color: var(--surface-1) !important;
+}
+
+.dark .forgot-link, 
+.dark .register-hint a {
+  color: var(--brand-500) !important;
+}
+
 .page-header {
   margin-bottom: 24px;
 }
@@ -153,6 +267,11 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-1);
   box-shadow: var(--shadow-soft);
+}
+
+.dark .standard-toolbar {
+  background: var(--surface-1) !important;
+  border-color: var(--border-1) !important;
 }
 
 .filter-group {

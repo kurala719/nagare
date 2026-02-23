@@ -88,7 +88,11 @@ const messages = {
       operationFailed: 'Operation failed',
       sessionExpired: 'Your session has expired. Please login again.',
       insufficientPrivileges: 'Insufficient privileges. Please login with an authorized account.',
-      loginToContinue: 'Please login to continue.'
+      loginToContinue: 'Please login to continue.',
+      dayUnit: 'd',
+      hourUnit: 'h',
+      minuteUnit: 'm',
+      secondUnit: 's'
     },
     auth: {
       login: 'Login',
@@ -260,6 +264,19 @@ const messages = {
       matrixTitle: 'Matrix Log Stream',
       matrixPause: 'Pause',
       matrixResume: 'Resume'
+    },
+    systemStatus: {
+      title: 'System Health',
+      uptime: 'Uptime',
+      goroutines: 'Goroutines',
+      allocatedMem: 'Allocated Mem',
+      cpus: 'CPUs',
+      memoryUsage: 'Memory Usage (MB)',
+      systemInfo: 'System Information',
+      goVersion: 'Go Version',
+      totalAlloc: 'Total Alloc',
+      systemMemory: 'System Memory',
+      gcCount: 'GC Count'
     },
     system: {
       title: 'Configuration',
@@ -491,7 +508,11 @@ const messages = {
       reportChatEmpty: 'No chat highlights available.',
       reportDisclaimer: 'This report is auto-generated based on current host metrics and AI analysis. For critical decisions, please verify with additional tools.',
       reportSuccess: 'Report generated successfully!',
-      reportFailed: 'Failed to generate report'
+      reportFailed: 'Failed to generate report',
+      networkInfo: 'Network Information',
+      location: 'Location',
+      geolocationLoading: 'Loading geolocation...',
+      geolocationFailed: 'Failed to fetch location'
     },
     monitors: {
       title: 'Inventory Sources',
@@ -1148,7 +1169,13 @@ const messages = {
       subtitle: 'Insights and statistical trends from your monitoring data',
       chaosTitle: 'Chaos Simulator',
       chaosDesc: 'Trigger a simulated alert storm to test system resilience.',
-      triggerChaos: 'Trigger Alert Storm'
+      triggerChaos: 'Trigger Alert Storm',
+      alertTrend: 'Alert Trend (Last 14 Days)',
+      severityDist: 'Severity Distribution',
+      topKeywords: 'Top Alert Keywords',
+      alertIntensity: 'Alert Intensity (Heatmap)',
+      topNoisyHosts: 'Top Noisy Hosts',
+      alerts: 'Alerts'
     },
     retention: {
       title: 'Data Retention',
@@ -1281,7 +1308,11 @@ const messages = {
       operationFailed: '操作失败',
       sessionExpired: '会话已过期，请重新登录。',
       insufficientPrivileges: '权限不足，请使用授权账号登录。',
-      loginToContinue: '请先登录。'
+      loginToContinue: '请先登录。',
+      dayUnit: '天',
+      hourUnit: '小时',
+      minuteUnit: '分',
+      secondUnit: '秒'
     },
     auth: {
       login: '登录',
@@ -1453,6 +1484,19 @@ const messages = {
       matrixTitle: '矩阵日志流',
       matrixPause: '暂停',
       matrixResume: '继续'
+    },
+    systemStatus: {
+      title: '系统健康',
+      uptime: '运行时间',
+      goroutines: '协程数',
+      allocatedMem: '已分配内存',
+      cpus: 'CPU核心数',
+      memoryUsage: '内存使用 (MB)',
+      systemInfo: '系统信息',
+      goVersion: 'Go 版本',
+      totalAlloc: '累计分配',
+      systemMemory: '系统内存',
+      gcCount: 'GC 次数'
     },
     system: {
       title: '配置',
@@ -1686,7 +1730,11 @@ const messages = {
       reportChatEmpty: '暂无对话精华',
       reportDisclaimer: '此报告基于当前主机指标和AI分析自动生成。关键决策请结合其他工具验证。',
       reportSuccess: '报告生成成功！',
-      reportFailed: '生成报告失败'
+      reportFailed: '生成报告失败',
+      networkInfo: '网络信息',
+      location: '归属地',
+      geolocationLoading: '正在加载归属地...',
+      geolocationFailed: '获取归属地失败'
     },
     monitors: {
       title: '资产来源',
@@ -2341,7 +2389,13 @@ const messages = {
       subtitle: '来自监控数据的见解和统计趋势',
       chaosTitle: '混沌模拟器',
       chaosDesc: '触发模拟告警风暴，测试系统抗压能力。',
-      triggerChaos: '触发告警风暴'
+      triggerChaos: '触发告警风暴',
+      alertTrend: '告警趋势 (最近 14 天)',
+      severityDist: '严重级别分布',
+      topKeywords: '告警关键词排行',
+      alertIntensity: '告警强度 (热力图)',
+      topNoisyHosts: '告警主机排行',
+      alerts: '告警数'
     },
     retention: {
       title: '数据保留',
@@ -2377,7 +2431,7 @@ const messages = {
     about: {
       title: '关于 Nagare',
       subtitle: '开源基础设施智能平台',
-      description: 'Nagare 是一个深度基础设施洞见与自动化运维 platform，旨在为现代环境提供全面的可见性和 AI 辅助的故障排查。',
+      description: 'Nagare 是一个深度基础设施洞见与自动化运维平台，旨在为现代环境提供全面的可见性和 AI 辅助的故障排查。',
       disclaimer: '由于 Nagare 仍处于积极开发阶段，部分功能和系统稳定性可能尚不完善。我们非常感谢您的使用与分享，并对开发初期可能给您带来的不便深表歉意。',
       contact: '如果您遇到任何问题，欢迎通过以下方式联系：',
       github: 'GitHub 仓库',

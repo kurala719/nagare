@@ -78,6 +78,18 @@
             <el-table :data="hosts" height="320" border>
               <el-table-column v-if="visibleColumns.includes('name')" prop="name" :label="$t('hosts.name')" min-width="160" sortable />
               <el-table-column v-if="visibleColumns.includes('ip_addr')" prop="ip_addr" :label="$t('hosts.ip')" min-width="140" sortable />
+              <el-table-column v-if="visibleColumns.includes('location')" :label="$t('hosts.location')" min-width="180">
+                <template #default="{ row }">
+                  <div v-if="geoMap[row.ip_addr]" style="font-size: 12px; line-height: 1.2;">
+                    <div>{{ geoMap[row.ip_addr].country }} - {{ geoMap[row.ip_addr].city }}</div>
+                    <div style="color: var(--el-text-color-secondary)">{{ geoMap[row.ip_addr].isp }}</div>
+                  </div>
+                  <el-button v-else-if="row.ip_addr && row.ip_addr !== '127.0.0.1'" link type="primary" size="small" :loading="geoLoadingMap[row.ip_addr]" @click="fetchHostGeo(row.ip_addr)">
+                    {{ $t('common.view') || 'Check' }}
+                  </el-button>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column v-if="visibleColumns.includes('status')" prop="status" :label="$t('hosts.status')" min-width="120" sortable>
                 <template #default="{ row }">
                   <el-tooltip :content="row.status_reason || statusLabel(row.status)" placement="top">
@@ -117,16 +129,35 @@ const statusChartRef = ref(null)
 const showColumnDialog = ref(false)
 const loading = ref(false)
 const error = ref(null)
+const geoMap = ref({})
+const geoLoadingMap = ref({})
 let statusChart
 
 // Column configuration for hosts table
 const availableColumns = [
   { key: 'name', label: t('hosts.name') },
   { key: 'ip_addr', label: t('hosts.ip') },
+  { key: 'location', label: t('hosts.location') },
   { key: 'status', label: t('hosts.status') },
 ]
 
-const visibleColumns = ref(['name', 'ip_addr', 'status'])
+const visibleColumns = ref(['name', 'ip_addr', 'location', 'status'])
+
+const fetchHostGeo = async (ip) => {
+  if (!ip || ip === '127.0.0.1' || ip === 'localhost' || geoMap.value[ip]) return
+  geoLoadingMap.value[ip] = true
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}`)
+    const data = await res.json()
+    if (data && data.status === 'success') {
+      geoMap.value[ip] = data
+    }
+  } catch (e) {
+    console.error("Failed to fetch IP geolocation for " + ip, e)
+  } finally {
+    geoLoadingMap.value[ip] = false
+  }
+}
 
 const loadVisibleColumns = () => {
   const saved = localStorage.getItem('groupDetailColumns')

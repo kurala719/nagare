@@ -47,9 +47,10 @@ func SearchGroupsCtrl(c *gin.Context) {
 		offset = *o
 	}
 	filter := model.GroupFilter{
-		Query:     c.Query("q"),
-		Status:    status,
-		MonitorID: monitorID,
+		Query:       c.Query("q"),
+		SearchField: c.Query("search_field"),
+		Status:      status,
+		MonitorID:   monitorID,
 		Limit:     limit,
 		Offset:    offset,
 		SortBy:    c.Query("sort"),

@@ -46,69 +46,69 @@ type Host struct {
 // Group represents a logical group of hosts
 type Group struct {
 	gorm.Model
-	Name              string
-	Description       string
-	MonitorID         uint   `gorm:"column:m_id"`
-	ExternalID        string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
-	Enabled           int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
-	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string // Reason for error status
-	ActiveAvailable   string `gorm:"column:active_available"` // 0=unknown, 1=available, 2=not_available
-	LastSyncAt        *time.Time
-	ExternalSource    string `gorm:"column:external_source"`
-	HealthScore       int    `gorm:"column:health_score;default:100"`
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	MonitorID         uint   `gorm:"column:m_id" json:"m_id"`
+	ExternalID        string `gorm:"column:external_id" json:"external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
+	Enabled           int    `gorm:"default:1" json:"enabled"`              // 0 = disabled, 1 = enabled
+	Status            int    `json:"status"`                                // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string `json:"status_description"`                    // Reason for error status
+	ActiveAvailable   string `gorm:"column:active_available" json:"active_available"` // 0=unknown, 1=available, 2=not_available
+	LastSyncAt        *time.Time `json:"last_sync_at"`
+	ExternalSource    string `gorm:"column:external_source" json:"external_source"`
+	HealthScore       int    `gorm:"column:health_score;default:100" json:"health_score"`
 }
 
 // Monitor represents a monitoring system (e.g., Zabbix)
 type Monitor struct {
 	gorm.Model
-	Name              string
-	URL               string
-	Username          string
-	Password          string
-	AuthToken         string
-	EventToken        string `gorm:"size:64;uniqueIndex"`
-	Description       string
-	Type              int    // 1 = snmp, 2 = zabbix, 3 = other
-	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
-	HealthScore       int    `gorm:"column:health_score;default:100"`
+	Name              string `json:"name"`
+	URL               string `json:"url"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+	AuthToken         string `json:"auth_token"`
+	EventToken        string `gorm:"size:64;uniqueIndex" json:"event_token"`
+	Description       string `json:"description"`
+	Type              int    `json:"type"` // 1 = snmp, 2 = zabbix, 3 = other
+	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status            int    `json:"status"` // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string `json:"status_description"` // Reason for error status (e.g., "connection timeout", "authentication failed")
+	HealthScore       int    `gorm:"column:health_score;default:100" json:"health_score"`
 }
 
 // Alarm represents an external alert source (e.g., Zabbix)
 type Alarm struct {
 	gorm.Model
-	Name              string
-	URL               string
-	Username          string
-	Password          string
-	AuthToken         string
-	EventToken        string `gorm:"size:64;uniqueIndex"`
-	Description       string
-	Type              int    // 1 = snmp, 2 = zabbix, 3 = other
-	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string // Reason for error status (e.g., "connection timeout", "authentication failed")
+	Name              string `json:"name"`
+	URL               string `json:"url"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+	AuthToken         string `json:"auth_token"`
+	EventToken        string `gorm:"size:64;uniqueIndex" json:"event_token"`
+	Description       string `json:"description"`
+	Type              int    `json:"type"` // 1 = snmp, 2 = zabbix, 3 = other
+	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status            int    `json:"status"` // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string `json:"status_description"` // Reason for error status (e.g., "connection timeout", "authentication failed")
 }
 
 // Item represents a monitoring item/metric
 type Item struct {
 	gorm.Model
-	Name              string
-	HID               uint   `gorm:"column:hid"`    // Internal host ID (foreign key to hosts table)
-	ItemID            string `gorm:"column:itemid"` // External ID from monitoring system
-	ExternalHostID    string `gorm:"column:hostid"` // External host ID from monitoring system
-	ValueType         string
-	LastValue         string
-	Units             string
-	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string // Reason for error status (e.g., "host is down", "pull failed")
-	Comment           string
-	LastSyncAt        *time.Time
-	ExternalSource    string `gorm:"column:external_source"`
-	HostName          string `gorm:"->"`
+	Name              string `json:"name"`
+	HID               uint   `gorm:"column:hid" json:"hid"`       // Internal host ID (foreign key to hosts table)
+	ItemID            string `gorm:"column:itemid" json:"itemid"` // External ID from monitoring system
+	ExternalHostID    string `gorm:"column:hostid" json:"hostid"` // External host ID from monitoring system
+	ValueType         string `json:"value_type"`
+	LastValue         string `json:"last_value"`
+	Units             string `json:"units"`
+	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status            int    `json:"status"`                   // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string `json:"status_description"`       // Reason for error status (e.g., "host is down", "pull failed")
+	Comment           string `json:"comment"`
+	LastSyncAt        *time.Time `json:"last_sync_at"`
+	ExternalSource    string `gorm:"column:external_source" json:"external_source"`
+	HostName          string `gorm:"->" json:"host_name"`
 }
 
 // ItemHistory tracks item metric values over time.

@@ -11,7 +11,14 @@
           <el-option v-for="col in columnOptions" :key="col.key" :label="col.label" :value="col.key" />
         </el-select>
         
-        <el-input v-model="search" :placeholder="$t('groups.search')" clearable style="width: 240px">
+        <el-input v-model="search" :placeholder="$t('groups.search')" clearable style="width: 320px" class="search-with-select">
+          <template #prepend>
+            <el-select v-model="searchField" style="width: 110px">
+              <el-option :label="$t('monitors.searchAll') || 'All'" value="all" />
+              <el-option :label="$t('groups.name')" value="name" />
+              <el-option :label="$t('groups.description')" value="description" />
+            </el-select>
+          </template>
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
@@ -381,6 +388,10 @@ export default {
       this.currentPage = 1;
       this.loadGroups(true);
     },
+    searchField() {
+      this.currentPage = 1;
+      this.loadGroups(true);
+    },
     statusFilter() {
       this.currentPage = 1;
       this.loadGroups(true);
@@ -524,6 +535,7 @@ export default {
       try {
         const response = await fetchGroupData({
           q: this.search || undefined,
+          search_field: this.searchField !== 'all' ? this.searchField : undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
           monitor_id: this.monitorFilter || undefined,
           limit: this.pageSize,

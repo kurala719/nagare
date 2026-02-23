@@ -48,9 +48,10 @@ func SearchHostsCtrl(c *gin.Context) {
 		offset = *o
 	}
 	filter := model.HostFilter{
-		Query:     c.Query("q"),
-		MID:       mid,
-		GroupID:   groupID,
+		Query:       c.Query("q"),
+		SearchField: c.Query("search_field"),
+		MID:         mid,
+		GroupID:     groupID,
 		Status:    status,
 		IPAddr:    parseOptionalString(c, "ip_addr"),
 		Limit:     limit,

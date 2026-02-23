@@ -95,42 +95,45 @@ type AlarmFilter struct {
 // HostFilter represents search and filter options for hosts
 // Query matches name/hostid/ip_addr/description (LIKE)
 type HostFilter struct {
-	Query     string
-	MID       *uint
-	GroupID   *uint
-	Status    *int
-	IPAddr    *string
-	Limit     int
-	Offset    int
-	SortBy    string
-	SortOrder string
+	Query       string
+	SearchField string // Optional: specific field to search in
+	MID         *uint
+	GroupID     *uint
+	Status      *int
+	IPAddr      *string
+	Limit       int
+	Offset      int
+	SortBy      string
+	SortOrder   string
 }
 
 // GroupFilter represents search and filter options for groups
 // Query matches name/description (LIKE)
 type GroupFilter struct {
-	Query     string
-	Status    *int
-	MonitorID *uint
-	Limit     int
-	Offset    int
-	SortBy    string
-	SortOrder string
+	Query       string
+	SearchField string // Optional: specific field to search in
+	Status      *int
+	MonitorID   *uint
+	Limit       int
+	Offset      int
+	SortBy      string
+	SortOrder   string
 }
 
 // ItemFilter represents search and filter options for items
 // Query matches name/itemid/hostid (LIKE)
 type ItemFilter struct {
-	Query     string
-	HID       *uint
-	ValueType *string
-	Status    *int
-	HostID    *string
-	ItemID    *string
-	Limit     int
-	Offset    int
-	SortBy    string
-	SortOrder string
+	Query       string
+	SearchField string // Optional: specific field to search in
+	HID         *uint
+	ValueType   *string
+	Status      *int
+	HostID      *string
+	ItemID      *string
+	Limit       int
+	Offset      int
+	SortBy      string
+	SortOrder   string
 }
 
 // ProviderFilter represents search and filter options for providers

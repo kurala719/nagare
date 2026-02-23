@@ -21,7 +21,18 @@ func GetAllGroupsDAO() ([]model.Group, error) {
 func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 	query := database.DB.Model(&model.Group{})
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("name LIKE ?", "%"+filter.Query+"%")
+			case "description":
+				query = query.Where("description LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
@@ -55,7 +66,18 @@ func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 func CountGroupsDAO(filter model.GroupFilter) (int64, error) {
 	query := database.DB.Model(&model.Group{})
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("name LIKE ?", "%"+filter.Query+"%")
+			case "description":
+				query = query.Where("description LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("name LIKE ? OR description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)

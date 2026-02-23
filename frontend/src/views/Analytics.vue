@@ -27,7 +27,7 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>Alert Trend (Last 14 Days)</span>
+              <span>{{ $t('analytics.alertTrend') }}</span>
             </div>
           </template>
           <div ref="trendChart" class="chart"></div>
@@ -37,7 +37,7 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>Severity Distribution</span>
+              <span>{{ $t('analytics.severityDist') }}</span>
             </div>
           </template>
           <div ref="severityChart" class="chart"></div>
@@ -50,7 +50,7 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>Top Alert Keywords</span>
+              <span>{{ $t('analytics.topKeywords') }}</span>
             </div>
           </template>
           <div ref="wordChart" class="chart"></div>
@@ -60,7 +60,7 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>Alert Intensity (Heatmap)</span>
+              <span>{{ $t('analytics.alertIntensity') }}</span>
             </div>
           </template>
           <div ref="heatmapChart" class="chart"></div>
@@ -73,7 +73,7 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>Top Noisy Hosts</span>
+              <span>{{ $t('analytics.topNoisyHosts') }}</span>
             </div>
           </template>
           <div ref="hostChart" class="chart" style="height: 300px"></div>
@@ -177,7 +177,7 @@ const initCharts = () => {
     xAxis: { type: 'category', boundaryGap: false, data: [] },
     yAxis: { type: 'value' },
     series: [{
-      name: 'Alerts',
+      name: t('analytics.alerts'),
       type: 'line',
       smooth: true,
       areaStyle: {

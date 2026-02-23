@@ -68,28 +68,39 @@
   --section-gap: 140px;
 }
 
-body.theme-dark {
+body.theme-dark,
+html.dark {
   --color-background: var(--vt-c-black);
-  --color-background-soft: var(--vt-c-black-soft);
-  --color-background-mute: var(--vt-c-black-mute);
+  --color-background-soft: #1e293b;
+  --color-background-mute: #334155;
 
-  --color-border: var(--vt-c-divider-dark-2);
-  --color-border-hover: var(--vt-c-divider-dark-1);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
 
   --color-heading: var(--vt-c-text-dark-1);
   --color-text: var(--vt-c-text-dark-2);
   
-  --surface-1: rgba(15, 23, 42, 0.95);
-  --surface-2: rgba(17, 24, 39, 0.85);
-  --surface-3: rgba(31, 41, 55, 0.85);
-  --surface-4: rgba(55, 65, 81, 0.85);
+  --surface-1: #0f172a;
+  --surface-2: #1e293b;
+  --surface-3: #334155;
+  --surface-4: #475569;
   --text-strong: #f8fafc;
   --text-muted: #94a3b8;
-  --border-1: rgba(248, 250, 252, 0.1);
-  --border-2: rgba(248, 250, 252, 0.2);
+  --border-1: rgba(255, 255, 255, 0.1);
+  --border-2: rgba(255, 255, 255, 0.2);
+
+  /* Element Plus Dark Overrides */
+  --el-bg-color: #0f172a;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f8fafc;
+  --el-text-color-regular: #cbd5e1;
+  --el-border-color: #334155;
+  --el-border-color-light: #475569;
+  --el-fill-color-blank: #0f172a;
 }
 
-body.theme-light {
+body.theme-light,
+html:not(.dark) {
   --color-background: var(--vt-c-white-soft);
   --color-background-soft: var(--surface-2);
   --color-background-mute: var(--surface-3);

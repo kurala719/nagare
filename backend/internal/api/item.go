@@ -42,9 +42,10 @@ func SearchItemsCtrl(c *gin.Context) {
 		offset = *o
 	}
 	filter := model.ItemFilter{
-		Query:     c.Query("q"),
-		HID:       hid,
-		ValueType: parseOptionalString(c, "value_type"),
+		Query:       c.Query("q"),
+		SearchField: c.Query("search_field"),
+		HID:         hid,
+		ValueType:   parseOptionalString(c, "value_type"),
 		Status:    status,
 		HostID:    parseOptionalString(c, "hostid"),
 		ItemID:    parseOptionalString(c, "itemid"),

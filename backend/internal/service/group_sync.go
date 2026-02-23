@@ -92,6 +92,8 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 		}
 	}
 
+	now := time.Now()
+
 	// 4. Sync groups
 	for _, hostGroup := range groups {
 		// Check if group exists by external ID and monitor ID
@@ -99,6 +101,7 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 		if err == nil {
 			// Update existing group
 			group.Name = hostGroup.Name
+			group.LastSyncAt = &now
 			if err := repository.UpdateGroupDAO(group.ID, group); err == nil {
 				result.Updated++
 			} else {
@@ -109,6 +112,7 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 			if existing, ok := localGroupsByName[hostGroup.Name]; ok {
 				existing.ExternalID = hostGroup.ID
 				existing.MonitorID = mid
+				existing.LastSyncAt = &now
 				if err := repository.UpdateGroupDAO(existing.ID, existing); err == nil {
 					result.Updated++
 				} else {
@@ -125,6 +129,7 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 				Status:      1,
 				MonitorID:   mid,
 				ExternalID:  hostGroup.ID,
+				LastSyncAt:  &now,
 			}
 			if err := repository.AddGroupDAO(newGroup); err == nil {
 				result.Added++

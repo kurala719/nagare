@@ -28,7 +28,24 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 		Joins("left join hosts on hosts.id = items.hid")
 
 	if filter.Query != "" {
-		query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("items.name LIKE ?", "%"+filter.Query+"%")
+			case "value":
+				query = query.Where("items.last_value LIKE ?", "%"+filter.Query+"%")
+			case "comment":
+				query = query.Where("items.comment LIKE ?", "%"+filter.Query+"%")
+			case "itemid":
+				query = query.Where("items.itemid LIKE ?", "%"+filter.Query+"%")
+			case "hostid":
+				query = query.Where("items.hostid LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.HID != nil {
 		query = query.Where("items.hid = ?", *filter.HID)
@@ -71,7 +88,20 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 func CountItemsDAO(filter model.ItemFilter) (int64, error) {
 	query := database.DB.Model(&model.Item{})
 	if filter.Query != "" {
-		query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		if filter.SearchField != "" {
+			switch filter.SearchField {
+			case "name":
+				query = query.Where("name LIKE ?", "%"+filter.Query+"%")
+			case "itemid":
+				query = query.Where("itemid LIKE ?", "%"+filter.Query+"%")
+			case "hostid":
+				query = query.Where("hostid LIKE ?", "%"+filter.Query+"%")
+			default:
+				query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			}
+		} else {
+			query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+		}
 	}
 	if filter.HID != nil {
 		query = query.Where("hid = ?", *filter.HID)
