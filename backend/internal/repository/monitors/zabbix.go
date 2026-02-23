@@ -67,6 +67,8 @@ type zabbixHost struct {
 		Type        interface{} `json:"type"`
 		Main        interface{} `json:"main"`
 		UseIP       interface{} `json:"useip"`
+		Available   interface{} `json:"available"`
+		Error       string      `json:"error"`
 	} `json:"interfaces"`
 }
 
@@ -349,7 +351,11 @@ func (p *ZabbixProvider) SetAuthToken(token string) {
 // GetHosts implements the Provider interface
 func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           "extend",
+		"output": []string{
+			"hostid", "host", "name", "description", "status",
+			"available", "error", "snmp_available", "snmp_error",
+			"ipmi_available", "ipmi_error", "jmx_available", "jmx_error",
+		},
 		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
 		"selectHostGroups": "extend",
@@ -366,7 +372,11 @@ func (p *ZabbixProvider) GetHosts(ctx context.Context) ([]Host, error) {
 // GetHostsByGroupID implements the Provider interface
 func (p *ZabbixProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
 	params := map[string]interface{}{
-		"output":           "extend",
+		"output": []string{
+			"hostid", "host", "name", "description", "status",
+			"available", "error", "snmp_available", "snmp_error",
+			"ipmi_available", "ipmi_error", "jmx_available", "jmx_error",
+		},
 		"selectInterfaces": "extend",
 		"selectGroups":     "extend",
 		"selectHostGroups": "extend",
@@ -393,27 +403,49 @@ func determineZabbixAvailability(zh zabbixHostWithGroups) (string, string, strin
 		return "unknown", "0", "" // Mapping to Inactive (0) in mapMonitorHostStatus
 	}
 
-	// Priority: check for any UNAVAILABLE (2) status
-	if available == "2" {
+	// Priority 1: Check Zabbix reported host-level availability errors
+	if available == "2" || zh.Error != "" {
 		return "down", "2", zh.Error
 	}
-	if snmpAvailable == "2" {
+	if snmpAvailable == "2" || zh.SnmpError != "" {
 		return "down", "2", zh.SnmpError
 	}
-	if ipmiAvailable == "2" {
+	if ipmiAvailable == "2" || zh.IpmiError != "" {
 		return "down", "2", zh.IpmiError
 	}
-	if jmxAvailable == "2" {
+	if jmxAvailable == "2" || zh.JmxError != "" {
 		return "down", "2", zh.JmxError
 	}
 
-	// Check if ANY are AVAILABLE (1)
+	// Priority 2: Check interface-level availability
+	hasAvailableInterface := false
+	firstInterfaceError := ""
+	for _, iface := range zh.Interfaces {
+		if toString(iface.Available) == "1" {
+			hasAvailableInterface = true
+			break
+		}
+		if toString(iface.Available) == "2" && firstInterfaceError == "" {
+			firstInterfaceError = iface.Error
+		}
+	}
+
+	if hasAvailableInterface {
+		return "up", "1", ""
+	}
+
+	if firstInterfaceError != "" {
+		return "down", "2", firstInterfaceError
+	}
+
+	// Check host-level available (1)
 	if available == "1" || snmpAvailable == "1" || ipmiAvailable == "1" || jmxAvailable == "1" {
 		return "up", "1", ""
 	}
 
-	// Default: Enabled but no availability info (0), mark as Up/Active
-	return "up", "0", ""
+	// Default: Enabled but no specific availability info (0), mark as Up (optimistic)
+	// This covers cases like "Simple checks" (ICMP ping) where Zabbix doesn't update availability fields.
+	return "up", "1", ""
 }
 
 func zabbixInterfaceTypeLabel(raw string) string {
@@ -566,11 +598,18 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 			metadata["groupnames"] = strings.Join(gnames, ",")
 		}
 
+		// Zabbix status: 0 = monitored, 1 = unmonitored
+		enabled := 1
+		if toString(zh.Status) == "1" {
+			enabled = 0
+		}
+
 		hosts = append(hosts, Host{
 			ID:          zh.HostID,
 			Name:        zh.Name,
 			Description: zh.Description,
 			Status:      status,
+			Enabled:     enabled,
 			IPAddress:   ip,
 			Metadata:    metadata,
 		})
@@ -636,11 +675,17 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 		metadata["groupnames"] = strings.Join(gnames, ",")
 	}
 
+	enabled := 1
+	if toString(zh.Status) == "1" {
+		enabled = 0
+	}
+
 	return &Host{
 		ID:          zh.HostID,
 		Name:        zh.Name,
 		Description: zh.Description,
 		Status:      status,
+		Enabled:     enabled,
 		IPAddress:   ip,
 		Metadata:    metadata,
 	}, nil
@@ -702,11 +747,17 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 		metadata["groupnames"] = strings.Join(gnames, ",")
 	}
 
+	enabled := 1
+	if toString(zh.Status) == "1" {
+		enabled = 0
+	}
+
 	return &Host{
 		ID:          zh.HostID,
 		Name:        zh.Name,
 		Description: zh.Description,
 		Status:      status,
+		Enabled:     enabled,
 		IPAddress:   ip,
 		Metadata:    metadata,
 	}, nil
@@ -1888,13 +1939,17 @@ func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error
 		}
 	}
 
-	// If no template specified, try to find a default one (optional)
-	// For now we don't force a template if not provided to avoid errors
+	// Zabbix status: 0 = monitored, 1 = unmonitored
+	zabbixStatus := 0
+	if host.Enabled == 0 {
+		zabbixStatus = 1
+	}
 
 	params := map[string]interface{}{
 		"host":       host.Name,
 		"interfaces": interfaces,
 		"groups":     []map[string]string{{"groupid": groupID}},
+		"status":     zabbixStatus,
 	}
 
 	if len(templates) > 0 {
@@ -1922,11 +1977,18 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 	if host.ID == "" {
 		return Host{}, fmt.Errorf("host ID is required")
 	}
+	// Zabbix status: 0 = monitored, 1 = unmonitored
+	zabbixStatus := 0
+	if host.Enabled == 0 {
+		zabbixStatus = 1
+	}
+
 	params := map[string]interface{}{
 		"hostid":      host.ID,
 		"host":        host.Name,
 		"name":        host.Name,
 		"description": host.Description,
+		"status":      zabbixStatus,
 	}
 	if host.Metadata != nil {
 		if gid, ok := host.Metadata["groupid"]; ok && gid != "" {

@@ -98,15 +98,17 @@ func GetGroupByExternalIDDAO(externalID string, monitorID uint) (model.Group, er
 // UpdateGroupDAO updates a group by ID
 func UpdateGroupDAO(id uint, group model.Group) error {
 	return database.DB.Model(&model.Group{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":            group.Name,
-		"description":     group.Description,
-		"enabled":         group.Enabled,
-		"status":          group.Status,
-		"m_id":            group.MonitorID,
-		"external_id":     group.ExternalID,
-		"last_sync_at":    group.LastSyncAt,
-		"external_source": group.ExternalSource,
-		"health_score":    group.HealthScore,
+		"name":               group.Name,
+		"description":        group.Description,
+		"enabled":            group.Enabled,
+		"status":             group.Status,
+		"status_description": group.StatusDescription,
+		"active_available":   group.ActiveAvailable,
+		"m_id":               group.MonitorID,
+		"external_id":        group.ExternalID,
+		"last_sync_at":       group.LastSyncAt,
+		"external_source":    group.ExternalSource,
+		"health_score":       group.HealthScore,
 	}).Error
 }
 
@@ -118,6 +120,14 @@ func UpdateGroupHealthScoreDAO(id uint, score int) error {
 // UpdateGroupStatusDAO updates only the status for a group
 func UpdateGroupStatusDAO(id uint, status int) error {
 	return database.DB.Model(&model.Group{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// UpdateGroupStatusAndDescriptionDAO updates status and status_description for a group
+func UpdateGroupStatusAndDescriptionDAO(id uint, status int, statusDesc string) error {
+	return database.DB.Model(&model.Group{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":             status,
+		"status_description": statusDesc,
+	}).Error
 }
 
 // DeleteGroupByIDDAO deletes a group by ID

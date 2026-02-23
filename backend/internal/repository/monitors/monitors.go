@@ -50,6 +50,7 @@ type Host struct {
 	Name        string
 	Description string
 	Status      string // "up", "down", "unknown"
+	Enabled     int    // 0 = disabled, 1 = enabled
 	IPAddress   string
 	Metadata    map[string]string
 }

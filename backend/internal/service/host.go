@@ -432,11 +432,26 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	if newHost.MonitorID > 0 {
+		monitorStatus := 1
 		if monitor, err := repository.GetMonitorByIDDAO(newHost.MonitorID); err == nil {
-			newHost.Status = determineHostStatus(newHost, determineMonitorStatus(monitor))
+			monitorStatus = determineMonitorStatus(monitor)
 		}
+		
+		groupStatus := 1
+		if newHost.GroupID > 0 {
+			if g, err := repository.GetGroupByIDDAO(newHost.GroupID); err == nil {
+				groupStatus = g.Status
+			}
+		}
+		newHost.Status = determineHostStatus(newHost, monitorStatus, groupStatus)
 	} else {
-		newHost.Status = determineHostStatus(newHost, 1)
+		groupStatus := 1
+		if newHost.GroupID > 0 {
+			if g, err := repository.GetGroupByIDDAO(newHost.GroupID); err == nil {
+				groupStatus = g.Status
+			}
+		}
+		newHost.Status = determineHostStatus(newHost, 1, groupStatus)
 	}
 
 	if err := repository.AddHostDAO(&newHost); err != nil {
@@ -508,6 +523,7 @@ func UpdateHostServ(id uint, h HostReq) error {
 		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
 		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
 		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
+		ActiveAvailable:     existing.ActiveAvailable,
 		LastSyncAt:          existing.LastSyncAt,
 		ExternalSource:      existing.ExternalSource,
 		Status:              existing.Status,
@@ -548,13 +564,21 @@ func UpdateHostServ(id uint, h HostReq) error {
 	}
 	// Preserve status and description unless enabled state changed
 	if h.Enabled != existing.Enabled {
+		monitorStatus := 1
 		if monitorID > 0 {
 			if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
-				updated.Status = determineHostStatus(updated, determineMonitorStatus(monitor))
+				monitorStatus = determineMonitorStatus(monitor)
 			}
-		} else {
-			updated.Status = determineHostStatus(updated, 1)
 		}
+
+		groupStatus := 1
+		if updated.GroupID > 0 {
+			if g, err := repository.GetGroupByIDDAO(updated.GroupID); err == nil {
+				groupStatus = g.Status
+			}
+		}
+
+		updated.Status = determineHostStatus(updated, monitorStatus, groupStatus)
 		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateHostDAO(id, updated); err != nil {
@@ -661,12 +685,18 @@ func mapMonitorHostStatus(status string, activeAvailable string) int {
 	if activeAvailable == "2" {
 		return 2
 	}
-
-	if status == "up" {
+	if activeAvailable == "1" {
 		return 1
 	}
+	if activeAvailable == "0" {
+		return 1 // Default to active if unknown but enabled
+	}
+
 	if status == "down" {
 		return 2
+	}
+	if status == "up" {
+		return 1
 	}
 	return 0
 }
@@ -1056,9 +1086,10 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				MonitorID:         mid,
 				GroupID:           groupID,
 				Description:       h.Description,
-				Enabled:           existingHost.Enabled,
+				Enabled:           h.Enabled,
 				Status:            status,
 				StatusDescription: statusDesc,
+				ActiveAvailable:   activeAvailable,
 				IPAddr:            h.IPAddress,
 				SSHUser:           existingHost.SSHUser,
 				SSHPassword:       "", // UpdateHostDAO won't update if empty
@@ -1085,9 +1116,10 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				MonitorID:         mid,
 				GroupID:           groupID,
 				Description:       h.Description,
-				Enabled:           1,
+				Enabled:           h.Enabled,
 				Status:            status,
 				StatusDescription: statusDesc,
+				ActiveAvailable:   activeAvailable,
 				IPAddr:            h.IPAddress,
 				LastSyncAt:        &now,
 				ExternalSource:    monitor.Name,
@@ -1236,15 +1268,16 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	if err == nil {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-			Name:      h.Name,
-			Hostid:    h.ID,
-			MonitorID: mid,
-			GroupID:   groupID,
-			Enabled:   existingHost.Enabled,
-			Status:    mapMonitorHostStatus(h.Status, activeAvailable),
-			IPAddr:    h.IPAddress,
-			SSHUser:   existingHost.SSHUser,
-			SSHPort:   existingHost.SSHPort,
+			Name:            h.Name,
+			Hostid:          h.ID,
+			MonitorID:       mid,
+			GroupID:         groupID,
+			Enabled:         h.Enabled,
+			Status:          mapMonitorHostStatus(h.Status, activeAvailable),
+			ActiveAvailable: activeAvailable,
+			IPAddr:          h.IPAddress,
+			SSHUser:         existingHost.SSHUser,
+			SSHPort:         existingHost.SSHPort,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -1254,18 +1287,20 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			recordHostHistory(refreshed, time.Now().UTC())
 		}
 		result.Updated++
-	} else {
-		// Host doesn't exist, add it
-		newHost := model.Host{
-			Name:        h.Name,
-			Hostid:      h.ID,
-			MonitorID:   mid,
-			GroupID:     groupID,
-			Description: h.Description,
-			Enabled:     1,
-			Status:      mapMonitorHostStatus(h.Status, activeAvailable),
-			IPAddr:      h.IPAddress,
-		}
+			} else {
+			// Host doesn't exist, add it
+			newHost := model.Host{
+				Name:            h.Name,
+				Hostid:          h.ID,
+				MonitorID:       mid,
+				GroupID:         groupID,
+				Description:     h.Description,
+				Enabled:         h.Enabled,
+				Status:          mapMonitorHostStatus(h.Status, activeAvailable),
+				ActiveAvailable: activeAvailable,
+				IPAddr:          h.IPAddress,
+			}
+	
 		if err := repository.AddHostDAO(&newHost); err != nil {
 			setMonitorStatusError(mid)
 			LogService("error", "pull host failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
@@ -1382,6 +1417,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 		Name:        host.Name,
 		IPAddress:   host.IPAddr,
 		Description: host.Description,
+		Enabled:     host.Enabled,
 		Metadata: map[string]string{
 			"groupid":        extGroupID,
 			"monitor_type":   fmt.Sprintf("%d", monitor.Type),

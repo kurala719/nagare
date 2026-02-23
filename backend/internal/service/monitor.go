@@ -296,6 +296,7 @@ func LoginMonitorServ(id uint) (MonitorResp, error) {
 		}
 	}
 	_ = repository.UpdateMonitorStatusDAO(id, 1)
+	_ = recomputeMonitorRelated(id)
 
 	// Retrieve and return the updated monitor
 	updatedMonitor, err := GetMonitorByIDServ(id)

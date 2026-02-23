@@ -12,49 +12,51 @@ import (
 // Host represents a monitored host entity
 type Host struct {
 	gorm.Model
-	Name              string
-	Hostid            string // External ID from monitoring system
-	MonitorID         uint   `gorm:"column:m_id"`
-	GroupID           uint   `gorm:"column:group_id"`
-	Description       string
-	Enabled           int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string // Reason for error status (e.g., "monitor is down", "connection failed")
-	ActiveAvailable   string `gorm:"column:active_available"` // 0=unknown, 1=available, 2=not_available
-	IPAddr            string `gorm:"column:ip_addr"`
-	Comment           string
-	SSHUser           string `gorm:"column:ssh_user"`
-	SSHPassword       string `gorm:"column:ssh_password"`
-	SSHPort           int    `gorm:"column:ssh_port;default:22"`
+	Name              string `json:"name"`
+	Hostid            string `json:"hostid"` // External ID from monitoring system
+	MonitorID         uint   `gorm:"column:m_id" json:"m_id"`
+	GroupID           uint   `gorm:"column:group_id" json:"group_id"`
+	Description       string `json:"description"`
+	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status            int    `json:"status"`                   // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string `json:"status_description"`       // Reason for error status
+	ActiveAvailable   string `gorm:"column:active_available" json:"active_available"`
+	IPAddr            string `gorm:"column:ip_addr" json:"ip_addr"`
+	Comment           string `json:"comment"`
+	SSHUser           string `gorm:"column:ssh_user" json:"ssh_user"`
+	SSHPassword       string `gorm:"column:ssh_password" json:"-"`
+	SSHPort           int    `gorm:"column:ssh_port;default:22" json:"ssh_port"`
 	// SNMP Configuration
-	SNMPCommunity       string `gorm:"column:snmp_community"`
-	SNMPVersion         string `gorm:"column:snmp_version"` // "v1", "v2c", "v3"
-	SNMPPort            int    `gorm:"column:snmp_port;default:161"`
-	SNMPV3User          string `gorm:"column:snmp_v3_user"`
-	SNMPV3AuthPass      string `gorm:"column:snmp_v3_auth_pass"`
-	SNMPV3PrivPass      string `gorm:"column:snmp_v3_priv_pass"`
-	SNMPV3AuthProtocol  string `gorm:"column:snmp_v3_auth_protocol"`  // "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512"
-	SNMPV3PrivProtocol  string `gorm:"column:snmp_v3_priv_protocol"`  // "DES", "AES", "AES128", "AES192", "AES256"
-	SNMPV3SecurityLevel string `gorm:"column:snmp_v3_security_level"` // "NoAuthNoPriv", "AuthNoPriv", "AuthPriv"
-	LastSyncAt          *time.Time
-	ExternalSource      string `gorm:"column:external_source"`
-	HealthScore         int    `gorm:"column:health_score;default:100"`
-	GroupName           string `gorm:"->"`
-	MonitorName         string `gorm:"->"`
+	SNMPCommunity       string     `gorm:"column:snmp_community" json:"snmp_community"`
+	SNMPVersion         string     `gorm:"column:snmp_version" json:"snmp_version"` // "v1", "v2c", "v3"
+	SNMPPort            int        `gorm:"column:snmp_port;default:161" json:"snmp_port"`
+	SNMPV3User          string     `gorm:"column:snmp_v3_user" json:"snmp_v3_user"`
+	SNMPV3AuthPass      string     `gorm:"column:snmp_v3_auth_pass" json:"-"`
+	SNMPV3PrivPass      string     `gorm:"column:snmp_v3_priv_pass" json:"-"`
+	SNMPV3AuthProtocol  string     `gorm:"column:snmp_v3_auth_protocol" json:"snmp_v3_auth_protocol"`
+	SNMPV3PrivProtocol  string     `gorm:"column:snmp_v3_priv_protocol" json:"snmp_v3_priv_protocol"`
+	SNMPV3SecurityLevel string     `gorm:"column:snmp_v3_security_level" json:"snmp_v3_security_level"`
+	LastSyncAt          *time.Time `json:"last_sync_at"`
+	ExternalSource      string     `gorm:"column:external_source" json:"external_source"`
+	HealthScore         int        `gorm:"column:health_score;default:100" json:"health_score"`
+	GroupName           string     `gorm:"->" json:"group_name"`
+	MonitorName         string     `gorm:"->" json:"monitor_name"`
 }
 
 // Group represents a logical group of hosts
 type Group struct {
 	gorm.Model
-	Name           string
-	Description    string
-	MonitorID      uint   `gorm:"column:m_id"`
-	ExternalID     string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
-	Enabled        int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
-	Status         int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	LastSyncAt     *time.Time
-	ExternalSource string `gorm:"column:external_source"`
-	HealthScore    int    `gorm:"column:health_score;default:100"`
+	Name              string
+	Description       string
+	MonitorID         uint   `gorm:"column:m_id"`
+	ExternalID        string `gorm:"column:external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
+	Enabled           int    `gorm:"default:1"`          // 0 = disabled, 1 = enabled
+	Status            int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string // Reason for error status
+	ActiveAvailable   string `gorm:"column:active_available"` // 0=unknown, 1=available, 2=not_available
+	LastSyncAt        *time.Time
+	ExternalSource    string `gorm:"column:external_source"`
+	HealthScore       int    `gorm:"column:health_score;default:100"`
 }
 
 // Monitor represents a monitoring system (e.g., Zabbix)

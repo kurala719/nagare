@@ -138,7 +138,7 @@ func (m *QQWebSocketManager) Listen(conn *websocket.Conn, mode string) {
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("[QQ-WS] %s read error: %v", err)
+			log.Printf("[QQ-WS] %s read error: %v", mode, err)
 			break
 		}
 

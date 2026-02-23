@@ -10,14 +10,16 @@
       <el-table-column prop="name" :label="$t('dashboard.name')" show-overflow-tooltip sortable />
       <el-table-column prop="type" :label="$t('monitors.type')" width="100" sortable>
         <template #default="{ row }">
-          <el-tag size="small" effect="plain">{{ row.type }}</el-tag>
+          <el-tag size="small" effect="plain">{{ getTypeLabel(row.type) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" :label="$t('dashboard.status')" width="80" sortable>
+      <el-table-column prop="status" :label="$t('dashboard.status')" width="100" sortable>
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">
-            {{ getStatusLabel(row.status) }}
-          </el-tag>
+          <el-tooltip :content="getStatusInfo(row.status).reason" placement="top">
+            <el-tag :type="getStatusInfo(row.status).type" size="small">
+              {{ getStatusInfo(row.status).label }}
+            </el-tag>
+          </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column label="Health" width="80">
@@ -55,12 +57,23 @@ export default defineComponent({
   setup() {
     const { t } = useI18n()
     
-    const getStatusType = (status) => {
-      return status === 1 ? 'success' : 'info'
+    const getTypeLabel = (type) => {
+      const map = {
+        1: 'SNMP',
+        2: 'Zabbix',
+        3: 'Other'
+      }
+      return map[type] || map[3]
     }
-    
-    const getStatusLabel = (status) => {
-      return status === 1 ? t('dashboard.activeLabel') : t('dashboard.inactiveLabel')
+
+    const getStatusInfo = (status) => {
+      const map = {
+        0: { label: t('common.statusInactive'), reason: t('common.reasonInactive'), type: 'info' },
+        1: { label: t('common.statusActive'), reason: t('common.reasonActive'), type: 'success' },
+        2: { label: t('common.statusError'), reason: t('common.reasonError'), type: 'danger' },
+        3: { label: t('common.statusSyncing'), reason: t('common.reasonSyncing'), type: 'warning' },
+      }
+      return map[status] || map[0]
     }
 
     const getHealthStatus = (score) => {
@@ -70,8 +83,8 @@ export default defineComponent({
     }
     
     return {
-      getStatusType,
-      getStatusLabel,
+      getTypeLabel,
+      getStatusInfo,
       getHealthStatus
     }
   }

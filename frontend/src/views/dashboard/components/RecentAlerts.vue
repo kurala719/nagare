@@ -11,7 +11,7 @@
       <el-table-column prop="message" :label="$t('dashboard.message')" show-overflow-tooltip sortable />
       <el-table-column prop="severity" :label="$t('dashboard.severity')" width="100" sortable>
         <template #default="{ row }">
-          <el-tag :type="getSeverityType(row.severity)" size="small">{{ row.severity }}</el-tag>
+          <el-tag :type="getSeverityType(row.severity)" size="small">{{ getSeverityLabel(row.severity) }}</el-tag>
         </template>
       </el-table-column>
     </el-table>
@@ -35,14 +35,28 @@ export default defineComponent({
     }
   },
   setup() {
+    const getSeverityLabel = (severity) => {
+      if (typeof severity === 'number') {
+        const map = { 0: 'info', 1: 'low', 2: 'medium', 3: 'high', 4: 'critical' }
+        return map[severity] || String(severity)
+      }
+      return String(severity || '')
+    }
+
     const getSeverityType = (severity) => {
-      const s = String(severity || '').toLowerCase()
+      let s = ''
+      if (typeof severity === 'number') {
+        const map = { 0: 'info', 1: 'info', 2: 'warning', 3: 'danger', 4: 'danger' }
+        return map[severity] || 'info'
+      } else {
+        s = String(severity || '').toLowerCase()
+      }
       if (s === 'critical' || s === 'high') return 'danger'
       if (s === 'medium' || s === 'warning') return 'warning'
       if (s === 'low' || s === 'info') return 'info'
       return 'info'
     }
-    return { getSeverityType }
+    return { getSeverityLabel, getSeverityType }
   }
 })
 </script>

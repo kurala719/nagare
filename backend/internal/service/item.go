@@ -530,7 +530,14 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
 	}
 
-	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor))
+	groupStatus := 1
+	if host.GroupID > 0 {
+		if g, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+			groupStatus = g.Status
+		}
+	}
+
+	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor), groupStatus)
 	if currentStatus == 2 {
 		reason := host.StatusDescription
 		if reason == "" {
@@ -544,7 +551,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			}
 		}
 		LogService("warn", "pull items skipped due to host error", map[string]interface{}{"host_id": hid, "host_status": currentStatus}, nil, "")
-		return result, fmt.Errorf("host is not active (status: %d)", currentStatus)
+		return result, fmt.Errorf("host is not active")
 	}
 	// Allow status 1 (Active) or 3 (Syncing) to proceed
 	if currentStatus != 1 && currentStatus != 3 {
@@ -556,11 +563,11 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			}
 		}
 		LogService("warn", "pull items skipped due to host not active", map[string]interface{}{"host_id": hid, "host_status": currentStatus}, nil, "")
-		return result, fmt.Errorf("host is not active (status: %d)", currentStatus)
+		return result, fmt.Errorf("host is not active")
 	}
 
-	if host.Status != 1 || host.StatusDescription != "" {
-		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, 1, "")
+	if host.Status != currentStatus || host.StatusDescription != "" {
+		_, _ = recomputeHostStatus(hid)
 	}
 
 	client, err := createMonitorClientFromDomain(monitor)
@@ -1059,7 +1066,14 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 		return result, fmt.Errorf("monitor is in error state (status: %d)", monitor.Status)
 	}
 
-	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor))
+	groupStatus := 1
+	if host.GroupID > 0 {
+		if g, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+			groupStatus = g.Status
+		}
+	}
+
+	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor), groupStatus)
 	if currentStatus == 2 {
 		reason := host.StatusDescription
 		if reason == "" {

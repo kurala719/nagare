@@ -48,7 +48,7 @@ func determineProviderStatus(p model.Provider) int {
 	return 1
 }
 
-func determineHostStatus(h model.Host, monitorStatus int) int {
+func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
 	if h.Enabled == 0 {
 		return 0
 	}
@@ -58,17 +58,39 @@ func determineHostStatus(h model.Host, monitorStatus int) int {
 		return 2
 	}
 
-	// Check monitor-reported availability (2 = not_available)
-	if h.ActiveAvailable == "2" {
+	// If the group is in error, the host should be too
+	if groupStatus == 2 {
 		return 2
 	}
 
-	// If it's currently syncing, keep it syncing
-	if h.Status == 3 {
-		return 3
+	// If monitor or group is inactive, host is inactive
+	if monitorStatus == 0 || groupStatus == 0 {
+		return 0
 	}
 
-	return 1
+	// Handle monitor-reported availability: 0=unknown, 1=available, 2=not_available
+	if h.ActiveAvailable == "2" {
+		return 2
+	}
+	if h.ActiveAvailable == "1" {
+		return 1
+	}
+	if h.ActiveAvailable == "0" && h.MonitorID != 1 {
+		return 1 // Unknown availability on monitor still defaults to Active if enabled
+	}
+
+	// If the host has an error description (like "host not found on monitor"), keep it in error state
+	// We exclude generic "host is not active" to allow recovery during sync.
+	if h.StatusDescription != "" && h.StatusDescription != "Nagare Internal Monitoring Service (Active)" && h.StatusDescription != "host is not active" {
+		return 2
+	}
+
+	// For Nagare Internal (SNMP) or providers without availability flags, default to Active if no error
+	if h.MonitorID == 1 || h.ActiveAvailable == "" {
+		return 1
+	}
+
+	return 0
 }
 
 func determineItemStatus(i model.Item) int {
@@ -124,10 +146,23 @@ func determineGroupStatus(group model.Group, monitorStatus int) int {
 	if group.Enabled == 0 {
 		return 0
 	}
+
 	// If the monitor is in error, the group should be too
 	if monitorStatus == 2 {
 		return 2
 	}
+
+	// Check external monitor-reported availability (2 = not_available)
+	if group.ActiveAvailable == "2" {
+		return 2
+	}
+
+	// If monitor is inactive, group is inactive
+	if monitorStatus == 0 {
+		return 0
+	}
+
+	// Default: Enabled and no specific error, mark as Active
 	return 1
 }
 
@@ -282,7 +317,15 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	}
 
 	status := determineGroupStatus(group, monitorStatus)
-	_ = repository.UpdateGroupStatusDAO(gid, status)
+	_ = repository.UpdateGroupStatusAndDescriptionDAO(gid, status, group.StatusDescription)
+
+	// Propagate status change to hosts in this group
+	hostsInGroup, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
+	if err == nil {
+		for _, h := range hostsInGroup {
+			_, _ = recomputeHostStatus(h.ID)
+		}
+	}
 
 	// Compute health score based on hosts
 	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
@@ -320,7 +363,14 @@ func recomputeHostStatus(hid uint) (int, error) {
 		}
 	}
 
-	status := determineHostStatus(host, monitorStatus)
+	groupStatus := 1
+	if host.GroupID > 0 {
+		if g, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+			groupStatus = g.Status
+		}
+	}
+
+	status := determineHostStatus(host, monitorStatus, groupStatus)
 	_ = repository.UpdateHostStatusAndDescriptionDAO(hid, status, host.StatusDescription)
 
 	// Compute health score based on status
@@ -329,6 +379,8 @@ func recomputeHostStatus(hid uint) (int, error) {
 		score = 0
 	} else {
 		switch status {
+		case 0: // Inactive/Unknown
+			score = 0
 		case 2: // Error
 			score = 0
 		case 3: // Syncing
@@ -387,13 +439,7 @@ func recomputeMonitorRelated(mid uint) error {
 		return err
 	}
 
-	// 1. Recompute Items and Hosts
-	for _, host := range hosts {
-		_ = recomputeItemsForHost(host.ID)
-		_, _ = recomputeHostStatus(host.ID)
-	}
-
-	// 2. Recompute Groups
+	// 1. Recompute Groups first (hosts depend on groups)
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
 	if err == nil {
 		for _, group := range groups {
@@ -405,6 +451,12 @@ func recomputeMonitorRelated(mid uint) error {
 		if host.GroupID > 0 {
 			_, _ = recomputeGroupStatus(host.GroupID)
 		}
+	}
+
+	// 2. Recompute Items and Hosts (now that groups are updated)
+	for _, host := range hosts {
+		_ = recomputeItemsForHost(host.ID)
+		_, _ = recomputeHostStatus(host.ID)
 	}
 
 	// 3. Recompute Monitor

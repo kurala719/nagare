@@ -9,7 +9,11 @@
     <el-table :data="providers" style="width: 100%" max-height="200" v-loading="loading">
       <el-table-column prop="id" :label="$t('dashboard.id')" width="60" sortable />
       <el-table-column prop="name" :label="$t('dashboard.name')" sortable />
-      <el-table-column prop="model" :label="$t('dashboard.model')" sortable />
+      <el-table-column :label="$t('dashboard.model')" sortable>
+        <template #default="{ row }">
+          {{ row.default_model || row.model || row.DefaultModel || row.Model || '-' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="status" :label="$t('dashboard.status')" width="100" sortable>
         <template #default="{ row }">
           <el-tooltip :content="getStatusInfo(row.status).reason" placement="top">

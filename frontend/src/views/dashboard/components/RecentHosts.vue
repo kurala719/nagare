@@ -9,7 +9,11 @@
     <el-table :data="hosts" style="width: 100%" max-height="250" v-loading="loading">
       <el-table-column prop="id" :label="$t('dashboard.id')" width="60" sortable />
       <el-table-column prop="name" :label="$t('dashboard.name')" show-overflow-tooltip sortable />
-      <el-table-column prop="ip" :label="$t('dashboard.ip')" width="120" sortable />
+      <el-table-column :label="$t('dashboard.ip')" width="140" sortable>
+        <template #default="{ row }">
+          {{ row.ip_addr || row.ip || row.IPAddr || '-' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="status" :label="$t('dashboard.status')" width="100" sortable>
         <template #default="{ row }">
           <el-tooltip :content="getStatusInfo(row.status).reason" placement="top">
