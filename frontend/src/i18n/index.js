@@ -1053,6 +1053,7 @@ const messages = {
       filterType: 'Filter Type',
       config: 'Configuration',
       configTitle: 'Report Configuration',
+      generateDaily: 'Generate Daily',
       generateWeekly: 'Generate Weekly',
       generateMonthly: 'Generate Monthly',
       generateCustom: 'Generate Custom',
@@ -1071,7 +1072,10 @@ const messages = {
       generationStarted: 'Report generation started',
       generationFailed: 'Report generation failed',
       deleteConfirm: 'Are you sure you want to delete this report?',
-      deleteSuccess: 'Report deleted successfully'
+      deleteSuccess: 'Report deleted successfully',
+      language: 'Language',
+      customDefaultTitle: 'Custom Infrastructure Report',
+      enableAISummary: 'AI Summary',
     },
     message: {
       title: 'Notifications',
@@ -2235,6 +2239,7 @@ const messages = {
       filterType: '筛选类型',
       config: '配置',
       configTitle: '报表配置',
+      generateDaily: '生成日报',
       generateWeekly: '生成周报',
       generateMonthly: '生成月报',
       generateCustom: '生成自定义报表',
@@ -2253,7 +2258,10 @@ const messages = {
       generationStarted: '报表生成已开始',
       generationFailed: '报表生成失败',
       deleteConfirm: '确定要删除这份报表吗？',
-      deleteSuccess: '报表删除成功'
+      deleteSuccess: '报表删除成功',
+      language: '报告语言',
+      customDefaultTitle: '自定义基础设施报告',
+      enableAISummary: 'AI 摘要生成',
     },
     message: {
       title: '系统通知',

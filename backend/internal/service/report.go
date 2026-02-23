@@ -23,8 +23,98 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/consts/extension"
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
+	"github.com/johnfercher/maroto/v2/pkg/core/entity"
 	"github.com/johnfercher/maroto/v2/pkg/props"
 )
+
+var translations = map[string]map[string]string{
+	"en": {
+		"page_pattern":           "Page {current} of {total}",
+		"daily_title":            "Daily Operations Summary",
+		"weekly_title":           "Weekly Operations Analytics",
+		"monthly_title":          "Monthly Infrastructure Insight",
+		"infra_health":           "Infrastructure Health & Trends",
+		"chart_skipped":          "[Chart Generation Skipped due to data issues]",
+		"critical_host":          "Critical Host Analytics",
+		"top_resource":           "Top Resource Consumers (CPU Usage)",
+		"stability_issues":       "Stability Issues (Frequency)",
+		"asset_name":             "Asset Name",
+		"ip_address":             "IP Address",
+		"avg_usage":              "Avg Usage",
+		"units":                  "Units",
+		"status":                 "Status",
+		"summary":                "Summary",
+		"alert_count":            "Alert Count",
+		"infra_report_platform":  "Infrastructure Intelligence Report | Nagare Platform",
+		"executive_summary":      "Executive Summary",
+		"total_alerts":           "Total Alerts",
+		"avg_health":             "Avg Health",
+		"critical_assets":        "Critical Assets",
+		"status_distribution":    "Status Distribution",
+		"alert_trend":            "Alert Trend in Period",
+		"failure_frequency":      "Failure Frequency",
+		"top_5_failures":         "Top 5 Most Frequent Failures (Times)",
+		"ai_summary_disabled":    "AI Summary generation is disabled. Based on metrics, the system has %d alerts in the last period.",
+		"ai_init_failed":         "Failed to initialize AI for summary: %v",
+		"ai_summary_failed":      "Infrastructure remained operational. Total alerts: %d. (AI Summary failed: %v)",
+		"ai_system_prompt":       "Generate a concise executive summary for an infrastructure report in English.",
+		"ai_user_prompt":         "You are a senior infrastructure analyst. Summarize the following operational data into a professional executive summary (3-4 sentences) in English.\nData: %s",
+		"detected_issues":       "Detected Issues",
+		"alerts_count_suffix":   "%d alerts",
+	},
+	"zh": {
+		"page_pattern":           "第 {current} 页，共 {total} 页",
+		"daily_title":            "每日运维总结报告",
+		"weekly_title":           "每周运维分析报告",
+		"monthly_title":          "每月基础设施洞察报告",
+		"infra_health":           "基础设施健康状况与趋势",
+		"chart_skipped":          "[由于数据问题，跳过图表生成]",
+		"critical_host":          "关键主机分析",
+		"top_resource":           "资源消耗排行 (CPU 使用率)",
+		"stability_issues":       "稳定性问题 (频率)",
+		"asset_name":             "资产名称",
+		"ip_address":             "IP 地址",
+		"avg_usage":              "平均使用率",
+		"units":                  "单位",
+		"status":                 "状态",
+		"summary":                "摘要",
+		"alert_count":            "告警次数",
+		"infra_report_platform":  "基础设施智能报告 | Nagare 平台",
+		"executive_summary":      "执行摘要",
+		"total_alerts":           "告警总数",
+		"avg_health":             "平均健康度",
+		"critical_assets":        "异常资产",
+		"status_distribution":    "状态分布",
+		"alert_trend":            "期间告警趋势",
+		"failure_frequency":      "故障频率",
+		"top_5_failures":         "故障最频繁的前 5 个主机 (次数)",
+		"ai_summary_disabled":    "AI 摘要生成已禁用。根据指标，系统在上一周期共有 %d 条告警。",
+		"ai_init_failed":         "初始化 AI 摘要失败: %v",
+		"ai_summary_failed":      "基础设施运行正常。告警总数: %d。(AI 摘要失败: %v)",
+		"ai_system_prompt":       "为基础设施报告生成一份简洁的中文执行摘要。",
+		"ai_user_prompt":         "你是一位资深基础设施分析师。请将以下运营数据总结为一份专业的执行摘要（3-4 句话），请使用中文回复。\n数据: %s",
+		"active":                 "正常",
+		"inactive":               "离线",
+		"error":                  "错误",
+		"syncing":                "同步中",
+		"unknown":                "未知",
+		"detected_issues":       "检测到问题",
+		"alerts_count_suffix":   "%d 条告警",
+	},
+}
+
+func T(lang, key string) string {
+	if m, ok := translations[lang]; ok {
+		if val, ok := m[key]; ok {
+			return val
+		}
+	}
+	// Fallback to English
+	if val, ok := translations["en"][key]; ok {
+		return val
+	}
+	return key
+}
 
 // ReportResp represents a report response
 type ReportResp struct {
@@ -37,14 +127,34 @@ type ReportResp struct {
 	GeneratedAt time.Time `json:"generated_at"`
 }
 
+// GenerateDailyReportServ triggers a daily report generation
+func GenerateDailyReportServ() (model.Report, error) {
+	lang := "en"
+	if cfg, err := repository.GetReportConfigDAO(); err == nil {
+		lang = cfg.Language
+	}
+	title := fmt.Sprintf("%s - %s", T(lang, "daily_title"), time.Now().Format("2006-01-02"))
+	return createAndProcessReport("daily", title, nil, nil)
+}
+
 // GenerateWeeklyReportServ triggers a weekly report generation
 func GenerateWeeklyReportServ() (model.Report, error) {
-	return createAndProcessReport("weekly", "Weekly Operations Analytics - "+time.Now().Format("2006-01-02"), nil, nil)
+	lang := "en"
+	if cfg, err := repository.GetReportConfigDAO(); err == nil {
+		lang = cfg.Language
+	}
+	title := fmt.Sprintf("%s - %s", T(lang, "weekly_title"), time.Now().Format("2006-01-02"))
+	return createAndProcessReport("weekly", title, nil, nil)
 }
 
 // GenerateMonthlyReportServ triggers a monthly report generation
 func GenerateMonthlyReportServ() (model.Report, error) {
-	return createAndProcessReport("monthly", "Monthly Infrastructure Insight - "+time.Now().Format("2006-01"), nil, nil)
+	lang := "en"
+	if cfg, err := repository.GetReportConfigDAO(); err == nil {
+		lang = cfg.Language
+	}
+	title := fmt.Sprintf("%s - %s", T(lang, "monthly_title"), time.Now().Format("2006-01"))
+	return createAndProcessReport("monthly", title, nil, nil)
 }
 
 // GenerateCustomReportServ triggers a custom report generation with specific timeframe
@@ -77,8 +187,13 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 		}
 	}()
 
+	lang := "en"
+	if cfg, err := repository.GetReportConfigDAO(); err == nil {
+		lang = cfg.Language
+	}
+
 	// 1. Fetch Aggregated Data
-	data := aggregateAdvancedReportData(report.ReportType, customStart, customEnd)
+	data := aggregateAdvancedReportData(report.ReportType, customStart, customEnd, lang)
 
 	// 2. Save Data to JSON for preview
 	dataJSON, err := json.Marshal(data)
@@ -92,34 +207,53 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	}
 
 	// 3. Generate PDF
-	cfg := config.NewBuilder().
+	builder := config.NewBuilder().
 		WithPageNumber(props.PageNumber{
-			Pattern: "Page {current} of {total}",
+			Pattern: T(lang, "page_pattern"),
 			Place:   props.RightBottom,
 		}).
 		WithLeftMargin(15).
 		WithTopMargin(15).
-		WithRightMargin(15).
-		Build()
+		WithRightMargin(15)
 
+	if lang == "zh" {
+		fontFile := "public/fonts/NotoSansSC-Regular.ttf"
+		if _, err := os.Stat(fontFile); err == nil {
+			customFonts := []*entity.CustomFont{
+				{
+					Family: "NotoSansSC",
+					Style:  fontstyle.Normal,
+					File:   fontFile,
+				},
+			}
+			builder.WithCustomFonts(customFonts).
+				WithDefaultFont(&props.Font{
+					Family: "NotoSansSC",
+				})
+		} else {
+			LogService("warn", "Chinese font not found, falling back to default", map[string]interface{}{"path": fontFile}, nil, "")
+		}
+	}
+
+	cfg := builder.Build()
 	m := maroto.New(cfg)
 
 	// Page 1: Cover & Summary
-	buildProfessionalHeader(m, report.Title)
-	buildExecutiveSummary(m, data)
+	buildProfessionalHeader(m, report.Title, lang)
+	buildExecutiveSummary(m, data, lang)
 
 	// Charts Section
-	m.AddAutoRow(text.NewCol(12, "Infrastructure Health & Trends", props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
+	m.AddAutoRow(text.NewCol(12, T(lang, "infra_health"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
 
 	// Pie Chart & Line Chart
-	pieBytes, errPie := utils.GeneratePieChart("Host Status", data.StatusDistribution)
+	pieBytes, errPie := utils.GeneratePieChart(T(lang, "status_distribution"), data.StatusDistribution)
 	
 	// Labels for trend
 	labels := []string{"M", "T", "W", "T", "F", "S", "S"}
 	if report.ReportType == "custom" && customStart != nil && customEnd != nil {
 		labels = []string{"Start", "...", "End"} // Simplified
 	}
-	lineBytes, errLine := utils.GenerateLineChart("Alert Trend", labels, data.AlertTrend)
+	lineBytes, errLine := utils.GenerateLineChart(T(lang, "alert_trend"), labels, data.AlertTrend)
 
 	if errPie == nil && errLine == nil {
 		m.AddRow(80,
@@ -127,25 +261,25 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 			col.New(6).Add(image.NewFromBytes(lineBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
 		)
 		m.AddRow(10,
-			text.NewCol(6, "Status Distribution", props.Text{Align: align.Center, Size: 9}),
-			text.NewCol(6, "Alert Trend in Period", props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, T(lang, "status_distribution"), props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, T(lang, "alert_trend"), props.Text{Align: align.Center, Size: 9}),
 		)
 	} else {
-		m.AddAutoRow(text.NewCol(12, "[Chart Generation Skipped due to data issues]", props.Text{Size: 10, Color: &props.Color{Red: 255}}))
+		m.AddAutoRow(text.NewCol(12, T(lang, "chart_skipped"), props.Text{Size: 10, Color: &props.Color{Red: 255}}))
 	}
 
 	// Page 2: Host Analytics
-	m.AddAutoRow(text.NewCol(12, "Critical Host Analytics", props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
+	m.AddAutoRow(text.NewCol(12, T(lang, "critical_host"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
 
 	// Failure Frequency Chart
-	barBytes, errBar := utils.GenerateBarChart("Failure Frequency", data.FailureFrequency)
+	barBytes, errBar := utils.GenerateBarChart(T(lang, "failure_frequency"), data.FailureFrequency)
 	if errBar == nil {
 		m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
-		m.AddRow(10, text.NewCol(12, "Top 5 Most Frequent Failures (Times)", props.Text{Align: align.Center, Size: 9}))
+		m.AddRow(10, text.NewCol(12, T(lang, "top_5_failures"), props.Text{Align: align.Center, Size: 9}))
 	}
 
-	buildTopHostsTable(m, data.TopCPUHosts)
-	buildDowntimeTable(m, data.LongestDowntimeHosts)
+	buildTopHostsTable(m, data.TopCPUHosts, lang)
+	buildDowntimeTable(m, data.LongestDowntimeHosts, lang)
 
 	fileName := fmt.Sprintf("report_%d.pdf", report.ID)
 	filePath := "public/reports/" + fileName
@@ -190,7 +324,7 @@ type AdvancedReportData struct {
 	Summary              string
 }
 
-func aggregateAdvancedReportData(reportType string, customStart, customEnd *time.Time) AdvancedReportData {
+func aggregateAdvancedReportData(reportType string, customStart, customEnd *time.Time, lang string) AdvancedReportData {
 	var startTime time.Time
 	if customStart != nil {
 		startTime = *customStart
@@ -198,6 +332,8 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		days := 7
 		if reportType == "monthly" {
 			days = 30
+		} else if reportType == "daily" {
+			days = 1
 		}
 		startTime = time.Now().AddDate(0, 0, -days)
 	}
@@ -223,16 +359,16 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	// 2. Status Distribution (current)
 	hosts, _ := repository.GetAllHostsDAO()
 	for _, h := range hosts {
-		status := "Unknown"
+		status := T(lang, "unknown")
 		switch h.Status {
 		case 1:
-			status = "Active"
+			status = T(lang, "active")
 		case 0:
-			status = "Inactive"
+			status = T(lang, "inactive")
 		case 2:
-			status = "Error"
+			status = T(lang, "error")
 		case 3:
-			status = "Syncing"
+			status = T(lang, "syncing")
 		}
 		data.StatusDistribution[status]++
 	}
@@ -279,9 +415,9 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 
 	for _, item := range cpuItems {
 		h, _ := repository.GetHostByIDDAO(item.HID)
-		status := "Active"
+		status := T(lang, "active")
 		if h.Status == 2 {
-			status = "Error"
+			status = T(lang, "error")
 		}
 		data.TopCPUHosts = append(data.TopCPUHosts, []string{
 			h.Name, h.IPAddr, item.LastValue, item.Units, status,
@@ -294,7 +430,7 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	}
 	if len(frequencies) > 0 {
 		h, _ := repository.GetHostByIDDAO(frequencies[0].HostID)
-		data.LongestDowntimeHosts[0] = []string{h.Name, h.IPAddr, "Detected Issues", fmt.Sprintf("%d alerts", frequencies[0].Count)}
+		data.LongestDowntimeHosts[0] = []string{h.Name, h.IPAddr, T(lang, "detected_issues"), fmt.Sprintf(T(lang, "alerts_count_suffix"), frequencies[0].Count)}
 	}
 
 	// 7. Calculate Avg Uptime (based on host health scores)
@@ -303,44 +439,44 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	data.AvgUptime = avgScore
 
 	// 8. AI Summary
-	data.Summary = generateAISummary(data)
+	data.Summary = generateAISummary(data, lang)
 
 	return data
 }
 
-func generateAISummary(data AdvancedReportData) string {
+func generateAISummary(data AdvancedReportData, lang string) string {
 	if !aiAnalysisEnabled() {
-		return "AI Summary generation is disabled. Based on metrics, the system has " + fmt.Sprint(data.TotalAlerts) + " alerts in the last period."
+		return fmt.Sprintf(T(lang, "ai_summary_disabled"), data.TotalAlerts)
 	}
 
 	providerID, modelName := aiProviderConfig()
 	client, resolvedModel, err := createLLMClient(providerID, modelName)
 	if err != nil {
-		return "Failed to initialize AI for summary: " + err.Error()
+		return fmt.Sprintf(T(lang, "ai_init_failed"), err)
 	}
 
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
 
 	statsJSON, _ := json.Marshal(data)
-	prompt := "You are a senior infrastructure analyst. Summarize the following operational data into a professional executive summary (3-4 sentences).\nData: " + string(statsJSON)
+	prompt := fmt.Sprintf(T(lang, "ai_user_prompt"), string(statsJSON))
 
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        resolvedModel,
-		SystemPrompt: "Generate a concise executive summary for an infrastructure report.",
+		SystemPrompt: T(lang, "ai_system_prompt"),
 		Messages: []llm.Message{
 			{Role: "user", Content: prompt},
 		},
 	})
 
 	if err != nil {
-		return "Infrastructure remained operational. Total alerts: " + fmt.Sprint(data.TotalAlerts) + ". (AI Summary failed: " + err.Error() + ")"
+		return fmt.Sprintf(T(lang, "ai_summary_failed"), data.TotalAlerts, err)
 	}
 
 	return strings.TrimSpace(resp.Content)
 }
 
-func buildProfessionalHeader(m core.Maroto, title string) {
+func buildProfessionalHeader(m core.Maroto, title string, lang string) {
 	m.AddRow(20,
 		text.NewCol(12, title, props.Text{
 			Size:  20,
@@ -350,7 +486,7 @@ func buildProfessionalHeader(m core.Maroto, title string) {
 		}),
 	)
 	m.AddRow(10,
-		text.NewCol(12, "Infrastructure Intelligence Report | Nagare Platform", props.Text{
+		text.NewCol(12, T(lang, "infra_report_platform"), props.Text{
 			Size:  10,
 			Style: fontstyle.Italic,
 			Align: align.Center,
@@ -359,22 +495,22 @@ func buildProfessionalHeader(m core.Maroto, title string) {
 	m.AddRow(5, text.NewCol(12, "", props.Text{})) // Spacer
 }
 
-func buildExecutiveSummary(m core.Maroto, data AdvancedReportData) {
-	m.AddAutoRow(text.NewCol(12, "Executive Summary", props.Text{Size: 14, Style: fontstyle.Bold}))
+func buildExecutiveSummary(m core.Maroto, data AdvancedReportData, lang string) {
+	m.AddAutoRow(text.NewCol(12, T(lang, "executive_summary"), props.Text{Size: 14, Style: fontstyle.Bold}))
 
 	m.AddRow(20,
-		text.NewCol(4, fmt.Sprintf("Total Alerts: %d", data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
-		text.NewCol(4, fmt.Sprintf("Avg Health: %.2f%%", data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
-		text.NewCol(4, fmt.Sprintf("Critical Assets: %d", int(data.StatusDistribution["Error"])), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("%s: %d", T(lang, "total_alerts"), data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("%s: %.2f%%", T(lang, "avg_health"), data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("%s: %d", T(lang, "critical_assets"), int(data.StatusDistribution[T(lang, "error")])), props.Text{Size: 11, Align: align.Center, Top: 5}),
 	)
 
 	m.AddAutoRow(text.NewCol(12, data.Summary, props.Text{Size: 10, Top: 5, Bottom: 10}))
 }
 
-func buildTopHostsTable(m core.Maroto, rows [][]string) {
-	m.AddAutoRow(text.NewCol(12, "Top Resource Consumers (CPU Usage)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+func buildTopHostsTable(m core.Maroto, rows [][]string, lang string) {
+	m.AddAutoRow(text.NewCol(12, T(lang, "top_resource"), props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
 
-	header := []string{"Asset Name", "IP Address", "Avg Usage", "Units", "Status"}
+	header := []string{T(lang, "asset_name"), T(lang, "ip_address"), T(lang, "avg_usage"), T(lang, "units"), T(lang, "status")}
 
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
@@ -395,10 +531,10 @@ func buildTopHostsTable(m core.Maroto, rows [][]string) {
 	}
 }
 
-func buildDowntimeTable(m core.Maroto, rows [][]string) {
-	m.AddAutoRow(text.NewCol(12, "Stability Issues (Frequency)", props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+func buildDowntimeTable(m core.Maroto, rows [][]string, lang string) {
+	m.AddAutoRow(text.NewCol(12, T(lang, "stability_issues"), props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
 
-	header := []string{"Asset Name", "IP Address", "Summary", "Alert Count"}
+	header := []string{T(lang, "asset_name"), T(lang, "ip_address"), T(lang, "summary"), T(lang, "alert_count")}
 
 	m.AddRow(10,
 		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),

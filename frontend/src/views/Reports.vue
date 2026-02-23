@@ -31,10 +31,11 @@
         </el-dropdown>
 
         <el-button @click="configDialogVisible = true" :icon="Setting">{{ $t('reports.config') }}</el-button>
-        <el-dropdown split-button type="primary" @click="generateWeekly" @command="handleGenerateCommand">
-          {{ $t('reports.generateWeekly') }}
+        <el-dropdown split-button type="primary" @click="generateDaily" @command="handleGenerateCommand">
+          {{ $t('reports.generateDaily') || 'Generate Daily' }}
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item command="weekly">{{ $t('reports.generateWeekly') }}</el-dropdown-item>
               <el-dropdown-item command="monthly">{{ $t('reports.generateMonthly') }}</el-dropdown-item>
               <el-dropdown-item command="custom">{{ $t('reports.generateCustom') || 'Generate Custom' }}</el-dropdown-item>
             </el-dropdown-menu>
@@ -101,6 +102,14 @@
     <!-- Config Dialog -->
     <el-dialog v-model="configDialogVisible" :title="$t('reports.configTitle')" width="500px">
       <el-form :model="configForm" label-width="160px">
+        <el-divider content-position="left">Daily Report</el-divider>
+        <el-form-item :label="$t('reports.autoGenerate')">
+          <el-switch v-model="configForm.auto_generate_daily" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item :label="$t('reports.generateTime')">
+          <el-time-select v-model="configForm.daily_generate_time" start="00:00" step="01:00" end="23:00" />
+        </el-form-item>
+
         <el-divider content-position="left">Weekly Report</el-divider>
         <el-form-item :label="$t('reports.autoGenerate')">
           <el-switch v-model="configForm.auto_generate_weekly" :active-value="1" :inactive-value="0" />
@@ -123,6 +132,19 @@
         </el-form-item>
         <el-form-item :label="$t('reports.generateTime')">
           <el-time-select v-model="configForm.monthly_generate_time" start="00:00" step="01:00" end="23:00" />
+        </el-form-item>
+
+        <el-divider content-position="left">{{ $t('reports.language') || 'Report Language' }}</el-divider>
+        <el-form-item :label="$t('reports.language') || 'Language'">
+          <el-select v-model="configForm.language">
+            <el-option label="English" value="en" />
+            <el-option label="Chinese (简体中文)" value="zh" />
+          </el-select>
+        </el-form-item>
+
+        <el-divider content-position="left">Report Content</el-divider>
+        <el-form-item :label="$t('reports.enableAISummary') || 'AI Summary'">
+          <el-switch v-model="configForm.enable_llm_summary" :active-value="1" :inactive-value="0" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -155,6 +177,7 @@ import { Download, Delete, Setting, ArrowDown, View, Printer } from '@element-pl
 import { 
   fetchReports, 
   fetchReportContent,
+  generateDailyReport,
   generateWeeklyReport, 
   generateMonthlyReport,
   generateCustomReport,
@@ -231,12 +254,16 @@ const handleBulkDelete = () => {
 }
 
 const configForm = reactive({
+  auto_generate_daily: 0,
+  daily_generate_time: '09:00',
   auto_generate_weekly: 0,
   weekly_generate_day: 'Monday',
   weekly_generate_time: '09:00',
   auto_generate_monthly: 0,
   monthly_generate_date: 1,
   monthly_generate_time: '09:00',
+  language: 'en',
+  enable_llm_summary: 1,
 })
 
 const loadReports = async () => {
@@ -264,15 +291,29 @@ const loadConfig = async () => {
   }
 }
 
-const saveConfig = async () => {
+const saveConfig = async (silent = false) => {
   try {
     const res = await updateReportConfig(configForm)
     if (res && res.success) {
-      ElMessage.success(t('common.saveSuccess') || 'Configuration saved')
+      if (!silent) {
+        ElMessage.success(t('common.saveSuccess') || 'Configuration saved')
+      }
       configDialogVisible.value = false
     }
   } catch (e) {
-    ElMessage.error(t('common.saveFailed') || 'Failed to save configuration')
+    if (!silent) {
+      ElMessage.error(t('common.saveFailed') || 'Failed to save configuration')
+    }
+  }
+}
+
+const generateDaily = async () => {
+  try {
+    await generateDailyReport()
+    ElMessage.success(t('reports.generationStarted') || 'Daily report generation started')
+    loadReports()
+  } catch (e) {
+    ElMessage.error(t('reports.generationFailed') || 'Failed to start generation')
   }
 }
 
@@ -287,7 +328,9 @@ const generateWeekly = async () => {
 }
 
 const handleGenerateCommand = async (cmd) => {
-  if (cmd === 'monthly') {
+  if (cmd === 'weekly') {
+    generateWeekly()
+  } else if (cmd === 'monthly') {
     try {
       await generateMonthlyReport()
       ElMessage.success(t('reports.generationStarted') || 'Monthly report generation started')
@@ -296,7 +339,7 @@ const handleGenerateCommand = async (cmd) => {
       ElMessage.error(t('reports.generationFailed') || 'Failed to start generation')
     }
   } else if (cmd === 'custom') {
-    customForm.title = 'Custom Infrastructure Report - ' + new Date().toLocaleDateString()
+    customForm.title = (t('reports.customDefaultTitle') || 'Custom Infrastructure Report') + ' - ' + new Date().toLocaleDateString()
     customForm.range = [new Date(Date.now() - 7 * 24 * 3600 * 1000), new Date()]
     customDialogVisible.value = true
   }

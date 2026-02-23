@@ -119,7 +119,15 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	if req.ExternalID != nil {
 		group.ExternalID = *req.ExternalID
 	}
-	group.Status = determineGroupStatus(group)
+
+	monitorStatus := 1
+	if group.MonitorID > 0 {
+		if m, err := repository.GetMonitorByIDDAO(group.MonitorID); err == nil {
+			monitorStatus = determineMonitorStatus(m)
+		}
+	}
+
+	group.Status = determineGroupStatus(group, monitorStatus)
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
 	}
@@ -176,7 +184,13 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 
 	// Preserve status unless enabled state changed
 	if req.Enabled != existing.Enabled {
-		updated.Status = determineGroupStatus(updated)
+		monitorStatus := 1
+		if updated.MonitorID > 0 {
+			if m, err := repository.GetMonitorByIDDAO(updated.MonitorID); err == nil {
+				monitorStatus = determineMonitorStatus(m)
+			}
+		}
+		updated.Status = determineGroupStatus(updated, monitorStatus)
 	}
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err

@@ -41,6 +41,7 @@ func setupReportRoutes(rg *gin.RouterGroup) {
 		reports.GET("/:id/content", api.GetReportContentCtrl)
 		reports.GET("/config", api.GetReportConfigCtrl)
 		reports.PUT("/config", api.UpdateReportConfigCtrl)
+		reports.POST("/generate/daily", api.GenerateDailyReportCtrl)
 		reports.POST("/generate/weekly", api.GenerateWeeklyReportCtrl)
 		reports.POST("/generate/monthly", api.GenerateMonthlyReportCtrl)
 		reports.POST("/generate/custom", api.GenerateCustomReportCtrl)

@@ -154,7 +154,8 @@ func (s *Service) GenerateReport(ctx context.Context, providerID int, model stri
 	systemPrompt := fmt.Sprintf(`You are a technical report writer specializing in IT infrastructure monitoring.
 Generate a %s report based on the provided monitoring data.
 The report should be well-structured, professional, and actionable.
-Include relevant metrics, trends, and recommendations.`, reportType)
+Include relevant metrics, trends, and recommendations.
+Please use the language requested by the user or the language used in the monitoring data labels.`, reportType)
 
 	req := ChatRequest{
 		Model:        model,

@@ -83,7 +83,40 @@ func InitDBTables() error {
 	if err := ensureDefaultMonitor(); err != nil {
 		return err
 	}
-	return ensureDefaultReportConfig()
+	if err := ensureDefaultReportConfig(); err != nil {
+		return err
+	}
+	return ensureDefaultRetentionPolicies()
+}
+
+func ensureDefaultRetentionPolicies() error {
+	var count int64
+	if err := database.DB.Model(&model.RetentionPolicy{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	defaults := []model.RetentionPolicy{
+		{DataType: "logs", RetentionDays: 30, Description: "System and service logs"},
+		{DataType: "alerts", RetentionDays: 90, Description: "Alert history"},
+		{DataType: "audit_logs", RetentionDays: 180, Description: "User operational logs"},
+		{DataType: "item_history", RetentionDays: 30, Description: "Metric history data"},
+		{DataType: "host_history", RetentionDays: 30, Description: "Host status history"},
+		{DataType: "network_history", RetentionDays: 90, Description: "Network health score history"},
+		{DataType: "chat", RetentionDays: 30, Description: "AI chat messages"},
+		{DataType: "ansible_jobs", RetentionDays: 30, Description: "Ansible execution logs"},
+		{DataType: "reports", RetentionDays: 30, Description: "Generated PDF reports"},
+		{DataType: "site_messages", RetentionDays: 30, Description: "User notifications"},
+	}
+
+	enabled := 1
+	for i := range defaults {
+		defaults[i].Enabled = &enabled
+	}
+
+	return database.DB.Create(&defaults).Error
 }
 
 func ensureDefaultAdmin() error {

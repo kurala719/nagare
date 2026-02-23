@@ -433,10 +433,10 @@ func AddHostServ(h HostReq) (HostResp, error) {
 
 	if newHost.MonitorID > 0 {
 		if monitor, err := repository.GetMonitorByIDDAO(newHost.MonitorID); err == nil {
-			newHost.Status = determineHostStatus(newHost, monitor)
+			newHost.Status = determineHostStatus(newHost, determineMonitorStatus(monitor))
 		}
 	} else {
-		newHost.Status = determineHostStatus(newHost, model.Monitor{Enabled: 1, Status: 1})
+		newHost.Status = determineHostStatus(newHost, 1)
 	}
 
 	if err := repository.AddHostDAO(&newHost); err != nil {
@@ -550,10 +550,10 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if h.Enabled != existing.Enabled {
 		if monitorID > 0 {
 			if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
-				updated.Status = determineHostStatus(updated, monitor)
+				updated.Status = determineHostStatus(updated, determineMonitorStatus(monitor))
 			}
 		} else {
-			updated.Status = determineHostStatus(updated, model.Monitor{Enabled: 1, Status: 1})
+			updated.Status = determineHostStatus(updated, 1)
 		}
 		updated.StatusDescription = ""
 	}

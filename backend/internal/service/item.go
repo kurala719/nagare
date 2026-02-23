@@ -530,7 +530,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		return result, fmt.Errorf("monitor is not active (status: %d)", monitor.Status)
 	}
 
-	currentStatus := determineHostStatus(host, monitor)
+	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor))
 	if currentStatus == 2 {
 		reason := host.StatusDescription
 		if reason == "" {
@@ -1059,7 +1059,7 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 		return result, fmt.Errorf("monitor is in error state (status: %d)", monitor.Status)
 	}
 
-	currentStatus := determineHostStatus(host, monitor)
+	currentStatus := determineHostStatus(host, determineMonitorStatus(monitor))
 	if currentStatus == 2 {
 		reason := host.StatusDescription
 		if reason == "" {

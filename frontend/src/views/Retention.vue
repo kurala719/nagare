@@ -26,7 +26,7 @@
         
         <el-table-column prop="retention_days" :label="$t('retention.retentionDays')" width="180" align="center">
           <template #default="{ row }">
-            <template v-if="editingId === (row.ID || row.data_type)">
+            <template v-if="editingId === (row.id || row.data_type)">
               <el-input-number v-model="editForm.retention_days" :min="0" size="small" />
             </template>
             <template v-else>
@@ -39,7 +39,7 @@
 
         <el-table-column prop="enabled" :label="$t('retention.enabled')" width="120" align="center">
           <template #default="{ row }">
-            <template v-if="editingId === (row.ID || row.data_type)">
+            <template v-if="editingId === (row.id || row.data_type)">
               <el-switch v-model="editForm.enabled" :active-value="1" :inactive-value="0" />
             </template>
             <template v-else>
@@ -53,7 +53,7 @@
 
         <el-table-column prop="description" :label="$t('retention.description')">
           <template #default="{ row }">
-            <template v-if="editingId === (row.ID || row.data_type)">
+            <template v-if="editingId === (row.id || row.data_type)">
               <el-input v-model="editForm.description" size="small" />
             </template>
             <template v-else>
@@ -64,7 +64,7 @@
 
         <el-table-column :label="$t('retention.actions')" width="150" align="right">
           <template #default="{ row }">
-            <template v-if="editingId === (row.ID || row.data_type)">
+            <template v-if="editingId === (row.id || row.data_type)">
               <el-button link type="primary" @click="savePolicy" :loading="saving">
                 {{ $t('retention.save') }}
               </el-button>
@@ -109,7 +109,7 @@ const saving = ref(false)
 const editingId = ref(null)
 
 const editForm = reactive({
-  ID: null,
+  id: null,
   data_type: '',
   retention_days: 30,
   enabled: 1,
@@ -142,7 +142,7 @@ const loadPolicies = async () => {
       supportedTypes.forEach(st => {
         if (!existingTypes.includes(st.type)) {
           policies.value.push({
-            ID: 0, // Mark as new
+            id: 0, // Mark as new
             data_type: st.type,
             retention_days: 30,
             enabled: 0,
@@ -168,8 +168,8 @@ const loadPolicies = async () => {
 }
 
 const startEdit = (row) => {
-  editingId.value = row.ID || row.data_type // Use data_type if ID is 0
-  editForm.ID = row.ID
+  editingId.value = row.id || row.data_type // Use data_type if id is 0
+  editForm.id = row.id
   editForm.data_type = row.data_type
   editForm.retention_days = row.retention_days
   editForm.enabled = row.enabled

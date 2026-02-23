@@ -81,6 +81,25 @@ func GetReportContentCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, content)
 }
 
+// GenerateDailyReportCtrl handles POST /reports/generate/daily
+func GenerateDailyReportCtrl(c *gin.Context) {
+	report, err := service.GenerateDailyReportServ()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	resp := service.ReportResp{
+		ID:         report.ID,
+		ReportType: report.ReportType,
+		Title:      report.Title,
+		Status:     "pending",
+		StatusCode: report.Status,
+	}
+
+	respondSuccess(c, http.StatusCreated, resp)
+}
+
 // GenerateWeeklyReportCtrl handles POST /reports/generate/weekly
 func GenerateWeeklyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateWeeklyReportServ()

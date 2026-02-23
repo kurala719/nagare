@@ -22,6 +22,13 @@ export function fetchReportContent(id) {
   })
 }
 
+export function generateDailyReport() {
+  return request({
+    url: '/reports/generate/daily',
+    method: 'post'
+  })
+}
+
 export function generateWeeklyReport() {
   return request({
     url: '/reports/generate/weekly',

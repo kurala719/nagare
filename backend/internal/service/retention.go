@@ -12,6 +12,11 @@ func GetRetentionPoliciesServ() ([]model.RetentionPolicy, error) {
 
 // UpdateRetentionPolicyServ updates or creates a retention policy
 func UpdateRetentionPolicyServ(policy model.RetentionPolicy) error {
+	LogService("info", "updating data retention policy", map[string]interface{}{
+		"data_type":      policy.DataType,
+		"retention_days": policy.RetentionDays,
+		"enabled":        policy.Enabled,
+	}, nil, "")
 	return repository.UpdateRetentionPolicyDAO(policy)
 }
 

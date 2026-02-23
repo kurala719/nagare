@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"nagare/internal/database"
 	"nagare/internal/model"
 	"time"
@@ -26,8 +27,13 @@ func GetRetentionPolicyByDataTypeDAO(dataType string) (model.RetentionPolicy, er
 
 // UpdateRetentionPolicyDAO updates or creates a retention policy
 func UpdateRetentionPolicyDAO(policy model.RetentionPolicy) error {
+	if policy.DataType == "" {
+		return fmt.Errorf("data type is required")
+	}
+
 	var existing model.RetentionPolicy
-	if err := database.DB.Where("data_type = ?", policy.DataType).First(&existing).Error; err == nil {
+	err := database.DB.Where("data_type = ?", policy.DataType).First(&existing).Error
+	if err == nil {
 		// Update existing
 		return database.DB.Model(&existing).Updates(map[string]interface{}{
 			"retention_days": policy.RetentionDays,
@@ -35,7 +41,9 @@ func UpdateRetentionPolicyDAO(policy model.RetentionPolicy) error {
 			"description":    policy.Description,
 		}).Error
 	}
-	// Create new
+
+	// Create new (ensure ID is 0 so GORM generates it)
+	policy.ID = 0
 	return database.DB.Create(&policy).Error
 }
 
