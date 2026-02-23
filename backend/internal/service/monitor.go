@@ -139,7 +139,7 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 		Description: description,
 		Type:        monitorType,
 		Enabled:     m.Enabled,
-		Status:      determineMonitorStatus(model.Monitor{Enabled: m.Enabled, AuthToken: m.AuthToken, Username: m.Username, Password: m.Password}),
+		Status:      0, // Default to inactive on creation
 	}
 
 	if err := repository.AddMonitorDAO(monitor); err != nil {
@@ -155,8 +155,6 @@ func AddMonitorServ(m MonitorReq) (MonitorResp, error) {
 	}
 
 	createdMonitor := monitors[len(monitors)-1] // Get the most recent one
-	_, _ = recomputeMonitorStatus(createdMonitor.ID)
-	createdMonitor, _ = repository.GetMonitorByIDDAO(createdMonitor.ID)
 	result := monitorToResp(createdMonitor)
 
 	// If credentials are provided, attempt to login automatically
@@ -220,16 +218,10 @@ func UpdateMonitorServ(id int, m MonitorReq) error {
 		StatusDescription: existing.StatusDesc,
 		HealthScore: existing.HealthScore,
 	}
-	// Preserve status and description unless enabled state changed
-	if m.Enabled != existing.Enabled {
-		updated.Status = determineMonitorStatus(model.Monitor{Enabled: m.Enabled, AuthToken: m.AuthToken, Username: m.Username, Password: m.Password})
-		updated.StatusDescription = ""
-	}
 	if err := repository.UpdateMonitorDAO(id, updated); err != nil {
 		return err
 	}
-	_, _ = recomputeMonitorStatus(uint(id))
-	return recomputeMonitorRelated(uint(id))
+	return nil
 }
 
 // RegenerateMonitorEventTokenServ creates a new event token for a monitor

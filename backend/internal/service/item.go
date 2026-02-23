@@ -92,6 +92,10 @@ func GetItemByIDServ(id uint) (ItemResp, error) {
 
 // AddItemServ creates a new item
 func AddItemServ(req ItemReq) (ItemResp, error) {
+	if req.HID == 0 {
+		return ItemResp{}, fmt.Errorf("host is required")
+	}
+
 	hid := req.HID
 	if hid == 0 {
 		hid = req.HID
@@ -111,22 +115,20 @@ func AddItemServ(req ItemReq) (ItemResp, error) {
 		Units:          req.Units,
 		Enabled:        req.Enabled,
 		Comment:        req.Comment,
-	}
-	var host model.Host
-	if loadedHost, err := repository.GetHostByIDDAO(hid); err == nil {
-		host = loadedHost
-		item.Status = determineItemStatus(item)
-	} else {
-		item.Status = determineItemStatus(item)
+		Status:         0, // Default to inactive on creation
 	}
 
 	if err := repository.AddItemDAO(item); err != nil {
 		return ItemResp{}, fmt.Errorf("failed to add item: %w", err)
 	}
-	if host.ID > 0 && host.MonitorID > 0 && req.PushToMonitor {
-		if err := PushItemToMonitorServ(host.MonitorID, host.ID, item.ID); err == nil {
-			if refreshed, err := repository.GetItemByIDDAO(item.ID); err == nil {
-				item = refreshed
+
+	if req.PushToMonitor {
+		host, err := repository.GetHostByIDDAO(item.HID)
+		if err == nil && host.MonitorID > 0 {
+			if err := PushItemToMonitorServ(host.MonitorID, host.ID, item.ID); err == nil {
+				if refreshed, err := repository.GetItemByIDDAO(item.ID); err == nil {
+					item = refreshed
+				}
 			}
 		}
 	}
@@ -145,6 +147,11 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	if hid == 0 {
 		hid = existing.HID
 	}
+
+	if hid == 0 {
+		return fmt.Errorf("host is required")
+	}
+
 	valueType := req.ValueType
 	if valueType == "" {
 		valueType = req.ValueType
@@ -170,11 +177,6 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	if req.ExternalSource != "" {
 		updated.ExternalSource = req.ExternalSource
 	}
-	// Preserve status and description unless enabled state changed
-	if req.Enabled != existing.Enabled {
-		updated.Status = determineItemStatus(updated)
-		updated.StatusDescription = ""
-	}
 	if err := repository.UpdateItemDAO(id, updated); err != nil {
 		return err
 	}
@@ -191,7 +193,6 @@ func UpdateItemServ(id uint, req ItemReq) error {
 		recordItemHistory(refreshed, time.Now().UTC())
 		ExecuteTriggersForItem(refreshed)
 	}
-	_, _ = recomputeItemStatus(id)
 	return nil
 }
 

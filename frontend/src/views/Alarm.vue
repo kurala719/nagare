@@ -227,15 +227,6 @@
           <el-option :label="$t('common.disabled')" value="disable" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('alarms.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('alarms.cancel') }}</el-button>
@@ -291,8 +282,8 @@ export default {
       alarms: [],
       createDialogVisible: false,
       propertiesDialogVisible: false,
-      newAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 },
-      selectedAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 },
+      newAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
+      selectedAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
       loading: false,
       error: null,
       search: '',
@@ -310,7 +301,6 @@ export default {
       selectedAlarmIds: [],
       bulkForm: {
         enabled: 'nochange',
-        status: 'nochange',
       },
       // Icons for template usage
       Refresh: markRaw(Refresh),
@@ -437,7 +427,7 @@ export default {
     },
     async applyBulkUpdate() {
       if (this.selectedCount === 0) return;
-      if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
+      if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
         return;
       }
@@ -445,11 +435,9 @@ export default {
       this.bulkUpdating = true;
       try {
         const enabledOverride = this.bulkForm.enabled;
-        const statusOverride = this.bulkForm.status;
         await Promise.all(this.alarms.filter((a) => this.selectedAlarmIds.includes(a.id)).map((alarm) => {
           const payload = {
             enabled: enabledOverride === 'nochange' ? alarm.enabled : (enabledOverride === 'enable' ? 1 : 0),
-            status: statusOverride === 'nochange' ? alarm.status : statusOverride,
           };
           return updateAlarm(alarm.id, payload);
         }));
@@ -539,13 +527,11 @@ export default {
           username: this.selectedAlarm.username,
           password: this.selectedAlarm.password,
           auth_token: this.selectedAlarm.auth_token,
-          type: this.selectedAlarm.type,
-          description: this.selectedAlarm.description,
-          enabled: this.selectedAlarm.enabled,
-          status: this.selectedAlarm.status,
-        };
-        await updateAlarm(this.selectedAlarm.id, updateData);
-        const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
+                      type: this.selectedAlarm.type,
+                      description: this.selectedAlarm.description,
+                      enabled: this.selectedAlarm.enabled,
+                    };
+                    await updateAlarm(this.selectedAlarm.id, updateData);        const idx = this.alarms.findIndex((a) => a.id === this.selectedAlarm.id);
         if (idx !== -1) {
           this.alarms.splice(idx, 1, Object.assign({}, this.selectedAlarm));
         }
@@ -668,7 +654,6 @@ export default {
           type: this.newAlarm.type,
           description: this.newAlarm.description,
           enabled: this.newAlarm.enabled,
-          status: this.newAlarm.status,
         };
 
         const response = await addAlarm(alarmData);
@@ -680,7 +665,7 @@ export default {
           event_token: createdAlarm.event_token,
         });
 
-        this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 };
+        this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 };
         this.createDialogVisible = false;
 
         if (createdAlarm.auth_token) {

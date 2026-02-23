@@ -85,7 +85,7 @@ func AddProviderServ(req ProviderReq) error {
 		Type:         req.Type,
 		Description:  req.Description,
 		Enabled:      req.Enabled,
-		Status:       determineProviderStatus(model.Provider{Enabled: req.Enabled, APIKey: req.APIKey}),
+		Status:       0, // Default to inactive on creation
 	})
 }
 
@@ -111,14 +111,9 @@ func UpdateProviderServ(id uint, req ProviderReq) error {
 		Enabled:      req.Enabled,
 		Status:       existing.Status,
 	}
-	// Preserve status unless enabled state or API key changed
-	if req.Enabled != existing.Enabled || req.APIKey != existing.APIKey {
-		updated.Status = determineProviderStatus(model.Provider{Enabled: req.Enabled, APIKey: req.APIKey})
-	}
 	if err := repository.UpdateProviderDAO(id, updated); err != nil {
 		return err
 	}
-	_, _ = recomputeProviderStatus(id)
 	return nil
 }
 

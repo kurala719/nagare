@@ -255,7 +255,6 @@ const defaultProviderItem = () => ({
     type: 2,
     description: '',
     enabled: 1,
-    status: 1,
 });
 
 export default {

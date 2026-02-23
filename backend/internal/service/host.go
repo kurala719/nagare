@@ -380,6 +380,10 @@ func DeleteHostsByMIDServ(mid uint) error {
 
 // AddHostServ creates a new host
 func AddHostServ(h HostReq) (HostResp, error) {
+	if h.GroupID == 0 {
+		return HostResp{}, fmt.Errorf("group is required")
+	}
+
 	newHost := model.Host{
 		Name:                h.Name,
 		Hostid:              h.Hostid,
@@ -438,28 +442,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		}
 	}
 
-	if newHost.MonitorID > 0 {
-		monitorStatus := 1
-		if monitor, err := repository.GetMonitorByIDDAO(newHost.MonitorID); err == nil {
-			monitorStatus = determineMonitorStatus(monitor)
-		}
-		
-		groupStatus := 1
-		if newHost.GroupID > 0 {
-			if g, err := repository.GetGroupByIDDAO(newHost.GroupID); err == nil {
-				groupStatus = g.Status
-			}
-		}
-		newHost.Status = determineHostStatus(newHost, monitorStatus, groupStatus)
-	} else {
-		groupStatus := 1
-		if newHost.GroupID > 0 {
-			if g, err := repository.GetGroupByIDDAO(newHost.GroupID); err == nil {
-				groupStatus = g.Status
-			}
-		}
-		newHost.Status = determineHostStatus(newHost, 1, groupStatus)
-	}
+	newHost.Status = 0 // Default to inactive on creation
 
 	if err := repository.AddHostDAO(&newHost); err != nil {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
@@ -478,9 +461,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		}
 	}
 
-	_, _ = recomputeHostStatus(newHost.ID)
-	
-	// Final reload to ensure we have all fields including any from recompute
+	// Final reload to ensure we have all fields
 	if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
 		newHost = refreshed
 	}
@@ -510,6 +491,11 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if monitorID == 0 {
 		monitorID = existing.MonitorID
 	}
+
+	if h.GroupID == 0 {
+		return fmt.Errorf("group is required")
+	}
+
 	updated := model.Host{
 		Name:                h.Name,
 		Hostid:              h.Hostid,
@@ -569,25 +555,6 @@ func UpdateHostServ(id uint, h HostReq) error {
 	} else {
 		updated.SNMPV3PrivPass = existing.SNMPV3PrivPass
 	}
-	// Preserve status and description unless enabled state changed
-	if h.Enabled != existing.Enabled {
-		monitorStatus := 1
-		if monitorID > 0 {
-			if monitor, err := repository.GetMonitorByIDDAO(monitorID); err == nil {
-				monitorStatus = determineMonitorStatus(monitor)
-			}
-		}
-
-		groupStatus := 1
-		if updated.GroupID > 0 {
-			if g, err := repository.GetGroupByIDDAO(updated.GroupID); err == nil {
-				groupStatus = g.Status
-			}
-		}
-
-		updated.Status = determineHostStatus(updated, monitorStatus, groupStatus)
-		updated.StatusDescription = ""
-	}
 	if err := repository.UpdateHostDAO(id, updated); err != nil {
 		return err
 	}
@@ -600,8 +567,6 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if refreshed, err := repository.GetHostByIDDAO(id); err == nil {
 		recordHostHistory(refreshed, time.Now().UTC())
 	}
-	_ = recomputeItemsForHost(id)
-	_, _ = recomputeHostStatus(id)
 	return nil
 }
 

@@ -231,15 +231,6 @@
           <el-option :label="$t('common.disabled')" value="disable" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('monitors.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('monitors.cancel') }}</el-button>
@@ -302,8 +293,8 @@ export default {
         monitors: [],
         createDialogVisible: false,
         propertiesDialogVisible: false,
-        newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 },
-        selectedMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 },
+        newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 2 },
+        selectedMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
         loading: false,
         error: null,
         search: '',
@@ -321,7 +312,6 @@ export default {
           selectedMonitorIds: [],
                       bulkForm: {
                         enabled: 'nochange',
-                        status: 'nochange',
                       },
                       // Icons for template usage
                       Check: markRaw(Check),
@@ -452,7 +442,7 @@ export default {
       },
       async applyBulkUpdate() {
         if (this.selectedCount === 0) return;
-        if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
+        if (this.bulkForm.enabled === 'nochange') {
           ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
           return;
         }
@@ -460,11 +450,9 @@ export default {
         this.bulkUpdating = true;
         try {
           const enabledOverride = this.bulkForm.enabled;
-          const statusOverride = this.bulkForm.status;
           await Promise.all(this.monitors.filter((m) => this.selectedMonitorIds.includes(m.id)).map((monitor) => {
             const payload = {
               enabled: enabledOverride === 'nochange' ? monitor.enabled : (enabledOverride === 'enable' ? 1 : 0),
-              status: statusOverride === 'nochange' ? monitor.status : statusOverride,
             };
             return updateMonitor(monitor.id, payload);
           }));
@@ -559,7 +547,6 @@ export default {
             type: this.selectedMonitor.type,
             description: this.selectedMonitor.description,
             enabled: this.selectedMonitor.enabled,
-            status: this.selectedMonitor.status,
           };
           await updateMonitor(this.selectedMonitor.id, updateData);
           const idx = this.monitors.findIndex((m) => m.id === this.selectedMonitor.id);
@@ -685,7 +672,6 @@ export default {
             type: this.newMonitor.type,
             description: this.newMonitor.description,
             enabled: this.newMonitor.enabled,
-            status: this.newMonitor.status,
           };
           
           // Call API to add monitor (it will auto-login if credentials provided)
@@ -700,7 +686,7 @@ export default {
             event_token: createdMonitor.event_token,
           });
           
-          this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 };
+          this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 2 };
           this.createDialogVisible = false;
           
           if (createdMonitor.auth_token) {
@@ -768,7 +754,7 @@ export default {
       },
       cancelCreate() {
         this.createDialogVisible = false;
-        this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 2 };
+        this.newMonitor = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 2 };
       },
       getStatusInfo(status) {
         const map = {

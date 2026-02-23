@@ -109,30 +109,25 @@ func GetGroupByIDServ(id uint) (GroupResp, error) {
 
 // AddGroupServ creates a new group
 func AddGroupServ(req GroupReq) (GroupResp, error) {
+	if req.MonitorID == nil || *req.MonitorID == 0 {
+		return GroupResp{}, fmt.Errorf("monitor is required")
+	}
+
 	group := model.Group{
 		Name:        req.Name,
 		Description: req.Description,
 		Enabled:     req.Enabled,
-	}
-	if req.MonitorID != nil {
-		group.MonitorID = *req.MonitorID
+		MonitorID:   *req.MonitorID,
 	}
 	if req.ExternalID != nil {
 		group.ExternalID = *req.ExternalID
 	}
 
-	monitorStatus := 1
-	if group.MonitorID > 0 {
-		if m, err := repository.GetMonitorByIDDAO(group.MonitorID); err == nil {
-			monitorStatus = determineMonitorStatus(m)
-		}
-	}
-
-	group.Status = determineGroupStatus(group, monitorStatus)
+	group.Status = 0 // Default to inactive on creation
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
 	}
-	// Fetch ID and recompute
+	// Fetch ID 
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{Query: group.Name})
 	if err == nil && len(groups) > 0 {
 		created := groups[len(groups)-1]
@@ -142,7 +137,6 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 			_ = PushGroupToMonitorServ(created.MonitorID, created.ID)
 		}
 		
-		_, _ = recomputeGroupStatus(created.ID)
 		group, _ = repository.GetGroupByIDDAO(created.ID)
 	}
 	return groupToResp(group), nil
@@ -171,7 +165,14 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 
 	// Only update if provided in request
 	if req.MonitorID != nil {
+		if *req.MonitorID == 0 {
+			return fmt.Errorf("monitor is required")
+		}
 		updated.MonitorID = *req.MonitorID
+	}
+
+	if updated.MonitorID == 0 {
+		return fmt.Errorf("monitor is required")
 	}
 	if req.ExternalID != nil {
 		updated.ExternalID = *req.ExternalID
@@ -183,16 +184,6 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		updated.ExternalSource = *req.ExternalSource
 	}
 
-	// Preserve status unless enabled state changed
-	if req.Enabled != existing.Enabled {
-		monitorStatus := 1
-		if updated.MonitorID > 0 {
-			if m, err := repository.GetMonitorByIDDAO(updated.MonitorID); err == nil {
-				monitorStatus = determineMonitorStatus(m)
-			}
-		}
-		updated.Status = determineGroupStatus(updated, monitorStatus)
-	}
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
 	}
@@ -207,7 +198,6 @@ func UpdateGroupServ(id uint, req GroupReq) error {
         // I will remove the auto-push on name change and rely on the flag.
 	}
 	
-	_, _ = recomputeGroupStatus(id)
 	return nil
 }
 

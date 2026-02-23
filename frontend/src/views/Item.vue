@@ -161,13 +161,17 @@
         />
     </div>
 
-        <!-- Add/Edit Dialog -->
         <el-dialog 
             v-model="dialogVisible" 
             :title="isEditing ? $t('items.editTitle') : $t('items.addTitle')"
             width="550px"
         >
             <el-form :model="itemForm" label-width="100px" :rules="formRules" ref="itemFormRef">
+                <el-form-item :label="$t('items.host')" prop="host_id">
+                    <el-select v-model="itemForm.host_id" style="width: 100%;" placeholder="Select Host">
+                        <el-option v-for="host in hostOptions" :key="host.id" :label="host.name" :value="host.id" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item :label="$t('items.name')" prop="name">
                     <el-input v-model="itemForm.name" :placeholder="$t('items.enterName')" />
                 </el-form-item>
@@ -176,14 +180,6 @@
                 </el-form-item>
                 <el-form-item :label="$t('common.enabled')" prop="enabled">
                     <el-switch v-model="itemForm.enabled" :active-value="1" :inactive-value="0" />
-                </el-form-item>
-                <el-form-item :label="$t('items.status')" prop="status">
-                    <el-select v-model="itemForm.status" style="width: 100%;">
-                        <el-option :label="$t('common.statusInactive')" :value="0" />
-                        <el-option :label="$t('common.statusActive')" :value="1" />
-                        <el-option :label="$t('common.statusError')" :value="2" />
-                        <el-option :label="$t('common.statusSyncing')" :value="3" />
-                    </el-select>
                 </el-form-item>
                 <el-form-item :label="$t('items.description')" prop="description">
                     <el-input v-model="itemForm.description" type="textarea" :rows="3" :placeholder="$t('items.enterDescription')" />
@@ -216,15 +212,6 @@
                         <el-option :label="$t('items.bulkUpdateNoChange')" value="nochange" />
                         <el-option :label="$t('common.enabled')" value="enable" />
                         <el-option :label="$t('common.disabled')" value="disable" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item :label="$t('items.bulkUpdateStatus')">
-                    <el-select v-model="bulkForm.status" style="width: 100%;">
-                        <el-option :label="$t('items.bulkUpdateNoChange')" value="nochange" />
-                        <el-option :label="$t('common.statusInactive')" :value="0" />
-                        <el-option :label="$t('common.statusActive')" :value="1" />
-                        <el-option :label="$t('common.statusError')" :value="2" />
-                        <el-option :label="$t('common.statusSyncing')" :value="3" />
                     </el-select>
                 </el-form-item>
             </el-form>
@@ -325,7 +312,6 @@ export default {
             type: '',
             interval: 60,
             enabled: 1,
-            status: 1,
             description: '',
             host_id: null,
         },
@@ -348,7 +334,6 @@ export default {
         statusFilter: 'all',
                 bulkForm: {
                         enabled: 'nochange',
-                        status: 'nochange',
                 },
         // Icons
         Plus: markRaw(Plus),
@@ -388,6 +373,7 @@ export default {
     created() {
         this.formRules = {
             name: [{ required: true, message: this.$t('items.validationName'), trigger: 'blur' }],
+            host_id: [{ required: true, message: 'Host is required', trigger: 'change' }],
         };
         this.applySearchFromQuery();
         this.applyHostFromQuery();
@@ -513,7 +499,6 @@ export default {
                 name: '',
                 value: '',
                 enabled: 1,
-                status: 1,
                 description: '',
                 host_id: this.hostFilter || null,
             };
@@ -526,7 +511,6 @@ export default {
                 name: item.name,
                 value: item.value,
                 enabled: item.enabled,
-                status: item.status,
                 description: item.description,
                 host_id: item.host_id ?? null,
             };
@@ -545,7 +529,6 @@ export default {
                     name: this.itemForm.name,
                     value: this.itemForm.value,
                     enabled: this.itemForm.enabled,
-                    status: this.itemForm.status,
                     comment: this.itemForm.description,
                     hid: this.itemForm.host_id,
                     push_to_monitor: pushToMonitor
@@ -727,27 +710,25 @@ export default {
             this.bulkDialogVisible = true;
         },
         async applyBulkUpdate() {
-            if (this.selectedCount === 0) return;
-            if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
-                ElMessage.warning(this.$t('items.bulkUpdateNoChanges'));
-                return;
-            }
+      if (this.selectedCount === 0) return;
+      if (this.bulkForm.enabled === 'nochange') {
+        ElMessage.warning(this.$t('items.bulkUpdateNoChanges'));
+        return;
+      }
 
-            this.bulkUpdating = true;
-            try {
-                const enabledOverride = this.bulkForm.enabled;
-                const statusOverride = this.bulkForm.status;
-                await Promise.all(this.selectedItems.map((item) => {
-                    const payload = {
-                        name: item.name,
-                        value: item.value,
-                        enabled: enabledOverride === 'nochange' ? item.enabled : (enabledOverride === 'enable' ? 1 : 0),
-                        status: statusOverride === 'nochange' ? item.status : statusOverride,
-                        comment: item.description,
-                        hid: item.host_id,
-                    };
-                    return updateItem(item.id, payload);
-                }));
+      this.bulkUpdating = true;
+      try {
+        const enabledOverride = this.bulkForm.enabled;
+        await Promise.all(this.selectedItems.map((item) => {
+          const payload = {
+            name: item.name,
+            value: item.value,
+            enabled: enabledOverride === 'nochange' ? item.enabled : (enabledOverride === 'enable' ? 1 : 0),
+            comment: item.description,
+            hid: item.host_id,
+          };
+          return updateItem(item.id, payload);
+        }));
                 ElMessage.success(this.$t('items.bulkUpdateSuccess', { count: this.selectedCount }));
                 this.bulkDialogVisible = false;
                 this.clearSelection();

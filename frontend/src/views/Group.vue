@@ -158,13 +158,12 @@
   </div>
 
   <el-dialog v-model="createDialogVisible" :title="$t('groups.createTitle')" width="500px" align-center>
-    <el-form :model="newGroup" label-width="120px">
-      <el-form-item :label="$t('groups.name')">
+    <el-form :model="newGroup" label-width="120px" :rules="formRules" ref="createFormRef">
+      <el-form-item :label="$t('groups.name')" prop="name">
         <el-input v-model="newGroup.name" :placeholder="$t('groups.name')" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.monitor')">
+      <el-form-item :label="$t('hosts.monitor')" prop="monitor_id">
         <el-select v-model="newGroup.monitor_id" style="width: 100%;" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </el-form-item>
@@ -173,14 +172,6 @@
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newGroup.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('groups.status')">
-        <el-select v-model="newGroup.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -191,13 +182,12 @@
   </el-dialog>
 
   <el-dialog v-model="propertiesDialogVisible" :title="`${$t('groups.properties')} - ${selectedGroup?.name || ''}`" width="600px">
-    <el-form :model="selectedGroup" label-width="120px">
-      <el-form-item :label="$t('groups.name')">
+    <el-form :model="selectedGroup" label-width="120px" :rules="formRules" ref="propertiesFormRef">
+      <el-form-item :label="$t('groups.name')" prop="name">
         <el-input v-model="selectedGroup.name" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.monitor')">
+      <el-form-item :label="$t('hosts.monitor')" prop="monitor_id">
         <el-select v-model="selectedGroup.monitor_id" style="width: 100%;" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </el-form-item>
@@ -206,14 +196,6 @@
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedGroup.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('groups.status')">
-        <el-select v-model="selectedGroup.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -231,15 +213,6 @@
           <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
           <el-option :label="$t('common.enabled')" value="enable" />
           <el-option :label="$t('common.disabled')" value="disable" />
-        </el-select>
-      </el-form-item>
-      <el-form-item :label="$t('groups.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
       </el-form-item>
     </el-form>
@@ -343,11 +316,14 @@ export default {
       pullingGroups: false,
       pushingGroups: false,
       selectedGroupRows: [],
-      newGroup: { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
-      selectedGroup: { id: 0, name: '', description: '', enabled: 1, status: 1, monitor_id: 0 },
+      newGroup: { name: '', description: '', enabled: 1, monitor_id: 0 },
+      selectedGroup: { id: 0, name: '', description: '', enabled: 1, monitor_id: 0 },
+      formRules: {
+        name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
+        monitor_id: [{ required: true, message: 'Monitor is required', trigger: 'change' }],
+      },
       bulkForm: {
         enabled: 'nochange',
-        status: 'nochange',
       },
       // Icons for template usage
       Plus: markRaw(Plus),
@@ -491,7 +467,7 @@ export default {
     },
     async applyBulkUpdate() {
       if (this.selectedCount === 0) return;
-      if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
+      if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
         return;
       }
@@ -499,13 +475,11 @@ export default {
       this.bulkUpdating = true;
       try {
         const enabledOverride = this.bulkForm.enabled;
-        const statusOverride = this.bulkForm.status;
         await Promise.all(this.selectedGroupRows.map((group) => {
           const payload = {
             name: group.name,
             description: group.description,
             enabled: enabledOverride === 'nochange' ? group.enabled : (enabledOverride === 'enable' ? 1 : 0),
-            status: statusOverride === 'nochange' ? group.status : statusOverride,
             monitor_id: group.monitor_id,
           };
           return updateGroup(group.id, payload);
@@ -579,11 +553,15 @@ export default {
     },
     async saveProperties(pushToMonitor = false) {
       try {
+        await this.$refs.propertiesFormRef.validate();
+      } catch (err) {
+        return;
+      }
+      try {
         await updateGroup(this.selectedGroup.id, {
           name: this.selectedGroup.name,
           description: this.selectedGroup.description,
           enabled: this.selectedGroup.enabled,
-          status: this.selectedGroup.status,
           monitor_id: this.selectedGroup.monitor_id,
           push_to_monitor: pushToMonitor
         });
@@ -597,11 +575,12 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
+      this.newGroup = { name: '', description: '', enabled: 1, monitor_id: 0 };
     },
     async onCreate(pushToMonitor = false) {
-      if (!this.newGroup.name) {
-        ElMessage.warning(this.$t('groups.name'));
+      try {
+        await this.$refs.createFormRef.validate();
+      } catch (err) {
         return;
       }
       try {
@@ -614,7 +593,7 @@ export default {
         const msg = (pushToMonitor && mid > 0)
           ? this.$t('groups.created') + ' & Automatically synced to monitor'
           : this.$t('groups.created');
-        this.newGroup = { name: '', description: '', enabled: 1, status: 1, monitor_id: 0 };
+        this.newGroup = { name: '', description: '', enabled: 1, monitor_id: 0 };
         ElMessage.success(msg);
       } catch (err) {
         ElMessage.error(this.$t('groups.createFailed') + ': ' + (err.message || ''));

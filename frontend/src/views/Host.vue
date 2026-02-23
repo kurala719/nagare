@@ -53,24 +53,23 @@
 
   <!-- Create Dialog -->
   <el-dialog v-model="createDialogVisible" :title="$t('hosts.createTitle')" width="500px" align-center>
-    <el-form :model="newHost" label-width="120px">
-      <el-form-item :label="$t('hosts.name')">
+    <el-form :model="newHost" label-width="120px" :rules="formRules" ref="createFormRef">
+      <el-form-item :label="$t('hosts.name')" prop="name">
         <el-input v-model="newHost.name" :placeholder="$t('hosts.name')" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.ip')">
+      <el-form-item :label="$t('hosts.ip')" prop="ip_addr">
         <el-input v-model="newHost.ip_addr" :placeholder="$t('hosts.ip')" />
       </el-form-item>
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="newHost.hostid" :placeholder="$t('hosts.hostId')" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.monitor')">
+      <el-form-item :label="$t('hosts.monitor')" prop="mid">
         <el-select v-model="newHost.mid" style="width: 100%;" clearable placeholder="Select Monitor">
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('groups.title')">
+      <el-form-item :label="$t('groups.title')" prop="group_id">
           <el-select v-model="newHost.group_id" style="width: 100%;" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
             <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
       </el-form-item>
@@ -79,14 +78,6 @@
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newHost.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('hosts.status')">
-        <el-select v-model="newHost.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
       <el-divider content-position="left">{{ $t('hosts.sshTitle') || 'SSH Configuration' }}</el-divider>
       <el-form-item :label="$t('hosts.sshUser') || 'SSH User'">
@@ -286,24 +277,23 @@
 
   <!-- Properties Dialog -->
   <el-dialog v-model="propertiesDialogVisible" :title="`${$t('hosts.propertiesTitle')} - ${selectedHost ? selectedHost.name : ''}`" width="600px">
-    <el-form :model="selectedHost" label-width="120px">
-      <el-form-item :label="$t('hosts.name')">
+    <el-form :model="selectedHost" label-width="120px" :rules="formRules" ref="propertiesFormRef">
+      <el-form-item :label="$t('hosts.name')" prop="name">
         <el-input v-model="selectedHost.name" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.ip')">
+      <el-form-item :label="$t('hosts.ip')" prop="ip_addr">
         <el-input v-model="selectedHost.ip_addr" />
       </el-form-item>
       <el-form-item :label="$t('hosts.hostId')">
         <el-input v-model="selectedHost.hostid" />
       </el-form-item>
-      <el-form-item :label="$t('hosts.monitor')">
+      <el-form-item :label="$t('hosts.monitor')" prop="mid">
         <el-select v-model="selectedHost.mid" style="width: 100%;" clearable placeholder="Select Monitor">
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('groups.title')">
+      <el-form-item :label="$t('groups.title')" prop="group_id">
         <el-select v-model="selectedHost.group_id" style="width: 100%;" clearable>
-          <el-option :label="$t('hosts.filterAll')" :value="0" />
           <el-option v-for="group in groups" :key="group.id" :label="group.name" :value="group.id" />
         </el-select>
       </el-form-item>
@@ -312,14 +302,6 @@
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedHost.enabled" :active-value="1" :inactive-value="0" />
-      </el-form-item>
-      <el-form-item :label="$t('hosts.status')">
-        <el-select v-model="selectedHost.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
       </el-form-item>
       <el-divider content-position="left">{{ $t('hosts.sshTitle') || 'SSH Configuration' }}</el-divider>
       <el-form-item :label="$t('hosts.sshUser') || 'SSH User'">
@@ -448,15 +430,6 @@
           <el-option :label="$t('common.disabled')" value="disable" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('hosts.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('hosts.cancel') }}</el-button>
@@ -559,7 +532,6 @@ export default {
         group_id: 0, 
         description: '', 
         enabled: 1, 
-        status: 1, 
         mid: 0, 
         ssh_user: '', 
         ssh_password: '', 
@@ -582,7 +554,6 @@ export default {
         group_id: 0, 
         description: '', 
         enabled: 1, 
-        status: 1, 
         mid: 0, 
         ssh_user: '', 
         ssh_password: '', 
@@ -597,6 +568,12 @@ export default {
         snmp_v3_priv_protocol: '',
         snmp_v3_security_level: ''
       },
+      formRules: {
+        name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
+        ip_addr: [{ required: true, message: 'IP address is required', trigger: 'blur' }],
+        mid: [{ required: true, message: 'Monitor is required', trigger: 'change' }],
+        group_id: [{ required: true, message: 'Group is required', trigger: 'change' }],
+      },
       loading: false,
       error: null,
       search: '',
@@ -608,7 +585,6 @@ export default {
       syncMonitorId: 0,
       bulkForm: {
         enabled: 'nochange',
-        status: 'nochange',
       },
       // Icons
       Plus: markRaw(Plus),
@@ -1053,7 +1029,7 @@ export default {
     },
     async applyBulkUpdate() {
       if (this.selectedCount === 0) return;
-      if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
+      if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
         return;
       }
@@ -1061,7 +1037,6 @@ export default {
       this.bulkUpdating = true;
       try {
         const enabledOverride = this.bulkForm.enabled;
-        const statusOverride = this.bulkForm.status;
         await Promise.all(this.selectedHosts.map((host) => {
           const payload = {
             name: host.name,
@@ -1070,7 +1045,6 @@ export default {
             group_id: host.group_id,
             description: host.description,
             enabled: enabledOverride === 'nochange' ? host.enabled : (enabledOverride === 'enable' ? 1 : 0),
-            status: statusOverride === 'nochange' ? host.status : statusOverride,
           };
           return updateHost(host.id, payload);
         }));
@@ -1103,6 +1077,12 @@ export default {
     },
     async performSaveProperties(pushToMonitor = false) {
       try {
+        await this.$refs.propertiesFormRef.validate();
+      } catch (err) {
+        return;
+      }
+      
+      try {
         const updateData = {
           name: this.selectedHost.name,
           m_id: this.selectedHost.mid,
@@ -1111,7 +1091,6 @@ export default {
           group_id: this.selectedHost.group_id,
           description: this.selectedHost.description,
           enabled: this.selectedHost.enabled,
-          status: this.selectedHost.status,
           ssh_user: this.selectedHost.ssh_user,
           ssh_password: this.selectedHost.ssh_password,
           ssh_port: this.selectedHost.ssh_port,
@@ -1168,7 +1147,6 @@ export default {
           group_id: this.selectedHost.group_id,
           description: this.selectedHost.description,
           enabled: this.selectedHost.enabled,
-          status: this.selectedHost.status,
           ssh_user: this.selectedHost.ssh_user,
           ssh_password: this.selectedHost.ssh_password,
           ssh_port: this.selectedHost.ssh_port,
@@ -1191,7 +1169,6 @@ export default {
 
         if (probe?.success) {
           ElMessage.success(`SNMP Test Successful: ${probe.value}`);
-          this.selectedHost.status = 1;
           await this.loadHosts();
         } else {
           ElMessage.error('SNMP Test Failed: ' + (probe?.error || 'No valid SNMP response'));
@@ -1218,7 +1195,6 @@ export default {
           group_id: this.selectedHost.group_id,
           description: this.selectedHost.description,
           enabled: this.selectedHost.enabled,
-          status: this.selectedHost.status,
           ssh_user: this.selectedHost.ssh_user,
           ssh_password: this.selectedHost.ssh_password,
           ssh_port: this.selectedHost.ssh_port,
@@ -1265,7 +1241,6 @@ export default {
 
         const successCount = this.snmpQuickResults.filter((item) => item.success).length;
         if (successCount > 0) {
-          this.selectedHost.status = 1;
           await this.loadHosts();
           ElMessage.success(`Huawei quick probe: ${successCount}/${quickSet.length} OIDs passed`);
         } else {
@@ -1313,11 +1288,9 @@ export default {
       });
     },
     async onCreate(pushToMonitor = false) {
-      if (!this.newHost.name) {
-        ElMessage({
-          type: 'warning',
-          message: this.$t('hosts.validationName'),
-        });
+      try {
+        await this.$refs.createFormRef.validate();
+      } catch (err) {
         return;
       }
       
@@ -1330,7 +1303,6 @@ export default {
           group_id: this.newHost.group_id,
           description: this.newHost.description,
           enabled: this.newHost.enabled,
-          status: this.newHost.status,
           ssh_user: this.newHost.ssh_user,
           ssh_password: this.newHost.ssh_password,
           ssh_port: this.newHost.ssh_port,
@@ -1390,7 +1362,6 @@ export default {
         group_id: 0, 
         description: '', 
         enabled: 1, 
-        status: 1, 
         mid: defaultMid, 
         ssh_user: '', 
         ssh_password: '', 

@@ -165,7 +165,7 @@ func AddAlarmServ(a AlarmReq) (AlarmResp, error) {
 		Description: a.Description,
 		Type:        a.Type,
 		Enabled:     a.Enabled,
-		Status:      determineAlarmStatus(model.Alarm{Enabled: a.Enabled, AuthToken: a.AuthToken, Username: a.Username, Password: a.Password}),
+		Status:      0, // Default to inactive on creation
 	}
 
 	if err := repository.AddAlarmDAO(alarm); err != nil {
@@ -218,11 +218,6 @@ func UpdateAlarmServ(id int, a AlarmReq) error {
 		Enabled:           a.Enabled,
 		Status:            existing.Status,
 		StatusDescription: existing.StatusDesc,
-	}
-	// Preserve status and description unless enabled state changed
-	if a.Enabled != existing.Enabled {
-		updated.Status = determineAlarmStatus(model.Alarm{Enabled: a.Enabled, AuthToken: a.AuthToken, Username: a.Username, Password: a.Password})
-		updated.StatusDescription = ""
 	}
 	if err := repository.UpdateAlarmDAO(id, updated); err != nil {
 		return err
