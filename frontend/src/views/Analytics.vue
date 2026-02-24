@@ -85,11 +85,13 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from '@/utils/request'
 import * as echarts from 'echarts'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
+const { t } = useI18n()
 const trendChart = ref(null)
 const severityChart = ref(null)
 const wordChart = ref(null)

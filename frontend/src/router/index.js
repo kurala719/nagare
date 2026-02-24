@@ -157,6 +157,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/metric-racing',
+    name: 'MetricRacing',
+    component: () => import('@/views/MetricRacing.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/analytics',
     name: 'Analytics',
     component: () => import('@/views/Analytics.vue'),

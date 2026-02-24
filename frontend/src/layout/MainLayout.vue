@@ -240,6 +240,7 @@ export default defineComponent({
       { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1, icon: 'DataBoard' },
       { key: 'insights_group', label: 'menu.insights', minPrivilege: 1, icon: 'PieChart', children: [
         { key: 'systemStatus', path: '/system-status', label: 'menu.systemStatus', minPrivilege: 1 },
+        { key: 'metricRacing', path: '/metric-racing', label: 'menu.metricRacing', minPrivilege: 1 },
         { key: 'analytics', path: '/analytics', label: 'menu.analytics', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
       ]},

@@ -27,9 +27,9 @@ func SearchTriggersCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid status")
 		return
 	}
-	severityMin, err := parseOptionalInt(c, "severity_min")
+	severity, err := parseOptionalInt(c, "severity")
 	if err != nil {
-		respondBadRequest(c, "invalid severity_min")
+		respondBadRequest(c, "invalid severity")
 		return
 	}
 	withTotal, _ := parseOptionalBool(c, "with_total")
@@ -74,7 +74,7 @@ func SearchTriggersCtrl(c *gin.Context) {
 	filter := model.TriggerFilter{
 		Query:          c.Query("q"),
 		Status:         status,
-		SeverityMin:    severityMin,
+		Severity:       severity,
 		Entity:         entityPtr,
 		AlertID:        alertID,
 		AlertMonitorID: alertMonitorID,

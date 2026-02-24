@@ -97,7 +97,13 @@
           <span v-if="!row.users || row.users.length === 0" style="color: #909399; font-size: 12px;">N/A</span>
         </template>
       </el-table-column>
-      <el-table-column prop="severity_min" :label="$t('triggers.severityMin')" width="140" align="center" sortable="custom" />
+      <el-table-column :label="$t('triggers.severity')" width="140" align="center" prop="severity_min" sortable="custom">
+        <template #default="{ row }">
+          <el-tag :type="getSeverityType(row.severity_min)" size="small" effect="dark">
+            {{ getSeverityLabel(row.severity_min) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip sortable="custom" />
       <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
         <template #default="{ row }">
@@ -151,24 +157,39 @@
           <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.severityMin')">
-        <el-input-number v-model="newAction.severity_min" :min="0" :max="10" style="width: 100%;" />
+      <el-form-item :label="$t('actions.severity')">
+        <el-select v-model="newAction.severity_min" style="width: 100%;">
+          <el-option :label="$t('alerts.severityCritical')" :value="4" />
+          <el-option :label="$t('alerts.severityHigh')" :value="3" />
+          <el-option :label="$t('alerts.severityMedium')" :value="2" />
+          <el-option :label="$t('alerts.severityLow')" :value="1" />
+          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertStatus')">
-        <el-select v-model="newAction.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
+      <el-form-item :label="$t('actions.alertStatus')">
+        <el-select v-model="newAction.alert_status" clearable :placeholder="$t('actions.filterAll')" style="width: 100%;">
           <el-option :label="$t('alerts.statusOpen')" :value="0" />
           <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
           <el-option :label="$t('alerts.statusResolved')" :value="2" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.itemHostId')">
-        <el-input-number v-model="newAction.host_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Host ID" />
+      <el-form-item :label="$t('actions.host')">
+        <el-select v-model="newAction.host_id" clearable filterable style="width: 100%;" :loading="loadingHosts" placeholder="Select specific host (optional)">
+          <el-option v-for="h in hostOptions" :key="h.id" :label="h.name" :value="h.id">
+            <span style="float: left">{{ h.name }}</span>
+            <span style="float: right; color: var(--el-text-color-secondary); font-size: 13px">{{ h.ip_addr }}</span>
+          </el-option>
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertGroupId')">
-        <el-input-number v-model="newAction.group_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Group ID" />
+      <el-form-item :label="$t('actions.group')">
+        <el-select v-model="newAction.group_id" clearable filterable style="width: 100%;" :loading="loadingGroups" placeholder="Select specific group (optional)">
+          <el-option v-for="g in groupOptions" :key="g.id" :label="g.name" :value="g.id" />
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertId')">
-        <el-input-number v-model="newAction.trigger_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Trigger ID" />
+      <el-form-item :label="$t('actions.trigger')">
+        <el-select v-model="newAction.trigger_id" clearable filterable style="width: 100%;" :loading="loadingTriggers" placeholder="Select specific trigger (optional)">
+          <el-option v-for="t in triggerOptions" :key="t.id" :label="t.name" :value="t.id" />
+        </el-select>
       </el-form-item>
       <el-form-item :label="$t('actions.template')">
         <el-input v-model="newAction.template" type="textarea" :placeholder="$t('actions.templateHint')" />
@@ -201,24 +222,39 @@
           <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.severityMin')">
-        <el-input-number v-model="selectedAction.severity_min" :min="0" :max="10" style="width: 100%;" />
+      <el-form-item :label="$t('actions.severity')">
+        <el-select v-model="selectedAction.severity_min" style="width: 100%;">
+          <el-option :label="$t('alerts.severityCritical')" :value="4" />
+          <el-option :label="$t('alerts.severityHigh')" :value="3" />
+          <el-option :label="$t('alerts.severityMedium')" :value="2" />
+          <el-option :label="$t('alerts.severityLow')" :value="1" />
+          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertStatus')">
+      <el-form-item :label="$t('actions.alertStatus')">
         <el-select v-model="selectedAction.alert_status" clearable :placeholder="$t('triggers.filterAll')" style="width: 100%;">
           <el-option :label="$t('alerts.statusOpen')" :value="0" />
           <el-option :label="$t('alerts.statusAcknowledged')" :value="1" />
           <el-option :label="$t('alerts.statusResolved')" :value="2" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.itemHostId')">
-        <el-input-number v-model="selectedAction.host_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Host ID" />
+      <el-form-item :label="$t('actions.host')">
+        <el-select v-model="selectedAction.host_id" clearable filterable style="width: 100%;" :loading="loadingHosts" placeholder="Select specific host (optional)">
+          <el-option v-for="h in hostOptions" :key="h.id" :label="h.name" :value="h.id">
+            <span style="float: left">{{ h.name }}</span>
+            <span style="float: right; color: var(--el-text-color-secondary); font-size: 13px">{{ h.ip_addr }}</span>
+          </el-option>
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertGroupId')">
-        <el-input-number v-model="selectedAction.group_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Group ID" />
+      <el-form-item :label="$t('actions.group')">
+        <el-select v-model="selectedAction.group_id" clearable filterable style="width: 100%;" :loading="loadingGroups" placeholder="Select specific group (optional)">
+          <el-option v-for="g in groupOptions" :key="g.id" :label="g.name" :value="g.id" />
+        </el-select>
       </el-form-item>
-      <el-form-item :label="$t('triggers.alertId')">
-        <el-input-number v-model="selectedAction.trigger_id" :min="0" :controls="false" style="width: 100%;" placeholder="Optional Trigger ID" />
+      <el-form-item :label="$t('actions.trigger')">
+        <el-select v-model="selectedAction.trigger_id" clearable filterable style="width: 100%;" :loading="loadingTriggers" placeholder="Select specific trigger (optional)">
+          <el-option v-for="t in triggerOptions" :key="t.id" :label="t.name" :value="t.id" />
+        </el-select>
       </el-form-item>
       <el-form-item :label="$t('actions.template')">
         <el-input v-model="selectedAction.template" type="textarea" />
@@ -280,6 +316,9 @@ import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@elemen
 import { fetchActionData, addAction, updateAction, deleteAction } from '@/api/actions';
 import { fetchMediaData } from '@/api/media';
 import { getUsers } from '@/api/users';
+import { fetchHostData } from '@/api/hosts';
+import { fetchGroupData } from '@/api/groups';
+import { fetchTriggerData } from '@/api/triggers';
 
 export default {
   name: 'Action',
@@ -297,7 +336,13 @@ export default {
       actions: [],
       mediaOptions: [],
       userOptions: [],
+      hostOptions: [],
+      groupOptions: [],
+      triggerOptions: [],
       loading: false,
+      loadingHosts: false,
+      loadingGroups: false,
+      loadingTriggers: false,
       error: null,
       search: '',
       statusFilter: 'all',
@@ -490,7 +535,7 @@ export default {
       this.loading = reset;
       this.error = null;
       try {
-        const [actionResp, mediaResp, userResp] = await Promise.all([
+        const [actionResp, mediaResp, userResp, hostResp, groupResp, triggerResp] = await Promise.all([
           fetchActionData({
             q: this.search || undefined,
             status: this.statusFilter === 'all' ? undefined : this.statusFilter,
@@ -502,6 +547,9 @@ export default {
           }),
           this.mediaOptions.length === 0 ? fetchMediaData({ limit: 100, offset: 0 }) : Promise.resolve(null),
           this.userOptions.length === 0 ? getUsers() : Promise.resolve(null),
+          this.hostOptions.length === 0 ? fetchHostData({ limit: 1000 }) : Promise.resolve(null),
+          this.groupOptions.length === 0 ? fetchGroupData({ limit: 1000 }) : Promise.resolve(null),
+          this.triggerOptions.length === 0 ? fetchTriggerData({ limit: 1000 }) : Promise.resolve(null),
         ]);
         const data = Array.isArray(actionResp)
           ? actionResp
@@ -540,6 +588,18 @@ export default {
             username: u.username || u.Username || '',
             nickname: u.nickname || u.Nickname || '',
           }));
+        }
+        if (hostResp) {
+          const hostData = hostResp.data?.items || hostResp.data || hostResp || [];
+          this.hostOptions = Array.isArray(hostData) ? hostData : [];
+        }
+        if (groupResp) {
+          const groupData = groupResp.data?.items || groupResp.data || groupResp || [];
+          this.groupOptions = Array.isArray(groupData) ? groupData : [];
+        }
+        if (triggerResp) {
+          const triggerData = triggerResp.data?.items || triggerResp.items || triggerResp.data || triggerResp.triggers || [];
+          this.triggerOptions = Array.isArray(triggerData) ? triggerData : [];
         }
       } catch (err) {
         this.error = err.message || this.$t('actions.loadFailed');
@@ -648,6 +708,26 @@ export default {
         3: { label: this.$t('common.statusSyncing'), reason: this.$t('common.reasonSyncing'), type: 'warning' },
       };
       return map[status] || map[0];
+    },
+    getSeverityLabel(severity) {
+      const map = {
+        0: this.$t('alerts.severityInfo'),
+        1: this.$t('alerts.severityLow'),
+        2: this.$t('alerts.severityMedium'),
+        3: this.$t('alerts.severityHigh'),
+        4: this.$t('alerts.severityCritical'),
+      };
+      return map[severity] || this.$t('alerts.severityInfo');
+    },
+    getSeverityType(severity) {
+      const map = {
+        0: 'info',
+        1: 'info',
+        2: 'warning',
+        3: 'danger',
+        4: 'danger',
+      };
+      return map[severity] || 'info';
     },
   },
 };

@@ -43,7 +43,7 @@ type ActionFilter struct {
 type TriggerFilter struct {
 	Query          string
 	Status         *int
-	SeverityMin    *int
+	Severity       *int
 	Entity         *string
 	AlertID        *uint
 	AlertMonitorID *uint

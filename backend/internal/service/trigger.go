@@ -13,7 +13,7 @@ import (
 type TriggerReq struct {
 	Name                  string   `json:"name" binding:"required"`
 	Entity                string   `json:"entity"`
-	SeverityMin           int      `json:"severity_min"`
+	Severity              int      `json:"severity"`
 	AlertID               *uint    `json:"alert_id"`
 	AlertStatus           *int     `json:"alert_status"`
 	AlertGroupID          *uint    `json:"alert_group_id"`
@@ -36,7 +36,7 @@ type TriggerResp struct {
 	ID                    int      `json:"id"`
 	Name                  string   `json:"name"`
 	Entity                string   `json:"entity"`
-	SeverityMin           int      `json:"severity_min"`
+	Severity              int      `json:"severity"`
 	AlertID               *uint    `json:"alert_id"`
 	AlertStatus           *int     `json:"alert_status"`
 	AlertGroupID          *uint    `json:"alert_group_id"`
@@ -96,7 +96,7 @@ func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 	trigger := model.Trigger{
 		Name:                  req.Name,
 		Entity:                normalizeTriggerEntity(req.Entity),
-		SeverityMin:           req.SeverityMin,
+		Severity:              req.Severity,
 		AlertID:               req.AlertID,
 		AlertStatus:           req.AlertStatus,
 		AlertGroupID:          req.AlertGroupID,
@@ -132,7 +132,7 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 	updated := model.Trigger{
 		Name:                  req.Name,
 		Entity:                normalizeTriggerEntity(req.Entity),
-		SeverityMin:           req.SeverityMin,
+		Severity:              req.Severity,
 		AlertID:               req.AlertID,
 		AlertStatus:           req.AlertStatus,
 		AlertGroupID:          req.AlertGroupID,
@@ -176,7 +176,7 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 		ID:                    int(trigger.ID),
 		Name:                  trigger.Name,
 		Entity:                trigger.Entity,
-		SeverityMin:           trigger.SeverityMin,
+		Severity:              trigger.Severity,
 		AlertID:               trigger.AlertID,
 		AlertStatus:           trigger.AlertStatus,
 		AlertGroupID:          trigger.AlertGroupID,
@@ -202,6 +202,7 @@ func ExecuteTriggersForItem(item model.Item) {
 	if err != nil {
 		return
 	}
+	
 	for _, trigger := range triggers {
 		if !matchItemTrigger(trigger, item) {
 			continue
@@ -240,7 +241,7 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		item.Name, hostName, item.LastValue, item.Units)
 
 	// Determine severity from trigger settings
-	severity := trigger.SeverityMin
+	severity := trigger.Severity
 	if severity == 0 {
 		severity = 1 // Default to warning level
 	}
@@ -252,8 +253,8 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		HostID:    item.HID,
 		ItemID:    item.ID,
 		TriggerID: &trigger.ID,
-		Comment: fmt.Sprintf("Triggered by %s: %s operator %v", trigger.Name,
-			describeItemTriggerCondition(trigger), trigger.ItemValueThreshold),
+		Comment: fmt.Sprintf("Triggered by %s: %s", trigger.Name,
+			describeItemTriggerCondition(trigger)),
 	}
 
 	_ = AddAlertServ(alertReq)
@@ -294,47 +295,53 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 	if entity != "item" {
 		return false
 	}
+	
+	// If a specific item is specified, it must match
 	if trigger.AlertItemID != nil && item.ID != *trigger.AlertItemID {
 		return false
 	}
+	
+	// If a specific host is specified, it must match
 	if trigger.AlertHostID != nil && item.HID != *trigger.AlertHostID {
 		return false
 	}
+
+	// If no conditions (status or value) are set, it doesn't match
+	if trigger.ItemStatus == nil && trigger.ItemValueThreshold == nil {
+		return false
+	}
+
+	// Match Status if specified
 	if trigger.ItemStatus != nil && item.Status != *trigger.ItemStatus {
 		return false
 	}
+
+	// Match Value if specified
 	if trigger.ItemValueThreshold != nil {
+		if item.LastValue == "" {
+			return false
+		}
 		val, err := strconv.ParseFloat(item.LastValue, 64)
 		if err != nil {
 			return false
 		}
 		threshold := *trigger.ItemValueThreshold
 		operator := strings.TrimSpace(trigger.ItemValueOperator)
+		
+		matched := false
 		switch operator {
 		case ">":
-			if !(val > threshold) {
-				return false
-			}
+			matched = val > threshold
 		case ">=":
-			if !(val >= threshold) {
-				return false
-			}
+			matched = val >= threshold
 		case "<":
-			if !(val < threshold) {
-				return false
-			}
+			matched = val < threshold
 		case "<=":
-			if !(val <= threshold) {
-				return false
-			}
+			matched = val <= threshold
 		case "=", "==":
-			if !(val == threshold) {
-				return false
-			}
+			matched = val == threshold
 		case "!=":
-			if !(val != threshold) {
-				return false
-			}
+			matched = val != threshold
 		case "between", "outside":
 			if trigger.ItemValueThresholdMax == nil {
 				return false
@@ -345,18 +352,17 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 				minThreshold, maxThreshold = maxThreshold, minThreshold
 			}
 			if operator == "between" {
-				if val < minThreshold || val > maxThreshold {
-					return false
-				}
+				matched = val >= minThreshold && val <= maxThreshold
 			} else {
-				if val >= minThreshold && val <= maxThreshold {
-					return false
-				}
+				matched = val < minThreshold || val > maxThreshold
 			}
-		default:
+		}
+		
+		if !matched {
 			return false
 		}
 	}
+	
 	return true
 }
 

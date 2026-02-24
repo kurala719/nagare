@@ -349,7 +349,7 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 		filter := model.TriggerFilter{
 			Query:          args.Query,
 			Status:         args.Status,
-			SeverityMin:    args.SeverityMin,
+			Severity:       args.SeverityMin,
 			Entity:         args.Entity,
 			AlertID:        alertID,
 			AlertMonitorID: alertMonitorID,

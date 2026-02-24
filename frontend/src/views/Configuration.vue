@@ -184,37 +184,37 @@
               </el-form-item>
             </el-form>
 
-            <div class="section-divider">OneBot (NapCat) Configuration</div>
+            <div class="section-divider">{{ $t('configuration.onebotSettings') }}</div>
             <el-form :model="editableConfig.qq" label-width="180px" label-position="left">
-              <el-form-item label="Enabled">
+              <el-form-item :label="$t('configuration.onebotEnabled')">
                 <el-switch v-model="editableConfig.qq.enabled" :disabled="!editing" />
               </el-form-item>
-              <el-form-item label="Connection Mode">
+              <el-form-item :label="$t('configuration.onebotMode')">
                 <el-radio-group v-model="editableConfig.qq.mode" :disabled="!editing">
-                  <el-radio label="reverse">Reverse (NapCat as Client)</el-radio>
-                  <el-radio label="positive">Positive (Server as Client)</el-radio>
+                  <el-radio label="reverse">{{ $t('configuration.onebotModeReverse') }}</el-radio>
+                  <el-radio label="positive">{{ $t('configuration.onebotModePositive') }}</el-radio>
                 </el-radio-group>
               </el-form-item>
-              <el-form-item v-if="editableConfig.qq.mode === 'positive'" label="NapCat WebSocket URL">
+              <el-form-item v-if="editableConfig.qq.mode === 'positive'" :label="$t('configuration.onebotUrl')">
                 <el-input v-model="editableConfig.qq.positive_url" :disabled="!editing" placeholder="ws://localhost:3001" />
               </el-form-item>
-              <el-form-item label="Access Token">
+              <el-form-item :label="$t('configuration.onebotToken')">
                 <el-input v-model="editableConfig.qq.access_token" :disabled="!editing" type="password" show-password />
               </el-form-item>
             </el-form>
 
-            <div class="section-divider">Gmail API Configuration</div>
+            <div class="section-divider">{{ $t('configuration.gmailSettings') }}</div>
             <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
-              <el-form-item label="Enabled">
+              <el-form-item :label="$t('configuration.gmailEnabled')">
                 <el-switch v-model="editableConfig.gmail.enabled" :disabled="!editing" />
               </el-form-item>
-              <el-form-item label="Credentials File">
+              <el-form-item :label="$t('configuration.gmailCredentials')">
                 <el-input v-model="editableConfig.gmail.credentials_file" :disabled="!editing" placeholder="configs/gmail_credentials.json" />
               </el-form-item>
-              <el-form-item label="Token File">
+              <el-form-item :label="$t('configuration.gmailToken')">
                 <el-input v-model="editableConfig.gmail.token_file" :disabled="!editing" placeholder="configs/gmail_token.json" />
               </el-form-item>
-              <el-form-item label="From Address">
+              <el-form-item :label="$t('configuration.gmailFrom')">
                 <el-input v-model="editableConfig.gmail.from" :disabled="!editing" placeholder="your-email@gmail.com" />
               </el-form-item>
             </el-form>
@@ -277,13 +277,13 @@
                   <el-input-number v-model="row.id" :controls="false" size="small" :disabled="!editing" style="width: 100%;" />
                 </template>
               </el-table-column>
-              <el-table-column label="Actions" width="80" align="center">
+              <el-table-column v-if="editing" :label="$t('configuration.itemActions')" width="80" align="center">
                 <template #default="{ $index }">
                   <el-button type="danger" :icon="Delete" circle size="small" @click="removeExternalItem($index)" :disabled="!editing" />
                 </template>
               </el-table-column>
             </el-table>
-            <p class="help-text">These definitions define the available types for monitors, alarms, AI providers, and notification media.</p>
+            <p class="help-text">{{ $t('configuration.itemHelpText') }}</p>
           </div>
         </el-tab-pane>
 
@@ -298,13 +298,13 @@
           <div class="tab-pane-content">
             <div class="section-divider">{{ $t('system.mediaRateLimitSettings') }}</div>
             <el-form :model="editableConfig.media_rate_limit" label-width="180px" label-position="left">
-              <el-form-item label="Global Interval (s)">
+              <el-form-item :label="$t('configuration.globalInterval')">
                 <el-input-number v-model="editableConfig.media_rate_limit.global_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
-              <el-form-item label="Protocol Interval (s)">
+              <el-form-item :label="$t('configuration.protocolInterval')">
                 <el-input-number v-model="editableConfig.media_rate_limit.protocol_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
-              <el-form-item label="Media Interval (s)">
+              <el-form-item :label="$t('configuration.mediaInterval')">
                 <el-input-number v-model="editableConfig.media_rate_limit.media_interval_seconds" :disabled="!editing" :min="0" />
               </el-form-item>
             </el-form>

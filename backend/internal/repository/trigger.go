@@ -27,8 +27,8 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
-	if filter.SeverityMin != nil {
-		query = query.Where("severity_min = ?", *filter.SeverityMin)
+	if filter.Severity != nil {
+		query = query.Where("severity = ?", *filter.Severity)
 	}
 	if filter.Entity != nil {
 		query = query.Where("entity = ?", *filter.Entity)
@@ -53,7 +53,7 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 		"status":       "status",
 		"enabled":      "enabled",
 		"entity":       "entity",
-		"severity_min": "severity_min",
+		"severity":     "severity",
 		"created_at":   "created_at",
 		"updated_at":   "updated_at",
 		"id":           "id",
@@ -80,8 +80,8 @@ func CountTriggersDAO(filter model.TriggerFilter) (int64, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
-	if filter.SeverityMin != nil {
-		query = query.Where("severity_min = ?", *filter.SeverityMin)
+	if filter.Severity != nil {
+		query = query.Where("severity = ?", *filter.Severity)
 	}
 	if filter.Entity != nil {
 		query = query.Where("entity = ?", *filter.Entity)
@@ -128,7 +128,7 @@ func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 	return database.DB.Model(&model.Trigger{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"name":                     trigger.Name,
 		"entity":                   trigger.Entity,
-		"severity_min":             trigger.SeverityMin,
+		"severity":                 trigger.Severity,
 		"alert_id":                 trigger.AlertID,
 		"alert_status":             trigger.AlertStatus,
 		"alert_group_id":           trigger.AlertGroupID,
@@ -161,7 +161,7 @@ func UpdateTriggerStatusDAO(id uint, status int) error {
 // GetActiveTriggersForSeverityDAO retrieves triggers matching severity
 func GetActiveTriggersForSeverityDAO(severity int) ([]model.Trigger, error) {
 	var triggers []model.Trigger
-	if err := database.DB.Where("enabled = ? AND severity_min <= ?", 1, severity).Find(&triggers).Error; err != nil {
+	if err := database.DB.Where("enabled = ? AND severity <= ?", 1, severity).Find(&triggers).Error; err != nil {
 		return nil, err
 	}
 	return triggers, nil
