@@ -1,7 +1,13 @@
 <template>
   <div class="system-status-container">
-    <div class="page-header">
+    <div class="page-header system-status-header">
       <h1 class="page-title">{{ $t('systemStatus.title') }}</h1>
+      <div class="refresh-info" v-if="lastUpdated">
+        <el-tag size="small" type="info" effect="plain" class="refresh-tag">
+          <el-icon class="is-loading"><Refresh /></el-icon>
+          {{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}
+        </el-tag>
+      </div>
     </div>
 
     <el-row :gutter="20">
@@ -53,10 +59,11 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from '@/utils/request'
 import * as echarts from 'echarts'
-import { Timer, Connection, PieChart, Cpu } from '@element-plus/icons-vue'
+import { Timer, Connection, PieChart, Cpu, Refresh } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 const status = ref({})
+const lastUpdated = ref('')
 const memoryChart = ref(null)
 const goroutineChart = ref(null)
 let memoryChartInstance = null
@@ -79,6 +86,7 @@ const fetchStatus = async () => {
     const res = await axios.get('/api/v1/system/status')
     if (res.success) {
       status.value = res.data
+      lastUpdated.value = new Date().toLocaleString()
       updateCharts(res.data)
     }
   } catch (error) {
@@ -167,6 +175,19 @@ onBeforeUnmount(() => {
 <style scoped>
 .system-status-container {
   padding: 20px;
+}
+
+.system-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .summary-card {

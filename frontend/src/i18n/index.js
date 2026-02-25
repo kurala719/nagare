@@ -1,7 +1,7 @@
 import { createI18n } from 'vue-i18n'
 
 const browserLocale = (typeof navigator !== 'undefined' && navigator.language)
-  ? (String(navigator.language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'en')
+  ? (String(navigator.language).toLowerCase().startsWith('zh') ? 'zh' : 'en')
   : 'en'
 
 const savedLocale = (typeof localStorage !== 'undefined' && localStorage.getItem('nagare_locale')) || browserLocale
@@ -92,7 +92,13 @@ const messages = {
       dayUnit: 'd',
       hourUnit: 'h',
       minuteUnit: 'm',
-      secondUnit: 's'
+      secondUnit: 's',
+      details: 'Log Details',
+      clear: 'Clear Logs',
+      export: 'Export CSV',
+      autoRefresh: 'Auto Refresh',
+      rawContext: 'Raw Context',
+      formattedContext: 'Formatted Context'
     },
     auth: {
       login: 'Login',
@@ -1226,12 +1232,23 @@ const messages = {
       save: 'Save',
       cancel: 'Cancel',
       manualCleanup: 'Manual Cleanup',
-      cleanupConfirm: 'Perform manual cleanup now?',
-      cleanupSuccess: 'Cleanup performed successfully',
+      nextCleanup: 'Next cleanup: Today 02:00 AM',
+      performCleanup: 'Perform Cleanup',
+      cleanupConfirm: 'Manual Cleanup',
+      cleanupConfirmText: 'Are you sure you want to perform manual data cleanup now according to the enabled policies?',
+      cleanupSuccess: 'Cleanup Success',
+      cleanupSuccessMsg: 'Cleanup performed successfully.',
+      recordsRemoved: 'Records removed:',
+      noRecordsCleaned: 'No records needed cleaning.',
       cleanupFailed: 'Cleanup failed',
+      cleanupFailedMsg: 'Cleanup operation failed.',
+      autoRefreshing: 'Auto-refreshing (30s)',
+      enterDescription: 'Enter description',
       updateSuccess: 'Policy updated successfully',
       updateFailed: 'Failed to update policy',
       forever: 'Forever',
+      automatedCleanupTitle: 'Automated Cleanup',
+      automatedCleanupDesc: 'The system automatically performs data retention cleanup every day at 2:00 AM based on these policies.',
       types: {
         logs: 'System Logs',
         alerts: 'Alerts',
@@ -1243,6 +1260,18 @@ const messages = {
         ansible_jobs: 'Ansible Job Logs',
         reports: 'Generated Reports',
         site_messages: 'Site Messages'
+      },
+      typeDescriptions: {
+        logs: 'System and service runtime logs.',
+        alerts: 'History of system alerts and incidents.',
+        audit_logs: 'Audit logs of user operational actions.',
+        item_history: 'Time-series historical data for metrics.',
+        host_history: 'Historical status and availability of hosts.',
+        network_history: 'History of global network health scores.',
+        chat: 'Conversation history with the AI assistant.',
+        ansible_jobs: 'Execution logs and results of Ansible tasks.',
+        reports: 'Archive of generated PDF operational reports.',
+        site_messages: 'Internal notifications and messages for users.'
       }
     },
     about: {
@@ -1256,15 +1285,9 @@ const messages = {
       email: 'Email',
       version: 'Version',
       license: 'License'
-    },
-    details: 'Log Details',
-    clear: 'Clear Logs',
-    export: 'Export CSV',
-    autoRefresh: 'Auto Refresh',
-    rawContext: 'Raw Context',
-    formattedContext: 'Formatted Context'
+    }
   },
-  'zh-CN': {
+  zh: {
     common: {
       language: '语言',
       day: '日间',
@@ -1349,7 +1372,13 @@ const messages = {
       dayUnit: '天',
       hourUnit: '小时',
       minuteUnit: '分',
-      secondUnit: '秒'
+      secondUnit: '秒',
+      details: '日志详情',
+      clear: '清空日志',
+      export: '导出 CSV',
+      autoRefresh: '自动刷新',
+      rawContext: '原始上下文',
+      formattedContext: '格式化上下文'
     },
     auth: {
       login: '登录',
@@ -2483,12 +2512,23 @@ const messages = {
       save: '保存',
       cancel: '取消',
       manualCleanup: '手动清理',
-      cleanupConfirm: '立即执行手动清理吗？',
-      cleanupSuccess: '清理执行成功',
-      cleanupFailed: '清理执行失败',
+      nextCleanup: '下次清理时间：今日 02:00 AM',
+      performCleanup: '立即清理',
+      cleanupConfirm: '手动清理',
+      cleanupConfirmText: '您确定要立即根据启用的策略执行手动数据清理吗？',
+      cleanupSuccess: '清理成功',
+      cleanupSuccessMsg: '清理执行成功。',
+      recordsRemoved: '已移除记录：',
+      noRecordsCleaned: '没有需要清理的记录。',
+      cleanupFailed: '清理失败',
+      cleanupFailedMsg: '清理操作失败。',
+      autoRefreshing: '自动刷新中 (30s)',
+      enterDescription: '请输入描述',
       updateSuccess: '策略更新成功',
       updateFailed: '策略更新失败',
       forever: '永久保留',
+      automatedCleanupTitle: '自动清理',
+      automatedCleanupDesc: '系统每天凌晨 2:00 会根据这些策略自动执行数据保留清理任务。',
       types: {
         logs: '系统日志',
         alerts: '告警记录',
@@ -2500,6 +2540,18 @@ const messages = {
         ansible_jobs: 'Ansible 任务日志',
         reports: '生成的报表',
         site_messages: '站内消息'
+      },
+      typeDescriptions: {
+        logs: '系统与服务的运行日志。',
+        alerts: '系统告警与事件的历史记录。',
+        audit_logs: '用户操作与安全性审计日志。',
+        item_history: '监控项指标的时间序列历史数据。',
+        host_history: '主机的状态变化与可用性历史。',
+        network_history: '全局网络健康评分的历史趋势。',
+        chat: '用户与 AI 助手的对话聊天记录。',
+        ansible_jobs: 'Ansible 自动化任务的执行日志与结果。',
+        reports: '系统自动或手动生成的 PDF 运维报表。',
+        site_messages: '发送给用户的内部通知与站内消息。'
       }
     },
     about: {
@@ -2513,15 +2565,12 @@ const messages = {
       email: '电子邮箱',
       version: '版本',
       license: '许可协议'
-    },
-    details: '日志详情',
-    clear: '清空日志',
-    export: '导出 CSV',
-    autoRefresh: '自动刷新',
-    rawContext: '原始上下文',
-    formattedContext: '格式化上下文'
+    }
   }
 }
+
+// Add aliases for broader compatibility
+messages['zh-CN'] = messages.zh
 
 const i18n = createI18n({
   legacy: false,

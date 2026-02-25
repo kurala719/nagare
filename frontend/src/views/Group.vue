@@ -1,8 +1,30 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('groups.title') }}</h1>
-      <p class="page-subtitle">{{ totalGroups }} {{ $t('dashboard.groups') }}</p>
+      <div class="header-main">
+        <h1 class="page-title">{{ $t('groups.title') }}</h1>
+        <div class="header-info">
+          <p class="page-subtitle">{{ totalGroups }} {{ $t('dashboard.groups') }}</p>
+          <div class="refresh-info" v-if="lastUpdated">
+            <span class="last-updated">{{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}</span>
+            <el-tag v-if="autoRefreshEnabled" size="small" type="success" effect="plain" class="auto-refresh-tag">
+              <el-icon class="is-loading"><Refresh /></el-icon>
+              Auto-refreshing (30s)
+            </el-tag>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <el-switch
+          v-model="autoRefreshEnabled"
+          style="margin-right: 16px"
+          :active-text="$t('common.autoRefresh') || 'Auto-refresh'"
+          @change="handleAutoRefreshChange"
+        />
+        <el-button type="primary" @click="loadGroups(true)" :loading="loading" :icon="Refresh">
+          {{ $t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div class="standard-toolbar">
@@ -339,6 +361,9 @@ export default {
       selectedGroupRows: [],
       newGroup: { name: '', description: '', enabled: 1, monitor_id: 0 },
       selectedGroup: { id: 0, name: '', description: '', enabled: 1, monitor_id: 0 },
+      lastUpdated: '',
+      autoRefreshEnabled: true,
+      refreshInterval: null,
       formRules: {
         name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
         monitor_id: [{ required: true, message: 'Monitor is required', trigger: 'change' }],
@@ -411,8 +436,35 @@ export default {
   created() {
     this.loadMonitors();
     this.loadGroups(true);
+    if (this.autoRefreshEnabled) {
+      this.startAutoRefresh();
+    }
+  },
+  beforeUnmount() {
+    this.stopAutoRefresh();
   },
   methods: {
+    startAutoRefresh() {
+      this.stopAutoRefresh();
+      this.refreshInterval = setInterval(() => {
+        if (!this.loading) {
+          this.loadGroups();
+        }
+      }, 30000);
+    },
+    stopAutoRefresh() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+        this.refreshInterval = null;
+      }
+    },
+    handleAutoRefreshChange(val) {
+      if (val) {
+        this.startAutoRefresh();
+      } else {
+        this.stopAutoRefresh();
+      }
+    },
     onSelectionChange(selection) {
       this.selectedGroupRows = selection || [];
     },
@@ -562,6 +614,7 @@ export default {
         }));
         this.groups = mapped;
         this.totalGroups = Number.isFinite(total) ? total : mapped.length;
+        this.lastUpdated = new Date().toLocaleString();
       } catch (err) {
         this.error = err.message || this.$t('groups.loadFailed');
       } finally {
@@ -746,6 +799,44 @@ export default {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.refresh-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.auto-refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .groups-scroll {
   margin-top: 8px;
 }

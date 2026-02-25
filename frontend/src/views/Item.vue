@@ -1,8 +1,30 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ titleLabel }}</h1>
-      <p class="page-subtitle">{{ totalItems }} {{ $t('items.total') }}</p>
+      <div class="header-main">
+        <h1 class="page-title">{{ titleLabel }}</h1>
+        <div class="header-info">
+          <p class="page-subtitle">{{ totalItems }} {{ $t('items.total') }}</p>
+          <div class="refresh-info" v-if="lastUpdated">
+            <span class="last-updated">{{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}</span>
+            <el-tag v-if="autoRefreshEnabled" size="small" type="success" effect="plain" class="auto-refresh-tag">
+              <el-icon class="is-loading"><Refresh /></el-icon>
+              Auto-refreshing (30s)
+            </el-tag>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <el-switch
+          v-model="autoRefreshEnabled"
+          style="margin-right: 16px"
+          :active-text="$t('common.autoRefresh') || 'Auto-refresh'"
+          @change="handleAutoRefreshChange"
+        />
+        <el-button type="primary" @click="loadItems(true)" :loading="loading" :icon="Refresh">
+          {{ $t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div class="standard-toolbar">
@@ -339,6 +361,9 @@ export default {
         ],
         hostFilter: 0,
         statusFilter: 'all',
+                lastUpdated: '',
+                autoRefreshEnabled: true,
+                refreshInterval: null,
                 bulkForm: {
                         enabled: 'nochange',
                 },
@@ -386,6 +411,12 @@ export default {
         this.applyHostFromQuery();
         this.loadHosts();
         this.loadItems(true);
+        if (this.autoRefreshEnabled) {
+            this.startAutoRefresh();
+        }
+    },
+    beforeUnmount() {
+        this.stopAutoRefresh();
     },
     watch: {
         '$route.query.q': function () {
@@ -429,6 +460,27 @@ export default {
         },
     },
     methods: {
+        startAutoRefresh() {
+            this.stopAutoRefresh();
+            this.refreshInterval = setInterval(() => {
+                if (!this.loading) {
+                    this.loadItems();
+                }
+            }, 30000);
+        },
+        stopAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+        },
+        handleAutoRefreshChange(val) {
+            if (val) {
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+        },
         applySearchFromQuery() {
             const queryValue = this.$route.query.q;
             const nextQuery = queryValue ? String(queryValue) : '';
@@ -497,6 +549,7 @@ export default {
                 }));
                 this.items = mapped;
                 this.totalItems = Number.isFinite(total) ? total : mapped.length;
+                this.lastUpdated = new Date().toLocaleString();
             } catch (err) {
                 this.error = err.message || this.$t('items.loadFailed');
                 console.error('Error loading items:', err);
@@ -804,6 +857,44 @@ export default {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.refresh-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.auto-refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .items-scroll {
   margin-top: 8px;
 }

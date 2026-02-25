@@ -90,12 +90,14 @@ func InitDBTables() error {
 }
 
 func ensureDefaultRetentionPolicies() error {
+	// Cleanup malformed entries first
+	if err := database.DB.Where("data_type = '' OR data_type IS NULL").Delete(&model.RetentionPolicy{}).Error; err != nil {
+		return err
+	}
+
 	var count int64
 	if err := database.DB.Model(&model.RetentionPolicy{}).Count(&count).Error; err != nil {
 		return err
-	}
-	if count > 0 {
-		return nil
 	}
 
 	defaults := []model.RetentionPolicy{
@@ -112,11 +114,18 @@ func ensureDefaultRetentionPolicies() error {
 	}
 
 	enabled := 1
-	for i := range defaults {
-		defaults[i].Enabled = &enabled
+	for _, d := range defaults {
+		var existing model.RetentionPolicy
+		err := database.DB.Where("data_type = ?", d.DataType).First(&existing).Error
+		if err != nil { // Not found or error
+			d.Enabled = &enabled
+			if err := database.DB.Create(&d).Error; err != nil {
+				return err
+			}
+		}
 	}
 
-	return database.DB.Create(&defaults).Error
+	return nil
 }
 
 func ensureDefaultAdmin() error {

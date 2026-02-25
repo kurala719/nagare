@@ -8,7 +8,7 @@
       <template #dropdown>
         <el-dropdown-menu>
           <el-dropdown-item command="en">English</el-dropdown-item>
-          <el-dropdown-item command="zh-CN">中文</el-dropdown-item>
+          <el-dropdown-item command="zh">中文</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -31,7 +31,7 @@ const { locale } = useI18n()
 const isDarkMode = ref(false)
 
 const currentLanguageLabel = computed(() => {
-  return locale.value === 'zh-CN' ? '中文' : 'English'
+  return (locale.value === 'zh' || locale.value === 'zh-CN') ? '中文' : 'English'
 })
 
 const setLanguage = (lang) => {

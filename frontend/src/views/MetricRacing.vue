@@ -1,8 +1,22 @@
 <template>
-  <div class="metric-racing-container">
+  <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('metricRacing.title') }}</h1>
-      <p class="page-subtitle">{{ $t('metricRacing.subtitle') }}</p>
+      <div class="header-main">
+        <h1 class="page-title">{{ $t('metricRacing.title') }}</h1>
+        <div class="header-info">
+          <p class="page-subtitle">{{ $t('metricRacing.subtitle') }}</p>
+          <div class="refresh-info" v-if="lastUpdated">
+            <span class="last-updated">{{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}</span>
+            <el-tag v-if="isRunning" size="small" type="success" effect="plain" class="auto-refresh-tag">
+              <el-icon class="is-loading"><Refresh /></el-icon>
+              Auto-refreshing ({{ refreshInterval }}s)
+            </el-tag>
+            <el-tag v-else size="small" type="info" effect="plain" class="auto-refresh-tag">
+              Paused
+            </el-tag>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="standard-toolbar">
@@ -18,7 +32,7 @@
       </div>
       
       <div class="action-group">
-        <el-button :type="isRunning ? 'danger' : 'primary'" @click="toggleRacing">
+        <el-button :type="isRunning ? 'danger' : 'primary'" @click="toggleRacing" :icon="isRunning ? VideoPause : VideoPlay">
           {{ isRunning ? $t('metricRacing.stop') : $t('metricRacing.start') }}
         </el-button>
       </div>
@@ -35,6 +49,7 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import axios from '@/utils/request'
+import { VideoPlay, VideoPause, Refresh } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 const racingChartRef = ref(null)
@@ -44,12 +59,13 @@ let timer = null
 const metricType = ref('cpu')
 const refreshInterval = ref(3)
 const isRunning = ref(true)
+const lastUpdated = ref('')
 const hostData = ref({}) // map of hostName -> value
 
 const getTitle = () => {
-  if (metricType.value === 'cpu') return t('metricRacing.cpuTitle')
-  if (metricType.value === 'memory') return t('metricRacing.itemTitle') + ' (Memory)'
-  return t('metricRacing.netTitle')
+  if (metricType.value === 'cpu') return t('metricRacing.cpuTitle') || 'CPU Utilization Racing'
+  if (metricType.value === 'memory') return (t('metricRacing.itemTitle') || 'Memory') + ' (Memory)'
+  return t('metricRacing.netTitle') || 'Network Traffic Racing'
 }
 
 const fetchMetrics = async () => {
@@ -86,6 +102,7 @@ const fetchMetrics = async () => {
       if (Object.keys(newMap).length > 0) {
         updateChart(newMap)
       }
+      lastUpdated.value = new Date().toLocaleString()
     }
   } catch (error) {
     console.error('Failed to fetch racing metrics:', error)
@@ -104,14 +121,33 @@ const updateChart = (data) => {
 
   racingChart.setOption({
     title: {
-      text: getTitle()
+      text: getTitle(),
+      textStyle: {
+        color: 'var(--text-strong)'
+      }
     },
     yAxis: {
-      data: names
+      data: names,
+      axisLabel: {
+        color: 'var(--text-strong)'
+      }
+    },
+    xAxis: {
+      splitLine: {
+        lineStyle: {
+          color: 'var(--border-1)'
+        }
+      },
+      axisLabel: {
+        color: 'var(--text-strong)'
+      }
     },
     series: [
       {
-        data: values
+        data: values,
+        label: {
+          color: 'var(--text-strong)'
+        }
       }
     ]
   })
@@ -127,7 +163,8 @@ const initChart = () => {
       left: 'center',
       textStyle: {
         fontSize: 20,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        color: 'var(--text-strong)'
       }
     },
     grid: {
@@ -139,7 +176,15 @@ const initChart = () => {
     xAxis: {
       type: 'value',
       max: 'dataMax',
-      splitLine: { show: true }
+      splitLine: { 
+        show: true,
+        lineStyle: {
+          color: 'var(--border-1)'
+        }
+      },
+      axisLabel: {
+        color: 'var(--text-strong)'
+      }
     },
     yAxis: {
       type: 'category',
@@ -150,7 +195,8 @@ const initChart = () => {
       axisLabel: {
         show: true,
         fontSize: 14,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        color: 'var(--text-strong)'
       }
     },
     series: [
@@ -164,13 +210,15 @@ const initChart = () => {
           position: 'right',
           valueAnimation: true,
           fontWeight: 'bold',
-          fontSize: 16
+          fontSize: 16,
+          color: 'var(--text-strong)'
         },
         itemStyle: {
           color: function (param) {
             const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'];
             return colors[param.dataIndex % colors.length];
-          }
+          },
+          borderRadius: [0, 4, 4, 0]
         }
       }
     ],
@@ -208,7 +256,12 @@ const stopTimer = () => {
 const handleTypeChange = () => {
   if (racingChart) {
     racingChart.setOption({
-      title: { text: getTitle() },
+      title: { 
+        text: getTitle(),
+        textStyle: {
+          color: 'var(--text-strong)'
+        }
+      },
       yAxis: { data: [] },
       series: [{ data: [] }]
     })
@@ -238,8 +291,37 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.metric-racing-container {
-  padding: 24px;
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.refresh-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.auto-refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .racing-card {

@@ -3,13 +3,29 @@
     <div class="page-header dashboard-header animate-fade-in">
       <div>
         <h1 class="page-title">{{ $t('dashboard.title') }}</h1>
-        <p class="page-subtitle" v-if="lastUpdated">
-          {{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}
-        </p>
+        <div class="header-subtitle-container">
+          <p class="page-subtitle" v-if="lastUpdated">
+            {{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}
+          </p>
+          <div class="auto-refresh-tag" v-if="autoRefreshEnabled">
+            <el-tag size="small" type="success" effect="plain" class="refresh-tag">
+              <el-icon class="is-loading"><Refresh /></el-icon>
+              Auto-refreshing (30s)
+            </el-tag>
+          </div>
+        </div>
       </div>
-      <el-button type="primary" @click="refreshAll" :loading="loading" :icon="Refresh">
-        {{ $t('common.refresh') }}
-      </el-button>
+      <div class="header-actions">
+        <el-switch
+          v-model="autoRefreshEnabled"
+          class="refresh-switch"
+          :active-text="$t('common.autoRefresh')"
+          @change="handleAutoRefreshChange"
+        />
+        <el-button type="primary" @click="refreshAll" :loading="loading" :icon="Refresh">
+          {{ $t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div v-if="loading && !lastUpdated" class="dashboard-content skeleton-container">
@@ -78,7 +94,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 import { Loading, Refresh } from '@element-plus/icons-vue'
 import { fetchAlertData } from '@/api/alerts'
 import { fetchHostData } from '@/api/hosts'
@@ -118,6 +134,8 @@ export default defineComponent({
     const { t } = useI18n()
     const loading = ref(false)
     const lastUpdated = ref('')
+    const autoRefreshEnabled = ref(true)
+    let refreshInterval = null
     
     // Data refs
     const summary = ref({
@@ -214,13 +232,46 @@ export default defineComponent({
       if (topologyChart.value?.handleRefresh) topologyChart.value.handleRefresh()
     }
 
+    const handleAutoRefreshChange = (val) => {
+      if (val) {
+        startAutoRefresh()
+      } else {
+        stopAutoRefresh()
+      }
+    }
+
+    const startAutoRefresh = () => {
+      stopAutoRefresh()
+      refreshInterval = setInterval(() => {
+        if (!loading.value) {
+          refreshAll()
+        }
+      }, 30000)
+    }
+
+    const stopAutoRefresh = () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval)
+        refreshInterval = null
+      }
+    }
+
     onMounted(() => {
       loadDashboardData()
+      if (autoRefreshEnabled.value) {
+        startAutoRefresh()
+      }
+    })
+
+    onBeforeUnmount(() => {
+      stopAutoRefresh()
     })
 
     return {
       loading,
       lastUpdated,
+      autoRefreshEnabled,
+      handleAutoRefreshChange,
       summary,
       recentAlerts,
       recentHosts,
@@ -244,6 +295,33 @@ export default defineComponent({
   align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 32px;
+}
+
+.header-subtitle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auto-refresh-tag {
+  display: inline-flex;
+  align-items: center;
+}
+
+.refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.refresh-switch {
+  margin-right: 8px;
 }
 
 .loading-container {

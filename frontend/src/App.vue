@@ -29,7 +29,7 @@ export default defineComponent({
     
     const elementLocale = computed(() => {
       try {
-        return (locale.value === 'zh-CN' ? zhCn : en) || en;
+        return (locale.value === 'zh-CN' || locale.value === 'zh' ? zhCn : en) || en;
       } catch (e) {
         return en;
       }
@@ -87,9 +87,6 @@ export default defineComponent({
 }
 
 html.dark {
-  --text-strong: #f8fafc;
-  --border-1: #334155;
-  --surface-3: #1e293b;
 }
 
 body {

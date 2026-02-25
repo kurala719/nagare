@@ -70,9 +70,9 @@
 
 body.theme-dark,
 html.dark {
-  --color-background: var(--vt-c-black);
-  --color-background-soft: #1e293b;
-  --color-background-mute: #334155;
+  --color-background: #0b1120;
+  --color-background-soft: #0f172a;
+  --color-background-mute: #1e293b;
 
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-hover: rgba(255, 255, 255, 0.2);
@@ -80,23 +80,23 @@ html.dark {
   --color-heading: var(--vt-c-text-dark-1);
   --color-text: var(--vt-c-text-dark-2);
   
-  --surface-1: #0f172a;
-  --surface-2: #1e293b;
-  --surface-3: #334155;
-  --surface-4: #475569;
+  --surface-1: #1e293b;
+  --surface-2: #334155;
+  --surface-3: #475569;
+  --surface-4: #64748b;
   --text-strong: #f8fafc;
   --text-muted: #94a3b8;
   --border-1: rgba(255, 255, 255, 0.1);
   --border-2: rgba(255, 255, 255, 0.2);
 
   /* Element Plus Dark Overrides */
-  --el-bg-color: #0f172a;
+  --el-bg-color: #0b1120;
   --el-bg-color-overlay: #1e293b;
   --el-text-color-primary: #f8fafc;
   --el-text-color-regular: #cbd5e1;
   --el-border-color: #334155;
   --el-border-color-light: #475569;
-  --el-fill-color-blank: #0f172a;
+  --el-fill-color-blank: #0b1120;
 }
 
 body.theme-light,

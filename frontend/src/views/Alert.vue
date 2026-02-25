@@ -1,8 +1,30 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('alerts.title') }}</h1>
-      <p class="page-subtitle">{{ totalAlerts }} {{ $t('dashboard.alerts') }}</p>
+      <div class="header-main">
+        <h1 class="page-title">{{ $t('alerts.title') }}</h1>
+        <div class="header-info">
+          <p class="page-subtitle">{{ totalAlerts }} {{ $t('dashboard.alerts') }}</p>
+          <div class="refresh-info" v-if="lastUpdated">
+            <span class="last-updated">{{ $t('dashboard.summaryLastUpdated') }}: {{ lastUpdated }}</span>
+            <el-tag v-if="autoRefreshEnabled" size="small" type="success" effect="plain" class="auto-refresh-tag">
+              <el-icon class="is-loading"><Refresh /></el-icon>
+              Auto-refreshing (30s)
+            </el-tag>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <el-switch
+          v-model="autoRefreshEnabled"
+          style="margin-right: 16px"
+          :active-text="$t('common.autoRefresh') || 'Auto-refresh'"
+          @change="handleAutoRefreshChange"
+        />
+        <el-button type="primary" @click="loadAlerts(true)" :loading="loading" :icon="Refresh">
+          {{ $t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div class="standard-toolbar">
@@ -335,7 +357,7 @@ import { fetchHostData } from '@/api/hosts';
 import { fetchItemData } from '@/api/items';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound } from '@element-plus/icons-vue';
+import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound, Refresh } from '@element-plus/icons-vue';
 
 export default {
     name: 'Alert',
@@ -350,7 +372,8 @@ export default {
         Monitor,
         Bell,
         Clock,
-        ChatLineRound
+        ChatLineRound,
+        Refresh
     },
     data() {
       return {
@@ -396,6 +419,9 @@ export default {
             item_id: null,
             comment: '',
         },
+        lastUpdated: '',
+        autoRefreshEnabled: true,
+        refreshInterval: null,
         formRules: {},
         // Icons for template usage
         Plus: markRaw(Plus),
@@ -408,7 +434,8 @@ export default {
         Bell: markRaw(Bell),
         Clock: markRaw(Clock),
         ChatLineRound: markRaw(ChatLineRound),
-        Loading: markRaw(Loading)
+        Loading: markRaw(Loading),
+        Refresh: markRaw(Refresh)
       };
     },
     computed: {
@@ -460,8 +487,35 @@ export default {
         this.applySearchFromQuery();
         this.loadAllHosts();
         this.loadAlerts(true);
+        if (this.autoRefreshEnabled) {
+            this.startAutoRefresh();
+        }
+    },
+    beforeUnmount() {
+        this.stopAutoRefresh();
     },
     methods: {
+        startAutoRefresh() {
+            this.stopAutoRefresh();
+            this.refreshInterval = setInterval(() => {
+                if (!this.loading) {
+                    this.loadAlerts();
+                }
+            }, 30000);
+        },
+        stopAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+        },
+        handleAutoRefreshChange(val) {
+            if (val) {
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+        },
         async loadAllHosts() {
             try {
                 const res = await fetchHostData({ limit: 1000 });
@@ -602,6 +656,7 @@ export default {
                 }));
                 this.alerts = mapped;
                 this.totalAlerts = Number.isFinite(total) ? total : mapped.length;
+                this.lastUpdated = new Date().toLocaleString();
             } catch (err) {
                 this.error = err.message || 'Failed to load alerts';
                 console.error('Error loading alerts:', err);
@@ -837,6 +892,44 @@ export default {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.refresh-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.auto-refresh-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .alerts-list {
   display: flex;
   flex-direction: column;

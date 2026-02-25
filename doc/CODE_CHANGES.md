@@ -199,8 +199,8 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		Severity: severity,
 		HostID:   item.HID,
 		ItemID:   item.ID,
-		Comment:  fmt.Sprintf("Triggered by %s: %s operator %v", trigger.Name, 
-			describeItemTriggerCondition(trigger), trigger.ItemValueThreshold),
+		Comment:  fmt.Sprintf("Triggered by %s: %s", trigger.Name, 
+			describeItemTriggerCondition(trigger)),
 	}
 
 	_ = AddAlertServ(alertReq)

@@ -79,6 +79,7 @@
 
       <!-- Footer -->
       <div class="status-footer">
+        <p v-if="lastUpdated" class="last-updated">Last updated: {{ lastUpdated }}</p>
         <p>Powered by Nagare Monitoring</p>
       </div>
     </div>
@@ -86,7 +87,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, computed } from 'vue'
+import { defineComponent, ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { Monitor, Loading, CircleCheckFilled, WarningFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -102,6 +103,8 @@ export default defineComponent({
   setup() {
     const loading = ref(true)
     const error = ref(null)
+    const lastUpdated = ref('')
+    let refreshTimer = null
     const statusData = ref({
       overall_status: 'operational', // operational, degraded, outage
       overall_message: 'Loading...',
@@ -118,20 +121,21 @@ export default defineComponent({
       }
     })
 
-    const fetchStatus = async () => {
-      loading.value = true
+    const fetchStatus = async (showLoading = true) => {
+      if (showLoading) loading.value = true
       error.value = null
       try {
         const response = await request.get('/public/status')
         if (response && response.success) {
           statusData.value = response.data
+          lastUpdated.value = new Date().toLocaleString()
         } else {
           error.value = response?.error || 'Failed to fetch status'
         }
       } catch (err) {
         error.value = err.message || 'Network error'
       } finally {
-        loading.value = false
+        if (showLoading) loading.value = false
       }
     }
 
@@ -151,11 +155,17 @@ export default defineComponent({
 
     onMounted(() => {
       fetchStatus()
+      refreshTimer = setInterval(() => fetchStatus(false), 60000)
+    })
+
+    onBeforeUnmount(() => {
+      if (refreshTimer) clearInterval(refreshTimer)
     })
 
     return {
       loading,
       error,
+      lastUpdated,
       statusData,
       overallStatusClass,
       fetchStatus,
@@ -329,5 +339,10 @@ export default defineComponent({
   margin-top: 60px;
   border-top: 1px solid #e0e0e0;
   padding-top: 20px;
+}
+
+.last-updated {
+  margin-bottom: 8px;
+  font-style: italic;
 }
 </style>

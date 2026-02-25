@@ -246,6 +246,10 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		severity = 1 // Default to warning level
 	}
 
+	// Create the alert comment
+	conditionDesc := describeItemTriggerCondition(trigger)
+	comment := fmt.Sprintf("Triggered by %s: %s", trigger.Name, conditionDesc)
+
 	// Create the alert
 	alertReq := AlertReq{
 		Message:   message,
@@ -253,8 +257,7 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		HostID:    item.HID,
 		ItemID:    item.ID,
 		TriggerID: &trigger.ID,
-		Comment: fmt.Sprintf("Triggered by %s: %s", trigger.Name,
-			describeItemTriggerCondition(trigger)),
+		Comment:   comment,
 	}
 
 	_ = AddAlertServ(alertReq)

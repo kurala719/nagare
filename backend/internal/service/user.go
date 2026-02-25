@@ -454,23 +454,28 @@ func LoginUserServ(username, password string) (string, error) {
 }
 
 func RegisterUserServ(req RegisterRequest) error {
-	if req.Username == "" || req.Password == "" || req.Email == "" || req.Code == "" {
+	if req.Username == "" || req.Password == "" {
 		return model.ErrInvalidInput
 	}
 	if !isValidUsername(req.Username) {
 		return model.ErrInvalidUsername
 	}
-	if !isValidEmail(req.Email) {
-		return model.ErrInvalidEmail
-	}
 	if !isStrongPassword(req.Password) {
 		return model.ErrWeakPassword
 	}
 
-	// Verify code
-	_, err := repository.FindEmailVerificationDAO(req.Email, req.Code)
-	if err != nil {
-		return fmt.Errorf("invalid or expired verification code")
+	// Verify code only if email is provided
+	if req.Email != "" {
+		if !isValidEmail(req.Email) {
+			return model.ErrInvalidEmail
+		}
+		if req.Code == "" {
+			return fmt.Errorf("verification code is required when email is provided")
+		}
+		_, err := repository.FindEmailVerificationDAO(req.Email, req.Code)
+		if err != nil {
+			return fmt.Errorf("invalid or expired verification code")
+		}
 	}
 
 	if _, err := repository.GetUserByUsernameDAO(req.Username); err == nil {
@@ -488,11 +493,11 @@ func RegisterUserServ(req RegisterRequest) error {
 		return err
 	}
 
-	// Clean up code after successful registration
-	// (Optional: depends on if we want to allow re-use within expiration window,
-	// but here we just leave it for simplicity or explicit deletion can be added)
-
-	_ = CreateSiteMessageServ("New Registration", fmt.Sprintf("A new user '%s' (%s) has applied for registration.", req.Username, req.Email), "system", 2, nil)
+	msg := fmt.Sprintf("A new user '%s' has applied for registration.", req.Username)
+	if req.Email != "" {
+		msg = fmt.Sprintf("A new user '%s' (%s) has applied for registration.", req.Username, req.Email)
+	}
+	_ = CreateSiteMessageServ("New Registration", msg, "system", 2, nil)
 	return nil
 }
 

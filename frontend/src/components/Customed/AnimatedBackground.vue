@@ -128,12 +128,12 @@ const getRandomStyle = (i) => {
 }
 
 :global(.dark) .blob {
-  opacity: 0.1;
-  filter: blur(100px);
+  opacity: 0.15;
+  filter: blur(120px);
 }
 
 :global(.dark) .particle {
-  background: white;
-  opacity: 0.05 !important;
+  background: var(--brand-400);
+  opacity: 0.15 !important;
 }
 </style>
