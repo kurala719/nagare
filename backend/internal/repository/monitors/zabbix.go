@@ -1430,9 +1430,6 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 	if err := json.Unmarshal(getResp.Result, &existing); err != nil {
 		return "", fmt.Errorf("failed to parse zabbix media type list: %w", err)
 	}
-	if len(existing) > 0 {
-		return existing[0].MediaTypeID, nil
-	}
 
 	script := "var req = new HttpRequest();\n" +
 		"req.addHeader('Content-Type: application/json');\n" +
@@ -1452,44 +1449,62 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 		"var response = req.post(params.URL, JSON.stringify(payload));\n" +
 		"return response;"
 
+	parameters := []map[string]interface{}{
+		{"name": "URL", "value": cfg.WebhookURL},
+		{"name": "EventToken", "value": cfg.EventToken},
+		{"name": "Subject", "value": "{EVENT.NAME}"},
+		{"name": "Message", "value": "Host: {HOST.NAME} ({HOST.IP}), Item: {ITEM.NAME}, Value: {ITEM.VALUE}, Severity: {EVENT.SEVERITY}, Time: {EVENT.DATE} {EVENT.TIME}"},
+		{"name": "Severity", "value": "{EVENT.NSEVERITY}"},
+		{"name": "HostID", "value": "{HOST.ID}"},
+		{"name": "HostName", "value": "{HOST.NAME}"},
+		{"name": "ItemID", "value": "{ITEM.ID}"},
+		{"name": "ItemName", "value": "{ITEM.NAME}"},
+		{"name": "EventID", "value": "{EVENT.ID}"},
+		{"name": "EventValue", "value": "{EVENT.VALUE}"},
+	}
+
+	messageTemplates := []map[string]interface{}{
+		{
+			"eventsource": 0, // Triggers
+			"recovery":    0, // Problem
+			"subject":     "Nagare Alert: {EVENT.NAME}",
+			"message":     "Host: {HOST.NAME} ({HOST.IP})\nItem: {ITEM.NAME}\nValue: {ITEM.VALUE}\nSeverity: {EVENT.SEVERITY}\nTime: {EVENT.DATE} {EVENT.TIME}\n\n{EVENT.OPDATA}",
+		},
+		{
+			"eventsource": 0, // Triggers
+			"recovery":    1, // Recovery
+			"subject":     "Resolved: {EVENT.NAME}",
+			"message":     "Host: {HOST.NAME} ({HOST.IP})\nItem: {ITEM.NAME}\nStatus: Resolved\nTime: {EVENT.RECOVERY.DATE} {EVENT.RECOVERY.TIME}",
+		},
+		{
+			"eventsource": 0, // Triggers
+			"recovery":    2, // Update
+			"subject":     "Updated: {EVENT.NAME}",
+			"message":     "Host: {HOST.NAME} ({HOST.IP})\nUser: {USER.FULLNAME}\nAction: {EVENT.UPDATE.ACTION}\nTime: {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}",
+		},
+	}
+
+	if len(existing) > 0 {
+		id := existing[0].MediaTypeID
+		updateParams := map[string]interface{}{
+			"mediatypeid":       id,
+			"parameters":        parameters,
+			"message_templates": messageTemplates,
+			"script":            script,
+		}
+		if _, err := p.sendRequest(ctx, "mediatype.update", updateParams); err != nil {
+			return id, fmt.Errorf("failed to update zabbix media type: %w", err)
+		}
+		return id, nil
+	}
+
 	createParams := map[string]interface{}{
-		"name":   cfg.MediaTypeName,
-		"type":   4,
-		"status": 0,
-		"parameters": []map[string]interface{}{
-			{"name": "URL", "value": cfg.WebhookURL},
-			{"name": "EventToken", "value": cfg.EventToken},
-			{"name": "Subject", "value": "{EVENT.NAME}"},
-			{"name": "Message", "value": "Value: {EVENT.OPDATA}"},
-			{"name": "Severity", "value": "{EVENT.NSEVERITY}"},
-			{"name": "HostID", "value": "{HOST.ID}"},
-			{"name": "HostName", "value": "{HOST.NAME}"},
-			{"name": "ItemID", "value": "{ITEM.ID}"},
-			{"name": "ItemName", "value": "{ITEM.NAME}"},
-			{"name": "EventID", "value": "{EVENT.ID}"},
-			{"name": "EventValue", "value": "{EVENT.VALUE}"},
-		},
-		"message_templates": []map[string]interface{}{
-			{
-				"eventsource": 0, // Triggers
-				"recovery":    0, // Problem
-				"subject":     "{EVENT.NAME}",
-				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
-			},
-			{
-				"eventsource": 0, // Triggers
-				"recovery":    1, // Recovery
-				"subject":     "Resolved: {EVENT.NAME}",
-				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
-			},
-			{
-				"eventsource": 0, // Triggers
-				"recovery":    2, // Update
-				"subject":     "Updated: {EVENT.NAME}",
-				"message":     "Host: {HOST.NAME}, Value: {EVENT.OPDATA}",
-			},
-		},
-		"script": script,
+		"name":              cfg.MediaTypeName,
+		"type":              4,
+		"status":            0,
+		"parameters":        parameters,
+		"message_templates": messageTemplates,
+		"script":            script,
 	}
 
 	createResp, err := p.sendRequest(ctx, "mediatype.create", createParams)
@@ -1738,32 +1753,63 @@ func (p *ZabbixProvider) ensureUserMedia(ctx context.Context, userID, mediaTypeI
 }
 
 func (p *ZabbixProvider) ensureActionBound(ctx context.Context, actionName, mediaTypeID, userID, escPeriod string) (string, string, error) {
-	existingID, existingName, err := p.findActionByName(ctx, actionName)
-	if err == nil && strings.TrimSpace(existingID) != "" {
-		return existingID, existingName, nil
-	}
+	existingID, _, err := p.findActionByName(ctx, actionName)
+	actionExists := err == nil && strings.TrimSpace(existingID) != ""
 
 	baseFilter, err := p.findBaseTriggerActionFilter(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
-	createParams := map[string]interface{}{
-		"name":        actionName,
-		"eventsource": 0,
-		"status":      0,
-		"esc_period":  escPeriod,
-		"filter":      baseFilter,
-		"operations": []map[string]interface{}{
-			{
-				"operationtype": 0,
-				"opmessage": map[string]interface{}{
-					"default_msg": 1,
-					"mediatypeid": mediaTypeID,
-				},
-				"opmessage_usr": []map[string]interface{}{{"userid": userID}},
+	operations := []map[string]interface{}{
+		{
+			"operationtype": 0, // Send message
+			"opmessage": map[string]interface{}{
+				"default_msg": 1,
+				"mediatypeid": mediaTypeID,
+			},
+			"opmessage_usr": []map[string]interface{}{{"userid": userID}},
+		},
+	}
+	recoveryOperations := []map[string]interface{}{
+		{
+			"operationtype": 11, // Recovery message
+			"opmessage": map[string]interface{}{
+				"default_msg": 1,
 			},
 		},
+	}
+	updateOperations := []map[string]interface{}{
+		{
+			"operationtype": 12, // Update message
+			"opmessage": map[string]interface{}{
+				"default_msg": 1,
+			},
+		},
+	}
+
+	if actionExists {
+		updateParams := map[string]interface{}{
+			"actionid":            existingID,
+			"operations":          operations,
+			"recovery_operations": recoveryOperations,
+			"update_operations":   updateOperations,
+		}
+		if _, err := p.sendRequest(ctx, "action.update", updateParams); err != nil {
+			return existingID, actionName, fmt.Errorf("failed to update zabbix action: %w", err)
+		}
+		return existingID, actionName, nil
+	}
+
+	createParams := map[string]interface{}{
+		"name":                actionName,
+		"eventsource":         0,
+		"status":              0,
+		"esc_period":          escPeriod,
+		"filter":              baseFilter,
+		"operations":          operations,
+		"recovery_operations": recoveryOperations,
+		"update_operations":   updateOperations,
 	}
 
 	createResp, err := p.sendRequest(ctx, "action.create", createParams)
@@ -1936,6 +1982,30 @@ func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error
 	if host.Metadata != nil {
 		if tid, ok := host.Metadata["templateid"]; ok && tid != "" {
 			templates = append(templates, map[string]string{"templateid": tid})
+		}
+	}
+
+	// If no template provided and it's SNMP, use "Huawei VRP by SNMP" as default
+	if len(templates) == 0 && isSNMP {
+		tids, err := p.GetTemplateidByName(ctx, "Huawei VRP by SNMP")
+		if err == nil && len(tids) > 0 {
+			templates = append(templates, map[string]string{"templateid": tids[0]})
+		} else {
+			// Fallback: search by case-insensitive name if exact match fails
+			params := map[string]interface{}{
+				"output": []string{"templateid", "name"},
+				"search": map[string]interface{}{"name": "Huawei VRP"},
+			}
+			resp, err := p.sendRequest(ctx, "template.get", params)
+			if err == nil {
+				var searchTmpls []struct {
+					TemplateID string `json:"templateid"`
+					Name       string `json:"name"`
+				}
+				if json.Unmarshal(resp.Result, &searchTmpls) == nil && len(searchTmpls) > 0 {
+					templates = append(templates, map[string]string{"templateid": searchTmpls[0].TemplateID})
+				}
+			}
 		}
 	}
 

@@ -154,8 +154,9 @@
               <el-tooltip :content="alarm.auth_token ? $t('alarms.reLogin') : $t('alarms.login')" placement="bottom">
                 <el-button size="small" :type="alarm.auth_token ? 'success' : 'warning'" plain :icon="alarm.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(alarm)" :loading="alarm.logging_in" />
               </el-tooltip>
-              <el-tooltip content="Setup Media" placement="bottom">
-                <el-button size="small" type="success" plain :icon="Message" @click="onSetupMedia(alarm)" :loading="alarm.setting_up_media" v-if="alarm.type === 1" />
+              <el-tooltip :content="$t('alarms.initializeZabbixTooltip') || 'Initialize Zabbix Integration'" placement="bottom">
+                <el-button size="small" type="success" plain :icon="Message" @click="onSetupMedia(alarm)" :loading="alarm.setting_up_media" v-if="alarm.type === 1">
+                </el-button>
               </el-tooltip>
               <el-tooltip :content="$t('alarms.delete')" placement="bottom">
                 <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(alarm)" />

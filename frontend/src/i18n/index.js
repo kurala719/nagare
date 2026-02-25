@@ -582,6 +582,8 @@ const messages = {
       reLogin: 'Re-login',
       propertiesTitle: 'Properties',
       save: 'Save',
+      initializeZabbix: 'Initialize Zabbix',
+      initializeZabbixTooltip: 'Sync/Update media types and actions in Zabbix',
       unknown: 'Unknown'
     },
     items: {
@@ -1865,6 +1867,8 @@ const messages = {
       reLogin: '重新登录',
       propertiesTitle: '属性',
       save: '保存',
+      initializeZabbix: '初始化 Zabbix',
+      initializeZabbixTooltip: '同步/更新 Zabbix 中的媒体类型和动作',
       unknown: '未知'
     },
     items: {
