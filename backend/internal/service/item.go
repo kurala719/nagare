@@ -596,8 +596,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		LogService("warn", "pull items skipped due to host error", map[string]interface{}{"host_id": hid, "host_status": currentStatus}, nil, "")
 		return result, fmt.Errorf("host is not active")
 	}
-	// Allow status 1 (Active) or 3 (Syncing) to proceed
-	if currentStatus != 1 && currentStatus != 3 {
+	// Allow status 1 (Active), 3 (Syncing), or 0 (Inactive) to proceed
+	if currentStatus != 1 && currentStatus != 3 && currentStatus != 0 {
 		_ = repository.UpdateHostStatusAndDescriptionDAO(hid, currentStatus, "")
 		items, err := repository.GetItemsByHIDDAO(hid)
 		if err == nil {
@@ -626,7 +626,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		if monitor.AuthToken != "" {
 			client.SetAuthToken(monitor.AuthToken)
 		} else if mid != 1 {
-			setHostStatusErrorWithReason(hid, err.Error())
+			setMonitorRelatedError(mid, err.Error())
 			return result, fmt.Errorf("authentication failed and no existing token: %w", err)
 		}
 	}

@@ -298,7 +298,7 @@ func LoginMonitorServ(id uint) (MonitorResp, error) {
 			return MonitorResp{}, fmt.Errorf("failed to save auth token: %w", err)
 		}
 	}
-	_ = repository.UpdateMonitorStatusDAO(id, 1)
+	_ = repository.UpdateMonitorStatusAndDescriptionDAO(id, 1, "")
 	_ = recomputeMonitorRelated(id)
 
 	// Retrieve and return the updated monitor

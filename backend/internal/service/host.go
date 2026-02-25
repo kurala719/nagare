@@ -704,21 +704,10 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 }
 
 func mapMonitorHostStatus(status string, activeAvailable string) int {
-	// Check Zabbix active_available first: 0=unknown, 1=available, 2=not_available
-	if activeAvailable == "2" {
+	if activeAvailable == "2" || status == "down" {
 		return 2
 	}
-	if activeAvailable == "1" {
-		return 1
-	}
-	if activeAvailable == "0" {
-		return 1 // Default to active if unknown but enabled
-	}
-
-	if status == "down" {
-		return 2
-	}
-	if status == "up" {
+	if activeAvailable == "1" || status == "up" {
 		return 1
 	}
 	return 0
@@ -1026,6 +1015,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		if monitor.AuthToken != "" {
 			client.SetAuthToken(monitor.AuthToken)
 		} else {
+			setMonitorRelatedError(mid, err.Error())
 			return result, fmt.Errorf("authentication failed and no existing token: %w", err)
 		}
 	}
@@ -1035,6 +1025,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 	monitorHosts, err := client.GetHosts(ctx)
 	if err != nil {
 		LogService("error", "pull hosts failed to fetch hosts", map[string]interface{}{"monitor_id": mid, "error": err.Error()}, nil, "")
+		setMonitorRelatedError(mid, err.Error())
 		return result, fmt.Errorf("failed to get hosts from monitor: %w", err)
 	}
 	if len(monitorHosts) == 0 {
@@ -1103,6 +1094,11 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 		if err == nil {
 			// Host exists, update it
+			finalStatusDesc := statusDesc
+			if finalStatusDesc == "" && status != 1 && existingHost.StatusDescription != "" {
+				finalStatusDesc = existingHost.StatusDescription
+			}
+
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 				Name:              h.Name,
 				Hostid:            h.ID,
@@ -1111,7 +1107,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Description:       h.Description,
 				Enabled:           h.Enabled,
 				Status:            status,
-				StatusDescription: statusDesc,
+				StatusDescription: finalStatusDesc,
 				ActiveAvailable:   activeAvailable,
 				IPAddr:            h.IPAddress,
 				SSHUser:           existingHost.SSHUser,

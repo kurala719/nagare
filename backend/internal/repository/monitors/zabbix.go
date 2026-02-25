@@ -400,52 +400,51 @@ func determineZabbixAvailability(zh zabbixHostWithGroups) (string, string, strin
 
 	// status == "1" means Disabled in Zabbix
 	if status == "1" {
-		return "unknown", "0", "" // Mapping to Inactive (0) in mapMonitorHostStatus
+		return "unknown", "0", "" // Mapping to Inactive (0)
 	}
 
-	// Priority 1: Check Zabbix reported host-level availability errors
-	if available == "2" || zh.Error != "" {
+	// Priority 1: Check for any explicit error messages at host level
+	if zh.Error != "" {
 		return "down", "2", zh.Error
 	}
-	if snmpAvailable == "2" || zh.SnmpError != "" {
+	if zh.SnmpError != "" {
 		return "down", "2", zh.SnmpError
 	}
-	if ipmiAvailable == "2" || zh.IpmiError != "" {
+	if zh.IpmiError != "" {
 		return "down", "2", zh.IpmiError
 	}
-	if jmxAvailable == "2" || zh.JmxError != "" {
+	if zh.JmxError != "" {
 		return "down", "2", zh.JmxError
 	}
 
-	// Priority 2: Check interface-level availability
-	hasAvailableInterface := false
-	firstInterfaceError := ""
+	// Priority 2: Deep check - Check interface-level availability and errors
+	// Zabbix 6.0+ often keeps the error details here
 	for _, iface := range zh.Interfaces {
-		if toString(iface.Available) == "1" {
-			hasAvailableInterface = true
-			break
-		}
-		if toString(iface.Available) == "2" && firstInterfaceError == "" {
-			firstInterfaceError = iface.Error
+		ifaceAvailable := toString(iface.Available)
+		if ifaceAvailable == "2" || iface.Error != "" {
+			return "down", "2", iface.Error
 		}
 	}
 
-	if hasAvailableInterface {
-		return "up", "1", ""
+	// Priority 3: Check for explicit "Not Available" (2) numeric status at host level
+	if available == "2" || snmpAvailable == "2" || ipmiAvailable == "2" || jmxAvailable == "2" {
+		return "down", "2", ""
 	}
 
-	if firstInterfaceError != "" {
-		return "down", "2", firstInterfaceError
-	}
-
-	// Check host-level available (1)
+	// Priority 4: Check for any explicit "Available" (1) status (Host or Interface)
 	if available == "1" || snmpAvailable == "1" || ipmiAvailable == "1" || jmxAvailable == "1" {
 		return "up", "1", ""
 	}
 
-	// Default: Enabled but no specific availability info (0), mark as Up (optimistic)
-	// This covers cases like "Simple checks" (ICMP ping) where Zabbix doesn't update availability fields.
-	return "up", "1", ""
+	for _, iface := range zh.Interfaces {
+		if toString(iface.Available) == "1" {
+			return "up", "1", ""
+		}
+	}
+
+	// Default: Enabled but Zabbix hasn't determined availability (0).
+	// We return "0" (unknown) to let Nagare's sync process try to poll it.
+	return "unknown", "0", ""
 }
 
 func zabbixInterfaceTypeLabel(raw string) string {
@@ -2275,6 +2274,9 @@ func (p *ZabbixProvider) CreateHostGroup(ctx context.Context, name string) (stri
 }
 
 func toString(value interface{}) string {
+	if value == nil {
+		return "0"
+	}
 	switch v := value.(type) {
 	case string:
 		return v

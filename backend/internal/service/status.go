@@ -11,6 +11,10 @@ func determineMonitorStatus(m model.Monitor) int {
 	if m.Enabled == 0 {
 		return 0
 	}
+	// Explicit error description overrides optimistic status
+	if m.StatusDescription != "" && m.StatusDescription != "Nagare Internal Monitoring Service (Active)" {
+		return 2
+	}
 	// SNMP monitors are active if enabled, as polling is per-host
 	if m.Type == 1 { // SNMP
 		return 1
@@ -28,6 +32,9 @@ func determineMonitorStatus(m model.Monitor) int {
 func determineAlarmStatus(a model.Alarm) int {
 	if a.Enabled == 0 {
 		return 0
+	}
+	if a.StatusDescription != "" {
+		return 2
 	}
 	if a.AuthToken != "" {
 		return 1
@@ -58,6 +65,19 @@ func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
 		return 2
 	}
 
+	// If the monitor is in error, the host MUST be in error
+	if monitorStatus == 2 {
+		return 2
+	}
+
+	// If the host has an explicit error description, keep it in error state.
+	// This ensures that Nagare's internal polling failures (like auth or timeout)
+	// are not overridden by stale 'available' data from Zabbix.
+	// We exclude generic "host is not active" to allow recovery during sync.
+	if h.StatusDescription != "" && h.StatusDescription != "Nagare Internal Monitoring Service (Active)" && h.StatusDescription != "host is not active" {
+		return 2
+	}
+
 	// If the group is in error, the host should be too
 	if groupStatus == 2 {
 		return 2
@@ -75,14 +95,9 @@ func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
 	if h.ActiveAvailable == "1" {
 		return 1
 	}
-	if h.ActiveAvailable == "0" && h.MonitorID != 1 {
-		return 1 // Unknown availability on monitor still defaults to Active if enabled
-	}
 
-	// If the host has an error description (like "host not found on monitor"), keep it in error state
-	// We exclude generic "host is not active" to allow recovery during sync.
-	if h.StatusDescription != "" && h.StatusDescription != "Nagare Internal Monitoring Service (Active)" && h.StatusDescription != "host is not active" {
-		return 2
+	if h.ActiveAvailable == "0" && h.MonitorID != 1 {
+		return 0 // Changed from 1 to 0: unknown availability is Inactive
 	}
 
 	// For Nagare Internal (SNMP) or providers without availability flags, default to Active if no error
