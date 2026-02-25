@@ -460,20 +460,17 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
 	}
 
-	// Auto-push to monitor if MID is set AND PushToMonitor is true
+	// Auto-push to monitor asynchronously if MID is set AND PushToMonitor is true
 	if newHost.MonitorID > 0 && h.PushToMonitor {
-		LogService("info", "auto-pushing new host to monitor", map[string]interface{}{"host_id": newHost.ID, "monitor_id": newHost.MonitorID}, nil, "")
-		if _, pushErr := PushHostToMonitorServ(newHost.MonitorID, newHost.ID); pushErr != nil {
-			LogService("error", "auto-push failed for new host", map[string]interface{}{"host_id": newHost.ID, "error": pushErr.Error()}, nil, "")
-		} else {
-			// Reload to get the external Hostid if it was updated during push
-			if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
-				newHost = refreshed
+		LogService("info", "triggering async auto-push for new host", map[string]interface{}{"host_id": newHost.ID, "monitor_id": newHost.MonitorID}, nil, "")
+		go func(mid, hid uint) {
+			if _, pushErr := PushHostToMonitorServ(mid, hid); pushErr != nil {
+				LogService("error", "async auto-push failed", map[string]interface{}{"host_id": hid, "monitor_id": mid, "error": pushErr.Error()}, nil, "")
 			}
-		}
+		}(newHost.MonitorID, newHost.ID)
 	}
 
-	// Final reload to ensure we have all fields
+	// Final reload to ensure we have all fields from DB (defaults etc)
 	if refreshed, err := repository.GetHostByIDDAO(newHost.ID); err == nil {
 		newHost = refreshed
 	}
@@ -571,9 +568,14 @@ func UpdateHostServ(id uint, h HostReq) error {
 		return err
 	}
 
-	// Auto-push to monitor only if PushToMonitor is true
+	// Auto-push to monitor asynchronously only if PushToMonitor is true
 	if updated.MonitorID > 0 && h.PushToMonitor {
-		_, _ = PushHostToMonitorServ(updated.MonitorID, id)
+		LogService("info", "triggering async auto-push for host update", map[string]interface{}{"host_id": id, "monitor_id": updated.MonitorID}, nil, "")
+		go func(mid, hid uint) {
+			if _, pushErr := PushHostToMonitorServ(mid, hid); pushErr != nil {
+				LogService("error", "async auto-push failed for host update", map[string]interface{}{"host_id": hid, "monitor_id": mid, "error": pushErr.Error()}, nil, "")
+			}
+		}(updated.MonitorID, id)
 	}
 
 	if refreshed, err := repository.GetHostByIDDAO(id); err == nil {

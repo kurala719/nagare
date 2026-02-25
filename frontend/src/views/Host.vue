@@ -1198,7 +1198,7 @@ export default {
         this.propertiesDialogVisible = false;
         
         const msg = (pushToMonitor && this.selectedHost.mid > 0)
-          ? this.$t('hosts.updated') + ' & Pushed to monitor'
+          ? this.$t('hosts.asyncPushStarted') || 'Update started. Syncing to monitor in background.'
           : this.$t('hosts.updated');
           
         ElMessage({
@@ -1398,7 +1398,7 @@ export default {
         this.createDialogVisible = false;
         
         const msg = (pushToMonitor && hostData.m_id > 0)
-          ? this.$t('hosts.created') + ' & Automatically synced to monitor'
+          ? this.$t('hosts.asyncPushStarted') || 'Operation started. Syncing to monitor in background.'
           : this.$t('hosts.created');
         ElMessage({
           type: 'success',
