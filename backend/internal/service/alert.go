@@ -222,8 +222,10 @@ func AddAlertServ(req AlertReq) error {
 		"host_id": alert.HostID,
 	}, nil, "")
 
-	// Trigger Site Message
-	_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
+	// Trigger Site Message only if severity meets minimum requirement
+	if alert.Severity >= siteMessageMinAlertSeverity() {
+		_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
+	}
 
 	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	go analyzeAndNotifyAlert(alert)

@@ -13,8 +13,15 @@ type Config struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
+	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+}
+
+// SiteMessageConfig holds internal notification settings
+type SiteMessageConfig struct {
+	MinAlertSeverity int `yaml:"min_alert_severity" json:"min_alert_severity" mapstructure:"min_alert_severity"`
+	MinLogSeverity   int `yaml:"min_log_severity" json:"min_log_severity" mapstructure:"min_log_severity"`
 }
 
 // QQConfig holds OneBot/NapCat WebSocket settings
@@ -115,6 +122,7 @@ type ConfigRequest struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
+	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -129,6 +137,7 @@ type ConfigResponse struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
+	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
 }
@@ -213,6 +222,9 @@ func ResetConfig() error {
 	viper.Set("qq.mode", "reverse")
 	viper.Set("qq.positive_url", "ws://localhost:3001")
 	viper.Set("qq.access_token", "")
+
+	viper.Set("site_message.min_alert_severity", 0)
+	viper.Set("site_message.min_log_severity", 1)
 
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
 	viper.Set("media_rate_limit.protocol_interval_seconds", 30)

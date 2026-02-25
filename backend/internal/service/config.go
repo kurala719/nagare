@@ -50,6 +50,35 @@ func SaveConfigServ() error {
 	return repository.SaveConfig()
 }
 
+func siteMessageMinAlertSeverity() int {
+	val := GetConfigServ("site_message.min_alert_severity")
+	if val == nil {
+		return 0
+	}
+	if i, ok := val.(int); ok {
+		return i
+	}
+	// Try float64 because JSON unmarshals numbers as floats
+	if f, ok := val.(float64); ok {
+		return int(f)
+	}
+	return 0
+}
+
+func siteMessageMinLogSeverity() int {
+	val := GetConfigServ("site_message.min_log_severity")
+	if val == nil {
+		return 1
+	}
+	if i, ok := val.(int); ok {
+		return i
+	}
+	if f, ok := val.(float64); ok {
+		return int(f)
+	}
+	return 1
+}
+
 var (
 	qqWSCancel context.CancelFunc
 )

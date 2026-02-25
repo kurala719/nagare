@@ -296,6 +296,16 @@
             </span>
           </template>
           <div class="tab-pane-content">
+            <div class="section-divider">{{ $t('configuration.siteMessageSettings') }}</div>
+            <el-form :model="editableConfig.site_message" label-width="180px" label-position="left">
+              <el-form-item :label="$t('configuration.minAlertSeverity')">
+                <el-input-number v-model="editableConfig.site_message.min_alert_severity" :disabled="!editing" :min="0" :max="4" />
+              </el-form-item>
+              <el-form-item :label="$t('configuration.minLogSeverity')">
+                <el-input-number v-model="editableConfig.site_message.min_log_severity" :disabled="!editing" :min="0" :max="2" />
+              </el-form-item>
+            </el-form>
+
             <div class="section-divider">{{ $t('system.mediaRateLimitSettings') }}</div>
             <el-form :model="editableConfig.media_rate_limit" label-width="180px" label-position="left">
               <el-form-item :label="$t('configuration.globalInterval')">
@@ -413,6 +423,10 @@ export default {
         protocol_interval_seconds: 30,
         media_interval_seconds: 30,
       },
+      site_message: {
+        min_alert_severity: 0,
+        min_log_severity: 1,
+      },
       external: [],
     });
     const loading = ref(false);
@@ -516,6 +530,12 @@ export default {
         global_interval_seconds: ['global_interval_seconds', 'GlobalIntervalSeconds'],
         protocol_interval_seconds: ['protocol_interval_seconds', 'ProtocolIntervalSeconds'],
         media_interval_seconds: ['media_interval_seconds', 'MediaIntervalSeconds']
+      });
+
+      const siteMessageSource = data.site_message || data.SiteMessage || {};
+      mapData(siteMessageSource, editableConfig.site_message, {
+        min_alert_severity: ['min_alert_severity', 'MinAlertSeverity'],
+        min_log_severity: ['min_log_severity', 'MinLogSeverity']
       });
 
       if (data.external || data.External) {

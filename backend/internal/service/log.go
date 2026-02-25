@@ -102,6 +102,15 @@ func logEntry(logType string, severity int, message string, context map[string]i
 		log.Printf("log write failed: %v", err)
 		return
 	}
+
+	// Trigger Site Message only if severity meets minimum requirement
+	if entry.Severity >= siteMessageMinLogSeverity() {
+		title := "System Log Notification"
+		if entry.Type == LogTypeService {
+			title = "Service Log Notification"
+		}
+		_ = CreateSiteMessageServ(title, entry.Message, "system", entry.Severity, nil)
+	}
 }
 
 func logSeverityFromString(value string) int {
