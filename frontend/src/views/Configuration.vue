@@ -171,10 +171,14 @@
                 <el-switch v-model="editableConfig.ai.notification_guard_enabled" :disabled="!editing" />
               </el-form-item>
               <el-form-item :label="$t('system.aiProviderId')">
-                <el-input-number v-model="editableConfig.ai.provider_id" :disabled="!editing" :min="0" />
+                <el-select v-model="editableConfig.ai.provider_id" :disabled="!editing" @change="onProviderChange" style="width: 100%;">
+                  <el-option v-for="p in aiProviders" :key="p.id" :label="p.name" :value="p.id" />
+                </el-select>
               </el-form-item>
               <el-form-item :label="$t('system.aiModel')">
-                <el-input v-model="editableConfig.ai.model" :disabled="!editing" placeholder="gemini-1.5-pro" />
+                <el-select v-model="editableConfig.ai.model" :disabled="!editing" filterable allow-create style="width: 100%;" placeholder="Select or enter model">
+                  <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+                </el-select>
               </el-form-item>
               <el-form-item :label="$t('system.aiTimeout')">
                 <el-input-number v-model="editableConfig.ai.analysis_timeout_seconds" :disabled="!editing" :min="1" />
@@ -335,6 +339,7 @@ import {
   Share, Plus, Delete
 } from '@element-plus/icons-vue';
 import { getMainConfig, updateConfig, saveConfig, resetConfig } from '@/api/config';
+import { fetchProviderData } from '@/api/providers';
 
 export default {
   name: 'Configuration',
@@ -433,6 +438,40 @@ export default {
     const saving = ref(false);
     const editing = ref(false);
     const error = ref(null);
+    const aiProviders = ref([]);
+    const availableModels = ref([]);
+
+    const loadAIProviders = async () => {
+      try {
+        const res = await fetchProviderData({ enabled: 1 });
+        const list = res.data?.items || res.items || res.data || [];
+        aiProviders.value = list.map(p => ({
+          id: p.ID || p.id,
+          name: p.name || p.Name,
+          models: p.models || p.Models || []
+        }));
+        
+        if (editableConfig.ai.provider_id) {
+          onProviderChange(editableConfig.ai.provider_id);
+        }
+      } catch (err) {
+        console.error('Failed to load AI providers', err);
+      }
+    };
+
+    const onProviderChange = (providerId) => {
+      const provider = aiProviders.value.find(p => p.id === providerId);
+      if (provider) {
+        availableModels.value = provider.models || [];
+        if (editableConfig.ai.model && !availableModels.value.includes(editableConfig.ai.model)) {
+          // Keep current if manual, or reset if it was from previous provider
+        } else if (!editableConfig.ai.model && availableModels.value.length > 0) {
+          editableConfig.ai.model = availableModels.value[0];
+        }
+      } else {
+        availableModels.value = [];
+      }
+    };
 
     const mapData = (source, target, fieldMap) => {
       if (!source) return;
@@ -554,6 +593,7 @@ export default {
         
         config.value = data;
         performMapping(data);
+        await loadAIProviders();
       } catch (err) {
         error.value = err.message || 'Failed to load configuration';
         console.error('Error loading configuration:', err);
@@ -663,11 +703,14 @@ export default {
       saving,
       editing,
       error,
+      aiProviders,
+      availableModels,
       loadConfig,
       startEdit,
       cancelEdit,
       saveChanges,
       handleReset,
+      onProviderChange,
       addExternalItem,
       removeExternalItem,
       Delete,

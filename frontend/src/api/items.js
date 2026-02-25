@@ -49,10 +49,11 @@ export function deleteItem(id, push = false) {
   })
 }
 
-export function consultItemAI(id) {
+export function consultItemAI(id, params) {
   return request({
     url: `/items/${id}/consult`,
-    method: 'post'
+    method: 'post',
+    params
   })
 }
 

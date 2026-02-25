@@ -103,7 +103,10 @@ func ConsultItemCtrl(c *gin.Context) {
 		return
 	}
 
-	chatRes, err := service.ConsultItemServ(uint(itemID))
+	providerID, _ := strconv.Atoi(c.DefaultQuery("provider_id", "1"))
+	model := c.Query("model")
+
+	chatRes, err := service.ConsultItemServ(uint(providerID), model, uint(itemID))
 	if err != nil {
 		respondError(c, err)
 		return

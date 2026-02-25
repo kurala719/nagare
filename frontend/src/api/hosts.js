@@ -42,10 +42,11 @@ export function getHostById(id) {
   })
 }
 
-export function consultHostAI(id) {
+export function consultHostAI(id, params) {
   return request({
     url: `/hosts/${id}/consult`,
-    method: 'post'
+    method: 'post',
+    params
   })
 }
 

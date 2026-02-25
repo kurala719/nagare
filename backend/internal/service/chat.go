@@ -376,7 +376,7 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 }
 
 // ConsultItemServ consults AI about a specific monitoring item
-func ConsultItemServ(itemID uint) (ChatRes, error) {
+func ConsultItemServ(providerID uint, model string, itemID uint) (ChatRes, error) {
 	// Get item data
 	item, err := repository.GetItemByIDDAO(itemID)
 	if err != nil {
@@ -389,9 +389,9 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 		return ChatRes{}, fmt.Errorf("failed to get host: %w", err)
 	}
 
-	client, resolvedModel, err := createLLMClient(1, "") // Default to provider ID 1
+	client, resolvedModel, err := createLLMClient(providerID, model)
 	if err != nil {
-		_ = repository.UpdateProviderStatusDAO(1, 2)
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, err
 	}
 
@@ -410,13 +410,13 @@ func ConsultItemServ(itemID uint) (ChatRes, error) {
 			{Role: "user", Content: itemData},
 		},
 	})
-	logLLMRequest("item_consult", 1, resolvedModel, time.Since(start), err)
+	logLLMRequest("item_consult", providerID, resolvedModel, time.Since(start), err)
 	if err != nil {
-		_ = repository.UpdateProviderStatusDAO(1, 2)
+		_ = repository.UpdateProviderStatusDAO(providerID, 2)
 		return ChatRes{}, fmt.Errorf("failed to analyze item: %w", err)
 	}
 
-	_ = repository.UpdateProviderStatusDAO(1, 1)
+	_ = repository.UpdateProviderStatusDAO(providerID, 1)
 
 	// Store the comment
 	item.Comment = resp.Content

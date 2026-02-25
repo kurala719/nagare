@@ -489,7 +489,7 @@
 
   <!-- AI Response Dialog -->
   <el-dialog v-model="aiDialogVisible" :title="$t('hosts.aiTitle')" width="600px">
-    <div v-if="consultingAI" style="text-align: center; padding: 40px;">
+    <div v-if="consultingAI && !aiResponse" style="text-align: center; padding: 40px;">
       <el-icon class="is-loading" size="40" color="#409EFF">
         <Loading />
       </el-icon>
@@ -500,6 +500,20 @@
         <el-descriptions-item :label="$t('hosts.name')">{{ currentHostForAI.name }}</el-descriptions-item>
         <el-descriptions-item :label="$t('hosts.ip')">{{ currentHostForAI.ip_addr }}</el-descriptions-item>
       </el-descriptions>
+
+      <div class="provider-selector-row" style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--el-fill-color-extra-light); border-radius: 8px;">
+        <span style="font-weight: 600; font-size: 13px;">{{ $t('system.aiProviderId') || 'AI Provider' }}:</span>
+        <el-select v-model="selectedProviderId" @change="onProviderChange" style="width: 160px;" size="small">
+          <el-option v-for="p in aiProviders" :key="p.id" :label="p.name" :value="p.id" />
+        </el-select>
+        <el-select v-if="availableModels.length > 0" v-model="selectedModel" style="width: 160px;" size="small" placeholder="Model">
+          <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+        </el-select>
+        <el-button type="primary" size="small" :icon="Search" @click="consultAI(currentHostForAI, true)" :loading="consultingAI">
+          {{ $t('common.retry') || 'Re-analyze' }}
+        </el-button>
+      </div>
+
       <el-divider content-position="left">{{ $t('hosts.aiResponse') }}</el-divider>
       <div class="ai-response-content">
         <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
@@ -518,6 +532,8 @@ import { markRaw } from 'vue';
 import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHostsFromMonitor, pushHostsToMonitor, pullHostFromMonitor, pushHostToMonitor, probeSnmpOid } from '@/api/hosts';
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
+import { fetchProviderData } from '@/api/providers';
+import { getMainConfig } from '@/api/config';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown, Monitor } from '@element-plus/icons-vue';
 
@@ -552,6 +568,10 @@ export default {
       consultingAI: false,
       currentHostForAI: null,
       aiResponse: '',
+      aiProviders: [],
+      availableModels: [],
+      selectedProviderId: 1,
+      selectedModel: '',
       deleteDialogVisible: false,
       hostToDelete: null,
       deleting: false,
@@ -711,6 +731,7 @@ export default {
     this.loadHosts(true);
     this.loadMonitors();
     this.loadGroups();
+    this.loadAIProviders();
     if (this.autoRefreshEnabled) {
       this.startAutoRefresh();
     }
@@ -1447,14 +1468,55 @@ export default {
         snmp_v3_security_level: 'NoAuthNoPriv'
       };
     },
-    async consultAI(host) {
+    async loadAIProviders() {
+      try {
+        const configRes = await getMainConfig();
+        const config = configRes.data?.data || configRes.data || configRes;
+        if (config.ai?.provider_id) {
+          this.selectedProviderId = config.ai.provider_id;
+          this.selectedModel = config.ai.model || '';
+        }
+
+        const res = await fetchProviderData({ enabled: 1 });
+        const list = res.data?.items || res.items || res.data || [];
+        this.aiProviders = list.map(p => ({
+          id: p.ID || p.id,
+          name: p.name || p.Name,
+          models: p.models || p.Models || []
+        }));
+
+        this.onProviderChange(this.selectedProviderId);
+      } catch (err) {
+        console.error('Failed to load AI providers', err);
+      }
+    },
+    onProviderChange(providerId) {
+      const provider = this.aiProviders.find(p => p.id === providerId);
+      if (provider) {
+        this.availableModels = provider.models || [];
+        if (this.selectedModel && !this.availableModels.includes(this.selectedModel)) {
+          this.selectedModel = this.availableModels.length > 0 ? this.availableModels[0] : '';
+        } else if (!this.selectedModel && this.availableModels.length > 0) {
+          this.selectedModel = this.availableModels[0];
+        }
+      } else {
+        this.availableModels = [];
+      }
+    },
+    async consultAI(host, reanalyze = false) {
       this.currentHostForAI = host;
-      this.aiResponse = '';
+      if (!reanalyze) {
+        this.aiResponse = '';
+      }
       this.aiDialogVisible = true;
       this.consultingAI = true;
       
       try {
-        const response = await consultHostAI(host.id);
+        const params = {
+          provider_id: this.selectedProviderId,
+          model: this.selectedModel
+        };
+        const response = await consultHostAI(host.id, params);
         
         // Handle different response formats
         if (typeof response === 'string') {

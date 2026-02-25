@@ -297,7 +297,7 @@
               
                   <!-- AI Response Dialog -->
                   <el-dialog v-model="aiDialogVisible" :title="$t('alerts.aiTitle')" width="700px">
-                      <div v-if="consultingAI" style="text-align: center; padding: 40px;">
+                      <div v-if="consultingAI && !aiResponse" style="text-align: center; padding: 40px;">
                           <el-icon class="is-loading" size="40" color="#409EFF">
                               <Loading />
                           </el-icon>
@@ -309,6 +309,19 @@
                           </el-descriptions>
                           
                           <div class="ai-consult-tabs">
+                              <div class="provider-selector-row" style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--el-fill-color-extra-light); border-radius: 8px;">
+                                <span style="font-weight: 600; font-size: 13px;">{{ $t('system.aiProviderId') || 'AI Provider' }}:</span>
+                                <el-select v-model="selectedProviderId" @change="onProviderChange" style="width: 180px;" size="small">
+                                  <el-option v-for="p in aiProviders" :key="p.id" :label="p.name" :value="p.id" />
+                                </el-select>
+                                <el-select v-if="availableModels.length > 0" v-model="selectedModel" style="width: 180px;" size="small" placeholder="Select Model">
+                                  <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+                                </el-select>
+                                <el-button type="primary" size="small" :icon="ChatLineRound" @click="consultAI(currentAlertForAI, true)" :loading="consultingAI">
+                                  {{ $t('common.retry') || 'Re-analyze' }}
+                                </el-button>
+                              </div>
+
                               <el-divider content-position="left">{{ $t('alerts.aiResponse') }}</el-divider>
                               <div class="ai-response-content">
                                   <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
@@ -355,6 +368,8 @@
 import { fetchAlertData, addAlert, updateAlert, deleteAlert, consultAlertAI } from '@/api/alerts';
 import { fetchHostData } from '@/api/hosts';
 import { fetchItemData } from '@/api/items';
+import { fetchProviderData } from '@/api/providers';
+import { getMainConfig } from '@/api/config';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound, Refresh } from '@element-plus/icons-vue';
@@ -408,6 +423,10 @@ export default {
         aiResponse: '',
         aiComment: '',
         aiStatus: 'acknowledged',
+        aiProviders: [],
+        availableModels: [],
+        selectedProviderId: 1,
+        selectedModel: '',
                 bulkForm: {
                         status: 'nochange',
                 },
@@ -487,6 +506,7 @@ export default {
         this.applySearchFromQuery();
         this.loadAllHosts();
         this.loadAlerts(true);
+        this.loadAIProviders();
         if (this.autoRefreshEnabled) {
             this.startAutoRefresh();
         }
@@ -802,16 +822,60 @@ export default {
                 this.deleting = false;
             }
         },
-        async consultAI(alert) {
+        async loadAIProviders() {
+            try {
+                // Get main config to find default provider
+                const configRes = await getMainConfig();
+                const config = configRes.data?.data || configRes.data || configRes;
+                if (config.ai?.provider_id) {
+                    this.selectedProviderId = config.ai.provider_id;
+                    this.selectedModel = config.ai.model || '';
+                }
+
+                const res = await fetchProviderData({ enabled: 1 });
+                const list = res.data?.items || res.items || res.data || [];
+                this.aiProviders = list.map(p => ({
+                    id: p.ID || p.id,
+                    name: p.name || p.Name,
+                    models: p.models || p.Models || []
+                }));
+
+                // Update models if provider found
+                this.onProviderChange(this.selectedProviderId);
+            } catch (err) {
+                console.error('Failed to load AI providers', err);
+            }
+        },
+        onProviderChange(providerId) {
+            const provider = this.aiProviders.find(p => p.id === providerId);
+            if (provider) {
+                this.availableModels = provider.models || [];
+                // If current model not in available models, reset it
+                if (this.selectedModel && !this.availableModels.includes(this.selectedModel)) {
+                    this.selectedModel = this.availableModels.length > 0 ? this.availableModels[0] : '';
+                } else if (!this.selectedModel && this.availableModels.length > 0) {
+                    this.selectedModel = this.availableModels[0];
+                }
+            } else {
+                this.availableModels = [];
+            }
+        },
+        async consultAI(alert, reanalyze = false) {
             this.currentAlertForAI = alert;
-            this.aiResponse = '';
-            this.aiComment = '';
+            if (!reanalyze) {
+                this.aiResponse = '';
+                this.aiComment = '';
+            }
             this.aiStatus = alert.status === 'resolved' ? 'resolved' : 'acknowledged';
             this.aiDialogVisible = true;
             this.consultingAI = true;
             
             try {
-                const response = await consultAlertAI(alert.id);
+                const params = {
+                    provider_id: this.selectedProviderId,
+                    model: this.selectedModel
+                };
+                const response = await consultAlertAI(alert.id, params);
                 let content = '';
                 
                 // Handle different response formats

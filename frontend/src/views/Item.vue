@@ -262,7 +262,7 @@
 
         <!-- AI Response Dialog -->
         <el-dialog v-model="aiDialogVisible" :title="$t('items.aiTitle')" width="600px">
-            <div v-if="consultingAI" style="text-align: center; padding: 40px;">
+            <div v-if="consultingAI && !aiResponse" style="text-align: center; padding: 40px;">
                 <el-icon class="is-loading" size="40" color="#409EFF">
                     <Loading />
                 </el-icon>
@@ -273,21 +273,29 @@
                     <el-descriptions-item :label="$t('items.name')">{{ currentItemForAI.name }}</el-descriptions-item>
                     <el-descriptions-item :label="$t('items.value')">{{ currentItemForAI.value }}</el-descriptions-item>
                 </el-descriptions>
-                <el-divider content-position="left">{{ $t('items.aiResponse') }}</el-divider>
-                <div class="ai-response-content">
-                    <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
+
+                <div class="provider-selector-row" style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--el-fill-color-extra-light); border-radius: 8px;">
+                  <span style="font-weight: 600; font-size: 13px;">{{ $t('system.aiProviderId') || 'AI Provider' }}:</span>
+                  <el-select v-model="selectedProviderId" @change="onProviderChange" style="width: 160px;" size="small">
+                    <el-option v-for="p in aiProviders" :key="p.id" :label="p.name" :value="p.id" />
+                  </el-select>
+                  <el-select v-if="availableModels.length > 0" v-model="selectedModel" style="width: 160px;" size="small" placeholder="Model">
+                    <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+                  </el-select>
+                  <el-button type="primary" size="small" :icon="Search" @click="consultAI(currentItemForAI, true)" :loading="consultingAI">
+                    {{ $t('common.retry') || 'Re-analyze' }}
+                  </el-button>
                 </div>
-            </div>
-            <template #footer>
-                <el-button @click="aiDialogVisible = false">{{ $t('items.close') }}</el-button>
-            </template>
-        </el-dialog>
+
+                <el-divider content-position="left">{{ $t('items.aiResponse') }}</el-divider>
     </div>
 </template>
 
 <script>
 import { fetchItemData, addItem, updateItem, deleteItem, consultItemAI, pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { fetchHostData } from '@/api/hosts';
+import { fetchProviderData } from '@/api/providers';
+import { getMainConfig } from '@/api/config';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
@@ -335,6 +343,10 @@ export default {
         bulkUpdating: false,
         currentItemForAI: null,
         aiResponse: '',
+        aiProviders: [],
+        availableModels: [],
+        selectedProviderId: 1,
+        selectedModel: '',
         itemForm: {
             name: '',
             value: '',
@@ -411,6 +423,7 @@ export default {
         this.applyHostFromQuery();
         this.loadHosts();
         this.loadItems(true);
+        this.loadAIProviders();
         if (this.autoRefreshEnabled) {
             this.startAutoRefresh();
         }
@@ -784,14 +797,55 @@ export default {
         openDetails(item) {
             this.$router.push({ path: `/item/${item.id}/detail` });
         },
-        async consultAI(item) {
+        async loadAIProviders() {
+            try {
+                const configRes = await getMainConfig();
+                const config = configRes.data?.data || configRes.data || configRes;
+                if (config.ai?.provider_id) {
+                    this.selectedProviderId = config.ai.provider_id;
+                    this.selectedModel = config.ai.model || '';
+                }
+
+                const res = await fetchProviderData({ enabled: 1 });
+                const list = res.data?.items || res.items || res.data || [];
+                this.aiProviders = list.map(p => ({
+                    id: p.ID || p.id,
+                    name: p.name || p.Name,
+                    models: p.models || p.Models || []
+                }));
+
+                this.onProviderChange(this.selectedProviderId);
+            } catch (err) {
+                console.error('Failed to load AI providers', err);
+            }
+        },
+        onProviderChange(providerId) {
+            const provider = this.aiProviders.find(p => p.id === providerId);
+            if (provider) {
+                this.availableModels = provider.models || [];
+                if (this.selectedModel && !this.availableModels.includes(this.selectedModel)) {
+                    this.selectedModel = this.availableModels.length > 0 ? this.availableModels[0] : '';
+                } else if (!this.selectedModel && this.availableModels.length > 0) {
+                    this.selectedModel = this.availableModels[0];
+                }
+            } else {
+                this.availableModels = [];
+            }
+        },
+        async consultAI(item, reanalyze = false) {
             this.currentItemForAI = item;
-            this.aiResponse = '';
+            if (!reanalyze) {
+                this.aiResponse = '';
+            }
             this.aiDialogVisible = true;
             this.consultingAI = true;
             
             try {
-                const response = await consultItemAI(item.id);
+                const params = {
+                    provider_id: this.selectedProviderId,
+                    model: this.selectedModel
+                };
+                const response = await consultItemAI(item.id, params);
                 
                 // Handle different response formats
                 if (typeof response === 'string') {

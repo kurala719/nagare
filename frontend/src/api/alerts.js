@@ -42,10 +42,11 @@ export function deleteAlert(id) {
   })
 }
 
-export function consultAlertAI(id) {
+export function consultAlertAI(id, params) {
   return request({
     url: `/alerts/${id}/consult`,
-    method: 'post'
+    method: 'post',
+    params
   })
 }
 
