@@ -35,10 +35,11 @@
 
         <el-select v-model="severityFilter" :placeholder="$t('alerts.filterSeverity')" style="width: 140px">
           <el-option :label="$t('alerts.filterAll')" value="all" />
-          <el-option :label="$t('alerts.severityCritical')" value="critical" />
+          <el-option :label="$t('alerts.severityDisaster') || 'Disaster'" value="disaster" />
+          <el-option :label="$t('alerts.severityCritical') || 'Critical'" value="critical" />
           <el-option :label="$t('alerts.severityHigh')" value="high" />
-          <el-option :label="$t('alerts.severityMedium')" value="medium" />
-          <el-option :label="$t('alerts.severityLow')" value="low" />
+          <el-option :label="$t('alerts.severityAverage') || 'Average'" value="average" />
+          <el-option :label="$t('alerts.severityWarning') || 'Warning'" value="warning" />
           <el-option :label="$t('alerts.severityInfo')" value="info" />
         </el-select>
 
@@ -216,11 +217,12 @@
                               <el-col :span="12">
                                   <el-form-item :label="$t('alerts.severityLabel')" prop="severity">
                                       <el-select v-model="alertForm.severity" :placeholder="$t('alerts.selectSeverity')" style="width: 100%;">
-                                          <el-option :label="$t('alerts.severityCritical')" :value="4" />
-                                          <el-option :label="$t('alerts.severityHigh')" :value="3" />
-                                          <el-option :label="$t('alerts.severityMedium')" :value="2" />
-                                          <el-option :label="$t('alerts.severityLow')" :value="1" />
-                                          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+                                          <el-option :label="$t('alerts.severityDisaster') || 'Disaster'" :value="5" />
+                                          <el-option :label="$t('alerts.severityHigh')" :value="4" />
+                                          <el-option :label="$t('alerts.severityAverage') || 'Average'" :value="3" />
+                                          <el-option :label="$t('alerts.severityWarning') || 'Warning'" :value="2" />
+                                          <el-option :label="$t('alerts.severityInfo')" :value="1" />
+                                          <el-option :label="$t('alerts.severityNotClassified') || 'Not Classified'" :value="0" />
                                       </el-select>
                                   </el-form-item>
                               </el-col>
@@ -699,7 +701,7 @@ export default {
         },
         severityFilterValue() {
             if (this.severityFilter === 'all') return undefined;
-            const map = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
+            const map = { info: 0, warning: 1, average: 2, high: 3, critical: 4, disaster: 5 };
             return map[this.severityFilter] ?? undefined;
         },
         statusFilterValue() {
@@ -709,7 +711,7 @@ export default {
         },
         normalizeSeverity(value) {
             if (typeof value === 'number') {
-                const map = { 0: 'info', 1: 'low', 2: 'medium', 3: 'high', 4: 'critical' };
+                const map = { 0: 'info', 1: 'warning', 2: 'average', 3: 'high', 4: 'critical', 5: 'disaster' };
                 return map[value] || String(value);
             }
             return String(value || '');
@@ -766,7 +768,7 @@ export default {
             this.dialogVisible = true;
         },
         severityLabelToInt(label) {
-            const map = { 'info': 0, 'low': 1, 'medium': 2, 'high': 3, 'critical': 4 };
+            const map = { 'info': 0, 'warning': 1, 'average': 2, 'high': 3, 'critical': 4, 'disaster': 5 };
             return map[label.toLowerCase()] ?? 0;
         },
         async saveAlert() {
@@ -938,9 +940,9 @@ export default {
         },
         getSeverityType(severity) {
             const s = (severity || '').toLowerCase();
-            if (s === 'critical' || s === 'high') return 'danger';
-            if (s === 'medium' || s === 'warning') return 'warning';
-            if (s === 'low') return 'info';
+            if (s === 'disaster' || s === 'critical' || s === 'high') return 'danger';
+            if (s === 'average' || s === 'warning') return 'warning';
+            if (s === 'info') return 'info';
             return 'info';
         },
         getStatusType(status) {

@@ -21,9 +21,12 @@
 
         <el-select v-model="severityFilter" :placeholder="$t('logs.filterLevel')" style="width: 140px">
           <el-option :label="$t('logs.filterAll')" value="all" />
-          <el-option :label="$t('logs.levelInfo')" :value="0" />
+          <el-option :label="$t('logs.levelFatal') || 'Fatal/Disaster'" :value="5" />
+          <el-option :label="$t('logs.levelCritical') || 'Critical'" :value="4" />
+          <el-option :label="$t('logs.levelError')" :value="3" />
+          <el-option :label="$t('logs.levelAverage') || 'Average'" :value="2" />
           <el-option :label="$t('logs.levelWarn')" :value="1" />
-          <el-option :label="$t('logs.levelError')" :value="2" />
+          <el-option :label="$t('logs.levelInfo')" :value="0" />
         </el-select>
 
         <el-divider direction="vertical" />
@@ -320,16 +323,24 @@ export default defineComponent({
     },
     severityTag(severity) {
       switch (severity) {
-        case 2: return 'danger'
+        case 5:
+        case 4:
+        case 3: return 'danger'
+        case 2:
         case 1: return 'warning'
+        case 0: return 'info'
         default: return 'info'
       }
     },
     severityLabel(severity) {
       switch (severity) {
-        case 2: return this.$t('logs.levelError')
+        case 5: return this.$t('logs.levelFatal') || 'Fatal'
+        case 4: return this.$t('logs.levelCritical') || 'Critical'
+        case 3: return this.$t('logs.levelError')
+        case 2: return this.$t('logs.levelAverage') || 'Average'
         case 1: return this.$t('logs.levelWarn')
-        default: return this.$t('logs.levelInfo')
+        case 0: return this.$t('logs.levelInfo')
+        default: return 'Unknown'
       }
     },
     coerceSeverity(value) {
@@ -337,8 +348,12 @@ export default defineComponent({
       if (typeof value === 'number') return value
       const text = String(value).toLowerCase()
       if (!Number.isNaN(Number(text))) return Number(text)
-      if (text === 'error') return 2
+      if (text === 'disaster' || text === 'fatal') return 5
+      if (text === 'critical') return 4
+      if (text === 'error' || text === 'high') return 3
+      if (text === 'average') return 2
       if (text === 'warn' || text === 'warning') return 1
+      if (text === 'info' || text === 'information') return 0
       return 0
     },
     exportCSV() {

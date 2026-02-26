@@ -15,7 +15,9 @@ type Host struct {
 	Name              string `json:"name"`
 	Hostid            string `json:"hostid"` // External ID from monitoring system
 	MonitorID         uint   `gorm:"column:m_id" json:"m_id"`
+	Monitor           Monitor `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	GroupID           uint   `gorm:"column:group_id" json:"group_id"`
+	Group             Group   `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	Description       string `json:"description"`
 	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
 	Status            int    `json:"status"`                   // 0 = inactive, 1 = active, 2 = error, 3 = syncing

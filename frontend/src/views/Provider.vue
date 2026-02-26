@@ -23,6 +23,7 @@
           <el-option :label="$t('providers.filterAll')" value="all" />
           <el-option :label="$t('providers.typeGemini')" :value="1" />
           <el-option :label="$t('providers.typeOpenAI')" :value="2" />
+          <el-option :label="$t('providers.typeOther')" :value="3" />
         </el-select>
 
         <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
@@ -201,6 +202,7 @@
                         <el-select v-model="selectedProvider.type" style="width: 100%;">
                             <el-option :label="$t('providers.typeGemini')" :value="1" />
                             <el-option :label="$t('providers.typeOpenAI')" :value="2" />
+                            <el-option :label="$t('providers.typeOther')" :value="3" />
                         </el-select>
                     </el-form-item>
                     <el-form-item :label="$t('providers.url')">

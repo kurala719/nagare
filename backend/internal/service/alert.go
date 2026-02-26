@@ -16,9 +16,13 @@ import (
 type AlertSeverity int
 
 const (
-	SeverityInfo     AlertSeverity = 0
-	SeverityWarning  AlertSeverity = 1
-	SeverityCritical AlertSeverity = 2
+	SeverityNotClassified AlertSeverity = 0
+	SeverityInformation   AlertSeverity = 1
+	SeverityWarning       AlertSeverity = 2
+	SeverityAverage       AlertSeverity = 3
+	SeverityHigh          AlertSeverity = 4
+	SeverityCritical      AlertSeverity = 4 // Alias for High
+	SeverityDisaster      AlertSeverity = 5
 )
 
 // AlertReq represents an alert request
@@ -496,12 +500,12 @@ func GenerateTestAlerts(count int) error {
 		}
 
 		// Simulate host/item status update based on severity
-		if severity == SeverityCritical {
+		if severity >= SeverityHigh {
 			// Mark host as error
-			_ = repository.UpdateHostStatusAndDescriptionDAO(host.ID, 2, fmt.Sprintf("Critical alert: %s", alert.Message))
+			_ = repository.UpdateHostStatusAndDescriptionDAO(host.ID, 2, fmt.Sprintf("Critical/Disaster alert: %s", alert.Message))
 			// Mark related items as error
 			if itemID > 0 {
-				_ = repository.UpdateItemStatusAndDescriptionDAO(itemID, 2, fmt.Sprintf("Critical alert: %s", alert.Message))
+				_ = repository.UpdateItemStatusAndDescriptionDAO(itemID, 2, fmt.Sprintf("Critical/Disaster alert: %s", alert.Message))
 			}
 		}
 	}
@@ -523,9 +527,12 @@ func CalculateAlertScore() (int, error) {
 
 	totalScore := 0.0
 	weights := map[AlertSeverity]float64{
-		SeverityInfo:     1.0,
-		SeverityWarning:  5.0,
-		SeverityCritical: 20.0,
+		SeverityNotClassified: 0.1,
+		SeverityInformation:   1.0,
+		SeverityWarning:       5.0,
+		SeverityAverage:       10.0,
+		SeverityHigh:          20.0,
+		SeverityDisaster:      50.0,
 	}
 
 	for _, alert := range alerts {
