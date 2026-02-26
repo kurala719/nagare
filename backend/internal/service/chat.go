@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -198,6 +199,17 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
 	}
 
+	// Load recent history for context
+	history, _ := repository.GetChatsWithLimitDAO(10, 0)
+	messages := make([]llm.Message, 0, len(history))
+	// history is desc, so we reverse it
+	for i := len(history) - 1; i >= 0; i-- {
+		messages = append(messages, llm.Message{
+			Role:    history[i].Role,
+			Content: history[i].Content,
+		})
+	}
+
 	tools := ListTools()
 	ctx := context.Background()
 	start := time.Now()
@@ -207,45 +219,45 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	baseContext := baseChatPrompt(isChinese(req.Locale))
 	initialSystemPrompt = initialSystemPrompt + "\n\n" + baseContext
 
-	initialResp, err := client.Chat(ctx, llm.ChatRequest{
-		Model:        llmModel,
-		SystemPrompt: initialSystemPrompt,
-		Messages: []llm.Message{
-			{Role: "user", Content: req.Content},
-		},
-	})
-	logLLMRequest("tool_chat", req.ProviderID, llmModel, time.Since(start), err)
-	if err != nil {
-		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-		return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
-	}
+	var finalText string
+	maxToolCalls := 3
+	for i := 0; i < maxToolCalls; i++ {
+		systemPrompt := initialSystemPrompt
+		if i > 0 {
+			systemPrompt = toolAnswerPrompt(personaPrompt) + "\n\n" + baseContext
+		}
 
-	toolCall, ok := parseToolCall(initialResp.Content)
-	finalText := initialResp.Content
-	if ok {
+		resp, err := client.Chat(ctx, llm.ChatRequest{
+			Model:        llmModel,
+			SystemPrompt: systemPrompt,
+			Messages:     messages,
+		})
+		logLLMRequest("tool_chat", req.ProviderID, llmModel, time.Since(start), err)
+		if err != nil {
+			if i == 0 {
+				_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
+				return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
+			}
+			break // Keep what we have
+		}
+
+		finalText = resp.Content
+		toolCall, ok := parseToolCall(resp.Content)
+		if !ok {
+			break // Not a tool call, we are done
+		}
+
+		// Perform tool call
 		toolResult, err := CallTool(toolCall.Name, toolCall.Arguments)
 		if err != nil {
 			toolResult = map[string]string{"error": err.Error()}
 		}
 		resultJSON, _ := json.Marshal(toolResult)
 		toolResultText := fmt.Sprintf("Tool result for %s: %s", toolCall.Name, string(resultJSON))
-		secondStart := time.Now()
-		
-		// Answer prompt also needs base context
-		answerPrompt := toolAnswerPrompt(personaPrompt) + "\n\n" + baseContext
-		
-		finalResp, err := client.Chat(ctx, llm.ChatRequest{
-			Model:        llmModel,
-			SystemPrompt: answerPrompt,
-			Messages: []llm.Message{
-				{Role: "user", Content: req.Content},
-				{Role: "user", Content: toolResultText},
-			},
-		})
-		logLLMRequest("tool_answer", req.ProviderID, llmModel, time.Since(secondStart), err)
-		if err == nil {
-			finalText = finalResp.Content
-		}
+
+		// Append to history for next turn
+		messages = append(messages, llm.Message{Role: "assistant", Content: resp.Content})
+		messages = append(messages, llm.Message{Role: "user", Content: toolResultText})
 	}
 
 	if err := repository.AddChatDAO(model.Chat{
@@ -269,24 +281,102 @@ type toolCall struct {
 }
 
 func parseToolCall(content string) (toolCall, bool) {
-	trimmed := strings.TrimSpace(content)
-	if !strings.HasPrefix(trimmed, "{") || !strings.HasSuffix(trimmed, "}") {
+	// 1. Try finding XML-like tool call: <tool_call><function=name><parameter=k>v</parameter></function></tool_call>
+	if strings.Contains(content, "<tool_call>") && strings.Contains(content, "<function=") {
+		return parseXMLToolCall(content)
+	}
+
+	// 2. Try finding JSON block. We look for { and } and try to find the largest valid JSON object
+	// that matches our toolCall structure.
+	
+	firstBrace := strings.Index(content, "{")
+	if firstBrace == -1 {
 		return toolCall{}, false
 	}
-	var call toolCall
-	if err := json.Unmarshal([]byte(trimmed), &call); err != nil {
+
+	// Try from the end to find the largest possible JSON
+	for lastBrace := strings.LastIndex(content, "}"); lastBrace > firstBrace; lastBrace = strings.LastIndex(content[:lastBrace], "}") {
+		jsonStr := content[firstBrace : lastBrace+1]
+		var call toolCall
+		if err := json.Unmarshal([]byte(jsonStr), &call); err == nil {
+			// Validate it's a tool call
+			if (call.Name != "" || call.AltName != "") && len(call.Arguments) > 0 {
+				if call.Name == "" {
+					call.Name = call.AltName
+				}
+				return call, true
+			}
+		}
+		if lastBrace <= firstBrace+1 {
+			break
+		}
+	}
+	return toolCall{}, false
+}
+
+func parseXMLToolCall(content string) (toolCall, bool) {
+	// Simple parser for <tool_call><function=name><parameter=k>v</parameter></function></tool_call>
+	funcStart := strings.Index(content, "<function=")
+	if funcStart == -1 {
 		return toolCall{}, false
 	}
-	if call.Name == "" {
-		call.Name = call.AltName
-	}
-	if call.Name == "" {
+	remaining := content[funcStart+10:]
+	nameEnd := strings.Index(remaining, ">")
+	if nameEnd == -1 {
 		return toolCall{}, false
 	}
-	if len(call.Arguments) == 0 {
-		call.Arguments = json.RawMessage("{}")
+	name := strings.TrimSpace(remaining[:nameEnd])
+
+	args := make(map[string]interface{})
+	remaining = remaining[nameEnd+1:]
+
+	// Look for parameters until </function>
+	funcEndTag := "</function>"
+	funcEnd := strings.Index(remaining, funcEndTag)
+	paramSearchArea := remaining
+	if funcEnd != -1 {
+		paramSearchArea = remaining[:funcEnd]
 	}
-	return call, true
+
+	for {
+		pStartTag := "<parameter="
+		pStart := strings.Index(paramSearchArea, pStartTag)
+		if pStart == -1 {
+			break
+		}
+		pNameArea := paramSearchArea[pStart+len(pStartTag):]
+		pNameEnd := strings.Index(pNameArea, ">")
+		if pNameEnd == -1 {
+			break
+		}
+		pName := strings.TrimSpace(pNameArea[:pNameEnd])
+
+		vStart := pStart + len(pStartTag) + pNameEnd + 1
+		vEndTag := "</parameter>"
+		vEnd := strings.Index(paramSearchArea[vStart:], vEndTag)
+		if vEnd == -1 {
+			break
+		}
+		val := strings.TrimSpace(paramSearchArea[vStart : vStart+vEnd])
+
+		// Type detection
+		if i, err := strconv.Atoi(val); err == nil {
+			args[pName] = i
+		} else if f, err := strconv.ParseFloat(val, 64); err == nil {
+			args[pName] = f
+		} else if val == "true" {
+			args[pName] = true
+		} else if val == "false" {
+			args[pName] = false
+		} else {
+			args[pName] = val
+		}
+
+		paramSearchArea = paramSearchArea[vStart+vEnd+len(vEndTag):]
+	}
+
+	argsJSON, _ := json.Marshal(args)
+	return toolCall{Name: name, Arguments: argsJSON}, true
 }
 
 func buildToolSystemPrompt(tools []ToolDefinition, personaPrompt string) string {
@@ -295,9 +385,9 @@ func buildToolSystemPrompt(tools []ToolDefinition, personaPrompt string) string 
 		builder.WriteString(personaPrompt)
 		builder.WriteString("\n\n")
 	}
-	builder.WriteString("You are an assistant that can call server tools when needed.\n")
-	builder.WriteString("If a tool is required, respond ONLY with JSON: {\"tool\":\"name\",\"arguments\":{...}}.\n")
-	builder.WriteString("If no tool is required, respond normally.\n\n")
+	builder.WriteString("You are an assistant that can call server tools when needed to get real-time data.\n")
+	builder.WriteString("To call a tool, you MUST include a JSON block in your response using this format: {\"tool\":\"name\",\"arguments\":{...}}\n")
+	builder.WriteString("You can provide analysis or explanation before or after the JSON block.\n")
 	builder.WriteString("Available tools:\n")
 	for _, tool := range tools {
 		toolSchema, _ := json.Marshal(tool.InputSchema)

@@ -219,41 +219,60 @@ func fixForeignKeyColumnTypes() error {
 		}
 		for _, column := range columns {
 			if database.DB.Migrator().HasColumn(table, column) {
-				// 1. Ensure it's BIGINT UNSIGNED
-				_ = database.DB.Exec(fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN `%s` BIGINT UNSIGNED", table, column))
-
-				// 2. Clean up invalid references (orphans) before adding FK
-				// For columns like group_id, m_id, user_id, etc.
-				refTable := ""
-				switch column {
-				case "group_id", "alert_group_id":
-					refTable = "groups"
-				case "m_id", "alert_monitor_id":
-					refTable = "monitors"
-				case "hid", "host_id", "alert_host_id":
-					refTable = "hosts"
-				case "item_id", "alert_item_id":
-					refTable = "items"
-				case "user_id", "approved_by", "triggered_by":
-					refTable = "users"
-				case "alarm_id":
-					refTable = "alarms"
-				case "trigger_id":
-					refTable = "triggers"
-				case "media_id":
-					refTable = "media"
-				case "provider_id":
-					refTable = "providers"
-				case "playbook_id":
-					refTable = "ansible_playbooks"
+				// Check current type to avoid redundant ALTER
+				columnTypes, err := database.DB.Migrator().ColumnTypes(table)
+				if err != nil {
+					continue
+				}
+				var isBigIntUnsigned bool
+				for _, ct := range columnTypes {
+					if ct.Name() == column {
+						dbType := strings.ToUpper(ct.DatabaseTypeName())
+						// Check for BIGINT and UNSIGNED. MySQL returns 'BIGINT UNSIGNED' or similar
+						isBigIntUnsigned = strings.Contains(dbType, "BIGINT") && strings.Contains(dbType, "UNSIGNED")
+						break
+					}
 				}
 
-				if refTable != "" && database.DB.Migrator().HasTable(refTable) {
-					// 1. Explicitly set 0 to NULL first to avoid FK issues
-					_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` = 0", table, column, column))
+				if !isBigIntUnsigned {
+					fmt.Printf(">>> Migrating column %s in table %s to BIGINT UNSIGNED...\n", column, table)
+					// 1. Ensure it's BIGINT UNSIGNED
+					_ = database.DB.Exec(fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN `%s` BIGINT UNSIGNED", table, column))
 
-					// 2. Set to NULL where the referenced ID doesn't exist
-					_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` NOT IN (SELECT id FROM `%s`) AND `%s` IS NOT NULL", table, column, column, refTable, column))
+					// 2. Clean up invalid references (orphans) before adding FK
+					// Only run this when we actually change the type (usually first time)
+					refTable := ""
+					switch column {
+					case "group_id", "alert_group_id":
+						refTable = "groups"
+					case "m_id", "alert_monitor_id":
+						refTable = "monitors"
+					case "hid", "host_id", "alert_host_id":
+						refTable = "hosts"
+					case "item_id", "alert_item_id":
+						refTable = "items"
+					case "user_id", "approved_by", "triggered_by":
+						refTable = "users"
+					case "alarm_id":
+						refTable = "alarms"
+					case "trigger_id":
+						refTable = "triggers"
+					case "media_id":
+						refTable = "media"
+					case "provider_id":
+						refTable = "providers"
+					case "playbook_id":
+						refTable = "ansible_playbooks"
+					}
+
+					if refTable != "" && database.DB.Migrator().HasTable(refTable) {
+						fmt.Printf(">>> Cleaning up orphans for %s.%s referencing %s...\n", table, column, refTable)
+						// 1. Explicitly set 0 to NULL first to avoid FK issues
+						_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` = 0", table, column, column))
+
+						// 2. Set to NULL where the referenced ID doesn't exist
+						_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` NOT IN (SELECT id FROM `%s`) AND `%s` IS NOT NULL", table, column, column, refTable, column))
+					}
 				}
 			}
 		}
@@ -339,12 +358,14 @@ func preSchemaUpdates() error {
 	}
 
 	if database.DB.Migrator().HasTable(&model.Trigger{}) && database.DB.Migrator().HasColumn(&model.Trigger{}, "log_level") {
-		if err := database.DB.Exec("UPDATE triggers SET log_level = CASE WHEN CAST(log_level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(log_level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(log_level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(log_level AS UNSIGNED) ELSE NULL END").Error; err != nil {
+		// Only run if there are non-numeric values
+		if err := database.DB.Exec("UPDATE triggers SET log_level = CASE WHEN CAST(log_level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(log_level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(log_level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(log_level AS UNSIGNED) ELSE NULL END WHERE log_level IS NOT NULL AND (CAST(log_level AS CHAR) REGEXP '^[a-zA-Z]+$')").Error; err != nil {
 			return err
 		}
 	}
 	if database.DB.Migrator().HasTable(&model.LogEntry{}) && database.DB.Migrator().HasColumn(&model.LogEntry{}, "level") {
-		if err := database.DB.Exec("UPDATE log_entries SET level = CASE WHEN CAST(level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(level AS UNSIGNED) ELSE NULL END").Error; err != nil {
+		// Only run if there are non-numeric values
+		if err := database.DB.Exec("UPDATE log_entries SET level = CASE WHEN CAST(level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(level AS UNSIGNED) ELSE NULL END WHERE level IS NOT NULL AND (CAST(level AS CHAR) REGEXP '^[a-zA-Z]+$')").Error; err != nil {
 			return err
 		}
 	}
@@ -393,8 +414,23 @@ func applySchemaUpdates() error {
 		}
 	}
 	if database.DB.Migrator().HasTable(&model.LogEntry{}) {
-		if err := database.DB.Exec("ALTER TABLE log_entries MODIFY COLUMN level INT").Error; err != nil {
-			return err
+		// Check current type to avoid redundant ALTER
+		columnTypes, err := database.DB.Migrator().ColumnTypes("log_entries")
+		if err == nil {
+			var isInt bool
+			for _, ct := range columnTypes {
+				if ct.Name() == "level" {
+					dbType := strings.ToUpper(ct.DatabaseTypeName())
+					isInt = strings.Contains(dbType, "INT") && !strings.Contains(dbType, "BIGINT")
+					break
+				}
+			}
+			if !isInt {
+				fmt.Println(">>> Migrating log_entries.level to INT...")
+				if err := database.DB.Exec("ALTER TABLE log_entries MODIFY COLUMN level INT").Error; err != nil {
+					return err
+				}
+			}
 		}
 	}
 	if os.Getenv("NAGARE_MEDIA_BACKFILL") == "1" {
