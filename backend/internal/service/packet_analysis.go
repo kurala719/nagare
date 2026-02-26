@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -63,10 +64,11 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 	if pa.RawContent != "" {
 		contentToAnalyze = pa.RawContent
 	} else if pa.FilePath != "" {
-		// Read small part of file if it's text-based, or just use name for now
-		// In a real scenario, we might use a library to parse PCAP
-		contentToAnalyze = fmt.Sprintf("Analyze packet capture file: %s", pa.FilePath)
-		// For now, let's assume we want AI to look at the name and whatever info we have
+		contentToAnalyze = extractPacketSummary(pa.FilePath)
+	}
+
+	if contentToAnalyze == "" {
+		contentToAnalyze = "No packet data could be extracted for analysis."
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -106,6 +108,45 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 		}
 		_ = CreateSiteMessageServ(title, fmt.Sprintf("AI analyzed packet '%s' and determined it is %s. Details: %s", pa.Name, riskLevel, pa.Name), "alert", 3, &pa.UserID)
 	}
+}
+
+func extractPacketSummary(fileName string) string {
+	fullPath := filepath.Join("public/uploads/packets", fileName)
+	
+	// Check if tshark is available
+	if _, err := exec.LookPath("tshark"); err == nil {
+		// Extract top conversations and protocol hierarchy as a summary
+		// -c 100: limit to first 100 packets for analysis speed and token limits
+		cmd := exec.Command("tshark", "-r", fullPath, "-c", "100", "-T", "fields", "-e", "frame.number", "-e", "_ws.col.Protocol", "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.dstport", "-e", "udp.dstport")
+		out, err := cmd.CombinedOutput()
+		if err == nil && len(out) > 0 {
+			return "Extracted first 100 packets summary:\n" + string(out)
+		}
+	}
+
+	// Fallback to tcpdump if available
+	if _, err := exec.LookPath("tcpdump"); err == nil {
+		cmd := exec.Command("tcpdump", "-nn", "-r", fullPath, "-c", "50")
+		out, err := cmd.CombinedOutput()
+		if err == nil && len(out) > 0 {
+			return "Extracted packet headers (tcpdump):\n" + string(out)
+		}
+	}
+
+	// Last fallback: Read the file as text/hex (first 4KB)
+	file, err := os.Open(fullPath)
+	if err != nil {
+		return fmt.Sprintf("Error opening file for analysis: %v", err)
+	}
+	defer file.Close()
+
+	buf := make([]byte, 4096)
+	n, _ := file.Read(buf)
+	if n > 0 {
+		return fmt.Sprintf("Raw file content (first %d bytes):\n%x", n, buf[:n])
+	}
+
+	return "Could not extract any data from the file."
 }
 
 func updatePacketAnalysisStatus(id uint, status int, analysis string, risk string) {

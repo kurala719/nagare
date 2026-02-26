@@ -8,10 +8,7 @@ import (
 	"nagare/cmd/server/router"
 	"nagare/internal/database"
 	"nagare/internal/migration"
-	"nagare/internal/repository"
 	"nagare/internal/service"
-
-	"github.com/spf13/viper"
 )
 
 const (
@@ -29,7 +26,8 @@ func run() error {
 	configPath := getConfigPath()
 	fmt.Printf(">>> Loading config from: %s\n", configPath)
 
-	if err := repository.InitConfig(configPath); err != nil {
+	// Use service wrapper to initialize config with logging and hot-reload observers
+	if err := service.InitConfigServ(configPath); err != nil {
 		return err
 	}
 
@@ -39,34 +37,34 @@ func run() error {
 	}
 	defer database.CloseDB(database.DB)
 
-	service.LogSystem("info", "starting application", map[string]interface{}{"system_name": viper.GetString("system.system_name")}, nil, "")
-
+	service.LogSystem("info", "starting application", nil, nil, "")
 	service.LogSystem("info", "database connection established", nil, nil, "")
 
 	fmt.Println(">>> Running Database Migrations...")
 	if err := migration.InitDBTables(); err != nil {
 		return err
 	}
+
+	// Recompute internal states before starting background tasks
+	fmt.Println(">>> Synchronizing internal state (Actions/Triggers)...")
+	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
+		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
+	}
 	
 	fmt.Println(">>> Starting Background Services...")
 	service.StartAutoSync()
 	service.StartStatusChecks()
 	service.InitQQWSServ()
-	service.LogSystem("info", "background services started", nil, nil, "")
-
-	fmt.Println(">>> Recomputing Action and Trigger statuses...")
-	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
-		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
-	}
-
-	// Initialize cron scheduler for automated reports
-	fmt.Println(">>> Initializing Cron Scheduler...")
+	
+	// Initialize cron scheduler for automated reports and cleanup
 	if err := service.InitCronScheduler(); err != nil {
 		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
+	
+	service.LogSystem("info", "all background services started", nil, nil, "")
 
-	service.LogSystem("info", "initializing router", nil, nil, "")
 	fmt.Println(">>> Initializing Router and starting server...")
+	service.LogSystem("info", "initializing router", nil, nil, "")
 	router.InitRouter()
 	return nil
 }

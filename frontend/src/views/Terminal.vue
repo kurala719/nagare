@@ -3,42 +3,42 @@
     <div class="terminal-header">
       <div class="host-info">
         <el-button icon="ArrowLeft" circle @click="$router.back()" />
-        <span class="host-name">Terminal: {{ hostName || 'Select a host' }}</span>
+        <span class="host-name">{{ $t('terminal.title') }}: {{ hostName || $t('terminal.selectHost') }}</span>
         <span class="host-ip" v-if="hostIp">({{ hostIp }})</span>
         <el-button v-if="!route.params.id" size="small" style="margin-left: 10px" @click="showHostSelector = true">
-          Switch Host
+          {{ $t('terminal.switchHost') }}
         </el-button>
       </div>
       <div class="terminal-actions">
-        <el-button type="danger" size="small" @click="handleDisconnect" :disabled="!connected">Disconnect</el-button>
-        <el-button type="primary" size="small" @click="handleReconnect" :disabled="connected || !currentHostId">Reconnect</el-button>
+        <el-button type="danger" size="small" @click="handleDisconnect" :disabled="!connected">{{ $t('terminal.disconnect') }}</el-button>
+        <el-button type="primary" size="small" @click="handleReconnect" :disabled="connected || !currentHostId">{{ $t('terminal.reconnect') }}</el-button>
       </div>
     </div>
     <div ref="terminalElement" class="terminal-body"></div>
 
     <!-- Host Selection Dialog -->
-    <el-dialog v-model="showHostSelector" title="Connect to Host" width="500px" :close-on-click-modal="false" :show-close="!!currentHostId">
+    <el-dialog v-model="showHostSelector" :title="$t('terminal.connectTitle')" width="500px" :close-on-click-modal="false" :show-close="!!currentHostId">
       <el-tabs v-model="connectionMode">
-        <el-tab-pane label="Saved Host" name="saved">
+        <el-tab-pane :label="$t('terminal.savedHost')" name="saved">
           <div style="padding: 20px 0">
-            <el-select v-model="selectedHostId" placeholder="Select a host" style="width: 100%" filterable>
+            <el-select v-model="selectedHostId" :placeholder="$t('terminal.selectHostPlaceholder')" style="width: 100%" filterable>
               <el-option v-for="h in availableHosts" :key="h.id" :label="`${h.name} (${h.ip_addr})`" :value="h.id" />
             </el-select>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="Direct Connect" name="direct">
+        <el-tab-pane :label="$t('terminal.directConnect')" name="direct">
           <div style="padding: 20px 0">
             <el-form :model="directConfig" label-width="100px">
-              <el-form-item label="IP Address">
+              <el-form-item :label="$t('hosts.ip')">
                 <el-input v-model="directConfig.ip" placeholder="192.168.1.1" />
               </el-form-item>
-              <el-form-item label="Port">
+              <el-form-item :label="$t('system.port')">
                 <el-input-number v-model="directConfig.port" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
-              <el-form-item label="Username">
+              <el-form-item :label="$t('auth.username')">
                 <el-input v-model="directConfig.user" placeholder="root" />
               </el-form-item>
-              <el-form-item label="Password">
+              <el-form-item :label="$t('auth.password')">
                 <el-input v-model="directConfig.password" type="password" show-password />
               </el-form-item>
             </el-form>
@@ -46,8 +46,8 @@
         </el-tab-pane>
       </el-tabs>
       <template #footer>
-        <el-button @click="showHostSelector = false" v-if="!!currentHostId">Cancel</el-button>
-        <el-button type="primary" @click="confirmHostSelection" :disabled="!canConnect">Connect</el-button>
+        <el-button @click="showHostSelector = false" v-if="!!currentHostId">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmHostSelection" :disabled="!canConnect">{{ $t('terminal.connect') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -63,7 +63,9 @@ import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 import { fetchHostData } from '@/api/hosts'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const currentHostId = ref(route.params.id)
@@ -105,12 +107,12 @@ const fetchHostInfo = async (id) => {
       hostSSHUser.value = response.data.ssh_user
       
       if (!hostSSHUser.value) {
-        ElMessage.warning('SSH credentials not configured for this host. Please update host properties first.')
+        ElMessage.warning(t('terminal.noCredentials'))
       }
     }
   } catch (err) {
     console.error('Failed to fetch host info', err)
-    ElMessage.error('Failed to fetch host information')
+    ElMessage.error(t('terminal.fetchInfoFailed'))
   }
 }
 
@@ -214,7 +216,7 @@ const connectWebSocket = () => {
 
   socket.onopen = () => {
     connected.value = true
-    term.write('\r\n*** Connected to host ***\r\n')
+    term.write(`\r\n*** ${t('terminal.connected')} ***\r\n`)
     handleResize()
   }
 
@@ -230,13 +232,13 @@ const connectWebSocket = () => {
   socket.onclose = (event) => {
     connected.value = false
     const reason = event.reason ? `: ${event.reason}` : ''
-    term.write(`\r\n*** Connection closed${reason} ***\r\n`)
+    term.write(`\r\n*** ${t('terminal.closed')}${reason} ***\r\n`)
   }
 
   socket.onerror = (error) => {
     console.error('WebSocket Error:', error)
-    term.write('\r\n*** WebSocket error ***\r\n')
-    ElMessage.error('WebSocket connection failed. Ensure the host is reachable and SSH credentials are correct.')
+    term.write(`\r\n*** ${t('terminal.wsError')} ***\r\n`)
+    ElMessage.error(t('terminal.connFailed'))
   }
 }
 

@@ -1197,6 +1197,24 @@ const messages = {
       deleteFailed: 'Failed to delete notification',
       operationFailed: 'Operation failed'
     },
+    terminal: {
+      title: 'Terminal',
+      selectHost: 'Select a host',
+      switchHost: 'Switch Host',
+      disconnect: 'Disconnect',
+      reconnect: 'Reconnect',
+      connectTitle: 'Connect to Host',
+      savedHost: 'Saved Host',
+      directConnect: 'Direct Connect',
+      selectHostPlaceholder: 'Select a host',
+      connect: 'Connect',
+      noCredentials: 'SSH credentials not configured for this host. Please update host properties first.',
+      fetchInfoFailed: 'Failed to fetch host information',
+      connected: 'Connected to host',
+      closed: 'Connection closed',
+      wsError: 'WebSocket error',
+      connFailed: 'WebSocket connection failed. Ensure the host is reachable and SSH credentials are correct.'
+    },
     ansible: {
       playbooksTitle: 'Ansible Playbooks',
       playbooksSubtitle: 'Manage and execute configuration management scripts',
@@ -2513,6 +2531,24 @@ const messages = {
       deleteSuccess: '通知已删除',
       deleteFailed: '删除通知失败',
       operationFailed: '操作失败'
+    },
+    terminal: {
+      title: '终端',
+      selectHost: '请选择主机',
+      switchHost: '切换主机',
+      disconnect: '断开连接',
+      reconnect: '重新连接',
+      connectTitle: '连接到主机',
+      savedHost: '已保存主机',
+      directConnect: '直接连接',
+      selectHostPlaceholder: '请选择一个主机',
+      connect: '连接',
+      noCredentials: '该主机未配置 SSH 凭据。请先更新主机属性。',
+      fetchInfoFailed: '获取主机信息失败',
+      connected: '已连接到主机',
+      closed: '连接已关闭',
+      wsError: 'WebSocket 错误',
+      connFailed: 'WebSocket 连接失败。请确保主机可达且 SSH 凭据正确。'
     },
     ansible: {
       playbooksTitle: 'Ansible 剧本',
