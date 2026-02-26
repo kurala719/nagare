@@ -285,32 +285,28 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	filePath := "public/reports/" + fileName
 
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		LogService("error", "failed to create reports directory", map[string]interface{}{"error": err.Error()}, nil, "")
+		LogService("error", fmt.Sprintf("Report Failed: Failed to create report directory for '%s'.", report.Title), map[string]interface{}{"error": err.Error()}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
-		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to create report directory for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	document, err := m.Generate()
 	if err != nil {
-		LogService("error", "failed to generate PDF", map[string]interface{}{"error": err.Error()}, nil, "")
+		LogService("error", fmt.Sprintf("Report Failed: Failed to generate PDF for '%s'.", report.Title), map[string]interface{}{"error": err.Error()}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
-		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to generate PDF for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	if err := document.Save(filePath); err != nil {
-		LogService("error", "failed to save PDF file", map[string]interface{}{"error": err.Error(), "path": filePath}, nil, "")
+		LogService("error", fmt.Sprintf("Report Failed: Failed to save PDF for '%s'.", report.Title), map[string]interface{}{"error": err.Error(), "path": filePath}, nil, "")
 		_ = repository.UpdateReportStatusDAO(report.ID, 2, "", "")
-		_ = CreateSiteMessageServ("Report Failed", fmt.Sprintf("Failed to save PDF for '%s'.", report.Title), "report", 3, nil)
 		return
 	}
 
 	downloadURL := "/api/v1/reports/" + fmt.Sprint(report.ID) + "/download"
 	_ = repository.UpdateReportStatusDAO(report.ID, 1, filePath, downloadURL)
 
-	// Add Site Message
-	_ = CreateSiteMessageServ("Report Ready", fmt.Sprintf("Report '%s' has been generated successfully.", report.Title), "report", 1, nil)
+	LogService("info", fmt.Sprintf("Report Ready: Report '%s' has been generated successfully.", report.Title), map[string]interface{}{"report_id": report.ID}, nil, "")
 }
 
 type AdvancedReportData struct {

@@ -10,13 +10,17 @@ func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
 	go func() {
 		message := fmt.Sprintf("sync %s: total=%d added=%d updated=%d failed=%d", entity, result.Total, result.Added, result.Updated, result.Failed)
 		
-		// Add Site Message
-		title := fmt.Sprintf("Sync %s Finished", entity)
-		msgSeverity := 1 // success
+		// Log event - this will trigger a Site Message via central log Entry
+		logSeverity := "info"
 		if result.Failed > 0 {
-			msgSeverity = 3 // error
+			logSeverity = "error"
 		}
-		_ = CreateSiteMessageServ(title, message, "sync", msgSeverity, nil)
+		LogService(logSeverity, fmt.Sprintf("Sync %s Finished: %s", entity, message), map[string]interface{}{
+			"entity":     entity,
+			"monitor_id": monitorID,
+			"host_id":    hostID,
+			"result":     result,
+		}, nil, "")
 
 		// BROADCAST to Frontend via WebSocket to force UI refresh
 		broadcastSyncUpdate(entity, monitorID, hostID)

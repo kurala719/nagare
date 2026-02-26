@@ -266,10 +266,10 @@ func executePlaybook(jobID uint, content string, hostFilter string) {
 
 	if err := cmd.Wait(); err != nil {
 		updateJobStatus(jobID, "failed", fullOutput.String())
-		CreateSiteMessageServ("Ansible Job Failed", fmt.Sprintf("Job #%d failed.", jobID), "system", 3, nil)
+		LogService("error", fmt.Sprintf("Ansible Job Failed: Job #%d failed.", jobID), map[string]interface{}{"job_id": jobID}, nil, "")
 	} else {
 		updateJobStatus(jobID, "success", fullOutput.String())
-		CreateSiteMessageServ("Ansible Job Success", fmt.Sprintf("Job #%d finished successfully.", jobID), "system", 1, nil)
+		LogService("info", fmt.Sprintf("Ansible Job Success: Job #%d finished successfully.", jobID), map[string]interface{}{"job_id": jobID}, nil, "")
 	}
 }
 

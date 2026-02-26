@@ -497,7 +497,7 @@ func RegisterUserServ(req RegisterRequest) error {
 	if req.Email != "" {
 		msg = fmt.Sprintf("A new user '%s' (%s) has applied for registration.", req.Username, req.Email)
 	}
-	_ = CreateSiteMessageServ("New Registration", msg, "system", 2, nil)
+	LogSystem("error", fmt.Sprintf("New Registration: %s", msg), map[string]interface{}{"username": req.Username, "email": req.Email}, nil, "")
 	return nil
 }
 

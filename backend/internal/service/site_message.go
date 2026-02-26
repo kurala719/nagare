@@ -19,6 +19,19 @@ type SiteMessageResp struct {
 
 // CreateSiteMessageServ creates and broadcasts a new site message
 func CreateSiteMessageServ(title, content, msgType string, severity int, userID *uint) error {
+	// Filter based on severity if it's a broadcast message (userID is nil)
+	if userID == nil {
+		if msgType == "alert" {
+			if severity < siteMessageMinAlertSeverity() {
+				return nil
+			}
+		} else {
+			if severity < siteMessageMinLogSeverity() {
+				return nil
+			}
+		}
+	}
+
 	msg := model.SiteMessage{
 		Title:    title,
 		Content:  content,

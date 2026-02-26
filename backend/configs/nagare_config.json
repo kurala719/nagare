@@ -111,7 +111,7 @@
   },
   "site_message": {
     "min_alert_severity": 2,
-    "min_log_severity": 1
+    "min_log_severity": 2
   },
   "smtp": {
     "enabled": false,
