@@ -154,3 +154,35 @@ func CheckAllProvidersStatusCtrl(c *gin.Context) {
 	results := service.CheckAllProvidersStatusServ()
 	respondSuccess(c, http.StatusOK, results)
 }
+
+// FetchProviderModelsCtrl handles POST /providers/:id/fetch-models
+func FetchProviderModelsCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid provider ID")
+		return
+	}
+
+	models, err := service.FetchProviderModelsServ(uint(id))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, models)
+}
+
+// FetchModelsDirectCtrl handles POST /providers/fetch-models-direct
+func FetchModelsDirectCtrl(c *gin.Context) {
+	var req service.ProviderReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, err.Error())
+		return
+	}
+
+	models, err := service.FetchModelsDirectServ(req)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, models)
+}

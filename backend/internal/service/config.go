@@ -68,7 +68,7 @@ func siteMessageMinAlertSeverity() int {
 func siteMessageMinLogSeverity() int {
 	val := GetConfigServ("site_message.min_log_severity")
 	if val == nil {
-		return 1
+		return 0
 	}
 	if i, ok := val.(int); ok {
 		return i
@@ -76,7 +76,7 @@ func siteMessageMinLogSeverity() int {
 	if f, ok := val.(float64); ok {
 		return int(f)
 	}
-	return 1
+	return 0
 }
 
 var (

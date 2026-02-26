@@ -94,6 +94,8 @@ func setupProviderRoutes(rg *gin.RouterGroup) {
 	providersWrite.PUT("/:id", api.UpdateProviderCtrl)
 	providersWrite.POST("/check", api.CheckAllProvidersStatusCtrl)
 	providersWrite.POST("/:id/check", api.CheckProviderStatusCtrl)
+	providersWrite.POST("/:id/fetch-models", api.FetchProviderModelsCtrl)
+	providersWrite.POST("/fetch-models-direct", api.FetchModelsDirectCtrl)
 }
 
 func setupMediaRoutes(rg *gin.RouterGroup) {
@@ -134,4 +136,14 @@ func setupAlertRoutes(rg *gin.RouterGroup) {
 	alertsWrite.DELETE("/:id", api.DeleteAlertByIDCtrl)
 	alertsWrite.PUT("/:id", api.UpdateAlertCtrl)
 	alertsWrite.POST("/generate-test", api.GenerateTestAlertsCtrl)
+}
+
+func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
+	packets := rg.Group("/packets", api.PrivilegesMiddleware(1))
+	{
+		packets.GET("", api.ListPacketAnalysesCtrl)
+		packets.POST("/upload", api.UploadPacketCtrl)
+		packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
+		packets.POST("/:id/analyze", api.StartPacketAnalysisCtrl)
+	}
 }

@@ -50,7 +50,7 @@
       <el-table-column prop="title" :label="$t('reports.reportTitle')" min-width="200" />
       <el-table-column prop="report_type" :label="$t('reports.type')" width="120">
         <template #default="{ row }">
-          <el-tag :type="row.report_type === 'custom' ? 'warning' : ''">{{ row.report_type }}</el-tag>
+          <el-tag :type="row.report_type === 'custom' ? 'warning' : 'info'">{{ row.report_type }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="generated_at" :label="$t('reports.generatedAt')" width="180">

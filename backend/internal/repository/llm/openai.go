@@ -172,7 +172,6 @@ func (p *OpenAIProvider) Name() string {
 
 // Models returns available OpenAI models
 func (p *OpenAIProvider) Models() []string {
-
 	return []string{
 		"gpt-4o",
 		"gpt-4o-mini",
@@ -180,4 +179,59 @@ func (p *OpenAIProvider) Models() []string {
 		"gpt-4",
 		"gpt-3.5-turbo",
 	}
+}
+
+// FetchModels retrieves models from OpenAI API
+func (p *OpenAIProvider) FetchModels(ctx context.Context) ([]string, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", p.baseURL+"/models", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var result struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("OpenAI API error: %s", result.Error.Message)
+	}
+
+	models := make([]string, 0, len(result.Data))
+	for _, m := range result.Data {
+		// Filter for chat models typically used
+		if strings.Contains(m.ID, "gpt") || strings.Contains(m.ID, "claude") || strings.Contains(m.ID, "llama") || strings.Contains(m.ID, "deepseek") {
+			models = append(models, m.ID)
+		}
+	}
+
+	// If filtered list is empty, return all
+	if len(models) == 0 {
+		for _, m := range result.Data {
+			models = append(models, m.ID)
+		}
+	}
+
+	return models, nil
 }

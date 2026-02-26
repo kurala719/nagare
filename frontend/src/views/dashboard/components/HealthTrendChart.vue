@@ -28,17 +28,22 @@
       </div>
     </template>
 
-    <el-skeleton v-if="loading" animated :rows="6" />
-    <el-alert
-      v-else-if="error"
-      :title="error"
-      type="error"
-      show-icon
-      :closable="false"
-      class="trend-alert"
-    />
-    <el-empty v-else-if="empty" :description="$t('common.noHistoryData')" />
-    <div v-else ref="chartRef" class="trend-chart"></div>
+    <div class="trend-wrapper" style="position: relative; min-height: 260px;">
+      <div ref="chartRef" class="trend-chart" v-show="!loading && !error && !empty"></div>
+
+      <div class="trend-body">
+        <el-skeleton v-if="loading" animated :rows="6" />
+        <el-alert
+          v-else-if="error"
+          :title="error"
+          type="error"
+          show-icon
+          :closable="false"
+          class="trend-alert"
+        />
+        <el-empty v-else-if="empty" :description="$t('common.noHistoryData')" />
+      </div>
+    </div>
   </el-card>
 </template>
 
@@ -58,6 +63,7 @@ export default defineComponent({
     const loading = ref(false)
     const error = ref(null)
     const empty = ref(false)
+    const isMounted = ref(false)
     const compareMode = ref(false)
     const dateRange = ref([])
 
@@ -78,8 +84,16 @@ export default defineComponent({
       return [start, end]
     }
 
-    const buildChart = (series, prevSeries = []) => {
-      if (!chartRef.value) return
+    const buildChart = async (series, prevSeries = []) => {
+      if (!isMounted.value) return;
+
+      if (!chartRef.value) {
+        await nextTick();
+      }
+      if (!chartRef.value || !isMounted.value) {
+        console.warn('chartRef is null, cannot build chart');
+        return;
+      }
       if (!chartInstance.value) {
         chartInstance.value = echarts.init(chartRef.value)
       }
@@ -235,6 +249,7 @@ export default defineComponent({
     }
 
     onMounted(() => {
+      isMounted.value = true
       // Set default range if empty
       if (dateRange.value.length === 0) {
         const end = new Date()
@@ -246,6 +261,7 @@ export default defineComponent({
     })
 
     onBeforeUnmount(() => {
+      isMounted.value = false
       window.removeEventListener('resize', onResize)
       if (chartInstance.value) {
         chartInstance.value.dispose()
@@ -276,7 +292,27 @@ export default defineComponent({
   height: 260px;
 }
 .trend-alert {
-  margin-bottom: 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+:deep(.el-skeleton) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  background: white;
+  z-index: 10;
+}
+:deep(.el-empty) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
 }
 .card-header {
   display: flex;

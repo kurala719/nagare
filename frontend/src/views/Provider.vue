@@ -163,7 +163,14 @@
                         <el-input v-model="dialogItem.api_key" type="password" :placeholder="$t('providers.apiKey')" show-password />
                     </el-form-item>
                     <el-form-item :label="$t('providers.defaultModel')">
-                        <el-input v-model="dialogItem.default_model" :placeholder="$t('providers.defaultModel')" />
+                        <div style="display: flex; gap: 8px; width: 100%;">
+                            <el-select v-model="dialogItem.default_model" style="flex: 1;" filterable allow-create placeholder="Select or enter model">
+                                <el-option v-for="m in (dialogItem.models || [])" :key="m" :label="m" :value="m" />
+                            </el-select>
+                            <el-button :icon="Cpu" :loading="fetchingModels" @click="onFetchModels('dialog')">
+                                {{ $t('providers.fetchModels') || 'Fetch Models' }}
+                            </el-button>
+                        </div>
                     </el-form-item>
                     <el-form-item :label="$t('providers.description')">
                         <el-input v-model="dialogItem.description" :placeholder="$t('providers.description')" />
@@ -197,7 +204,14 @@
                         <el-input v-model="selectedProvider.api_key" show-password />
                     </el-form-item>
                     <el-form-item :label="$t('providers.model')">
-                        <el-input v-model="selectedProvider.default_model" />
+                        <div style="display: flex; gap: 8px; width: 100%;">
+                            <el-select v-model="selectedProvider.default_model" style="flex: 1;" filterable allow-create placeholder="Select or enter model">
+                                <el-option v-for="m in (selectedProvider.models || [])" :key="m" :label="m" :value="m" />
+                            </el-select>
+                            <el-button :icon="Cpu" :loading="fetchingModels" @click="onFetchModels">
+                                {{ $t('providers.fetchModels') || 'Fetch Models' }}
+                            </el-button>
+                        </div>
                     </el-form-item>
                     <el-form-item :label="$t('providers.description')">
                         <el-input type="textarea" v-model="selectedProvider.description" />
@@ -243,8 +257,8 @@
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown } from '@element-plus/icons-vue';
-import { fetchProviderData, addProvider, deleteProvider, updateProvider } from '@/api/providers';
+import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown, Cpu } from '@element-plus/icons-vue';
+import { fetchProviderData, addProvider, deleteProvider, updateProvider, fetchProviderModels, fetchModelsDirect } from '@/api/providers';
 
 const defaultProviderItem = () => ({
     id: 0,
@@ -252,6 +266,7 @@ const defaultProviderItem = () => ({
     url: '',
     api_key: '',
     default_model: '',
+    models: [],
     type: 2,
     description: '',
     enabled: 1,
@@ -281,6 +296,7 @@ export default {
             bulkDeleteDialogVisible: false,
             bulkUpdating: false,
             bulkDeleting: false,
+            fetchingModels: false,
             selectedProviderIds: [],
             bulkForm: {
                 enabled: 'nochange',
@@ -294,7 +310,8 @@ export default {
             Edit: markRaw(Edit),
             Delete: markRaw(Delete),
             Connection: markRaw(Connection),
-            ArrowDown: markRaw(ArrowDown)
+            ArrowDown: markRaw(ArrowDown),
+            Cpu: markRaw(Cpu)
         };
     },
     computed: {
@@ -480,6 +497,7 @@ export default {
                     url: p.URL || p.url || '',
                     api_key: p.APIKey || p.api_key || '',
                     default_model: p.DefaultModel || p.default_model || p.Model || p.model || '',
+                    models: p.Models || p.models || [],
                     type: p.Type ?? p.type ?? 3,
                     description: p.Description || p.description || '',
                     enabled: p.Enabled ?? p.enabled ?? 1,
@@ -507,6 +525,7 @@ export default {
                     url: this.dialogItem.url,
                     api_key: this.dialogItem.api_key,
                     default_model: this.dialogItem.default_model,
+                    models: this.dialogItem.models || [],
                     type: this.dialogItem.type,
                     description: this.dialogItem.description,
                     enabled: this.dialogItem.enabled,
@@ -537,6 +556,7 @@ export default {
                     url: this.dialogItem.url,
                     api_key: this.dialogItem.api_key,
                     default_model: this.dialogItem.default_model,
+                    models: this.dialogItem.models || [],
                     type: this.dialogItem.type,
                     description: this.dialogItem.description,
                     enabled: this.dialogItem.enabled,
@@ -621,6 +641,7 @@ export default {
                     url: this.selectedProvider.url,
                     api_key: this.selectedProvider.api_key,
                     default_model: this.selectedProvider.default_model,
+                    models: this.selectedProvider.models || [],
                     type: this.selectedProvider.type,
                     description: this.selectedProvider.description,
                     enabled: this.selectedProvider.enabled,
@@ -638,6 +659,46 @@ export default {
                     message: 'Failed to update provider: ' + (err.message || 'Unknown error'),
                 });
                 console.error('Error updating provider:', err);
+            }
+        },
+        async onFetchModels(target = 'selected') {
+            const provider = target === 'selected' ? this.selectedProvider : this.dialogItem;
+            
+            // API Key is always required for fetching
+            if (!provider.api_key) {
+                ElMessage.warning(this.$t('providers.apiKeyRequired'));
+                return;
+            }
+
+            this.fetchingModels = true;
+            try {
+                let res;
+                if (provider.id) {
+                    // Saved provider
+                    res = await fetchProviderModels(provider.id);
+                } else {
+                    // New provider (direct fetch by config)
+                    const payload = {
+                        name: provider.name || 'temporary',
+                        url: provider.url,
+                        api_key: provider.api_key,
+                        type: provider.type,
+                    };
+                    res = await fetchModelsDirect(payload);
+                }
+
+                const models = res.data?.data || res.data || res;
+                if (Array.isArray(models)) {
+                    provider.models = models;
+                    if (models.length > 0 && !provider.default_model) {
+                        provider.default_model = models[0];
+                    }
+                    ElMessage.success(this.$t('common.success') || 'Models fetched successfully');
+                }
+            } catch (err) {
+                ElMessage.error(this.$t('common.error') + ': ' + (err.message || 'Unknown error'));
+            } finally {
+                this.fetchingModels = false;
             }
         },
         getStatusInfo(status) {

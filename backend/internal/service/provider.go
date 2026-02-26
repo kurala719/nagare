@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
+	"nagare/internal/repository/llm"
 )
 
 // ProviderReq represents a provider request
@@ -115,6 +119,66 @@ func UpdateProviderServ(id uint, req ProviderReq) error {
 		return err
 	}
 	return nil
+}
+
+// FetchProviderModelsServ fetches available models from the provider's API and updates the DB
+func FetchProviderModelsServ(id uint) ([]string, error) {
+	provider, err := repository.GetProviderByIDDAO(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider: %w", err)
+	}
+
+	client, _, err := createLLMClient(id, "")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	models, err := client.FetchModels(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch models from API: %w", err)
+	}
+
+	// Update DB with fresh models
+	provider.Models = models
+	if err := repository.UpdateProviderDAO(id, provider); err != nil {
+		return nil, fmt.Errorf("failed to save fetched models: %w", err)
+	}
+
+	return models, nil
+}
+
+// FetchModelsDirectServ fetches available models using provided config without saving to DB
+func FetchModelsDirectServ(req ProviderReq) ([]string, error) {
+	if req.APIKey == "" {
+		return nil, errors.New("API key is required")
+	}
+
+	var providerType llm.ProviderType
+	switch req.Type {
+	case 1:
+		providerType = llm.ProviderGemini
+	case 2:
+		providerType = llm.ProviderOpenAI
+	default:
+		providerType = llm.ProviderGemini
+	}
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:  req.APIKey,
+		BaseURL: req.URL,
+		Type:    providerType,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create LLM client: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return client.FetchModels(ctx)
 }
 
 // providerToRes converts a domain Provider to ProviderRes

@@ -107,6 +107,12 @@ const routes = [
     meta: { requiresAuth: true, minPrivilege: 1 }
   },
   {
+    path: '/packet-analysis',
+    name: 'PacketAnalysis',
+    component: () => import('@/views/PacketAnalysis.vue'),
+    meta: { requiresAuth: true, minPrivilege: 1 }
+  },
+  {
     path: '/host/:hostId/items',
     name: 'HostItems',
     redirect: (to) => ({

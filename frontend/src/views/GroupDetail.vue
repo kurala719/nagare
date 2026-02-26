@@ -60,7 +60,7 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="16">
+      <el-row :gutter="16" v-show="!loading && !error">
         <el-col :xs="24" :lg="12">
           <el-card>
             <template #header>{{ $t('groups.hostStatusChart') }}</template>
@@ -228,7 +228,7 @@ const buildStatusChart = () => {
         label: { formatter: '{b}: {c}' }
       }
     ]
-  })
+  }, { notMerge: true })
 }
 
 const loadData = async () => {
@@ -254,11 +254,12 @@ const loadData = async () => {
       health_score: h.health_score ?? h.HealthScore ?? 100,
       status_reason: h.Reason || h.reason || h.Error || h.error || h.ErrorMessage || h.error_message || h.LastError || h.last_error || '',
     }))
+    loading.value = false
+    await nextTick()
     buildStatusChart()
   } catch (err) {
     console.error('Failed to load group detail data', err)
     error.value = err.message || 'Failed to load group data'
-  } finally {
     loading.value = false
   }
 }

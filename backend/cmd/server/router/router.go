@@ -131,4 +131,5 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupSiteMessageRoutes(rg)
 	setupAnsibleRoutes(rg)
 	setupRetentionRoutes(rg)
+	setupPacketAnalysisRoutes(rg)
 }

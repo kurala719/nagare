@@ -44,8 +44,10 @@ type Provider interface {
 	Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error)
 	// Name returns the provider name
 	Name() string
-	// Models returns available models for this provider
+	// Models returns cached/static models for this provider
 	Models() []string
+	// FetchModels retrieves the latest list of models from the provider's API
+	FetchModels(ctx context.Context) ([]string, error)
 }
 
 // Config holds the configuration for an LLM provider
@@ -128,4 +130,9 @@ func (c *Client) ProviderName() string {
 // AvailableModels returns the available models for the current provider
 func (c *Client) AvailableModels() []string {
 	return c.provider.Models()
+}
+
+// FetchModels retrieves the latest list of models from the provider's API
+func (c *Client) FetchModels(ctx context.Context) ([]string, error) {
+	return c.provider.FetchModels(ctx)
 }

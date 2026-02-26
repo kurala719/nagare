@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"google.golang.org/genai"
@@ -89,4 +90,28 @@ func (p *GeminiProvider) Models() []string {
 		"gemini-1.5-pro",
 		"gemini-1.0-pro",
 	}
+}
+
+// FetchModels retrieves models from Gemini API
+func (p *GeminiProvider) FetchModels(ctx context.Context) ([]string, error) {
+	it, err := p.client.Models.List(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list models: %w", err)
+	}
+	var models []string
+	for {
+		m, err := it.Next(ctx)
+		if err != nil {
+			break
+		}
+		// m.Name typically starts with "models/"
+		name := strings.TrimPrefix(m.Name, "models/")
+		models = append(models, name)
+	}
+
+	if len(models) == 0 {
+		return nil, fmt.Errorf("no Gemini models found")
+	}
+
+	return models, nil
 }

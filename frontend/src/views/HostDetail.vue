@@ -176,7 +176,7 @@
               class="chart-alert"
             />
             <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
-            <div v-else>
+            <div v-show="!historyLoading && !historyError && !historyEmpty">
               <div ref="statusChartRef" class="chart"></div>
               <div class="status-legend">
                 <span class="legend-title">{{ $t('hosts.statusLegendTitle') }}:</span>
@@ -498,6 +498,7 @@ const setMetricChartOption = (chart, name, data, color, unit = '%') => {
       trigger: 'axis',
       formatter: (params) => {
         const p = params[0]
+        if (!p || !p.data) return ''
         const time = new Date(p.data[0]).toLocaleString()
         return `${time}<br/>${p.seriesName}: ${p.data[1]}${unitLabel}`
       }
@@ -519,7 +520,7 @@ const setMetricChartOption = (chart, name, data, color, unit = '%') => {
       itemStyle: { color },
       data
     }]
-  })
+  }, { notMerge: true })
 }
 
 const loadMetricHistory = async () => {
@@ -684,7 +685,7 @@ const buildStatusChart = (series, prevSeries = []) => {
       },
     },
     series: chartSeries
-  })
+  }, { notMerge: true })
 }
 
 const loadHistory = async () => {
@@ -762,9 +763,11 @@ const loadHistory = async () => {
     }
     
     historyEmpty.value = series.length === 0
+    await nextTick()
     buildStatusChart(series, prevSeries)
   } catch (err) {
     historyError.value = err?.message || t('common.historyLoadFailed')
+    await nextTick()
     buildStatusChart([], [])
   } finally {
     historyLoading.value = false

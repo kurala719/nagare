@@ -49,6 +49,21 @@ export function checkAllProvidersStatus() {
   })
 }
 
+export function fetchProviderModels(id) {
+  return request({
+    url: `/providers/${id}/fetch-models`,
+    method: 'post'
+  })
+}
+
+export function fetchModelsDirect(data) {
+  return request({
+    url: '/providers/fetch-models-direct',
+    method: 'post',
+    data
+  })
+}
+
 export function getProviderById(id) {
   return request({
     url: `/providers/${id}`,

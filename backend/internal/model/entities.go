@@ -423,3 +423,17 @@ type RetentionPolicy struct {
 	Enabled       *int           `gorm:"default:1" json:"enabled"`             // 0 = disabled, 1 = enabled
 	Description   string         `gorm:"size:255" json:"description"`
 }
+
+// PacketAnalysis represents a packet capture analysis request
+type PacketAnalysis struct {
+	gorm.Model
+	Name        string `gorm:"size:255" json:"name"`
+	FilePath    string `gorm:"size:500" json:"file_path"`
+	RawContent  string `gorm:"type:longtext" json:"raw_content"` // Hex or text snippet
+	ProviderID  uint   `json:"provider_id"`
+	AIModel     string `gorm:"column:model;size:100" json:"model"`
+	Status      int    `gorm:"default:0" json:"status"` // 0=pending, 1=analyzing, 2=completed, 3=failed
+	RiskLevel   string `gorm:"size:50" json:"risk_level"` // "clean", "notable", "malicious"
+	Analysis    string `gorm:"type:longtext" json:"analysis"`
+	UserID      uint   `json:"user_id"`
+}

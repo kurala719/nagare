@@ -58,6 +58,26 @@ func (s *Service) GetClient(providerID int) (*Client, error) {
 	return client, nil
 }
 
+// AvailableModels returns the available models for the specified provider
+func (s *Service) AvailableModels(providerID int) ([]string, error) {
+	client, err := s.GetClient(providerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.AvailableModels(), nil
+}
+
+// FetchModels retrieves the latest list of models from the specified provider's API
+func (s *Service) FetchModels(ctx context.Context, providerID int) ([]string, error) {
+	client, err := s.GetClient(providerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.FetchModels(ctx)
+}
+
 // RemoveProvider removes a provider from the service
 func (s *Service) RemoveProvider(providerID int) {
 	s.mu.Lock()

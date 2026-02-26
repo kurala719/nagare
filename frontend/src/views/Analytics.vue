@@ -247,11 +247,11 @@ const initCharts = () => {
       itemStyle: { borderWidth: 0.5 },
       yearLabel: { show: false }
     },
-    series: {
+    series: [{
       type: 'heatmap',
       coordinateSystem: 'calendar',
       data: []
-    }
+    }]
   })
 
   // Host Chart Config

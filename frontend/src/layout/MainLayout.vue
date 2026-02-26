@@ -260,6 +260,7 @@ export default defineComponent({
       ]},
       { key: 'tooling_group', label: 'menu.tooling', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
+        { key: 'packetAnalysis', path: '/packet-analysis', label: 'packets.title', minPrivilege: 1 },
         { key: 'ansible', path: '/ansible/playbooks', label: 'menu.ansible', minPrivilege: 2 },
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
       ]},

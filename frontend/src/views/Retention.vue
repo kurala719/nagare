@@ -83,7 +83,7 @@
             </template>
             <template v-else>
               <span class="description-text">
-                {{ $t(`retention.typeDescriptions.${row.data_type}`) !== `retention.typeDescriptions.${row.data_type}` ? $t(`retention.typeDescriptions.${row.data_type}`) : (row.description || '-') }}
+                {{ row.data_type ? ($t(`retention.typeDescriptions.${row.data_type}`) !== `retention.typeDescriptions.${row.data_type}` ? $t(`retention.typeDescriptions.${row.data_type}`) : (row.description || '-')) : '-' }}
               </span>
             </template>
           </template>
@@ -155,7 +155,7 @@ const loadPolicies = async () => {
   try {
     const res = await api.retention.fetchRetentionPolicies()
     if (res && res.success) {
-      policies.value = res.data || []
+      policies.value = (res.data || []).filter(p => p.data_type)
       
       // Ensure all supported types are present (even if not in DB yet)
       const supportedTypes = [

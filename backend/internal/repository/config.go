@@ -12,6 +12,7 @@ var ConfigPath string
 type Config struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
@@ -22,6 +23,16 @@ type Config struct {
 type SiteMessageConfig struct {
 	MinAlertSeverity int `yaml:"min_alert_severity" json:"min_alert_severity" mapstructure:"min_alert_severity"`
 	MinLogSeverity   int `yaml:"min_log_severity" json:"min_log_severity" mapstructure:"min_log_severity"`
+}
+
+// SMTPConfig holds SMTP server settings
+type SMTPConfig struct {
+	Enabled  bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
+	Host     string `yaml:"host" json:"host" mapstructure:"host"`
+	Port     int    `yaml:"port" json:"port" mapstructure:"port"`
+	Username string `yaml:"username" json:"username" mapstructure:"username"`
+	Password string `yaml:"password" json:"password" mapstructure:"password"`
+	From     string `yaml:"from" json:"from" mapstructure:"from"`
 }
 
 // QQConfig holds OneBot/NapCat WebSocket settings
@@ -121,6 +132,7 @@ type ConfigRequest struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
@@ -136,6 +148,7 @@ type ConfigResponse struct {
 	MCP            MCPConfig            `yaml:"mcp" json:"mcp" mapstructure:"mcp"`
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
+	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
 	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
@@ -153,8 +166,39 @@ func InitConfig(path string) error {
 	viper.AutomaticEnv()
 
 	viper.SetDefault("status_check.provider_enabled", false)
-	return viper.ReadInConfig()
+	
+	if err := viper.ReadInConfig(); err != nil {
+		return err
+	}
+
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		LogConfigChange(e.Name)
+		NotifyConfigObservers()
+	})
+	viper.WatchConfig()
+
+	return nil
 }
+
+// ConfigObserver defines a function that reacts to config changes
+type ConfigObserver func()
+
+var observers []ConfigObserver
+
+// RegisterConfigObserver adds a listener for configuration changes
+func RegisterConfigObserver(observer ConfigObserver) {
+	observers = append(observers, observer)
+}
+
+// NotifyConfigObservers triggers all registered callbacks
+func NotifyConfigObservers() {
+	for _, observer := range observers {
+		observer()
+	}
+}
+
+// LogConfigChange is a placeholder for logging, will be linked to service later
+var LogConfigChange = func(path string) {}
 
 // LoadConfig reloads the configuration file
 func LoadConfig() error {
@@ -217,6 +261,13 @@ func ResetConfig() error {
 	viper.Set("gmail.credentials_file", "configs/gmail_credentials.json")
 	viper.Set("gmail.token_file", "configs/gmail_token.json")
 	viper.Set("gmail.from", "")
+
+	viper.Set("smtp.enabled", false)
+	viper.Set("smtp.host", "")
+	viper.Set("smtp.port", 587)
+	viper.Set("smtp.username", "")
+	viper.Set("smtp.password", "")
+	viper.Set("smtp.from", "")
 
 	viper.Set("qq.enabled", false)
 	viper.Set("qq.mode", "reverse")

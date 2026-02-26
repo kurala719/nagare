@@ -16,6 +16,7 @@ import * as ansible from './ansible';
 import * as siteMessages from './siteMessage';
 import * as knowledgeBase from './knowledgeBase';
 import * as retention from './retention';
+import * as packetAnalysis from './packetAnalysis';
 
 export default {
   chats,
@@ -35,5 +36,6 @@ export default {
   ansible,
   siteMessages,
   knowledgeBase,
-  retention
+  retention,
+  packetAnalysis
 };

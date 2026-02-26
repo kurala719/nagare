@@ -288,6 +288,11 @@
                 </div>
 
                 <el-divider content-position="left">{{ $t('items.aiResponse') }}</el-divider>
+                <div class="ai-response-content" v-if="aiResponse">
+                    <p style="white-space: pre-wrap;">{{ aiResponse }}</p>
+                </div>
+            </div>
+        </el-dialog>
     </div>
 </template>
 

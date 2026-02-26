@@ -131,7 +131,7 @@ const initCharts = () => {
           }
         }
       }]
-    })
+    }, { notMerge: true })
   }
 
   // Line Chart
@@ -149,7 +149,7 @@ const initCharts = () => {
         smooth: true,
         areaStyle: {}
       }]
-    })
+    }, { notMerge: true })
   }
 }
 

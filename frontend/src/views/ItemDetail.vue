@@ -334,7 +334,7 @@ const buildStatusChart = (series, units, prevSeries = []) => {
         }
       },
       series: chartSeries
-    })
+    }, { notMerge: true })
   } catch (err) {
     console.error('[ItemDetail] Error building chart:', err)
   }

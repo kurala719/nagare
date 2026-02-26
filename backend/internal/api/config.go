@@ -31,15 +31,64 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 		respondBadRequest(c, err.Error())
 		return
 	}
-	repository.SetConfigValue("system", req.System)
-	repository.SetConfigValue("database", req.Database)
-	repository.SetConfigValue("sync", req.Sync)
-	repository.SetConfigValue("status_check", req.StatusCheck)
-	repository.SetConfigValue("mcp", req.MCP)
-	repository.SetConfigValue("ai", req.AI)
-	repository.SetConfigValue("gmail", req.Gmail)
-	repository.SetConfigValue("qq", req.QQ)
-	repository.SetConfigValue("media_rate_limit", req.MediaRateLimit)
+
+	// Set individual fields to ensure Viper tracks them correctly for Get calls
+	repository.SetConfigValue("system.system_name", req.System.SystemName)
+	repository.SetConfigValue("system.ip_address", req.System.IPAddress)
+	repository.SetConfigValue("system.port", req.System.Port)
+	repository.SetConfigValue("system.availability", req.System.Availability)
+
+	repository.SetConfigValue("database.host", req.Database.Host)
+	repository.SetConfigValue("database.port", req.Database.Port)
+	repository.SetConfigValue("database.username", req.Database.Username)
+	repository.SetConfigValue("database.password", req.Database.Password)
+	repository.SetConfigValue("database.version", req.Database.Version)
+	repository.SetConfigValue("database.database_name", req.Database.DatabaseName)
+
+	repository.SetConfigValue("sync.enabled", req.Sync.Enabled)
+	repository.SetConfigValue("sync.interval_seconds", req.Sync.IntervalSeconds)
+	repository.SetConfigValue("sync.concurrency", req.Sync.Concurrency)
+
+	repository.SetConfigValue("status_check.enabled", req.StatusCheck.Enabled)
+	repository.SetConfigValue("status_check.provider_enabled", req.StatusCheck.ProviderEnabled)
+	repository.SetConfigValue("status_check.interval_seconds", req.StatusCheck.IntervalSeconds)
+	repository.SetConfigValue("status_check.concurrency", req.StatusCheck.Concurrency)
+
+	repository.SetConfigValue("mcp.enabled", req.MCP.Enabled)
+	repository.SetConfigValue("mcp.api_key", req.MCP.APIKey)
+	repository.SetConfigValue("mcp.max_concurrency", req.MCP.MaxConcurrency)
+
+	repository.SetConfigValue("ai.analysis_enabled", req.AI.AnalysisEnabled)
+	repository.SetConfigValue("ai.notification_guard_enabled", req.AI.NotificationGuardEnabled)
+	repository.SetConfigValue("ai.provider_id", req.AI.ProviderID)
+	repository.SetConfigValue("ai.model", req.AI.Model)
+	repository.SetConfigValue("ai.analysis_timeout_seconds", req.AI.AnalysisTimeoutSeconds)
+	repository.SetConfigValue("ai.analysis_min_severity", req.AI.AnalysisMinSeverity)
+
+	repository.SetConfigValue("gmail.enabled", req.Gmail.Enabled)
+	repository.SetConfigValue("gmail.credentials_file", req.Gmail.CredentialsFile)
+	repository.SetConfigValue("gmail.token_file", req.Gmail.TokenFile)
+	repository.SetConfigValue("gmail.from", req.Gmail.From)
+
+	repository.SetConfigValue("smtp.enabled", req.SMTP.Enabled)
+	repository.SetConfigValue("smtp.host", req.SMTP.Host)
+	repository.SetConfigValue("smtp.port", req.SMTP.Port)
+	repository.SetConfigValue("smtp.username", req.SMTP.Username)
+	repository.SetConfigValue("smtp.password", req.SMTP.Password)
+	repository.SetConfigValue("smtp.from", req.SMTP.From)
+
+	repository.SetConfigValue("qq.enabled", req.QQ.Enabled)
+	repository.SetConfigValue("qq.mode", req.QQ.Mode)
+	repository.SetConfigValue("qq.positive_url", req.QQ.PositiveURL)
+	repository.SetConfigValue("qq.access_token", req.QQ.AccessToken)
+
+	repository.SetConfigValue("site_message.min_alert_severity", req.SiteMessage.MinAlertSeverity)
+	repository.SetConfigValue("site_message.min_log_severity", req.SiteMessage.MinLogSeverity)
+
+	repository.SetConfigValue("media_rate_limit.global_interval_seconds", req.MediaRateLimit.GlobalIntervalSeconds)
+	repository.SetConfigValue("media_rate_limit.protocol_interval_seconds", req.MediaRateLimit.ProtocolIntervalSeconds)
+	repository.SetConfigValue("media_rate_limit.media_interval_seconds", req.MediaRateLimit.MediaIntervalSeconds)
+
 	repository.SetConfigValue("external", req.External)
 
 	if err := repository.SaveConfig(); err != nil {

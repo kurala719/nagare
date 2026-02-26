@@ -132,7 +132,7 @@ export default defineComponent({
   },
   setup() {
     const { t } = useI18n()
-    const loading = ref(false)
+    const loading = ref(true)
     const lastUpdated = ref('')
     const autoRefreshEnabled = ref(true)
     let refreshInterval = null

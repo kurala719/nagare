@@ -1,19 +1,19 @@
 {
   "ai": {
     "analysis_enabled": false,
-    "notification_guard_enabled": false,
-    "provider_id": 1,
-    "model": "",
+    "analysis_min_severity": 2,
     "analysis_timeout_seconds": 60,
-    "analysis_min_severity": 2
+    "model": "",
+    "notification_guard_enabled": false,
+    "provider_id": 1
   },
   "database": {
+    "database_name": "nagare",
     "host": "127.0.0.1",
+    "password": "Huawei@123",
     "port": 3306,
     "username": "nagare",
-    "password": "Huawei@123",
-    "version": "MYSQL 8.0.44",
-    "database_name": "nagare"
+    "version": "MYSQL 8.0.44"
   },
   "external": [
     {
@@ -84,46 +84,58 @@
     }
   ],
   "gmail": {
-    "enabled": true,
     "credentials_file": "configs/gmail_credentials.json",
-    "token_file": "configs/gmail_token.json",
-    "from": "kurala719@gmail.com"
+    "enabled": true,
+    "from": "kurala719@gmail.com",
+    "token_file": "configs/gmail_token.json"
   },
   "jwt": {
     "jwt_ttl": 7200,
     "secret_key": "knt;e@KLDsjhBjq!T@dvjpSpRa+%r?(7YM^hZ*Q(te[!b9Cg~7LD7,@J!^u8QF`F"
   },
   "mcp": {
-    "enabled": true,
     "api_key": "change-me",
+    "enabled": true,
     "max_concurrency": 4
   },
   "media_rate_limit": {
     "global_interval_seconds": 30,
-    "protocol_interval_seconds": 0,
-    "media_interval_seconds": 30
+    "media_interval_seconds": 30,
+    "protocol_interval_seconds": 0
   },
   "qq": {
+    "access_token": "",
     "enabled": true,
     "mode": "positive",
-    "positive_url": "ws://localhost:3001",
-    "access_token": ""
+    "positive_url": "ws://localhost:3001"
+  },
+  "site_message": {
+    "min_alert_severity": 1,
+    "min_log_severity": 1
+  },
+  "smtp": {
+    "enabled": false,
+    "from": "",
+    "host": "",
+    "password": "",
+    "port": 0,
+    "username": ""
   },
   "status_check": {
+    "concurrency": 4,
     "enabled": true,
-    "provider_enabled": false,
     "interval_seconds": 60,
-    "concurrency": 4
+    "provider_enabled": false
   },
   "sync": {
+    "concurrency": 2,
     "enabled": true,
-    "interval_seconds": 60,
-    "concurrency": 2
+    "interval_seconds": 60
   },
   "system": {
-    "system_name": "Nagare System",
+    "availability": true,
     "ip_address": "192.168.32.1",
     "port": 8080,
-    "availability": true
+    "system_name": "Nagare System"
   }
 }
