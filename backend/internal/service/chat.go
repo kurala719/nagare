@@ -95,13 +95,14 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 		health = HealthScore{}
 	}
 
-	context := buildNetworkStatusContext(alerts, metrics, health)
+	contextData := buildNetworkStatusContext(alerts, metrics, health)
 
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
 
 	// Build system prompt with persona (roast mode) if specified
-	systemPrompt := networkStatusPrompt(isChinese(req.Locale))
+	isCn := isChinese(req.Locale)
+	systemPrompt := networkStatusPrompt(isCn)
 	personaPrompt := resolveChatPersonaPrompt(req.Mode, req.Locale)
 	if personaPrompt != "" {
 		systemPrompt = personaPrompt + "\n\n" + systemPrompt
@@ -112,7 +113,7 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 		Model:        llmModel,
 		SystemPrompt: systemPrompt,
 		Messages: []llm.Message{
-			{Role: "user", Content: context},
+			{Role: "user", Content: contextData},
 		},
 	})
 	logLLMRequest("network_status", req.ProviderID, llmModel, time.Since(start), err)
@@ -826,15 +827,15 @@ func isNetworkStatusQuery(content string) bool {
 	if lower == "" {
 		return false
 	}
-	// Check English keywords
-	keywords := []string{"network", "net", "status", "health", "alert"}
+	// Check English keywords (more specific)
+	keywords := []string{"network status", "overall health", "system status", "current alerts", "network health"}
 	for _, k := range keywords {
 		if strings.Contains(lower, k) {
 			return true
 		}
 	}
 	// Check Chinese keywords
-	cnKeywords := []string{"网络", "状态", "状况", "健康", "告警"}
+	cnKeywords := []string{"网络状态", "整体状况", "系统状态", "当前告警", "网络健康"}
 	for _, k := range cnKeywords {
 		if strings.Contains(content, k) {
 			return true

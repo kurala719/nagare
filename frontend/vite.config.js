@@ -61,6 +61,7 @@ export default defineConfig({
             target: 'http://localhost:8080',
             changeOrigin: true,
             secure: false,
+            ws: true,
             configure: (proxy, _options) => {
               proxy.on('proxyReq', (proxyReq, req, _res) => {
                 console.log('Proxying:', req.method, req.url, '->', 'http://localhost:8080' + proxyReq.path);

@@ -98,7 +98,9 @@ const messages = {
       export: 'Export CSV',
       autoRefresh: 'Auto Refresh',
       rawContext: 'Raw Context',
-      formattedContext: 'Formatted Context'
+      formattedContext: 'Formatted Context',
+      retry: 'Retry',
+      applyAndSave: 'Apply and Save'
     },
     auth: {
       login: 'Login',
@@ -703,6 +705,7 @@ const messages = {
       model: 'Model',
       file: 'PCAP/Text File',
       rawContent: 'Raw Hex/Flow Data (Optional)',
+      rawContentPlaceholder: 'Paste hex or flow data here...',
       analyze: 'Start Analysis',
       status: 'Status',
       risk: 'Risk Level',
@@ -1020,7 +1023,9 @@ const messages = {
       export: 'Export CSV',
       autoRefresh: 'Auto Refresh',
       rawContext: 'Raw Context',
-      formattedContext: 'Formatted Context'
+      formattedContext: 'Formatted Context',
+      retry: 'Retry',
+      applyAndSave: 'Apply and Save'
     },
     groups: {
       title: 'Host Groups',
@@ -1450,7 +1455,9 @@ const messages = {
       export: '导出 CSV',
       autoRefresh: '自动刷新',
       rawContext: '原始上下文',
-      formattedContext: '格式化上下文'
+      formattedContext: '格式化上下文',
+      retry: '重试',
+      applyAndSave: '应用并保存'
     },
     auth: {
       login: '登录',
@@ -2051,6 +2058,7 @@ const messages = {
       model: '模型',
       file: 'PCAP/文本文件',
       rawContent: '原始十六进制/流数据 (可选)',
+      rawContentPlaceholder: '请在此处粘贴十六进制或流数据...',
       analyze: '开始分析',
       status: '状态',
       risk: '风险等级',
@@ -2371,7 +2379,9 @@ const messages = {
       export: '导出 CSV',
       autoRefresh: '自动刷新',
       rawContext: '原始上下文',
-      formattedContext: '格式化上下文'
+      formattedContext: '格式化上下文',
+      retry: '重试',
+      applyAndSave: '应用并保存'
     },
     groups: {
       title: '主机分组',
