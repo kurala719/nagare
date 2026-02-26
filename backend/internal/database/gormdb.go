@@ -39,7 +39,6 @@ func InitDB(dsn string) error {
 	return nil
 }
 
-// InitDBFromConfig initializes the database using viper configuration
 func InitDBFromConfig() error {
 	user := viper.GetString("database.username")
 	password := viper.GetString("database.password")
@@ -49,6 +48,14 @@ func InitDBFromConfig() error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local", user, password, host, port, dbname)
 	if err := InitDB(dsn); err != nil {
 		return err
+	}
+	return applyPoolSettings()
+}
+
+// ReapplyPoolSettings updates the pool settings from configuration
+func ReapplyPoolSettings() error {
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
 	}
 	return applyPoolSettings()
 }

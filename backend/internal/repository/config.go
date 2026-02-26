@@ -2,11 +2,19 @@ package repository
 
 import (
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
-var ConfigPath string
+var (
+	ConfigPath string
+	observers  []ConfigObserver
+	obsMutex   sync.Mutex
+	lastNotify time.Time
+)
 
 // Config represents the main application configuration
 type Config struct {
@@ -183,16 +191,29 @@ func InitConfig(path string) error {
 // ConfigObserver defines a function that reacts to config changes
 type ConfigObserver func()
 
-var observers []ConfigObserver
-
 // RegisterConfigObserver adds a listener for configuration changes
 func RegisterConfigObserver(observer ConfigObserver) {
+	obsMutex.Lock()
+	defer obsMutex.Unlock()
 	observers = append(observers, observer)
 }
 
-// NotifyConfigObservers triggers all registered callbacks
+// NotifyConfigObservers triggers all registered callbacks with a simple debounce
 func NotifyConfigObservers() {
-	for _, observer := range observers {
+	obsMutex.Lock()
+	// Debounce: don't notify more than once every 500ms
+	if time.Since(lastNotify) < 500*time.Millisecond {
+		obsMutex.Unlock()
+		return
+	}
+	lastNotify = time.Now()
+	
+	// Create a copy to avoid holding lock during execution
+	currentObservers := make([]ConfigObserver, len(observers))
+	copy(currentObservers, observers)
+	obsMutex.Unlock()
+
+	for _, observer := range currentObservers {
 		observer()
 	}
 }

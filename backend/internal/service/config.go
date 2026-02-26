@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"nagare/internal/database"
 	"nagare/internal/repository"
 	"nagare/internal/repository/media"
 )
@@ -32,6 +33,21 @@ func ModifyConfigServ(key string, value interface{}) error {
 
 // InitConfigServ initializes configuration from path
 func InitConfigServ(path string) error {
+	repository.LogConfigChange = func(path string) {
+		LogSystem("info", "configuration file changed", map[string]interface{}{"path": path}, nil, "")
+	}
+
+	// Register observers for hot reload
+	repository.RegisterConfigObserver(func() {
+		LogSystem("info", "restarting services after configuration change", nil, nil, "")
+		RestartAutoSync()
+		RestartStatusChecks()
+		RestartQQWSServ()
+		if err := database.ReapplyPoolSettings(); err != nil {
+			LogSystem("error", "failed to reapply database pool settings", map[string]interface{}{"error": err.Error()}, nil, "")
+		}
+	})
+
 	return repository.InitConfig(path)
 }
 

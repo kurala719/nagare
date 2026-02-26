@@ -96,8 +96,8 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 		return
 	}
 
-	// Restart services that might need it
-	service.RestartQQWSServ()
+	// Trigger hot reload for background services
+	repository.NotifyConfigObservers()
 
 	respondSuccessMessage(c, http.StatusOK, "configuration updated")
 }
@@ -116,6 +116,8 @@ func ModifyConfig(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	// Trigger hot reload
+	repository.NotifyConfigObservers()
 	respondSuccessMessage(c, http.StatusOK, "configuration updated")
 }
 
@@ -134,6 +136,8 @@ func LoadConfigCtrl(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	// Trigger hot reload after manual reload
+	repository.NotifyConfigObservers()
 	respondSuccessMessage(c, http.StatusOK, "configuration loaded")
 }
 
@@ -143,6 +147,8 @@ func ResetConfigCtrl(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	// Trigger hot reload
+	repository.NotifyConfigObservers()
 	respondSuccessMessage(c, http.StatusOK, "configuration reset to defaults")
 }
 

@@ -24,8 +24,16 @@ type StatusCheckResult struct {
 	Error  string `json:"error,omitempty"`
 }
 
+var (
+	statusCheckCancel context.CancelFunc
+)
+
 // StartStatusChecks starts periodic status checks for key resources.
 func StartStatusChecks() {
+	if statusCheckCancel != nil {
+		return
+	}
+
 	enabled := viper.GetBool("status_check.enabled")
 	if !enabled {
 		LogSystem("info", "status checks disabled via configuration", nil, nil, "")
@@ -39,6 +47,9 @@ func StartStatusChecks() {
 
 	LogSystem("info", "status checks enabled", map[string]interface{}{"interval_seconds": intervalSeconds}, nil, "")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	statusCheckCancel = cancel
+
 	go func() {
 		ticker := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
 		defer ticker.Stop()
@@ -48,14 +59,37 @@ func StartStatusChecks() {
 			_ = CheckAllProvidersStatusServ()
 		}
 		_ = CheckAllGroupsStatusServ()
-		for range ticker.C {
-			_ = CheckAllMonitorsStatusServ()
-			if viper.GetBool("status_check.provider_enabled") {
-				_ = CheckAllProvidersStatusServ()
+		
+		for {
+			select {
+			case <-ctx.Done():
+				LogSystem("info", "status checks background task stopped", nil, nil, "")
+				return
+			case <-ticker.C:
+				_ = CheckAllMonitorsStatusServ()
+				if viper.GetBool("status_check.provider_enabled") {
+					_ = CheckAllProvidersStatusServ()
+				}
+				_ = CheckAllGroupsStatusServ()
 			}
-			_ = CheckAllGroupsStatusServ()
 		}
 	}()
+}
+
+// StopStatusChecks stops the status check service
+func StopStatusChecks() {
+	if statusCheckCancel != nil {
+		statusCheckCancel()
+		statusCheckCancel = nil
+	}
+}
+
+// RestartStatusChecks restarts the status check service
+func RestartStatusChecks() {
+	StopStatusChecks()
+	// Small delay to allow goroutine to exit
+	time.Sleep(100 * time.Millisecond)
+	StartStatusChecks()
 }
 
 // CheckMonitorStatusServ checks a single monitor's status.

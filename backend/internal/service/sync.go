@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,8 +14,16 @@ const (
 	defaultSyncConcurrency = 2
 )
 
+var (
+	syncCancel context.CancelFunc
+)
+
 // StartAutoSync starts periodic pulling of hosts and items from all monitors.
 func StartAutoSync() {
+	if syncCancel != nil {
+		return
+	}
+
 	fmt.Println(">>> Starting AutoSync Service...")
 	enabled := viper.GetBool("sync.enabled")
 	if !viper.IsSet("sync.enabled") {
@@ -40,16 +49,41 @@ func StartAutoSync() {
 	fmt.Printf(">>> AutoSync will run every %d seconds (source: %s)\n", intervalSeconds, intervalSource)
 	LogSystem("info", "auto sync enabled", map[string]interface{}{"interval_seconds": intervalSeconds, "interval_source": intervalSource}, nil, "")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	syncCancel = cancel
+
 	LogSystem("info", "starting auto sync background task", nil, nil, "")
 	go func() {
 		ticker := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
 		defer ticker.Stop()
 
 		pullAllMonitors()
-		for range ticker.C {
-			pullAllMonitors()
+		for {
+			select {
+			case <-ctx.Done():
+				LogSystem("info", "auto sync background task stopped", nil, nil, "")
+				return
+			case <-ticker.C:
+				pullAllMonitors()
+			}
 		}
 	}()
+}
+
+// StopAutoSync stops the auto sync service
+func StopAutoSync() {
+	if syncCancel != nil {
+		syncCancel()
+		syncCancel = nil
+	}
+}
+
+// RestartAutoSync restarts the auto sync service
+func RestartAutoSync() {
+	StopAutoSync()
+	// Small delay to allow goroutine to exit
+	time.Sleep(100 * time.Millisecond)
+	StartAutoSync()
 }
 
 func pullAllMonitors() {
