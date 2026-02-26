@@ -446,11 +446,12 @@ export default {
     const availableModels = ref([]);
 
     const alertSeverityOptions = computed(() => [
-      { label: t('alerts.severityInfo'), value: 0 },
-      { label: t('alerts.severityLow'), value: 1 },
-      { label: t('alerts.severityMedium'), value: 2 },
-      { label: t('alerts.severityHigh'), value: 3 },
-      { label: t('alerts.severityCritical'), value: 4 }
+      { label: t('alerts.severityDisaster'), value: 5 },
+      { label: t('alerts.severityHigh'), value: 4 },
+      { label: t('alerts.severityAverage'), value: 3 },
+      { label: t('alerts.severityWarning'), value: 2 },
+      { label: t('alerts.severityInfo'), value: 1 },
+      { label: t('alerts.severityNotClassified'), value: 0 }
     ]);
 
     const logSeverityOptions = computed(() => [

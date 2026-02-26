@@ -159,11 +159,12 @@
       </el-form-item>
       <el-form-item :label="$t('actions.severity')">
         <el-select v-model="newAction.severity_min" style="width: 100%;">
-          <el-option :label="$t('alerts.severityCritical')" :value="4" />
-          <el-option :label="$t('alerts.severityHigh')" :value="3" />
-          <el-option :label="$t('alerts.severityMedium')" :value="2" />
-          <el-option :label="$t('alerts.severityLow')" :value="1" />
-          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+          <el-option :label="$t('alerts.severityDisaster')" :value="5" />
+          <el-option :label="$t('alerts.severityHigh')" :value="4" />
+          <el-option :label="$t('alerts.severityAverage')" :value="3" />
+          <el-option :label="$t('alerts.severityWarning')" :value="2" />
+          <el-option :label="$t('alerts.severityInfo')" :value="1" />
+          <el-option :label="$t('alerts.severityNotClassified')" :value="0" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('actions.alertStatus')">
@@ -224,11 +225,12 @@
       </el-form-item>
       <el-form-item :label="$t('actions.severity')">
         <el-select v-model="selectedAction.severity_min" style="width: 100%;">
-          <el-option :label="$t('alerts.severityCritical')" :value="4" />
-          <el-option :label="$t('alerts.severityHigh')" :value="3" />
-          <el-option :label="$t('alerts.severityMedium')" :value="2" />
-          <el-option :label="$t('alerts.severityLow')" :value="1" />
-          <el-option :label="$t('alerts.severityInfo')" :value="0" />
+          <el-option :label="$t('alerts.severityDisaster')" :value="5" />
+          <el-option :label="$t('alerts.severityHigh')" :value="4" />
+          <el-option :label="$t('alerts.severityAverage')" :value="3" />
+          <el-option :label="$t('alerts.severityWarning')" :value="2" />
+          <el-option :label="$t('alerts.severityInfo')" :value="1" />
+          <el-option :label="$t('alerts.severityNotClassified')" :value="0" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('actions.alertStatus')">
@@ -711,21 +713,23 @@ export default {
     },
     getSeverityLabel(severity) {
       const map = {
-        0: this.$t('alerts.severityInfo'),
-        1: this.$t('alerts.severityLow'),
-        2: this.$t('alerts.severityMedium'),
-        3: this.$t('alerts.severityHigh'),
-        4: this.$t('alerts.severityCritical'),
+        0: this.$t('alerts.severityNotClassified'),
+        1: this.$t('alerts.severityInfo'),
+        2: this.$t('alerts.severityWarning'),
+        3: this.$t('alerts.severityAverage'),
+        4: this.$t('alerts.severityHigh'),
+        5: this.$t('alerts.severityDisaster'),
       };
-      return map[severity] || this.$t('alerts.severityInfo');
+      return map[severity] || this.$t('alerts.severityNotClassified');
     },
     getSeverityType(severity) {
       const map = {
         0: 'info',
         1: 'info',
         2: 'warning',
-        3: 'danger',
+        3: 'warning',
         4: 'danger',
+        5: 'danger',
       };
       return map[severity] || 'info';
     },

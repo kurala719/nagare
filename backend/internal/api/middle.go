@@ -148,17 +148,12 @@ func AuditLogMiddleware() gin.HandlerFunc {
 		uidValue, existsUid := c.Get("uid")
 		usernameValue, existsUsername := c.Get("username")
 
-		var uid uint
 		var username string
-		if existsUid {
-			uid = uidValue.(uint)
-		}
 		if existsUsername {
 			username = usernameValue.(string)
 		}
 
 		entry := model.AuditLog{
-			UserID:    uid,
 			Username:  username,
 			Action:    getActionDescription(c),
 			Method:    method,
@@ -167,6 +162,10 @@ func AuditLogMiddleware() gin.HandlerFunc {
 			Status:    c.Writer.Status(),
 			Latency:   latency,
 			UserAgent: c.Request.UserAgent(),
+		}
+		if existsUid {
+			uID := uidValue.(uint)
+			entry.UserID = &uID
 		}
 
 		// Save asynchronously to not block the response

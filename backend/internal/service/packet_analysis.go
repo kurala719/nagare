@@ -24,12 +24,18 @@ type PacketAnalysisReq struct {
 func AddPacketAnalysisServ(req PacketAnalysisReq, userID uint, fileName string) (model.PacketAnalysis, error) {
 	pa := model.PacketAnalysis{
 		Name:       req.Name,
-		ProviderID: req.ProviderID,
 		AIModel:    req.Model,
 		RawContent: req.RawContent,
-		UserID:     userID,
 		Status:     0, // Pending
 		FilePath:   fileName,
+	}
+	if req.ProviderID > 0 {
+		pID := req.ProviderID
+		pa.ProviderID = &pID
+	}
+	if userID > 0 {
+		uID := userID
+		pa.UserID = &uID
 	}
 
 	if err := repository.AddPacketAnalysisDAO(&pa); err != nil {
@@ -54,7 +60,13 @@ func StartPacketAnalysisServ(id uint) error {
 
 func analyzePacketAsync(pa model.PacketAnalysis) {
 	fmt.Printf(">>> Starting AI analysis for packet '%s' (ID: %d)\n", pa.Name, pa.ID)
-	client, resolvedModel, err := createLLMClient(pa.ProviderID, pa.AIModel)
+	
+	var pID uint = 0
+	if pa.ProviderID != nil {
+		pID = *pa.ProviderID
+	}
+	
+	client, resolvedModel, err := createLLMClient(pID, pa.AIModel)
 	if err != nil {
 		fmt.Printf(">>> Failed to create AI client: %v\n", err)
 		updatePacketAnalysisStatus(pa.ID, 3, "Failed to create AI client: "+err.Error(), "error")
@@ -92,7 +104,12 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 	})
 
 	duration := time.Since(start)
-	logLLMRequest("packet_analysis", pa.ProviderID, resolvedModel, duration, err)
+	
+	var logPID uint = 0
+	if pa.ProviderID != nil {
+		logPID = *pa.ProviderID
+	}
+	logLLMRequest("packet_analysis", logPID, resolvedModel, duration, err)
 
 	if err != nil {
 		fmt.Printf(">>> AI Analysis failed after %v: %v\n", duration, err)
@@ -122,7 +139,7 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 		if riskLevel == "malicious" {
 			title = "Malicious Packet Detected!"
 		}
-		_ = CreateSiteMessageServ(title, fmt.Sprintf("AI analyzed packet '%s' and determined it is %s. Details: %s", pa.Name, riskLevel, pa.Name), "alert", 3, &pa.UserID)
+		_ = CreateSiteMessageServ(title, fmt.Sprintf("AI analyzed packet '%s' and determined it is %s. Details: %s", pa.Name, riskLevel, pa.Name), "alert", 3, pa.UserID)
 	}
 }
 

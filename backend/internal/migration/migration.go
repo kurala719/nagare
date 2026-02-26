@@ -193,7 +193,117 @@ func ensureDefaultReportConfig() error {
 	return nil
 }
 
+func fixForeignKeyColumnTypes() error {
+	tablesToFix := map[string][]string{
+		"hosts":                         {"m_id", "group_id"},
+		"groups":                        {"m_id"},
+		"items":                         {"hid"},
+		"item_histories":                {"item_id", "host_id"},
+		"host_histories":                {"host_id"},
+		"alerts":                        {"alarm_id", "trigger_id", "host_id", "item_id"},
+		"actions":                       {"media_id", "trigger_id", "host_id", "group_id"},
+		"triggers":                      {"alert_id", "alert_group_id", "alert_monitor_id", "alert_host_id", "alert_item_id"},
+		"chats":                         {"user_id", "provider_id"},
+		"log_entries":                   {"user_id"},
+		"audit_logs":                    {"user_id"},
+		"register_applications":         {"approved_by"},
+		"password_reset_applications":   {"user_id", "approved_by"},
+		"ansible_jobs":                  {"playbook_id", "triggered_by"},
+		"site_messages":                 {"user_id"},
+		"packet_analyses":               {"provider_id", "user_id"},
+	}
+
+	for table, columns := range tablesToFix {
+		if !database.DB.Migrator().HasTable(table) {
+			continue
+		}
+		for _, column := range columns {
+			if database.DB.Migrator().HasColumn(table, column) {
+				// 1. Ensure it's BIGINT UNSIGNED
+				_ = database.DB.Exec(fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN `%s` BIGINT UNSIGNED", table, column))
+
+				// 2. Clean up invalid references (orphans) before adding FK
+				// For columns like group_id, m_id, user_id, etc.
+				refTable := ""
+				switch column {
+				case "group_id", "alert_group_id":
+					refTable = "groups"
+				case "m_id", "alert_monitor_id":
+					refTable = "monitors"
+				case "hid", "host_id", "alert_host_id":
+					refTable = "hosts"
+				case "item_id", "alert_item_id":
+					refTable = "items"
+				case "user_id", "approved_by", "triggered_by":
+					refTable = "users"
+				case "alarm_id":
+					refTable = "alarms"
+				case "trigger_id":
+					refTable = "triggers"
+				case "media_id":
+					refTable = "media"
+				case "provider_id":
+					refTable = "providers"
+				case "playbook_id":
+					refTable = "ansible_playbooks"
+				}
+
+				if refTable != "" && database.DB.Migrator().HasTable(refTable) {
+					// 1. Explicitly set 0 to NULL first to avoid FK issues
+					_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` = 0", table, column, column))
+
+					// 2. Set to NULL where the referenced ID doesn't exist
+					_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `%s` = NULL WHERE `%s` NOT IN (SELECT id FROM `%s`) AND `%s` IS NOT NULL", table, column, column, refTable, column))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func migrateSeverityLevels() error {
+	// Check if we already migrated. We use a config flag or check if values shifted.
+	// For simplicity, we'll shift them once.
+	// Old: 0:Info, 1:Low, 2:Medium, 3:High, 4:Critical
+	// New: 0:Not Classified, 1:Info, 2:Warning, 3:Average, 4:High, 5:Disaster
+	
+	// We'll increment existing 0-4 values by 1 to roughly match new mapping
+	// Info (0) -> Info (1)
+	// Low (1) -> Warning (2)
+	// Medium (2) -> Average (3)
+	// High (3) -> High (4)
+	// Critical (4) -> High (4) or Disaster (5)? 
+	// Let's just do a simple shift for now if they are in range [0, 4]
+	
+	// Only run if Disaster (5) is not used yet? Or use a marker.
+	// We'll check if any Trigger has severity 5.
+	var count int64
+	database.DB.Model(&model.Trigger{}).Where("severity = 5").Count(&count)
+	if count > 0 {
+		return nil // Already migrated or has disaster triggers
+	}
+
+	tables := []string{"triggers", "alerts"}
+	for _, t := range tables {
+		if database.DB.Migrator().HasTable(t) {
+			_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET severity = severity + 1 WHERE severity >= 0 AND severity <= 4", t))
+		}
+	}
+	
+	// Actions use severity_min
+	if database.DB.Migrator().HasTable("actions") {
+		_ = database.DB.Exec("UPDATE actions SET severity_min = severity_min + 1 WHERE severity_min >= 0 AND severity_min <= 4")
+	}
+
+	return nil
+}
+
 func preSchemaUpdates() error {
+	// Fix column types for foreign keys to ensure they are compatible (BIGINT UNSIGNED)
+	if err := fixForeignKeyColumnTypes(); err != nil {
+		fmt.Printf("Warning: failed to fix foreign key column types: %v\n", err)
+	}
+
 	// Deduplicate users before adding unique index if table exists
 	if database.DB.Migrator().HasTable("users") {
 		// This query finds duplicates and deletes all but the one with the smallest ID
@@ -202,6 +312,10 @@ func preSchemaUpdates() error {
 			INNER JOIN users u2 
 			WHERE u1.id > u2.id AND u1.username = u2.username
 		`)
+	}
+
+	if err := migrateSeverityLevels(); err != nil {
+		fmt.Printf("Warning: failed to migrate severity levels: %v\n", err)
 	}
 
 	if database.DB.Migrator().HasTable("sites") && !database.DB.Migrator().HasTable("groups") {

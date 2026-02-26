@@ -34,9 +34,8 @@ func SearchAuditLogsServ(limit, offset int, query string) ([]AuditResp, int64, e
 
 	resps := make([]AuditResp, 0, len(logs))
 	for _, l := range logs {
-		resps = append(resps, AuditResp{
+		resp := AuditResp{
 			ID:        l.ID,
-			UserID:    l.UserID,
 			Username:  l.Username,
 			Action:    l.Action,
 			Method:    l.Method,
@@ -46,7 +45,11 @@ func SearchAuditLogsServ(limit, offset int, query string) ([]AuditResp, int64, e
 			Latency:   l.Latency,
 			UserAgent: l.UserAgent,
 			CreatedAt: l.CreatedAt.Format("2006-01-02 15:04:05"),
-		})
+		}
+		if l.UserID != nil {
+			resp.UserID = *l.UserID
+		}
+		resps = append(resps, resp)
 	}
 
 	return resps, total, nil

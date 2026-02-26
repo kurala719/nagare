@@ -330,13 +330,13 @@ type alertMatchContext struct {
 
 func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 	ctx := alertMatchContext{alert: alert}
-	if alert.ItemID > 0 {
-		if item, err := repository.GetItemByIDDAO(alert.ItemID); err == nil {
+	if alert.ItemID != nil && *alert.ItemID > 0 {
+		if item, err := repository.GetItemByIDDAO(*alert.ItemID); err == nil {
 			ctx.item = &item
 		}
 	}
-	if alert.HostID > 0 {
-		if host, err := repository.GetHostByIDDAO(alert.HostID); err == nil {
+	if alert.HostID != nil && *alert.HostID > 0 {
+		if host, err := repository.GetHostByIDDAO(*alert.HostID); err == nil {
 			ctx.host = &host
 		}
 	}
@@ -369,42 +369,46 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 		return false
 	}
 	
-	// Host Check
-	// Ignore if nil or 0
-	if action.HostID != nil && *action.HostID > 0 {
-		// Alert must be associated with this host
-		hostID := alert.HostID
-		if ctx.host != nil {
-			hostID = ctx.host.ID
+		// Host Check
+		// Ignore if nil or 0
+		if action.HostID != nil && *action.HostID > 0 {
+			// Alert must be associated with this host
+			var hostID uint = 0
+			if alert.HostID != nil {
+				hostID = *alert.HostID
+			}
+			if ctx.host != nil {
+				hostID = ctx.host.ID
+			}
+			if hostID != *action.HostID {
+				LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
+				return false
+			}
 		}
-		if hostID != *action.HostID {
-			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
-			return false
+		
+		// Group Check
+		// Ignore if nil or 0
+		if action.GroupID != nil && *action.GroupID > 0 {
+			if ctx.groupID != *action.GroupID {
+				LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
+				return false
+			}
 		}
-	}
+		
+		// Trigger ID Check
+		if action.TriggerID != nil && *action.TriggerID > 0 {
+			matched := (alert.TriggerID != nil && *alert.TriggerID == *action.TriggerID) || (alert.AlarmID != nil && *alert.AlarmID == *action.TriggerID)
+			if !matched {
+				LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
+					"action_id":         action.ID,
+					"alert_trigger_id": alert.TriggerID,
+					"alert_alarm_id":   alert.AlarmID,
+					"filter_trigger_id": *action.TriggerID,
+				}, nil, "")
+				return false
+			}
+		}
 	
-	// Group Check
-	// Ignore if nil or 0
-	if action.GroupID != nil && *action.GroupID > 0 {
-		if ctx.groupID != *action.GroupID {
-			LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
-			return false
-		}
-	}
-	
-	// Trigger ID Check
-	if action.TriggerID != nil && *action.TriggerID > 0 {
-		matched := (alert.TriggerID == *action.TriggerID) || (alert.AlarmID == *action.TriggerID)
-		if !matched {
-			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
-				"action_id":         action.ID,
-				"alert_trigger_id":  alert.TriggerID,
-				"alert_alarm_id":    alert.AlarmID,
-				"filter_trigger_id": *action.TriggerID,
-			}, nil, "")
-			return false
-		}
-	}
 	
 	return true
 }
