@@ -373,8 +373,9 @@ func mergeAlertComment(existing, analysis string) string {
 }
 
 func alertAnalysisPrompt() string {
-	return "You are an expert system administrator and DevOps engineer.\n" +
+	return "You are an expert network administrator and DevOps engineer specializing in Huawei infrastructure.\n" +
 		"Analyze the alert data and produce a concise, actionable assessment.\n\n" +
+		systemContextPrompt() + "\n\n" +
 		"Rules:\n" +
 		"- Use only the provided data; do not invent metrics or events.\n" +
 		"- If data is missing, state what is missing and how it affects confidence.\n" +
@@ -390,7 +391,7 @@ func alertAnalysisPrompt() string {
 		"Likely Causes:\n" +
 		"- Bullet list of the most probable causes.\n\n" +
 		"Recommended Actions:\n" +
-		"- Immediate steps first, then follow-ups.\n\n" +
+		"- Immediate steps first (e.g. VRP CLI commands via SSH), then follow-ups.\n\n" +
 		"Decision:\n" +
 		"- [NOTIFY] or [SUPPRESS] followed by a one-sentence justification.\n\n" +
 		"Severity:\n" +

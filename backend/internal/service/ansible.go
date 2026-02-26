@@ -308,9 +308,14 @@ func ListAnsibleJobsServ(playbookID uint, limit int) ([]AnsibleJobResp, error) {
 
 func RecommendAnsiblePlaybookServ(context string) (string, error) {
 	// Logic to use LLM to generate a playbook based on error message or requirement
-	prompt := fmt.Sprintf(`You are an Ansible expert. Generate a YAML playbook based on the following requirement:
+	prompt := fmt.Sprintf(`You are an Ansible expert specializing in Huawei network automation. 
 %s
-Respond ONLY with the YAML content. Use 'all' as the default hosts if not specified.`, context)
+
+Generate a YAML playbook based on the following requirement:
+%s
+
+Respond ONLY with the YAML content. Use 'all' as the default hosts if not specified.
+Prefer using Huawei-specific modules (e.g., community.network.huawei_vrp) or generic network modules if appropriate.`, systemContextPrompt(), context)
 	
 	// Re-using SendChatServ logic
 	res, err := SendChatServ(ChatReq{

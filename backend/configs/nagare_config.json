@@ -1,11 +1,11 @@
 {
   "ai": {
-    "analysis_enabled": false,
+    "analysis_enabled": true,
     "analysis_min_severity": 2,
     "analysis_timeout_seconds": 60,
     "model": "",
     "notification_guard_enabled": false,
-    "provider_id": 1
+    "provider_id": 3
   },
   "database": {
     "database_name": "nagare",
@@ -85,7 +85,7 @@
   ],
   "gmail": {
     "credentials_file": "configs/gmail_credentials.json",
-    "enabled": true,
+    "enabled": false,
     "from": "kurala719@gmail.com",
     "token_file": "configs/gmail_token.json"
   },

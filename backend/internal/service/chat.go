@@ -145,28 +145,26 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 	ctx := context.Background()
 	start := time.Now()
 	responseText := ""
+	
+	// Prepare system prompt: Persona + Base Context
+	systemPrompt := baseChatPrompt(isChinese(req.Locale))
 	if personaPrompt != "" {
-		resp, err := client.Chat(ctx, llm.ChatRequest{
-			Model:        llmModel,
-			SystemPrompt: personaPrompt,
-			Messages: []llm.Message{
-				{Role: "user", Content: req.Content},
-			},
-		})
-		logLLMRequest("persona_chat", req.ProviderID, llmModel, time.Since(start), err)
-		if err != nil {
-			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
-		}
-		responseText = resp.Content
-	} else {
-		responseText, err = client.SimpleChat(ctx, llmModel, req.Content)
-		logLLMRequest("simple_chat", req.ProviderID, llmModel, time.Since(start), err)
-		if err != nil {
-			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
-		}
+		systemPrompt = personaPrompt + "\n\n" + systemPrompt
 	}
+
+	resp, err := client.Chat(ctx, llm.ChatRequest{
+		Model:        llmModel,
+		SystemPrompt: systemPrompt,
+		Messages: []llm.Message{
+			{Role: "user", Content: req.Content},
+		},
+	})
+	logLLMRequest("chat", req.ProviderID, llmModel, time.Since(start), err)
+	if err != nil {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
+		return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
+	}
+	responseText = resp.Content
 
 	if err := repository.AddChatDAO(model.Chat{
 		UserID:     1,
@@ -202,9 +200,15 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	tools := ListTools()
 	ctx := context.Background()
 	start := time.Now()
+	
+	// Build system prompt with Persona + Tools + Base Context
+	initialSystemPrompt := buildToolSystemPrompt(tools, personaPrompt)
+	baseContext := baseChatPrompt(isChinese(req.Locale))
+	initialSystemPrompt = initialSystemPrompt + "\n\n" + baseContext
+
 	initialResp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        llmModel,
-		SystemPrompt: buildToolSystemPrompt(tools, personaPrompt),
+		SystemPrompt: initialSystemPrompt,
 		Messages: []llm.Message{
 			{Role: "user", Content: req.Content},
 		},
@@ -224,21 +228,23 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		}
 		resultJSON, _ := json.Marshal(toolResult)
 		toolResultText := fmt.Sprintf("Tool result for %s: %s", toolCall.Name, string(resultJSON))
-		start := time.Now()
+		secondStart := time.Now()
+		
+		// Answer prompt also needs base context
+		answerPrompt := toolAnswerPrompt(personaPrompt) + "\n\n" + baseContext
+		
 		finalResp, err := client.Chat(ctx, llm.ChatRequest{
 			Model:        llmModel,
-			SystemPrompt: toolAnswerPrompt(personaPrompt),
+			SystemPrompt: answerPrompt,
 			Messages: []llm.Message{
 				{Role: "user", Content: req.Content},
 				{Role: "user", Content: toolResultText},
 			},
 		})
-		logLLMRequest("tool_answer", req.ProviderID, llmModel, time.Since(start), err)
-		if err != nil {
-			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-			return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
+		logLLMRequest("tool_answer", req.ProviderID, llmModel, time.Since(secondStart), err)
+		if err == nil {
+			finalText = finalResp.Content
 		}
-		finalText = finalResp.Content
 	}
 
 	if err := repository.AddChatDAO(model.Chat{
@@ -644,8 +650,9 @@ func itemAnalysisPrompt(chinese bool) string {
 
 func hostAnalysisPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位专业的系统管理员和运维工程师。\n" +
+		return "你是一位专业的系统管理员和运维工程师，专注于华为网络设备。\n" +
 			"分析主机监控数据并总结健康状况。\n\n" +
+			systemContextPrompt() + "\n\n" +
 			"规则：\n" +
 			"- 仅使用提供的数据；不要编造指标。\n" +
 			"- 优先显示最关键的问题。\n\n" +
@@ -657,10 +664,11 @@ func hostAnalysisPrompt(chinese bool) string {
 			"风险：\n" +
 			"- 如果当前状态持续的潜在问题。\n\n" +
 			"建议操作：\n" +
-			"- 立即步骤和后续行动。"
+			"- 立即步骤（例如通过 SSH 执行 VRP 命令）和后续行动。"
 	}
-	return "You are an expert system administrator and DevOps engineer.\n" +
+	return "You are an expert system administrator and DevOps engineer specializing in Huawei network infrastructure.\n" +
 		"Analyze the host monitoring data and summarize health.\n\n" +
+		systemContextPrompt() + "\n\n" +
 		"Rules:\n" +
 		"- Use only the provided data; do not invent metrics.\n" +
 		"- Highlight the most critical issues first.\n\n" +
@@ -672,7 +680,7 @@ func hostAnalysisPrompt(chinese bool) string {
 		"Risks:\n" +
 		"- Potential issues if the current state persists.\n\n" +
 		"Recommended Actions:\n" +
-		"- Immediate steps and follow-ups."
+		"- Immediate steps (e.g. VRP CLI commands via SSH) and follow-ups."
 }
 
 func monitoringAnalysisPrompt(chinese bool) string {
@@ -716,8 +724,9 @@ func monitoringAnalysisPrompt(chinese bool) string {
 
 func networkStatusPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位专业的网络运维分析师。\n" +
+		return "你是一位专业的网络运维分析师，专注于华为网络设备。\n" +
 			"使用提供的告警、健康评分和指标数据来评估当前网络状态。\n\n" +
+			systemContextPrompt() + "\n\n" +
 			"规则：\n" +
 			"- 仅使用提供的数据；不要编造告警或指标。\n" +
 			"- 如果没有告警，明确说明并依赖指标/健康评分。\n\n" +
@@ -729,12 +738,13 @@ func networkStatusPrompt(chinese bool) string {
 			"关键指标：\n" +
 			"- 突出显示值得注意的指标。\n\n" +
 			"建议：\n" +
-			"- 立即采取的步骤和后续行动。\n\n" +
+			"- 立即采取的步骤（例如通过 SSH 执行 VRP 命令）和后续行动。\n\n" +
 			"置信度：\n" +
 			"- 注明任何缺失数据或限制。"
 	}
-	return "You are an expert network operations analyst.\n" +
+	return "You are an expert network operations analyst specializing in Huawei infrastructure.\n" +
 		"Use the provided alerts, health score, and metrics to assess current network status.\n\n" +
+		systemContextPrompt() + "\n\n" +
 		"Rules:\n" +
 		"- Use only the provided data; do not invent alerts or metrics.\n" +
 		"- If no alerts are present, explicitly say so and rely on metrics/health score.\n\n" +
@@ -746,7 +756,7 @@ func networkStatusPrompt(chinese bool) string {
 		"Key Metrics:\n" +
 		"- Highlight notable metrics.\n\n" +
 		"Recommendations:\n" +
-		"- Immediate steps and follow-ups.\n\n" +
+		"- Immediate steps (e.g. VRP CLI commands via SSH) and follow-ups.\n\n" +
 		"Confidence:\n" +
 		"- Note any missing data or limits."
 }
@@ -861,4 +871,15 @@ func logLLMRequest(operation string, providerID uint, model string, duration tim
 		context["error"] = err.Error()
 	}
 	LogService(level, "llm request", context, nil, "")
+}
+
+func baseChatPrompt(chinese bool) string {
+	if chinese {
+		return "基础上下文信息：\n" +
+			"- 所有的被监控设备均为华为网络设备（交换机、路由器、防火墙）。\n" +
+			"- 支持通过 SSH 进行远程管理，这是首选的操作方式。\n" +
+			"- 你可以建议使用 VRP (Versatile Routing Platform) 命令行进行排查或配置。"
+	}
+	return "BASE CONTEXT INFORMATION:\n" +
+		systemContextPrompt()
 }

@@ -45,3 +45,10 @@ func aiAnalysisMinSeverity() int {
 	}
 	return minSeverity
 }
+
+func systemContextPrompt() string {
+	return `ENVIRONMENT CONTEXT:
+- All monitored devices are Huawei network devices (switches, routers, firewalls).
+- Remote management via SSH is available and preferred for all devices.
+- You can suggest CLI commands (VRP - Versatile Routing Platform) for troubleshooting or configuration.`
+}
