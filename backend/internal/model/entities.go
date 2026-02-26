@@ -14,9 +14,9 @@ type Host struct {
 	gorm.Model
 	Name              string `json:"name"`
 	Hostid            string `json:"hostid"` // External ID from monitoring system
-	MonitorID         uint   `gorm:"column:m_id" json:"m_id"`
+	MonitorID         uint   `gorm:"column:m_id;type:bigint unsigned" json:"m_id"`
 	Monitor           Monitor `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	GroupID           uint   `gorm:"column:group_id" json:"group_id"`
+	GroupID           uint   `gorm:"column:group_id;type:bigint unsigned" json:"group_id"`
 	Group             Group   `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	Description       string `json:"description"`
 	Enabled           int    `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
@@ -50,7 +50,7 @@ type Group struct {
 	gorm.Model
 	Name              string `json:"name"`
 	Description       string `json:"description"`
-	MonitorID         uint   `gorm:"column:m_id" json:"m_id"`
+	MonitorID         uint   `gorm:"column:m_id;type:bigint unsigned" json:"m_id"`
 	Monitor           Monitor `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	ExternalID        string `gorm:"column:external_id" json:"external_id"` // External ID from monitoring system (e.g., Zabbix groupid)
 	Enabled           int    `gorm:"default:1" json:"enabled"`              // 0 = disabled, 1 = enabled
@@ -99,7 +99,7 @@ type Alarm struct {
 type Item struct {
 	gorm.Model
 	Name              string `json:"name"`
-	HID               uint   `gorm:"column:hid" json:"hid"`       // Internal host ID (foreign key to hosts table)
+	HID               uint   `gorm:"column:hid;type:bigint unsigned" json:"hid"`       // Internal host ID (foreign key to hosts table)
 	Host              Host   `gorm:"foreignKey:HID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	ItemID            string `gorm:"column:itemid" json:"itemid"` // External ID from monitoring system
 	ExternalHostID    string `gorm:"column:hostid" json:"hostid"` // External host ID from monitoring system
@@ -118,9 +118,9 @@ type Item struct {
 // ItemHistory tracks item metric values over time.
 type ItemHistory struct {
 	gorm.Model
-	ItemID    uint `gorm:"index"`
+	ItemID    uint `gorm:"index;type:bigint unsigned"`
 	Item      Item `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	HostID    uint `gorm:"index"`
+	HostID    uint `gorm:"index;type:bigint unsigned"`
 	Host      Host `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Value     string
 	Units     string
@@ -131,7 +131,7 @@ type ItemHistory struct {
 // HostHistory tracks host status over time.
 type HostHistory struct {
 	gorm.Model
-	HostID            uint `gorm:"index"`
+	HostID            uint `gorm:"index;type:bigint unsigned"`
 	Host              Host `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Status            int
 	StatusDescription string
@@ -159,15 +159,15 @@ type NetworkStatusHistory struct {
 type Alert struct {
 	gorm.Model
 	Message   string `gorm:"size:512"`
-	Severity  int
-	Status    int  // 0 = active, 1 = acknowledged, 2 = resolved
-	AlarmID   *uint `gorm:"column:alarm_id"`
-	Alarm     *Alarm   `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	TriggerID *uint `gorm:"column:trigger_id"`
+	Severity  int    `gorm:"type:int"`
+	Status    int    `gorm:"type:int"` // 0 = active, 1 = acknowledged, 2 = resolved
+	AlarmID   *uint  `gorm:"column:alarm_id;type:bigint unsigned"`
+	Alarm     *Alarm `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	TriggerID *uint  `gorm:"column:trigger_id;type:bigint unsigned"`
 	Trigger   *Trigger `gorm:"foreignKey:TriggerID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	HostID    *uint
-	Host      *Host    `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	ItemID    *uint
+	HostID    *uint  `gorm:"type:bigint unsigned"`
+	Host      *Host  `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	ItemID    *uint  `gorm:"type:bigint unsigned"`
 	// Item      *Item    `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	Comment   string
 	HostName  string `gorm:"->"`
@@ -191,21 +191,21 @@ type Media struct {
 type Action struct {
 	gorm.Model
 	Name        string
-	MediaID     uint
+	MediaID     uint     `gorm:"type:bigint unsigned"`
 	Media       Media    `gorm:"foreignKey:MediaID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Template    string // message template
-	Enabled     int    `gorm:"default:1"` // 0 = disabled, 1 = enabled
-	Status      int    // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	Enabled     int    `gorm:"default:1;type:int"` // 0 = disabled, 1 = enabled
+	Status      int    `gorm:"type:int"`           // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	Description string
 	// Filter conditions for executing this action
-	SeverityMin *int  `gorm:"default:0"` // Filter alerts with severity >= this
-	TriggerID   *uint `gorm:"index"`     // Optional: specific trigger
+	SeverityMin *int  `gorm:"default:0;type:int"` // Filter alerts with severity >= this
+	TriggerID   *uint `gorm:"index;type:bigint unsigned"`     // Optional: specific trigger
 	Trigger     *Trigger `gorm:"foreignKey:TriggerID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	HostID      *uint `gorm:"index"`     // Optional: specific host
+	HostID      *uint `gorm:"index;type:bigint unsigned"`     // Optional: specific host
 	Host        *Host    `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	GroupID     *uint `gorm:"index"`     // Optional: specific group
+	GroupID     *uint `gorm:"index;type:bigint unsigned"`     // Optional: specific group
 	Group       *Group   `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AlertStatus *int  `gorm:"default:0"` // Filter by alert status (0=active, 1=ack, 2=resolved)
+	AlertStatus *int  `gorm:"default:0;type:int"` // Filter by alert status (0=active, 1=ack, 2=resolved)
 	Users       []User `gorm:"many2many:action_users;"`
 }
 
@@ -214,28 +214,28 @@ type Trigger struct {
 	gorm.Model
 	Name                  string   `json:"name"`
 	Entity                string   `json:"entity"` // "alert" or "log"
-	Severity              int      `json:"severity"`
-	AlertID               *uint    `gorm:"column:alert_id" json:"alert_id"`
+	Severity              int      `json:"severity;type:int"`
+	AlertID               *uint    `gorm:"column:alert_id;type:bigint unsigned" json:"alert_id"`
 	Alert                 *Alert   `gorm:"foreignKey:AlertID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AlertStatus           *int     `gorm:"column:alert_status" json:"alert_status"`
-	AlertGroupID          *uint    `gorm:"column:alert_group_id" json:"alert_group_id"`
+	AlertStatus           *int     `gorm:"column:alert_status;type:int" json:"alert_status"`
+	AlertGroupID          *uint    `gorm:"column:alert_group_id;type:bigint unsigned" json:"alert_group_id"`
 	AlertGroup            *Group   `gorm:"foreignKey:AlertGroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AlertMonitorID        *uint    `gorm:"column:alert_monitor_id" json:"alert_monitor_id"`
+	AlertMonitorID        *uint    `gorm:"column:alert_monitor_id;type:bigint unsigned" json:"alert_monitor_id"`
 	AlertMonitor          *Monitor `gorm:"foreignKey:AlertMonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AlertHostID           *uint    `gorm:"column:alert_host_id" json:"alert_host_id"`
+	AlertHostID           *uint    `gorm:"column:alert_host_id;type:bigint unsigned" json:"alert_host_id"`
 	AlertHost             *Host    `gorm:"foreignKey:AlertHostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AlertItemID           *uint    `gorm:"column:alert_item_id" json:"alert_item_id"`
+	AlertItemID           *uint    `gorm:"column:alert_item_id;type:bigint unsigned" json:"alert_item_id"`
 	AlertItem             *Item    `gorm:"foreignKey:AlertItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	AlertQuery            string   `json:"alert_query"`
 	LogType               string   `gorm:"column:log_type" json:"log_type"`
-	LogSeverity           *int     `gorm:"column:log_level" json:"log_level"`
+	LogSeverity           *int     `gorm:"column:log_level;type:int" json:"log_level"`
 	LogQuery              string   `gorm:"column:log_query" json:"log_query"`
-	ItemStatus            *int     `gorm:"column:item_status" json:"item_status"`
+	ItemStatus            *int     `gorm:"column:item_status;type:int" json:"item_status"`
 	ItemValueThreshold    *float64 `gorm:"column:item_value_threshold" json:"item_value_threshold"`
 	ItemValueThresholdMax *float64 `gorm:"column:item_value_threshold_max" json:"item_value_threshold_max"`
 	ItemValueOperator     string   `gorm:"column:item_value_operator" json:"item_value_operator"`
-	Enabled               int      `gorm:"default:1" json:"enabled"` // 0 = disabled, 1 = enabled
-	Status                int      `json:"status"`                   // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	Enabled               int      `gorm:"default:1;type:int" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status                int      `json:"status;type:int"`                   // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 }
 
 // Provider represents an AI provider (e.g., Google Gemini)
@@ -275,10 +275,10 @@ type ChatMessage struct {
 type LogEntry struct {
 	gorm.Model
 	Type     string // "system" or "service"
-	Severity int    `gorm:"column:level"` // 0=info, 1=warn, 2=error
+	Severity int    `gorm:"column:level;type:int"` // 0=info, 1=warn, 2=error
 	Message  string `gorm:"size:512"`
 	Context  string `gorm:"type:text"`
-	UserID   *uint
+	UserID   *uint  `gorm:"type:bigint unsigned"`
 	User     *User  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	IP       string
 }
@@ -431,9 +431,9 @@ type SiteMessage struct {
 	Title    string `gorm:"size:255"`
 	Content  string `gorm:"type:text"`
 	Type     string `gorm:"size:50"` // "alert", "sync", "system", "report"
-	Severity int    // 0=info, 1=success, 2=warn, 3=error
-	IsRead   int    `gorm:"default:0"` // 0=unread, 1=read
-	UserID   *uint  `gorm:"index"`     // Optional: target specific user, null for all
+	Severity int    `gorm:"type:int"` // 0=info, 1=success, 2=warn, 3=error
+	IsRead   int    `gorm:"default:0;type:int"` // 0=unread, 1=read
+	UserID   *uint  `gorm:"index;type:bigint unsigned"`     // Optional: target specific user, null for all
 	User     *User  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 }
 

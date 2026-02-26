@@ -224,23 +224,23 @@ func fixForeignKeyColumnTypes() error {
 				if err != nil {
 					continue
 				}
-				var isBigIntUnsigned bool
+				var isBigInt bool
 				for _, ct := range columnTypes {
 					if ct.Name() == column {
 						dbType := strings.ToUpper(ct.DatabaseTypeName())
-						// Check for BIGINT and UNSIGNED. MySQL returns 'BIGINT UNSIGNED' or similar
-						isBigIntUnsigned = strings.Contains(dbType, "BIGINT") && strings.Contains(dbType, "UNSIGNED")
+						// MySQL returns 'BIGINT'
+						isBigInt = strings.Contains(dbType, "BIGINT")
 						break
 					}
 				}
 
-				if !isBigIntUnsigned {
-					fmt.Printf(">>> Migrating column %s in table %s to BIGINT UNSIGNED...\n", column, table)
-					// 1. Ensure it's BIGINT UNSIGNED
-					_ = database.DB.Exec(fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN `%s` BIGINT UNSIGNED", table, column))
+				if !isBigInt {
+					fmt.Printf(">>> Migrating column %s in table %s to BIGINT...\n", column, table)
+					// 1. Ensure it's BIGINT
+					_ = database.DB.Exec(fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN `%s` BIGINT", table, column))
 
 					// 2. Clean up invalid references (orphans) before adding FK
-					// Only run this when we actually change the type (usually first time)
+					// Only run this when we actually change the type
 					refTable := ""
 					switch column {
 					case "group_id", "alert_group_id":
