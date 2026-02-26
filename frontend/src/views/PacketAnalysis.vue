@@ -63,7 +63,7 @@
     <el-dialog v-model="uploadDialogVisible" :title="$t('packets.uploadTitle')" width="600px">
       <el-form :model="uploadForm" label-width="120px" ref="uploadFormRef" :rules="uploadRules">
         <el-form-item :label="$t('packets.name')" prop="name">
-          <el-input v-model="uploadForm.name" placeholder="e.g. Suspicious TCP Flow" />
+          <el-input v-model="uploadForm.name" :placeholder="$t('packets.namePlaceholder')" />
         </el-form-item>
         
         <el-form-item :label="$t('packets.provider')" prop="provider_id">
@@ -89,14 +89,12 @@
             :file-list="fileList"
           >
             <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">
-              Drop file here or <em>click to upload</em>
-            </div>
+            <div class="el-upload__text" v-html="$t('packets.dropFile')"></div>
           </el-upload>
         </el-form-item>
 
         <el-form-item :label="$t('packets.rawContent')">
-          <el-input v-model="uploadForm.raw_content" type="textarea" :rows="4" placeholder="Paste hex or flow data here..." />
+          <el-input v-model="uploadForm.raw_content" type="textarea" :rows="4" :placeholder="$t('packets.rawContentPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -116,19 +114,19 @@
                 {{ $t('packets.' + selectedItem.risk_level) || selectedItem.risk_level }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="Provider">{{ selectedItem.provider_name }} ({{ selectedItem.model }})</el-descriptions-item>
-            <el-descriptions-item label="Source File">{{ selectedItem.file_path || 'Manual Content' }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('packets.providerLabel')">{{ selectedItem.provider_name }} ({{ selectedItem.model }})</el-descriptions-item>
+            <el-descriptions-item :label="$t('packets.sourceFileLabel')">{{ selectedItem.file_path || $t('packets.manualContent') }}</el-descriptions-item>
           </el-descriptions>
         </div>
 
         <div v-if="selectedItem.raw_content" class="raw-data-section">
-          <h4>Raw Data / Flow</h4>
+          <h4>{{ $t('packets.rawDataTitle') }}</h4>
           <div class="raw-box">
             <code>{{ selectedItem.raw_content }}</code>
           </div>
         </div>
 
-        <el-divider content-position="left">AI Intelligence Analysis</el-divider>
+        <el-divider content-position="left">{{ $t('packets.aiAnalysisTitle') }}</el-divider>
         <div class="ai-analysis-content markdown-body">
           <p style="white-space: pre-wrap;">{{ selectedItem.analysis }}</p>
         </div>
@@ -169,8 +167,8 @@ const uploadForm = reactive({
 })
 
 const uploadRules = {
-  name: [{ required: true, message: 'Please enter a name', trigger: 'blur' }],
-  provider_id: [{ required: true, message: 'Please select an AI provider', trigger: 'change' }]
+  name: [{ required: true, message: t('packets.nameRequired'), trigger: 'blur' }],
+  provider_id: [{ required: true, message: t('packets.providerRequired'), trigger: 'change' }]
 }
 
 const loadData = async () => {
@@ -181,7 +179,7 @@ const loadData = async () => {
       items.value = res.data || []
     }
   } catch (err) {
-    ElMessage.error('Failed to load data')
+    ElMessage.error(t('packets.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -233,7 +231,7 @@ const openUploadDialog = () => {
 }
 
 const submitUpload = async () => {
-  if (!uploadForm.name) return ElMessage.warning('Name is required')
+  if (!uploadForm.name) return ElMessage.warning(t('packets.nameRequired'))
   
   const formData = new FormData()
   formData.append('name', uploadForm.name)
@@ -253,7 +251,7 @@ const submitUpload = async () => {
       loadData()
     }
   } catch (err) {
-    ElMessage.error('Upload failed')
+    ElMessage.error(t('packets.uploadFailed'))
   } finally {
     uploading.value = false
   }
@@ -263,11 +261,11 @@ const handleAnalyze = async (row) => {
   try {
     const res = await startPacketAnalysis(row.ID)
     if (res && res.success) {
-      ElMessage.success('Analysis started')
+      ElMessage.success(t('packets.analysisStarted'))
       loadData()
     }
   } catch (err) {
-    ElMessage.error('Failed to start analysis')
+    ElMessage.error(t('packets.startFailed'))
   }
 }
 
@@ -282,7 +280,7 @@ const handleDelete = (row) => {
         loadData()
       }
     } catch (err) {
-      ElMessage.error('Delete failed')
+      ElMessage.error(t('packets.deleteFailed'))
     }
   })
 }
@@ -290,7 +288,7 @@ const handleDelete = (row) => {
 const viewAnalysis = (row) => {
   selectedItem.value = row
   const prov = aiProviders.value.find(p => p.id === row.provider_id)
-  selectedItem.value.provider_name = prov ? prov.name : 'Unknown'
+  selectedItem.value.provider_name = prov ? prov.name : t('packets.unknown')
   resultDialogVisible.value = true
 }
 
@@ -306,7 +304,7 @@ const getStatusLabel = (status) => {
     2: t('packets.completed'), 
     3: t('packets.failed') 
   }
-  return map[status] || 'Unknown'
+  return map[status] || t('packets.unknown')
 }
 
 const getRiskType = (risk) => {
