@@ -204,12 +204,14 @@ func AlertWebhookCtrl(c *gin.Context) {
 		Severity:  severity,
 		Status:    status,
 		AlarmID:   alarmID,
-		TriggerID: &triggerID,
 		HostID:    hostID,
 		ItemID:    itemID,
 		HostName:  hostName,
 		ItemName:  itemName,
 		Comment:   comment,
+	}
+	if triggerID > 0 {
+		req.TriggerID = &triggerID
 	}
 
 	if err := service.AddAlertServ(req); err != nil {

@@ -4,8 +4,8 @@
     "analysis_min_severity": 2,
     "analysis_timeout_seconds": 180,
     "model": "",
-    "notification_guard_enabled": true,
-    "provider_id": 3
+    "notification_guard_enabled": false,
+    "provider_id": 2
   },
   "database": {
     "database_name": "nagare",

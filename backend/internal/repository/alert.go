@@ -137,6 +137,7 @@ func UpdateAlertDAO(id int, alert model.Alert) error {
 		"severity": alert.Severity,
 		"status":   alert.Status,
 		"alarm_id": alert.AlarmID,
+		"trigger_id": alert.TriggerID,
 		"host_id":  alert.HostID,
 		"item_id":  alert.ItemID,
 		"comment":  alert.Comment,

@@ -249,7 +249,7 @@ func AddAlertServ(req AlertReq) error {
 		itID := itemID
 		alert.ItemID = &itID
 	}
-	if req.TriggerID != nil {
+	if req.TriggerID != nil && *req.TriggerID > 0 {
 		alert.TriggerID = req.TriggerID
 	}
 	if err := repository.AddAlertDAO(&alert); err != nil {
@@ -474,7 +474,7 @@ func UpdateAlertServ(id int, req AlertReq) error {
 		iID := req.ItemID
 		updatedAlert.ItemID = &iID
 	}
-	if req.TriggerID != nil {
+	if req.TriggerID != nil && *req.TriggerID > 0 {
 		updatedAlert.TriggerID = req.TriggerID
 	}
 
