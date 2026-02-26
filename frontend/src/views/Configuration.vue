@@ -303,10 +303,14 @@
             <div class="section-divider">{{ $t('configuration.siteMessageSettings') }}</div>
             <el-form :model="editableConfig.site_message" label-width="180px" label-position="left">
               <el-form-item :label="$t('configuration.minAlertSeverity')">
-                <el-input-number v-model="editableConfig.site_message.min_alert_severity" :disabled="!editing" :min="0" :max="4" />
+                <el-select v-model="editableConfig.site_message.min_alert_severity" :disabled="!editing" style="width: 100%">
+                  <el-option v-for="opt in alertSeverityOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                </el-select>
               </el-form-item>
               <el-form-item :label="$t('configuration.minLogSeverity')">
-                <el-input-number v-model="editableConfig.site_message.min_log_severity" :disabled="!editing" :min="0" :max="2" />
+                <el-select v-model="editableConfig.site_message.min_log_severity" :disabled="!editing" style="width: 100%">
+                  <el-option v-for="opt in logSeverityOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                </el-select>
               </el-form-item>
             </el-form>
 
@@ -330,7 +334,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
@@ -440,6 +444,20 @@ export default {
     const error = ref(null);
     const aiProviders = ref([]);
     const availableModels = ref([]);
+
+    const alertSeverityOptions = computed(() => [
+      { label: t('alerts.severityInfo'), value: 0 },
+      { label: t('alerts.severityLow'), value: 1 },
+      { label: t('alerts.severityMedium'), value: 2 },
+      { label: t('alerts.severityHigh'), value: 3 },
+      { label: t('alerts.severityCritical'), value: 4 }
+    ]);
+
+    const logSeverityOptions = computed(() => [
+      { label: t('logs.levelInfo'), value: 0 },
+      { label: t('logs.levelWarn'), value: 1 },
+      { label: t('logs.levelError'), value: 2 }
+    ]);
 
     const loadAIProviders = async () => {
       try {
@@ -705,6 +723,8 @@ export default {
       error,
       aiProviders,
       availableModels,
+      alertSeverityOptions,
+      logSeverityOptions,
       loadConfig,
       startEdit,
       cancelEdit,
