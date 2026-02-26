@@ -104,12 +104,16 @@ func logEntry(logType string, severity int, message string, context map[string]i
 	}
 
 	// Trigger Site Message only if severity meets minimum requirement
-	if entry.Severity >= siteMessageMinLogSeverity() {
+	minLogSeverity := siteMessageMinLogSeverity()
+	if entry.Severity >= minLogSeverity {
 		title := "System Log Notification"
 		if entry.Type == LogTypeService {
 			title = "Service Log Notification"
 		}
 		_ = CreateSiteMessageServ(title, entry.Message, "system", entry.Severity, nil)
+		log.Printf(">>> Site Message created: [%s] severity %d (min: %d)", entry.Type, entry.Severity, minLogSeverity)
+	} else {
+		log.Printf(">>> Site Message skipped: [%s] severity %d (min: %d)", entry.Type, entry.Severity, minLogSeverity)
 	}
 }
 

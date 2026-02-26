@@ -67,32 +67,17 @@ func SaveConfigServ() error {
 }
 
 func siteMessageMinAlertSeverity() int {
-	val := GetConfigServ("site_message.min_alert_severity")
-	if val == nil {
-		return 0
+	if !repository.IsConfigSet("site_message.min_alert_severity") {
+		return 0 // Default: show all alerts
 	}
-	if i, ok := val.(int); ok {
-		return i
-	}
-	// Try float64 because JSON unmarshals numbers as floats
-	if f, ok := val.(float64); ok {
-		return int(f)
-	}
-	return 0
+	return repository.GetConfigInt("site_message.min_alert_severity")
 }
 
 func siteMessageMinLogSeverity() int {
-	val := GetConfigServ("site_message.min_log_severity")
-	if val == nil {
-		return 0
+	if !repository.IsConfigSet("site_message.min_log_severity") {
+		return 1 // Default: show warnings and errors
 	}
-	if i, ok := val.(int); ok {
-		return i
-	}
-	if f, ok := val.(float64); ok {
-		return int(f)
-	}
-	return 0
+	return repository.GetConfigInt("site_message.min_log_severity")
 }
 
 var (

@@ -238,6 +238,16 @@ func GetConfigValue(key string) interface{} {
 	return viper.Get(key)
 }
 
+// GetConfigInt retrieves an integer configuration value by key
+func GetConfigInt(key string) int {
+	return viper.GetInt(key)
+}
+
+// IsConfigSet checks if a configuration key exists
+func IsConfigSet(key string) bool {
+	return viper.IsSet(key)
+}
+
 // SetConfigValue updates a configuration value
 func SetConfigValue(key string, value interface{}) {
 	viper.Set(key, value)

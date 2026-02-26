@@ -52,6 +52,7 @@ func run() error {
 	}
 	
 	fmt.Println(">>> Starting Background Services...")
+	go service.GlobalHub.Run()
 	service.StartAutoSync()
 	service.StartStatusChecks()
 	service.InitQQWSServ()

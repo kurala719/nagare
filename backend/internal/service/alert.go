@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"strings"
@@ -223,8 +224,12 @@ func AddAlertServ(req AlertReq) error {
 	}, nil, "")
 
 	// Trigger Site Message only if severity meets minimum requirement
-	if alert.Severity >= siteMessageMinAlertSeverity() {
+	minAlertSeverity := siteMessageMinAlertSeverity()
+	if alert.Severity >= minAlertSeverity {
 		_ = CreateSiteMessageServ("New Alert Detected", alert.Message, "alert", alert.Severity, nil)
+		log.Printf(">>> Site Message created for Alert ID %d: severity %d (min: %d)", alert.ID, alert.Severity, minAlertSeverity)
+	} else {
+		log.Printf(">>> Site Message skipped for Alert ID %d: severity %d (min: %d)", alert.ID, alert.Severity, minAlertSeverity)
 	}
 
 	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
