@@ -151,7 +151,7 @@ type NetworkStatusHistory struct {
 // Alert represents an alert/notification
 type Alert struct {
 	gorm.Model
-	Message   string
+	Message   string `gorm:"size:512"`
 	Severity  int
 	Status    int  // 0 = active, 1 = acknowledged, 2 = resolved
 	AlarmID   uint `gorm:"column:alarm_id"`
@@ -254,7 +254,7 @@ type LogEntry struct {
 	gorm.Model
 	Type     string // "system" or "service"
 	Severity int    `gorm:"column:level"` // 0=info, 1=warn, 2=error
-	Message  string
+	Message  string `gorm:"size:512"`
 	Context  string `gorm:"type:text"`
 	UserID   *uint
 	IP       string

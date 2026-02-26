@@ -38,6 +38,9 @@
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
+        <el-button @click="onCheckAll" :loading="checkingAll" :icon="Check" type="success" plain>
+          {{ $t('providers.checkAll') || 'Check All' }}
+        </el-button>
         <el-button @click="loadProviders(true)" :loading="loading" :icon="Refresh" circle />
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('providers.create') }}
@@ -123,6 +126,9 @@
 
           <div class="provider-card-footer">
             <el-button-group>
+              <el-button size="small" :icon="Check" @click="onCheckStatus(provider)" :loading="isChecking(provider.id)">
+                {{ $t('providers.checkStatus') || 'Check Status' }}
+              </el-button>
               <el-button size="small" :icon="Edit" @click="openProperties(provider)">{{ $t('providers.properties') }}</el-button>
               <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(provider)">{{ $t('providers.delete') }}</el-button>
             </el-button-group>
@@ -257,8 +263,8 @@
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown, Cpu } from '@element-plus/icons-vue';
-import { fetchProviderData, addProvider, deleteProvider, updateProvider, fetchProviderModels, fetchModelsDirect } from '@/api/providers';
+import { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown, Cpu, Check } from '@element-plus/icons-vue';
+import { fetchProviderData, addProvider, deleteProvider, updateProvider, fetchProviderModels, fetchModelsDirect, checkProviderStatus, checkAllProvidersStatus } from '@/api/providers';
 
 const defaultProviderItem = () => ({
     id: 0,
@@ -274,7 +280,7 @@ const defaultProviderItem = () => ({
 
 export default {
     name: 'Provider',
-    components: { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown },
+    components: { Loading, Search, Plus, Refresh, Edit, Delete, Connection, ArrowDown, Check },
     data() {
         return {
             providers: [],
@@ -297,6 +303,8 @@ export default {
             bulkUpdating: false,
             bulkDeleting: false,
             fetchingModels: false,
+            checkingAll: false,
+            checkingIds: [],
             selectedProviderIds: [],
             bulkForm: {
                 enabled: 'nochange',
@@ -311,7 +319,8 @@ export default {
             Delete: markRaw(Delete),
             Connection: markRaw(Connection),
             ArrowDown: markRaw(ArrowDown),
-            Cpu: markRaw(Cpu)
+            Cpu: markRaw(Cpu),
+            Check: markRaw(Check)
         };
     },
     computed: {
@@ -699,6 +708,46 @@ export default {
                 ElMessage.error(this.$t('common.error') + ': ' + (err.message || 'Unknown error'));
             } finally {
                 this.fetchingModels = false;
+            }
+        },
+        isChecking(id) {
+            return this.checkingIds.includes(id);
+        },
+        async onCheckStatus(provider) {
+            this.checkingIds.push(provider.id);
+            try {
+                const res = await checkProviderStatus(provider.id);
+                const result = res.data || res;
+                if (result.status === 1) {
+                    ElMessage.success(`${provider.name}: ${this.$t('common.statusActive')}`);
+                } else {
+                    ElMessage.error(`${provider.name}: ${result.error || this.$t('common.statusError')}`);
+                }
+                await this.loadProviders(false);
+            } catch (err) {
+                ElMessage.error(`${provider.name}: ${err.message || 'Check failed'}`);
+            } finally {
+                this.checkingIds = this.checkingIds.filter(id => id !== provider.id);
+            }
+        },
+        async onCheckAll() {
+            this.checkingAll = true;
+            try {
+                const res = await checkAllProvidersStatus();
+                const results = res.data || res;
+                if (Array.isArray(results)) {
+                    const successCount = results.filter(r => r.status === 1).length;
+                    const errorCount = results.filter(r => r.status === 2).length;
+                    ElMessage({
+                        type: errorCount > 0 ? 'warning' : 'success',
+                        message: `Check completed: ${successCount} active, ${errorCount} errors`,
+                    });
+                }
+                await this.loadProviders(false);
+            } catch (err) {
+                ElMessage.error(this.$t('common.error') + ': ' + (err.message || 'Bulk check failed'));
+            } finally {
+                this.checkingAll = false;
             }
         },
         getStatusInfo(status) {

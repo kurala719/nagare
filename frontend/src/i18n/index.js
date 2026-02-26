@@ -778,6 +778,8 @@ const messages = {
       typeGemini: 'Gemini',
       typeOpenAI: 'OpenAI',
       typeOther: 'Other (OpenAI-compatible)',
+      checkStatus: 'Check Status',
+      checkAll: 'Check All',
     },
     users: {
       title: 'Identity Management',
@@ -2137,6 +2139,8 @@ const messages = {
       typeGemini: 'Gemini',
       typeOpenAI: 'OpenAI',
       typeOther: '其他 (OpenAI 兼容)',
+      checkStatus: '检查状态',
+      checkAll: '检查全部',
     },
     users: {
       title: '身份管理',
