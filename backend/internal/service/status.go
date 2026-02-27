@@ -195,6 +195,7 @@ func setMonitorStatusErrorWithReason(mid uint, reason string) {
 		return
 	}
 	_ = repository.UpdateMonitorStatusAndDescriptionDAO(mid, 2, reason)
+	_ = recomputeMonitorRelated(mid)
 }
 
 func setMonitorRelatedError(mid uint, reason string) {

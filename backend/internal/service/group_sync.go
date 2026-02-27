@@ -126,16 +126,20 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 				Name:        hostGroup.Name,
 				Description: "Imported from " + monitor.Name,
 				Enabled:     1,
-				Status:      1,
 				MonitorID:   mid,
 				ExternalID:  hostGroup.ID,
 				LastSyncAt:  &now,
 			}
+			newGroup.Status = determineGroupStatus(newGroup, monitor.Status)
 			if err := repository.AddGroupDAO(newGroup); err == nil {
 				result.Added++
 			} else {
 				result.Failed++
 			}
+		}
+		// Recompute status for each group to ensure consistency
+		if group, err := repository.GetGroupByExternalIDDAO(hostGroup.ID, mid); err == nil {
+			_, _ = recomputeGroupStatus(group.ID)
 		}
 	}
 
@@ -284,6 +288,7 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 		}
 	}
 
+	_, _ = recomputeGroupStatus(groupID)
 	return nil
 }
 
@@ -347,7 +352,11 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 			group.ExternalID = g.ID
 			group.LastSyncAt = &now
 			group.ExternalSource = monitor.Name
-			return repository.UpdateGroupDAO(group.ID, group)
+			err := repository.UpdateGroupDAO(group.ID, group)
+			if err == nil {
+				_, _ = recomputeGroupStatus(group.ID)
+			}
+			return err
 		}
 	}
 

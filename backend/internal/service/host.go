@@ -865,6 +865,7 @@ func parseMetadataCSVValues(metadata map[string]string, listKey, singleKey strin
 }
 
 func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallbackGroupID uint) uint {
+	monitorDomain, _ := repository.GetMonitorByIDDAO(mid) // Fetch monitorDomain here
 	groupID := fallbackGroupID
 	if metadata == nil {
 		return groupID
@@ -915,9 +916,9 @@ func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallba
 				Name:       newGroupName,
 				MonitorID:  mid,
 				Enabled:    1,
-				Status:     1,
 				ExternalID: "",
 			}
+			newGroup.Status = determineGroupStatus(newGroup, monitorDomain.Status)
 			if err := repository.AddGroupDAO(newGroup); err == nil {
 				if createdGroup, err := repository.SearchGroupsDAO(model.GroupFilter{Query: newGroupName}); err == nil && len(createdGroup) > 0 {
 					return createdGroup[len(createdGroup)-1].ID
@@ -938,8 +939,8 @@ func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallba
 		ExternalID: externalGroupIDs[0],
 		MonitorID:  mid,
 		Enabled:    1,
-		Status:     1,
 	}
+	newGroup.Status = determineGroupStatus(newGroup, monitorDomain.Status)
 	if err := repository.AddGroupDAO(newGroup); err == nil {
 		if createdGroup, err := repository.GetGroupByExternalIDDAO(externalGroupIDs[0], mid); err == nil {
 			LogService("info", "created group from external metadata", map[string]interface{}{"external_id": externalGroupIDs[0], "group_name": newGroupName, "monitor_id": mid}, nil, "")
@@ -1100,21 +1101,19 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			}
 
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-				Name:              h.Name,
-				Hostid:            h.ID,
-				MonitorID:         mid,
-				GroupID:           groupID,
-				Description:       h.Description,
-				Enabled:           h.Enabled,
-				Status:            status,
-				StatusDescription: finalStatusDesc,
-				ActiveAvailable:   activeAvailable,
-				IPAddr:            h.IPAddress,
-				SSHUser:           existingHost.SSHUser,
-				SSHPassword:       "", // UpdateHostDAO won't update if empty
-				SSHPort:           existingHost.SSHPort,
-				LastSyncAt:        &now,
-				ExternalSource:    monitor.Name,
+				Name:            h.Name,
+				Hostid:          h.ID,
+				MonitorID:       mid,
+				GroupID:         groupID,
+				Description:     h.Description,
+				Enabled:         h.Enabled,
+				ActiveAvailable: activeAvailable,
+				IPAddr:          h.IPAddress,
+				SSHUser:         existingHost.SSHUser,
+				SSHPassword:     "", // UpdateHostDAO won't update if empty
+				SSHPort:         existingHost.SSHPort,
+				LastSyncAt:      &now,
+				ExternalSource:  monitor.Name,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -1130,18 +1129,16 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		} else {
 			// Host doesn't exist, add it
 			hNew := model.Host{
-				Name:              h.Name,
-				Hostid:            h.ID,
-				MonitorID:         mid,
-				GroupID:           groupID,
-				Description:       h.Description,
-				Enabled:           h.Enabled,
-				Status:            status,
-				StatusDescription: statusDesc,
-				ActiveAvailable:   activeAvailable,
-				IPAddr:            h.IPAddress,
-				LastSyncAt:        &now,
-				ExternalSource:    monitor.Name,
+				Name:            h.Name,
+				Hostid:          h.ID,
+				MonitorID:       mid,
+				GroupID:         groupID,
+				Description:     h.Description,
+				Enabled:         h.Enabled,
+				ActiveAvailable: activeAvailable,
+				IPAddr:          h.IPAddress,
+				LastSyncAt:      &now,
+				ExternalSource:  monitor.Name,
 			}
 			if err := repository.AddHostDAO(&hNew); err != nil {
 				setMonitorStatusError(mid)
@@ -1292,7 +1289,6 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			MonitorID:       mid,
 			GroupID:         groupID,
 			Enabled:         h.Enabled,
-			Status:          mapMonitorHostStatus(h.Status, activeAvailable),
 			ActiveAvailable: activeAvailable,
 			IPAddr:          h.IPAddress,
 			SSHUser:         existingHost.SSHUser,
@@ -1300,31 +1296,32 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
+			result.Failed++
 			return SyncResult{}, fmt.Errorf("failed to update host: %w", err)
 		}
+		_, _ = recomputeHostStatus(existingHost.ID)
 		if refreshed, err := repository.GetHostByIDDAO(existingHost.ID); err == nil {
 			recordHostHistory(refreshed, time.Now().UTC())
 		}
 		result.Updated++
-			} else {
-			// Host doesn't exist, add it
-			newHost := model.Host{
-				Name:            h.Name,
-				Hostid:          h.ID,
-				MonitorID:       mid,
-				GroupID:         groupID,
-				Description:     h.Description,
-				Enabled:         h.Enabled,
-				Status:          mapMonitorHostStatus(h.Status, activeAvailable),
-				ActiveAvailable: activeAvailable,
-				IPAddr:          h.IPAddress,
-			}
-	
+		// Host doesn't exist, add it
+		newHost := model.Host{
+			Name:            h.Name,
+			Hostid:          h.ID,
+			MonitorID:       mid,
+			GroupID:         groupID,
+			Description:     h.Description,
+			Enabled:         h.Enabled,
+			ActiveAvailable: activeAvailable,
+			IPAddr:          h.IPAddress,
+		}
+
 		if err := repository.AddHostDAO(&newHost); err != nil {
 			setMonitorStatusError(mid)
 			LogService("error", "pull host failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
 			return SyncResult{}, fmt.Errorf("failed to add host: %w", err)
 		}
+		_, _ = recomputeHostStatus(newHost.ID)
 		if created, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID); err == nil {
 			recordHostHistory(created, time.Now().UTC())
 		}
