@@ -1295,7 +1295,10 @@ const messages = {
       topKeywords: 'Top Alert Keywords',
       alertIntensity: 'Alert Intensity (Heatmap)',
       topNoisyHosts: 'Top Noisy Hosts',
-      alerts: 'Alerts'
+      alerts: 'Alerts',
+      totalAlerts: 'Total Alerts',
+      systemHealth: 'System Health',
+      activeHosts: 'Active Hosts'
     },
     metricRacing: {
       title: 'Metric Racing',
@@ -2660,7 +2663,10 @@ const messages = {
       topKeywords: '告警关键词排行',
       alertIntensity: '告警强度 (热力图)',
       topNoisyHosts: '告警主机排行',
-      alerts: '告警数'
+      alerts: '告警数',
+      totalAlerts: '累计告警',
+      systemHealth: '系统健康度',
+      activeHosts: '活动资产'
     },
     metricRacing: {
       title: '指标赛跑',

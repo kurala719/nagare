@@ -5,9 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"nagare/internal/database"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // WordCount represents a word and its frequency
@@ -54,8 +56,8 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 
 	// 2. Get Heatmap data (counts per day for last 90 days)
 	type result struct {
-		Date  string
-		Count int
+		Date  string `json:"date"`
+		Count int    `json:"count"`
 	}
 	var results []result
 	ninetyDaysAgo := time.Now().AddDate(0, 0, -90)
@@ -73,8 +75,8 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 
 	// 3. Get Severity Distribution
 	type sevResult struct {
-		Severity int
-		Count    int
+		Severity int `json:"severity"`
+		Count    int `json:"count"`
 	}
 	var sevResults []sevResult
 	database.DB.Model(&model.Alert{}).
@@ -84,9 +86,9 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 
 	// 4. Get Top Noisy Hosts
 	type hostResult struct {
-		HostID uint
-		Count  int
-		Name   string
+		HostID uint   `json:"host_id"`
+		Count  int    `json:"count"`
+		Name   string `json:"name"`
 	}
 	var hostResults []hostResult
 	database.DB.Table("alerts").
@@ -108,11 +110,25 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		Order("date").
 		Scan(&trendResults)
 
+	// 6. Summary Stats
+	var totalAlerts int64
+	database.DB.Model(&model.Alert{}).Count(&totalAlerts)
+
+	healthScore, _ := service.GetHealthScoreServ()
+
+	var activeHosts int64
+	database.DB.Model(&model.Host{}).Where("status = ?", 1).Count(&activeHosts)
+
 	respondSuccess(c, http.StatusOK, gin.H{
 		"wordCloud":    wordCloud,
 		"heatmap":      heatmap,
 		"severityDist": sevResults,
 		"topHosts":     hostResults,
 		"trend":        trendResults,
+		"summary": gin.H{
+			"totalAlerts":  totalAlerts,
+			"systemHealth": healthScore.Score,
+			"activeHosts":  activeHosts,
+		},
 	})
 }
