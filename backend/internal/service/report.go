@@ -29,77 +29,107 @@ import (
 
 var translations = map[string]map[string]string{
 	"en": {
-		"page_pattern":           "Page {current} of {total}",
-		"daily_title":            "Daily Operations Summary",
-		"weekly_title":           "Weekly Operations Analytics",
-		"monthly_title":          "Monthly Infrastructure Insight",
-		"infra_health":           "Infrastructure Health & Trends",
-		"chart_skipped":          "[Chart Generation Skipped due to data issues]",
-		"critical_host":          "Critical Host Analytics",
-		"top_resource":           "Top Resource Consumers (CPU Usage)",
-		"stability_issues":       "Stability Issues (Frequency)",
-		"asset_name":             "Asset Name",
-		"ip_address":             "IP Address",
-		"avg_usage":              "Avg Usage",
-		"units":                  "Units",
-		"status":                 "Status",
-		"summary":                "Summary",
-		"alert_count":            "Alert Count",
-		"infra_report_platform":  "Infrastructure Intelligence Report | Nagare Platform",
-		"executive_summary":      "Executive Summary",
-		"total_alerts":           "Total Alerts",
-		"avg_health":             "Avg Health",
-		"critical_assets":        "Critical Assets",
-		"status_distribution":    "Status Distribution",
-		"alert_trend":            "Alert Trend in Period",
-		"failure_frequency":      "Failure Frequency",
-		"top_5_failures":         "Top 5 Most Frequent Failures (Times)",
-		"ai_summary_disabled":    "AI Summary generation is disabled. Based on metrics, the system has %d alerts in the last period.",
-		"ai_init_failed":         "Failed to initialize AI for summary: %v",
-		"ai_summary_failed":      "Infrastructure remained operational. Total alerts: %d. (AI Summary failed: %v)",
-		"ai_system_prompt":       "Generate a concise executive summary for an infrastructure report in English.",
-		"ai_user_prompt":         "You are a senior infrastructure analyst. Summarize the following operational data into a professional executive summary (3-4 sentences) in English.\nData: %s",
+		"page_pattern":          "Page {current} of {total}",
+		"daily_title":           "Daily Operations Summary",
+		"weekly_title":          "Weekly Operations Analytics",
+		"monthly_title":         "Monthly Infrastructure Insight",
+		"infra_health":          "Infrastructure Health & Trends",
+		"chart_skipped":         "[Chart Generation Skipped due to data issues]",
+		"critical_host":         "Critical Host Analytics",
+		"top_resource":          "Top Resource Consumers (CPU Usage)",
+		"stability_issues":      "Stability Issues (Frequency)",
+		"asset_name":            "Asset Name",
+		"ip_address":            "IP Address",
+		"avg_usage":             "Avg Usage",
+		"units":                 "Units",
+		"status":                "Status",
+		"summary":               "Summary",
+		"alert_count":           "Alert Count",
+		"infra_report_platform": "Infrastructure Intelligence Report | Nagare Platform",
+		"executive_summary":     "Executive Summary",
+		"total_alerts":          "Total Alerts",
+		"avg_health":            "Avg Health",
+		"critical_assets":       "Critical Assets",
+		"status_distribution":   "Status Distribution",
+		"alert_trend":           "Alert Trend in Period",
+		"failure_frequency":     "Failure Frequency",
+		"top_5_failures":        "Top 5 Most Frequent Failures (Times)",
+		"ai_summary_disabled":   "AI Summary generation is disabled. Based on metrics, the system has %d alerts in the last period.",
+		"ai_init_failed":        "Failed to initialize AI for summary: %v",
+		"ai_summary_failed":     "Infrastructure remained operational. Total alerts: %d. (AI Summary failed: %v)",
+		"ai_system_prompt":      "Generate a concise executive summary for an infrastructure report in English.",
+		"ai_user_prompt":        "You are a senior infrastructure analyst. Summarize the following operational data into a professional executive summary (3-4 sentences) in English.\nData: %s",
 		"detected_issues":       "Detected Issues",
 		"alerts_count_suffix":   "%d alerts",
+		"time":                  "Time",
+		"count":                 "Count",
+		"no_data":               "No Data",
+		"na":                    "N/A",
+		"hours_suffix":          "%s h",
+		"times_suffix":          "%s times",
+		"start":                 "Start",
+		"end":                   "End",
+		"mon":                   "M",
+		"tue":                   "T",
+		"wed":                   "W",
+		"thu":                   "T",
+		"fri":                   "F",
+		"sat":                   "S",
+		"sun":                   "S",
 	},
 	"zh": {
-		"page_pattern":           "第 {current} 页，共 {total} 页",
-		"daily_title":            "每日运维总结报告",
-		"weekly_title":           "每周运维分析报告",
-		"monthly_title":          "每月基础设施洞察报告",
-		"infra_health":           "基础设施健康状况与趋势",
-		"chart_skipped":          "[由于数据问题，跳过图表生成]",
-		"critical_host":          "关键主机分析",
-		"top_resource":           "资源消耗排行 (CPU 使用率)",
-		"stability_issues":       "稳定性问题 (频率)",
-		"asset_name":             "资产名称",
-		"ip_address":             "IP 地址",
-		"avg_usage":              "平均使用率",
-		"units":                  "单位",
-		"status":                 "状态",
-		"summary":                "摘要",
-		"alert_count":            "告警次数",
-		"infra_report_platform":  "基础设施智能报告 | Nagare 平台",
-		"executive_summary":      "执行摘要",
-		"total_alerts":           "告警总数",
-		"avg_health":             "平均健康度",
-		"critical_assets":        "异常资产",
-		"status_distribution":    "状态分布",
-		"alert_trend":            "期间告警趋势",
-		"failure_frequency":      "故障频率",
-		"top_5_failures":         "故障最频繁的前 5 个主机 (次数)",
-		"ai_summary_disabled":    "AI 摘要生成已禁用。根据指标，系统在上一周期共有 %d 条告警。",
-		"ai_init_failed":         "初始化 AI 摘要失败: %v",
-		"ai_summary_failed":      "基础设施运行正常。告警总数: %d。(AI 摘要失败: %v)",
-		"ai_system_prompt":       "为基础设施报告生成一份简洁的中文执行摘要。",
-		"ai_user_prompt":         "你是一位资深基础设施分析师。请将以下运营数据总结为一份专业的执行摘要（3-4 句话），请使用中文回复。\n数据: %s",
-		"active":                 "正常",
-		"inactive":               "离线",
-		"error":                  "错误",
-		"syncing":                "同步中",
-		"unknown":                "未知",
+		"page_pattern":          "第 {current} 页，共 {total} 页",
+		"daily_title":           "每日运维总结报告",
+		"weekly_title":          "每周运维分析报告",
+		"monthly_title":         "每月基础设施洞察报告",
+		"infra_health":          "基础设施健康状况与趋势",
+		"chart_skipped":         "[由于数据问题，跳过图表生成]",
+		"critical_host":         "关键主机分析",
+		"top_resource":          "资源消耗排行 (CPU 使用率)",
+		"stability_issues":      "稳定性问题 (频率)",
+		"asset_name":            "资产名称",
+		"ip_address":            "IP 地址",
+		"avg_usage":             "平均使用率",
+		"units":                 "单位",
+		"status":                "状态",
+		"summary":               "摘要",
+		"alert_count":           "告警次数",
+		"infra_report_platform": "基础设施智能报告 | Nagare 平台",
+		"executive_summary":     "执行摘要",
+		"total_alerts":          "告警总数",
+		"avg_health":            "平均健康度",
+		"critical_assets":       "异常资产",
+		"status_distribution":   "状态分布",
+		"alert_trend":           "期间告警趋势",
+		"failure_frequency":     "故障频率",
+		"top_5_failures":        "故障最频繁的前 5 个主机 (次数)",
+		"ai_summary_disabled":   "AI 摘要生成已禁用。根据指标，系统在上一周期共有 %d 条告警。",
+		"ai_init_failed":        "初始化 AI 摘要失败: %v",
+		"ai_summary_failed":     "基础设施运行正常。告警总数: %d。(AI 摘要失败: %v)",
+		"ai_system_prompt":      "为基础设施报告生成一份简洁的中文执行摘要。",
+		"ai_user_prompt":        "你是一位资深基础设施分析师。请将以下运营数据总结为一份专业的执行摘要（3-4 句话），请使用中文回复。\n数据: %s",
+		"active":                "正常",
+		"inactive":              "离线",
+		"error":                 "错误",
+		"syncing":               "同步中",
+		"unknown":               "未知",
 		"detected_issues":       "检测到问题",
 		"alerts_count_suffix":   "%d 条告警",
+		"time":                  "时间",
+		"count":                 "数量",
+		"no_data":               "无数据",
+		"na":                    "无",
+		"hours_suffix":          "%s 小时",
+		"times_suffix":          "%s 次",
+		"start":                 "开始",
+		"end":                   "结束",
+		"mon":                   "一",
+		"tue":                   "二",
+		"wed":                   "三",
+		"thu":                   "四",
+		"fri":                   "五",
+		"sat":                   "六",
+		"sun":                   "日",
 	},
 }
 
@@ -246,14 +276,14 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	m.AddAutoRow(text.NewCol(12, T(lang, "infra_health"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
 
 	// Pie Chart & Line Chart
-	pieBytes, errPie := utils.GeneratePieChart(T(lang, "status_distribution"), data.StatusDistribution)
-	
+	pieBytes, errPie := utils.GeneratePieChart(T(lang, "status_distribution"), data.StatusDistribution, T(lang, "no_data"))
+
 	// Labels for trend
-	labels := []string{"M", "T", "W", "T", "F", "S", "S"}
+	labels := []string{T(lang, "mon"), T(lang, "tue"), T(lang, "wed"), T(lang, "thu"), T(lang, "fri"), T(lang, "sat"), T(lang, "sun")}
 	if report.ReportType == "custom" && customStart != nil && customEnd != nil {
-		labels = []string{"Start", "...", "End"} // Simplified
+		labels = []string{T(lang, "start"), "...", T(lang, "end")}
 	}
-	lineBytes, errLine := utils.GenerateLineChart(T(lang, "alert_trend"), labels, data.AlertTrend)
+	lineBytes, errLine := utils.GenerateLineChart(T(lang, "alert_trend"), labels, data.AlertTrend, T(lang, "time"), T(lang, "count"))
 
 	if errPie == nil && errLine == nil {
 		m.AddRow(80,
@@ -272,7 +302,7 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	m.AddAutoRow(text.NewCol(12, T(lang, "critical_host"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
 
 	// Failure Frequency Chart
-	barBytes, errBar := utils.GenerateBarChart(T(lang, "failure_frequency"), data.FailureFrequency)
+	barBytes, errBar := utils.GenerateBarChart(T(lang, "failure_frequency"), data.FailureFrequency, T(lang, "no_data"))
 	if errBar == nil {
 		m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
 		m.AddRow(10, text.NewCol(12, T(lang, "top_5_failures"), props.Text{Align: align.Center, Size: 9}))
@@ -402,27 +432,34 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	}
 
 	// 5. Top CPU Hosts
-	var cpuItems []model.Item
-	database.DB.Model(&model.Item{}).
-		Where("name LIKE ? OR name LIKE ?", "%CPU%", "%cpu%").
-		Order("CAST(last_value AS DECIMAL) desc").
+	type cpuResult struct {
+		model.Item
+		HostName   string
+		HostIP     string
+		HostStatus int
+	}
+	var cpuResults []cpuResult
+	database.DB.Table("items").
+		Select("items.*, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
+		Joins("left join hosts on hosts.id = items.hid").
+		Where("(items.name LIKE ? OR items.name LIKE ? OR items.name LIKE ?) AND items.last_value != ''", "%CPU%", "%cpu%", "%处理器%").
+		Order("(items.last_value + 0) desc").
 		Limit(5).
-		Find(&cpuItems)
+		Scan(&cpuResults)
 
-	for _, item := range cpuItems {
-		h, _ := repository.GetHostByIDDAO(item.HID)
+	for _, res := range cpuResults {
 		status := T(lang, "active")
-		if h.Status == 2 {
+		if res.HostStatus == 2 {
 			status = T(lang, "error")
 		}
 		data.TopCPUHosts = append(data.TopCPUHosts, []string{
-			h.Name, h.IPAddr, item.LastValue, item.Units, status,
+			res.HostName, res.HostIP, res.LastValue, res.Units, status,
 		})
 	}
 
 	// 6. Longest Downtime Hosts (Mocked for now as real calculation is complex)
 	data.LongestDowntimeHosts = [][]string{
-		{"N/A", "-", "0h", "0 times"},
+		{T(lang, "na"), "-", fmt.Sprintf(T(lang, "hours_suffix"), "0"), fmt.Sprintf(T(lang, "times_suffix"), "0")},
 	}
 	if len(frequencies) > 0 {
 		h, _ := repository.GetHostByIDDAO(frequencies[0].HostID)

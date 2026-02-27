@@ -7,9 +7,12 @@ import (
 )
 
 // GeneratePieChart generates a pie chart and returns the PNG bytes
-func GeneratePieChart(title string, values map[string]float64) ([]byte, error) {
+func GeneratePieChart(title string, values map[string]float64, noDataText string) ([]byte, error) {
 	if len(values) == 0 {
-		values = map[string]float64{"No Data": 1}
+		if noDataText == "" {
+			noDataText = "No Data"
+		}
+		values = map[string]float64{noDataText: 1}
 	}
 	var slices []chart.Value
 	for label, val := range values {
@@ -28,7 +31,7 @@ func GeneratePieChart(title string, values map[string]float64) ([]byte, error) {
 }
 
 // GenerateLineChart generates a line chart for trends
-func GenerateLineChart(title string, xValues []string, yValues []float64) ([]byte, error) {
+func GenerateLineChart(title string, xValues []string, yValues []float64, xLabel, yLabel string) ([]byte, error) {
 	if len(yValues) == 0 {
 		yValues = []float64{0}
 	}
@@ -41,10 +44,10 @@ func GenerateLineChart(title string, xValues []string, yValues []float64) ([]byt
 
 	graph := chart.Chart{
 		XAxis: chart.XAxis{
-			Name: "Time",
+			Name: xLabel,
 		},
 		YAxis: chart.YAxis{
-			Name: "Count",
+			Name: yLabel,
 		},
 		Series: []chart.Series{
 			chart.ContinuousSeries{
@@ -64,9 +67,12 @@ func GenerateLineChart(title string, xValues []string, yValues []float64) ([]byt
 }
 
 // GenerateBarChart generates a bar chart
-func GenerateBarChart(title string, values map[string]float64) ([]byte, error) {
+func GenerateBarChart(title string, values map[string]float64, noDataText string) ([]byte, error) {
 	if len(values) == 0 {
-		values = map[string]float64{"No Data": 0}
+		if noDataText == "" {
+			noDataText = "No Data"
+		}
+		values = map[string]float64{noDataText: 0}
 	}
 	var bars []chart.Value
 	for label, val := range values {
