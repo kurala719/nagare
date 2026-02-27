@@ -67,10 +67,12 @@ POST /media
 
 | Level | Label | Usage |
 |-------|-------|-------|
-| 0 | Info | Informational events |
-| 1 | Warning | Non-critical issues |
-| 2 | Critical | Important alerts |
-| 3+ | Severe | Emergency situations |
+| 0 | Not Classified | Unknown or unclassified events |
+| 1 | Information | Informational events |
+| 2 | Warning | Non-critical issues |
+| 3 | Average | Moderate issues |
+| 4 | High / Critical | Important alerts |
+| 5 | Disaster | Emergency situations |
 
 ## Item Trigger Operators
 

@@ -23,10 +23,9 @@
           <el-option :label="$t('logs.filterAll')" value="all" />
           <el-option :label="$t('logs.levelFatal') || 'Fatal/Disaster'" :value="5" />
           <el-option :label="$t('logs.levelCritical') || 'Critical'" :value="4" />
-          <el-option :label="$t('logs.levelError')" :value="3" />
-          <el-option :label="$t('logs.levelAverage') || 'Average'" :value="2" />
-          <el-option :label="$t('logs.levelWarn')" :value="1" />
-          <el-option :label="$t('logs.levelInfo')" :value="0" />
+          <el-option :label="$t('logs.levelAverage') || 'Average'" :value="3" />
+          <el-option :label="$t('logs.levelWarn') || 'Warning'" :value="2" />
+          <el-option :label="$t('logs.levelInfo') || 'Info'" :value="1" />
         </el-select>
 
         <el-divider direction="vertical" />
@@ -324,37 +323,37 @@ export default defineComponent({
     severityTag(severity) {
       switch (severity) {
         case 5:
-        case 4:
-        case 3: return 'danger'
-        case 2:
-        case 1: return 'warning'
+        case 4: return 'danger'
+        case 3:
+        case 2: return 'warning'
+        case 1:
         case 0: return 'info'
         default: return 'info'
       }
     },
     severityLabel(severity) {
       switch (severity) {
-        case 5: return this.$t('logs.levelFatal') || 'Fatal'
+        case 5: return this.$t('logs.levelFatal') || 'Fatal/Disaster'
         case 4: return this.$t('logs.levelCritical') || 'Critical'
-        case 3: return this.$t('logs.levelError')
-        case 2: return this.$t('logs.levelAverage') || 'Average'
-        case 1: return this.$t('logs.levelWarn')
-        case 0: return this.$t('logs.levelInfo')
+        case 3: return this.$t('logs.levelAverage') || 'Average'
+        case 2: return this.$t('logs.levelWarn') || 'Warning'
+        case 1: return this.$t('logs.levelInfo') || 'Information'
+        case 0: return this.$t('alerts.severityNotClassified') || 'Not Classified'
         default: return 'Unknown'
       }
     },
     coerceSeverity(value) {
-      if (value === null || value === undefined || value === '') return 0
+      if (value === null || value === undefined || value === '') return 1
       if (typeof value === 'number') return value
       const text = String(value).toLowerCase()
       if (!Number.isNaN(Number(text))) return Number(text)
       if (text === 'disaster' || text === 'fatal') return 5
-      if (text === 'critical') return 4
-      if (text === 'error' || text === 'high') return 3
-      if (text === 'average') return 2
-      if (text === 'warn' || text === 'warning') return 1
-      if (text === 'info' || text === 'information') return 0
-      return 0
+      if (text === 'critical' || text === 'high') return 4
+      if (text === 'average') return 3
+      if (text === 'warn' || text === 'warning') return 2
+      if (text === 'info' || text === 'information') return 1
+      if (text === 'not_classified' || text === 'none') return 0
+      return 1
     },
     exportCSV() {
       const header = ['Time', 'Level', 'Message', 'IP', 'Context']

@@ -154,17 +154,17 @@ func AlertWebhookCtrl(c *gin.Context) {
 			if alarm.Type == 1 { // Zabbix
 				switch severity {
 				case 5:
-					severity = 4 // Disaster -> Critical
+					severity = 5 // Disaster -> Disaster
 				case 4:
-					severity = 3 // High -> High
+					severity = 4 // High -> High
 				case 3:
-					severity = 2 // Average -> Medium
+					severity = 3 // Average -> Average
 				case 2:
-					severity = 2 // Warning -> Medium
+					severity = 2 // Warning -> Warning
 				case 1:
-					severity = 1 // Information -> Low
+					severity = 1 // Information -> Information
 				case 0:
-					severity = 0 // Not classified -> Info
+					severity = 0 // Not classified -> Not classified
 				}
 			}
 		}

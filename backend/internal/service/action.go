@@ -535,11 +535,18 @@ func resolveMediaTypeKeyForSend(media model.Media) string {
 }
 
 func severityLabel(severity int) string {
-	if severity >= 3 {
-		return "Critical"
-	}
-	if severity == 2 {
+	switch severity {
+	case 5:
+		return "Disaster"
+	case 4:
+		return "High"
+	case 3:
+		return "Average"
+	case 2:
 		return "Warning"
+	case 1:
+		return "Information"
+	default:
+		return "Not Classified"
 	}
-	return "Normal"
 }

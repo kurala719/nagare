@@ -701,7 +701,7 @@ export default {
         },
         severityFilterValue() {
             if (this.severityFilter === 'all') return undefined;
-            const map = { info: 0, warning: 1, average: 2, high: 3, critical: 4, disaster: 5 };
+            const map = { info: 1, warning: 2, average: 3, high: 4, critical: 4, disaster: 5 };
             return map[this.severityFilter] ?? undefined;
         },
         statusFilterValue() {
@@ -711,7 +711,7 @@ export default {
         },
         normalizeSeverity(value) {
             if (typeof value === 'number') {
-                const map = { 0: 'info', 1: 'warning', 2: 'average', 3: 'high', 4: 'critical', 5: 'disaster' };
+                const map = { 0: 'not_classified', 1: 'info', 2: 'warning', 3: 'average', 4: 'high', 5: 'disaster' };
                 return map[value] || String(value);
             }
             return String(value || '');
@@ -768,7 +768,7 @@ export default {
             this.dialogVisible = true;
         },
         severityLabelToInt(label) {
-            const map = { 'info': 0, 'warning': 1, 'average': 2, 'high': 3, 'critical': 4, 'disaster': 5 };
+            const map = { 'not_classified': 0, 'info': 1, 'warning': 2, 'average': 3, 'high': 4, 'critical': 4, 'disaster': 5 };
             return map[label.toLowerCase()] ?? 0;
         },
         async saveAlert() {

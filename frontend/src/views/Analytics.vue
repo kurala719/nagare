@@ -128,13 +128,14 @@ const updateCharts = (data) => {
 
   // 2. Severity Chart
   if (data.severityDist) {
-    const sevMap = { 0: 'Info', 1: 'Warning', 2: 'Average', 3: 'High', 4: 'Disaster' }
-    const sevColors = ['#909399', '#E6A23C', '#F56C6C', '#CF4444', '#000000']
+    const sevMap = { 0: 'Not Classified', 1: 'Info', 2: 'Warning', 3: 'Average', 4: 'High', 5: 'Disaster' }
+    const sevColors = ['#909399', '#909399', '#E6A23C', '#F56C6C', '#CF4444', '#000000']
     severityChartInstance.setOption({
       series: [{
         data: data.severityDist.map(s => ({
           name: sevMap[s.Severity] || `Level ${s.Severity}`,
-          value: s.Count
+          value: s.Count,
+          itemStyle: { color: sevColors[s.Severity] || '#909399' }
         }))
       }]
     })
