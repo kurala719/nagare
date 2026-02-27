@@ -3,9 +3,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/repository"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetConfigCtrl returns all configuration settings
@@ -64,6 +65,7 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 	repository.SetConfigValue("ai.model", req.AI.Model)
 	repository.SetConfigValue("ai.analysis_timeout_seconds", req.AI.AnalysisTimeoutSeconds)
 	repository.SetConfigValue("ai.analysis_min_severity", req.AI.AnalysisMinSeverity)
+	repository.SetConfigValue("ai.language", req.AI.Language)
 
 	repository.SetConfigValue("gmail.enabled", req.Gmail.Enabled)
 	repository.SetConfigValue("gmail.credentials_file", req.Gmail.CredentialsFile)

@@ -27,9 +27,9 @@ const (
 
 // AlertReq represents an alert request
 type AlertReq struct {
-	Message  string `json:"message" binding:"required"`
-	Severity int    `json:"severity"`
-	Status   int    `json:"status"`
+	Message   string `json:"message" binding:"required"`
+	Severity  int    `json:"severity"`
+	Status    int    `json:"status"`
 	HostID    uint   `json:"host_id"`
 	ItemID    uint   `json:"item_id"`
 	AlarmID   uint   `json:"alarm_id"`
@@ -168,7 +168,7 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 // AddAlertServ creates a new alert
 func AddAlertServ(req AlertReq) error {
 	LogService("info", "AddAlertServ entry", map[string]interface{}{"message": req.Message, "host_id": req.HostID}, nil, "")
-	
+
 	hostID := req.HostID
 	itemID := req.ItemID
 
@@ -259,8 +259,8 @@ func AddAlertServ(req AlertReq) error {
 	LogService("info", "alert created", map[string]interface{}{
 		"alert_id": alert.ID,
 		"severity": alert.Severity,
-		"status": alert.Status,
-		"host_id": alert.HostID,
+		"status":   alert.Status,
+		"host_id":  alert.HostID,
 	}, nil, "")
 
 	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
@@ -270,7 +270,7 @@ func AddAlertServ(req AlertReq) error {
 
 func analyzeAndNotifyAlert(alert model.Alert) {
 	LogService("info", "starting alert analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
-	
+
 	if !aiAnalysisEnabled() {
 		LogService("info", "AI analysis disabled, executing actions directly", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 		ExecuteActionsForAlert(alert)
@@ -384,9 +384,13 @@ func analyzeAlertWithAI(alert model.Alert) (string, error) {
 		localContext,
 	)
 
+	// Fetch language preference from AI config
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        resolvedModel,
-		SystemPrompt: alertAnalysisPrompt(),
+		SystemPrompt: alertAnalysisPrompt(isCn),
 		Messages: []llm.Message{
 			{Role: "user", Content: alertData},
 		},
@@ -408,7 +412,34 @@ func mergeAlertComment(existing, analysis string) string {
 	return trimmed + "\n\nAI Analysis:\n" + analysis
 }
 
-func alertAnalysisPrompt() string {
+func alertAnalysisPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位专业的网络管理员和运维工程师，专注于华为网络设备。\n" +
+			"在给定的告警数据基础上，生成一份简洁、可操作性的评估报告。\n\n" +
+			systemContextPrompt() + "\n\n" +
+			"规则：\n" +
+			"- 仅使用提供的数据；请勿捏造指标或事件。\n" +
+			"- 如果数据缺失，请说明缺失的内容以及它如何影响分析的置信度。\n" +
+			"- 严重程度映射：0-1=正常，2=警告，3+=紧急。\n\n" +
+			"决策要求：\n" +
+			"- 你必须给出一个明确的决策，即是否需要通知人工用户。\n" +
+			"- 决策：[NOTIFY] (通知) 或 [SUPPRESS] (抑制)。\n" +
+			"- 如果告警是已知的误报、重复告警或微小的噪音，请抑制。\n" +
+			"- 如果告警需要人工立即或近期关注，请通知。\n\n" +
+			"输出格式（使用标题）：\n" +
+			"摘要：\n" +
+			"- 用通俗易懂的语言解释告警的含义。\n\n" +
+			"可能原因：\n" +
+			"-列出最可能的原因（点语法）。\n\n" +
+			"建议操作：\n" +
+			"- 首先列出紧急步骤（例如通过 SSH 使用 VRP 命令行），然后是后续行动。\n\n" +
+			"决策：\n" +
+			"- [NOTIFY] 或 [SUPPRESS] 紧接一句理由说明。\n\n" +
+			"严重程度：\n" +
+			"- 紧急/警告/正常，并附带简要理由。\n\n" +
+			"假设：\n" +
+			"- 任何假设或未知情况。"
+	}
 	return "You are an expert network administrator and DevOps engineer specializing in Huawei infrastructure.\n" +
 		"Analyze the alert data and produce a concise, actionable assessment.\n\n" +
 		systemContextPrompt() + "\n\n" +

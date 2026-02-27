@@ -46,6 +46,14 @@ func aiAnalysisMinSeverity() int {
 	return minSeverity
 }
 
+func aiLanguage() string {
+	lang := viper.GetString("ai.language")
+	if lang == "" {
+		return "en"
+	}
+	return lang
+}
+
 func systemContextPrompt() string {
 	return `ENVIRONMENT CONTEXT:
 - All monitored devices are Huawei network devices (switches, routers, firewalls).

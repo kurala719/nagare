@@ -115,6 +115,7 @@ type AIConfig struct {
 	Model                    string `yaml:"model" json:"model" mapstructure:"model"`
 	AnalysisTimeoutSeconds   int    `yaml:"analysis_timeout_seconds" json:"analysis_timeout_seconds" mapstructure:"analysis_timeout_seconds"`
 	AnalysisMinSeverity      int    `yaml:"analysis_min_severity" json:"analysis_min_severity" mapstructure:"analysis_min_severity"`
+	Language                 string `yaml:"language" json:"language" mapstructure:"language"`
 }
 
 // MediaRateLimitConfig holds notification rate limit settings
@@ -174,7 +175,7 @@ func InitConfig(path string) error {
 	viper.AutomaticEnv()
 
 	viper.SetDefault("status_check.provider_enabled", false)
-	
+
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
@@ -207,7 +208,7 @@ func NotifyConfigObservers() {
 		return
 	}
 	lastNotify = time.Now()
-	
+
 	// Create a copy to avoid holding lock during execution
 	currentObservers := make([]ConfigObserver, len(observers))
 	copy(currentObservers, observers)
@@ -287,6 +288,7 @@ func ResetConfig() error {
 	viper.Set("ai.model", "")
 	viper.Set("ai.analysis_timeout_seconds", 60)
 	viper.Set("ai.analysis_min_severity", 2)
+	viper.Set("ai.language", "en")
 
 	viper.Set("gmail.enabled", false)
 	viper.Set("gmail.credentials_file", "configs/gmail_credentials.json")

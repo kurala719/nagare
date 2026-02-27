@@ -147,7 +147,7 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 	ctx := context.Background()
 	start := time.Now()
 	responseText := ""
-	
+
 	// Prepare system prompt: Persona + Base Context
 	systemPrompt := baseChatPrompt(isChinese(req.Locale))
 	if personaPrompt != "" {
@@ -213,7 +213,7 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	tools := ListTools()
 	ctx := context.Background()
 	start := time.Now()
-	
+
 	// Build system prompt with Persona + Tools + Base Context
 	initialSystemPrompt := buildToolSystemPrompt(tools, personaPrompt)
 	baseContext := baseChatPrompt(isChinese(req.Locale))
@@ -288,7 +288,7 @@ func parseToolCall(content string) (toolCall, bool) {
 
 	// 2. Try finding JSON block. We look for { and } and try to find the largest valid JSON object
 	// that matches our toolCall structure.
-	
+
 	firstBrace := strings.Index(content, "{")
 	if firstBrace == -1 {
 		return toolCall{}, false
@@ -447,9 +447,12 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 		return ChatRes{}, err
 	}
 
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := alertAnalysisPrompt()
+	systemPrompt := alertAnalysisPrompt(isCn)
 	start := time.Now()
 
 	alertData := fmt.Sprintf("Alert ID: %d\nHost ID: %d\nSeverity: %d\nMessage: %s\nStatus: %d",
@@ -492,9 +495,12 @@ func ConsultItemServ(providerID uint, model string, itemID uint) (ChatRes, error
 		return ChatRes{}, err
 	}
 
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := itemAnalysisPrompt(false)
+	systemPrompt := itemAnalysisPrompt(isCn)
 
 	itemData := fmt.Sprintf("Host: %s\nItem Name: %s\nItem ID: %s\nCurrent Value: %s\nUnits: %s",
 		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ItemID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
@@ -542,9 +548,12 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 		return ChatRes{}, err
 	}
 
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := hostAnalysisPrompt(false)
+	systemPrompt := hostAnalysisPrompt(isCn)
 
 	// Build items data string
 	var itemsData string
@@ -655,9 +664,12 @@ func AnalyzeMonitoringDataServ(providerID uint, model string, data string) (Chat
 		return ChatRes{}, err
 	}
 
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	ctx, cancel := aiAnalysisContext()
 	defer cancel()
-	systemPrompt := monitoringAnalysisPrompt(false)
+	systemPrompt := monitoringAnalysisPrompt(isCn)
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{
@@ -685,8 +697,11 @@ func ExplainErrorServ(providerID uint, model string, errorMsg string) (ChatRes, 
 		return ChatRes{}, err
 	}
 
+	lang := aiLanguage()
+	isCn := isChinese(lang)
+
 	ctx := context.Background()
-	systemPrompt := errorExplainPrompt()
+	systemPrompt := errorExplainPrompt(isCn)
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{
@@ -934,7 +949,16 @@ func isNetworkStatusQuery(content string) bool {
 	return false
 }
 
-func errorExplainPrompt() string {
+func errorExplainPrompt(chinese bool) string {
+	if chinese {
+		return "你是一位得力的技术助手。\n" +
+			"当提供错误消息时：\n" +
+			"1. 用简单的术语解释该错误的含义\n" +
+			"2. 确定最可能的原因\n" +
+			"3. 提供修复该问题的逐步解决方案\n" +
+			"4. 提及未来任何预防措施\n\n" +
+			"在解释时保持实用和清晰。"
+	}
 	return "You are a helpful technical assistant.\n" +
 		"When given an error message:\n" +
 		"1. Explain what the error means in simple terms\n" +

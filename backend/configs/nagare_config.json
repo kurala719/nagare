@@ -3,6 +3,7 @@
     "analysis_enabled": true,
     "analysis_min_severity": 2,
     "analysis_timeout_seconds": 180,
+    "language": "en",
     "model": "",
     "notification_guard_enabled": false,
     "provider_id": 2
@@ -110,7 +111,7 @@
     "positive_url": "ws://localhost:3001"
   },
   "site_message": {
-    "min_alert_severity": 2,
+    "min_alert_severity": 3,
     "min_log_severity": 2
   },
   "smtp": {

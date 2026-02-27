@@ -186,6 +186,12 @@
               <el-form-item :label="$t('system.aiMinSeverity')">
                 <el-input-number v-model="editableConfig.ai.analysis_min_severity" :disabled="!editing" :min="0" :max="4" />
               </el-form-item>
+              <el-form-item :label="$t('system.aiLanguage')">
+                <el-select v-model="editableConfig.ai.language" :disabled="!editing" style="width: 100%;">
+                  <el-option label="English" value="en" />
+                  <el-option label="中文" value="zh" />
+                </el-select>
+              </el-form-item>
             </el-form>
 
             <div class="section-divider">{{ $t('configuration.onebotSettings') }}</div>
@@ -406,6 +412,7 @@ export default {
         model: '',
         analysis_timeout_seconds: 60,
         analysis_min_severity: 2,
+        language: 'en'
       },
       gmail: {
         enabled: false,
