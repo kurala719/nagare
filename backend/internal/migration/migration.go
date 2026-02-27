@@ -7,6 +7,7 @@ import (
 
 	"nagare/internal/database"
 	"nagare/internal/model"
+	"nagare/internal/repository"
 	"nagare/internal/service"
 )
 
@@ -87,6 +88,9 @@ func InitDBTables() error {
 	if err := ensureDefaultReportConfig(); err != nil {
 		return err
 	}
+	if err := ensureDefaultKnowledgeBase(); err != nil {
+		return err
+	}
 	return ensureDefaultRetentionPolicies()
 }
 
@@ -126,6 +130,58 @@ func ensureDefaultRetentionPolicies() error {
 		}
 	}
 
+	return nil
+}
+
+func ensureDefaultKnowledgeBase() error {
+	defaults := []model.KnowledgeBase{
+		{
+			Topic:    "Nagare Overview and Architecture",
+			Category: "System",
+			Keywords: "Nagare, Overview, Architecture, Monitoring, Alerting",
+			Content:  "Nagare is an advanced IT monitoring platform built with Go and Vue 3. It provides comprehensive monitoring for servers, network devices, and applications. Core components include Data Collection (agents, SNMP, Prometheus integration), Analysis Engine (thresholds, AI anomaly detection), Alerting System (email, Webhooks, DingTalk), and Reporting modules. Nagare is designed to be highly scalable and observable, storing data in MySQL and utilizing an internal rules engine for alerting.",
+		},
+		{
+			Topic:    "How does Alerting and Triggers work?",
+			Category: "Alerts",
+			Keywords: "Alert, Trigger, Action, Media, Notification, Severity",
+			Content:  "Alerts in Nagare are generated when monitored items cross defined 'Triggers'. A Trigger specifies conditions, such as 'CPU Usage > 90% for 5 minutes'. When a trigger condition is met, an Alert is fired. The system then evaluates 'Actions' to determine how to notify users. Actions filter alerts by severity, host groups, or specific monitors, and send notifications via configured 'Media' (e.g., Email, Webhooks). Alerts have a lifecycle: Active (0), Acknowledged (1), and Resolved (2).",
+		},
+		{
+			Topic:    "Using the AI Chat Assistant",
+			Category: "AI",
+			Keywords: "AI, Chat, Copilot, Analysis, Help, Assistance",
+			Content:  "Nagare includes an integrated AI Chat Assistant powered by Large Language Models (LLMs) like Google Gemini or OpenAI. The AI Assistant can answer questions about the system, analyze active alerts, explain complex metrics, and even suggest remediation steps for failing services. You can provide the Copilot with your API keys in the Configuration page. The AI uses Retrievel Augmented Generation (RAG) by fetching relevant data from existing alerts, logs, and this local Knowledge Base.",
+		},
+		{
+			Topic:    "Troubleshooting High Network Latency",
+			Category: "Network Solutions",
+			Keywords: "Network, Latency, Ping, Delay, Solution",
+			Content:  "High network latency is often caused by bandwidth congestion, faulty physical connections, or routing loops. Solution: 1) Check bandwidth usage on the affected switch/router interfaces. 2) Use MTR or Traceroute to identify where the delay is introduced. 3) Inspect for duplex mismatches or damaged cables on physical links. 4) Ensure QoS policies are not throttling legitimate traffic.",
+		},
+		{
+			Topic:    "Resolving Packet Loss on Hosts",
+			Category: "Network Solutions",
+			Keywords: "Packet Loss, Drops, Network, Host, Solution",
+			Content:  "Packet loss typically indicates an overloaded interface, bad cabling, or MTU mismatches. Solution: 1) Verify the MTU settings on the host match the network path. 2) Check switch port statistics for CRC errors or input/output drops, which indicate hardware or congestion issues. 3) Check if the host CPU or Network Interface Card (NIC) is overloaded and dropping packets at the OS level.",
+		},
+		{
+			Topic:    "Handling High CPU or Memory Utilization",
+			Category: "Host Solutions",
+			Keywords: "CPU, Memory, Utilization, High, Solution",
+			Content:  "When a host reports high CPU or Memory: 1) Identify the top consuming processes using tools like 'top', 'htop', or Task Manager. 2) Determine if the process is behaving normally for the current load. 3) If it's a memory leak, consider restarting the service. 4) If the baseline load has genuinely increased over time, consider scaling up the host resources.",
+		},
+	}
+
+	for _, kb := range defaults {
+		var existing model.KnowledgeBase
+		err := database.DB.Where("topic = ?", kb.Topic).First(&existing).Error
+		if err != nil { // Not found or error
+			if err := database.DB.Create(&kb).Error; err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -195,22 +251,22 @@ func ensureDefaultReportConfig() error {
 
 func fixForeignKeyColumnTypes() error {
 	tablesToFix := map[string][]string{
-		"hosts":                         {"m_id", "group_id"},
-		"groups":                        {"m_id"},
-		"items":                         {"hid"},
-		"item_histories":                {"item_id", "host_id"},
-		"host_histories":                {"host_id"},
-		"alerts":                        {"alarm_id", "trigger_id", "host_id", "item_id"},
-		"actions":                       {"media_id", "trigger_id", "host_id", "group_id"},
-		"triggers":                      {"alert_id", "alert_group_id", "alert_monitor_id", "alert_host_id", "alert_item_id"},
-		"chats":                         {"user_id", "provider_id"},
-		"log_entries":                   {"user_id"},
-		"audit_logs":                    {"user_id"},
-		"register_applications":         {"approved_by"},
-		"password_reset_applications":   {"user_id", "approved_by"},
-		"ansible_jobs":                  {"playbook_id", "triggered_by"},
-		"site_messages":                 {"user_id"},
-		"packet_analyses":               {"provider_id", "user_id"},
+		"hosts":                       {"m_id", "group_id"},
+		"groups":                      {"m_id"},
+		"items":                       {"hid"},
+		"item_histories":              {"item_id", "host_id"},
+		"host_histories":              {"host_id"},
+		"alerts":                      {"alarm_id", "trigger_id", "host_id", "item_id"},
+		"actions":                     {"media_id", "trigger_id", "host_id", "group_id"},
+		"triggers":                    {"alert_id", "alert_group_id", "alert_monitor_id", "alert_host_id", "alert_item_id"},
+		"chats":                       {"user_id", "provider_id"},
+		"log_entries":                 {"user_id"},
+		"audit_logs":                  {"user_id"},
+		"register_applications":       {"approved_by"},
+		"password_reset_applications": {"user_id", "approved_by"},
+		"ansible_jobs":                {"playbook_id", "triggered_by"},
+		"site_messages":               {"user_id"},
+		"packet_analyses":             {"provider_id", "user_id"},
 	}
 
 	for table, columns := range tablesToFix {
@@ -285,15 +341,15 @@ func migrateSeverityLevels() error {
 	// For simplicity, we'll shift them once.
 	// Old: 0:Info, 1:Low, 2:Medium, 3:High, 4:Critical
 	// New: 0:Not Classified, 1:Info, 2:Warning, 3:Average, 4:High, 5:Disaster
-	
+
 	// We'll increment existing 0-4 values by 1 to roughly match new mapping
 	// Info (0) -> Info (1)
 	// Low (1) -> Warning (2)
 	// Medium (2) -> Average (3)
 	// High (3) -> High (4)
-	// Critical (4) -> High (4) or Disaster (5)? 
+	// Critical (4) -> High (4) or Disaster (5)?
 	// Let's just do a simple shift for now if they are in range [0, 4]
-	
+
 	// Only run if Disaster (5) is not used yet? Or use a marker.
 	// We'll check if any Trigger has severity 5.
 	var count int64
@@ -308,10 +364,61 @@ func migrateSeverityLevels() error {
 			_ = database.DB.Exec(fmt.Sprintf("UPDATE `%s` SET severity = severity + 1 WHERE severity >= 0 AND severity <= 4", t))
 		}
 	}
-	
+
 	// Actions use severity_min
 	if database.DB.Migrator().HasTable("actions") {
 		_ = database.DB.Exec("UPDATE actions SET severity_min = severity_min + 1 WHERE severity_min >= 0 AND severity_min <= 4")
+	}
+
+	return nil
+}
+
+func migrateLogSeverityLevels() error {
+	// Only run if there's no log_entries with level > 2 (new logs will be mapped to 1, 2, 4)
+	// Log severity old map: 0:Info, 1:Warn, 2:Error
+	// Log severity new map: 1:Info, 2:Warning, 4:High/Error
+
+	// Check log_entries
+	if database.DB.Migrator().HasTable("log_entries") {
+		var count int64
+		// If we already have logs with level >= 3, assume we've migrated
+		database.DB.Table("log_entries").Where("level >= 3").Count(&count)
+		if count == 0 {
+			// Bump 2 (Error) -> 4 (High)
+			_ = database.DB.Exec("UPDATE log_entries SET level = 4 WHERE level = 2")
+			// Bump 1 (Warn) -> 2 (Warning) (already 2, but just for clarity or if it was different)
+			_ = database.DB.Exec("UPDATE log_entries SET level = 2 WHERE level = 1")
+			// Bump 0 (Info) -> 1 (Info)
+			_ = database.DB.Exec("UPDATE log_entries SET level = 1 WHERE level = 0")
+
+			// Migrate site_message.min_log_severity config using viper directly
+			currentMin, err := repository.GetMainConfig()
+			if err == nil {
+				oldSev := currentMin.SiteMessage.MinLogSeverity
+				// Only migrate if within old 0-2 bounds
+				if oldSev >= 0 && oldSev <= 2 {
+					newSev := 1 // default info
+					if oldSev == 1 {
+						newSev = 2 // Warning
+					} else if oldSev == 2 {
+						newSev = 4 // High/Error
+					}
+					repository.SetConfigValue("site_message.min_log_severity", newSev)
+					_ = repository.SaveConfig()
+				}
+			}
+		}
+	}
+
+	// Check triggers.log_level
+	if database.DB.Migrator().HasTable("triggers") && database.DB.Migrator().HasColumn(&model.Trigger{}, "log_level") {
+		var count int64
+		database.DB.Table("triggers").Where("log_level >= 3 AND entity = 'log'").Count(&count)
+		if count == 0 {
+			_ = database.DB.Exec("UPDATE triggers SET log_level = 4 WHERE log_level = 2 AND entity = 'log'")
+			_ = database.DB.Exec("UPDATE triggers SET log_level = 2 WHERE log_level = 1 AND entity = 'log'")
+			_ = database.DB.Exec("UPDATE triggers SET log_level = 1 WHERE log_level = 0 AND entity = 'log'")
+		}
 	}
 
 	return nil
@@ -334,7 +441,11 @@ func preSchemaUpdates() error {
 	}
 
 	if err := migrateSeverityLevels(); err != nil {
-		fmt.Printf("Warning: failed to migrate severity levels: %v\n", err)
+		fmt.Printf("Warning: failed to migrate alert severity levels: %v\n", err)
+	}
+
+	if err := migrateLogSeverityLevels(); err != nil {
+		fmt.Printf("Warning: failed to migrate log severity levels: %v\n", err)
 	}
 
 	if database.DB.Migrator().HasTable("sites") && !database.DB.Migrator().HasTable("groups") {

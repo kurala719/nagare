@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetSystemLogsCtrl handles GET /log/system
@@ -108,13 +109,22 @@ func parseLogSeverityParam(value string) *int {
 		return &n
 	}
 	switch strings.ToLower(trimmed) {
-	case "warn", "warning":
+	case "info", "information":
 		v := 1
 		return &v
-	case "error", "err":
+	case "warn", "warning":
 		v := 2
 		return &v
-	case "info":
+	case "average":
+		v := 3
+		return &v
+	case "high", "error", "err":
+		v := 4
+		return &v
+	case "critical", "disaster", "fatal":
+		v := 5
+		return &v
+	case "not_classified", "none":
 		v := 0
 		return &v
 	default:

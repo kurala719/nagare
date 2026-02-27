@@ -308,7 +308,7 @@ func ResetConfig() error {
 	viper.Set("qq.access_token", "")
 
 	viper.Set("site_message.min_alert_severity", 0)
-	viper.Set("site_message.min_log_severity", 2)
+	viper.Set("site_message.min_log_severity", 4)
 
 	viper.Set("media_rate_limit.global_interval_seconds", 30)
 	viper.Set("media_rate_limit.protocol_interval_seconds", 30)

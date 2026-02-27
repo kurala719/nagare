@@ -174,6 +174,13 @@ func ListTools() []ToolDefinition {
 				"offset":      schemaInt("Offset for pagination."),
 			}),
 		},
+		{
+			Name:        "get_knowledge_base",
+			Description: "Search the internal knowledge base for system information, solutions, and overviews.",
+			InputSchema: schemaObject(map[string]interface{}{
+				"q": schemaString("Search keywords or topics."),
+			}),
+		},
 	}
 }
 
@@ -446,6 +453,17 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			Offset:     offset,
 		}
 		return SearchChatsServ(filter)
+	case "get_knowledge_base":
+		var args struct {
+			Query string `json:"q"`
+		}
+		if err := decodeParams(rawArgs, &args); err != nil {
+			return nil, err
+		}
+		if isEmptyArgs(rawArgs) || args.Query == "" {
+			return GetAllKnowledgeBaseServ()
+		}
+		return SearchKnowledgeBaseServ(args.Query)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}

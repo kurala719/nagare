@@ -113,27 +113,27 @@ func logEntry(logType string, severity int, message string, context map[string]i
 func logSeverityFromString(value string) int {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return 0 // Information
+		return 1 // Information
 	}
 	if n, err := strconv.Atoi(trimmed); err == nil {
-		return n
+		return n // Return raw integer if already mapped
 	}
 	switch strings.ToLower(trimmed) {
 	case "info", "information":
-		return 0
-	case "warn", "warning":
 		return 1
-	case "average":
+	case "warn", "warning":
 		return 2
-	case "high", "err", "error":
+	case "average":
 		return 3
-	case "critical":
+	case "high", "err", "error":
 		return 4
-	case "disaster", "fatal":
+	case "critical", "disaster", "fatal":
 		return 5
 	case "debug", "trace":
-		return 0 // map debug to info for now
-	default:
+		return 1 // map debug to info for now
+	case "not_classified", "none":
 		return 0
+	default:
+		return 1
 	}
 }

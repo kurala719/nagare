@@ -43,10 +43,10 @@ func evaluateThreshold(host model.Host, item model.Item) {
 	if item.Name == "hwCpuDevDuty" || item.Name == "hwEntityCpuUsage" {
 		if val >= 90 {
 			alertMsg = fmt.Sprintf("Critical CPU Usage: %.2f%% on %s", val, host.Name)
-			severity = 2
+			severity = 4
 		} else if val >= 75 {
 			alertMsg = fmt.Sprintf("High CPU Usage: %.2f%% on %s", val, host.Name)
-			severity = 1
+			severity = 2
 		}
 	}
 
@@ -54,10 +54,10 @@ func evaluateThreshold(host model.Host, item model.Item) {
 	if item.Name == "hwEntityMemUsage" || item.Name == "mem_usage_pct" {
 		if val >= 95 {
 			alertMsg = fmt.Sprintf("Critical Memory Usage: %.2f%% on %s", val, host.Name)
-			severity = 2
+			severity = 4
 		} else if val >= 85 {
 			alertMsg = fmt.Sprintf("High Memory Usage: %.2f%% on %s", val, host.Name)
-			severity = 1
+			severity = 2
 		}
 	}
 
@@ -67,13 +67,13 @@ func evaluateThreshold(host model.Host, item model.Item) {
 		if val > 200 {
 			val = val / 10.0
 		}
-		
+
 		if val >= 75 {
 			alertMsg = fmt.Sprintf("Critical Temperature: %.2f°C on %s", val, host.Name)
-			severity = 2
+			severity = 4
 		} else if val >= 60 {
 			alertMsg = fmt.Sprintf("High Temperature: %.2f°C on %s", val, host.Name)
-			severity = 1
+			severity = 2
 		}
 	}
 
@@ -110,7 +110,7 @@ func triggerAlert(host model.Host, item model.Item, message string, severity int
 	}
 
 	_ = repository.AddAlertDAO(&alert)
-	
+
 	// Site Message for Real-time notification
 	_ = CreateSiteMessageServ("Threshold Alert", message, "alert", severity, nil)
 

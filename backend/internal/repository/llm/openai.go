@@ -28,8 +28,9 @@ type openAIRequest struct {
 }
 
 type openAIMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role             string `json:"role"`
+	Content          string `json:"content"`
+	ReasoningContent string `json:"reasoning_content,omitempty"`
 }
 
 type openAIResponse struct {
@@ -157,8 +158,13 @@ func (p *OpenAIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatRespon
 		return nil, fmt.Errorf("no response from OpenAI")
 	}
 
+	finalContent := openAIResp.Choices[0].Message.Content
+	if openAIResp.Choices[0].Message.ReasoningContent != "" {
+		finalContent = "<think>\n" + openAIResp.Choices[0].Message.ReasoningContent + "\n</think>\n\n" + finalContent
+	}
+
 	return &ChatResponse{
-		Content:      openAIResp.Choices[0].Message.Content,
+		Content:      finalContent,
 		Model:        openAIResp.Model,
 		FinishReason: openAIResp.Choices[0].FinishReason,
 		TokensUsed:   openAIResp.Usage.TotalTokens,

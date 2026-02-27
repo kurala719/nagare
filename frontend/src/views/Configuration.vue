@@ -462,9 +462,12 @@ export default {
     ]);
 
     const logSeverityOptions = computed(() => [
-      { label: t('logs.levelInfo'), value: 0 },
-      { label: t('logs.levelWarn'), value: 1 },
-      { label: t('logs.levelError'), value: 2 }
+      { label: t('alerts.severityDisaster') || 'Fatal/Disaster', value: 5 },
+      { label: t('alerts.severityHigh') || 'High/Error', value: 4 },
+      { label: t('alerts.severityAverage') || 'Average', value: 3 },
+      { label: t('alerts.severityWarning') || 'Warning', value: 2 },
+      { label: t('alerts.severityInfo') || 'Information', value: 1 },
+      { label: t('alerts.severityNotClassified') || 'Not Classified', value: 0 }
     ]);
 
     const loadAIProviders = async () => {

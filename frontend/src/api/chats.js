@@ -12,7 +12,8 @@ export function sendChatMessage(data) {
   return request({
     url: '/chats',
     method: 'post',
-    data
+    data,
+    timeout: 120000 // 120 seconds timeout for AI processing
   })
 }
 
