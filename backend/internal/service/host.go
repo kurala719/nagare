@@ -622,7 +622,9 @@ func DeleteHostByIDServ(id uint, deleteFromMonitor bool) error {
 
 	// 2. Delete from monitor if requested
 	if deleteFromMonitor && host.MonitorID > 0 && host.Hostid != "" {
-		_ = DeleteHostFromMonitorServ(host.MonitorID, host.Hostid)
+		if err := DeleteHostFromMonitorServ(host.MonitorID, host.Hostid); err != nil {
+			return fmt.Errorf("failed to delete host from monitor: %w", err)
+		}
 	}
 
 	// 3. Delete the host itself

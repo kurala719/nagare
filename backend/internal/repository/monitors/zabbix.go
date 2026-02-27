@@ -25,11 +25,11 @@ type ZabbixProvider struct {
 
 // Zabbix API request/response structures
 type zabbixRequest struct {
-	Jsonrpc string                 `json:"jsonrpc"`
-	Method  string                 `json:"method"`
-	Params  map[string]interface{} `json:"params"`
-	Auth    string                 `json:"auth,omitempty"`
-	ID      int                    `json:"id"`
+	Jsonrpc string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params"`
+	Auth    string      `json:"auth,omitempty"`
+	ID      int         `json:"id"`
 }
 
 type zabbixResponse struct {
@@ -173,7 +173,7 @@ func NewZabbixProvider(cfg Config) (*ZabbixProvider, error) {
 }
 
 // sendRequest sends a request to the Zabbix API
-func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params map[string]interface{}) (*zabbixResponse, error) {
+func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params interface{}) (*zabbixResponse, error) {
 	p.reqID++
 
 	req := zabbixRequest{
@@ -2076,7 +2076,7 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				"dns":         iface.DNS,
 				"port":        iface.Port,
 			}
-			
+
 			// Update SNMP details if provided in metadata
 			if host.Metadata != nil && host.Metadata["monitor_type"] == "2" {
 				snmpVersion := 2
@@ -2091,7 +2091,7 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				if comm == "" {
 					comm = "public"
 				}
-				
+
 				ifaceParams["details"] = map[string]interface{}{
 					"version":   snmpVersion,
 					"bulk":      1,
@@ -2099,7 +2099,7 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				}
 				ifaceParams["type"] = 2 // Ensure type is SNMP
 			}
-			
+
 			params["interfaces"] = []map[string]interface{}{ifaceParams}
 		}
 	}
@@ -2113,12 +2113,13 @@ func (p *ZabbixProvider) DeleteHost(ctx context.Context, hostID string) error {
 	if hostID == "" {
 		return fmt.Errorf("host ID is required")
 	}
-	params := map[string]interface{}{
-		"hostids": []string{hostID},
-	}
-	if _, err := p.sendRequest(ctx, "host.delete", params); err != nil {
+	params := []string{hostID}
+	resp, err := p.sendRequest(ctx, "host.delete", params)
+	if err != nil {
+		fmt.Printf("DEBUG Zabbix DeleteHost Failed for hostid %s: %v\n", hostID, err)
 		return fmt.Errorf("failed to delete host: %w", err)
 	}
+	fmt.Printf("DEBUG Zabbix DeleteHost Succeeded for hostid %s: %s\n", hostID, string(resp.Result))
 	return nil
 }
 func (p *ZabbixProvider) GetTemplateidByName(ctx context.Context, name string) ([]string, error) {
@@ -2204,9 +2205,7 @@ func (p *ZabbixProvider) UpdateHostGroup(ctx context.Context, id, name string) e
 }
 
 func (p *ZabbixProvider) DeleteHostGroup(ctx context.Context, id string) error {
-	params := map[string]interface{}{
-		"groupids": []string{id},
-	}
+	params := []string{id}
 	if _, err := p.sendRequest(ctx, "hostgroup.delete", params); err != nil {
 		return fmt.Errorf("failed to delete host group: %w", err)
 	}
