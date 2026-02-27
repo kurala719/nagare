@@ -433,21 +433,33 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 
 	// 5. Top CPU Hosts
 	type cpuResult struct {
-		model.Item
-		HostName   string
-		HostIP     string
-		HostStatus int
+		ID         uint   `gorm:"column:id"`
+		HID        uint   `gorm:"column:hid"`
+		Name       string `gorm:"column:name"`
+		LastValue  string `gorm:"column:last_value"`
+		Units      string `gorm:"column:units"`
+		HostName   string `gorm:"column:host_name"`
+		HostIP     string `gorm:"column:host_ip"`
+		HostStatus int    `gorm:"column:host_status"`
 	}
 	var cpuResults []cpuResult
 	database.DB.Table("items").
-		Select("items.*, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
+		Select("items.id, items.hid, items.name, items.last_value, items.units, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
 		Joins("left join hosts on hosts.id = items.hid").
 		Where("(items.name LIKE ? OR items.name LIKE ? OR items.name LIKE ?) AND items.last_value != ''", "%CPU%", "%cpu%", "%处理器%").
 		Order("(items.last_value + 0) desc").
-		Limit(5).
+		Limit(20).
 		Scan(&cpuResults)
 
+	seenAssets := make(map[string]bool)
 	for _, res := range cpuResults {
+		// Deduplicate by host name and IP to ensure we unique logical assets
+		assetKey := res.HostName + "|" + res.HostIP
+		if assetKey == "|" || seenAssets[assetKey] {
+			continue
+		}
+		seenAssets[assetKey] = true
+
 		status := T(lang, "active")
 		if res.HostStatus == 2 {
 			status = T(lang, "error")
@@ -455,6 +467,10 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		data.TopCPUHosts = append(data.TopCPUHosts, []string{
 			res.HostName, res.HostIP, res.LastValue, res.Units, status,
 		})
+
+		if len(data.TopCPUHosts) >= 5 {
+			break
+		}
 	}
 
 	// 6. Longest Downtime Hosts (Mocked for now as real calculation is complex)
