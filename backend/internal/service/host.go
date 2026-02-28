@@ -117,7 +117,7 @@ func ProbeSNMPOIDServ(hid uint, oid string) (SNMPOIDProbeResult, error) {
 
 	target := strings.TrimSpace(host.IPAddr)
 	if target == "" {
-		target = strings.TrimSpace(host.Hostid)
+		target = strings.TrimSpace(host.ExternalHostID)
 	}
 	if target == "" {
 		return SNMPOIDProbeResult{}, fmt.Errorf("host has no SNMP target (ip_addr/hostid empty)")
@@ -271,9 +271,9 @@ func ProbeSNMPOIDServ(hid uint, oid string) (SNMPOIDProbeResult, error) {
 // HostReq represents a host request
 type HostReq struct {
 	Name        string `json:"name" binding:"required"`
-	MID         uint   `json:"m_id"`
+	MID         uint   `json:"monitor_id"`
 	GroupID     uint   `json:"group_id"`
-	Hostid      string `json:"hostid"`
+	ExternalHostID      string `json:"hostid"`
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
 	IPAddr      string `json:"ip_addr"`
@@ -300,11 +300,11 @@ type HostReq struct {
 type HostResp struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
-	MID         uint   `json:"m_id"`
+	MID         uint   `json:"monitor_id"`
 	GroupID     uint   `json:"group_id"`
 	GroupName   string `json:"group_name"`
 	MonitorName string `json:"monitor_name"`
-	Hostid      string `json:"hostid"`
+	ExternalHostID      string `json:"hostid"`
 	Description string `json:"description"`
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
@@ -379,8 +379,8 @@ func DeleteHostsByMIDServ(mid uint, deleteFromMonitor bool) error {
 		hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 		if err == nil {
 			for _, h := range hosts {
-				if h.Hostid != "" {
-					_ = DeleteHostFromMonitorServ(mid, h.Hostid)
+				if h.ExternalHostID != "" {
+					_ = DeleteHostFromMonitorServ(mid, h.ExternalHostID)
 				}
 			}
 		}
@@ -398,7 +398,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 
 	newHost := model.Host{
 		Name:                h.Name,
-		Hostid:              h.Hostid,
+		ExternalHostID:              h.ExternalHostID,
 		MonitorID:           h.MID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
@@ -480,7 +480,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		Name:        newHost.Name,
 		MID:         newHost.MonitorID,
 		GroupID:     newHost.GroupID,
-		Hostid:      newHost.Hostid,
+		ExternalHostID:      newHost.ExternalHostID,
 		Description: newHost.Description,
 		Enabled:     newHost.Enabled,
 		Status:      newHost.Status,
@@ -507,7 +507,7 @@ func UpdateHostServ(id uint, h HostReq) error {
 
 	updated := model.Host{
 		Name:                h.Name,
-		Hostid:              h.Hostid,
+		ExternalHostID:              h.ExternalHostID,
 		MonitorID:           monitorID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
@@ -621,8 +621,8 @@ func DeleteHostByIDServ(id uint, deleteFromMonitor bool) error {
 	}
 
 	// 2. Delete from monitor if requested
-	if deleteFromMonitor && host.MonitorID > 0 && host.Hostid != "" {
-		if err := DeleteHostFromMonitorServ(host.MonitorID, host.Hostid); err != nil {
+	if deleteFromMonitor && host.MonitorID > 0 && host.ExternalHostID != "" {
+		if err := DeleteHostFromMonitorServ(host.MonitorID, host.ExternalHostID); err != nil {
 			return fmt.Errorf("failed to delete host from monitor: %w", err)
 		}
 	}
@@ -694,7 +694,7 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 		status := mapMonitorHostStatus(h.Status, activeAvailable)
 		hosts = append(hosts, HostResp{
 			Name:        h.Name,
-			Hostid:      h.ID,
+			ExternalHostID:      h.ID,
 			Description: h.Description,
 			IPAddr:      h.IPAddress,
 			Enabled:     1,
@@ -788,7 +788,7 @@ func hostToResp(h model.Host) HostResp {
 		GroupID:             h.GroupID,
 		GroupName:           h.GroupName,
 		MonitorName:         h.MonitorName,
-		Hostid:              h.Hostid,
+		ExternalHostID:              h.ExternalHostID,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
 		Status:              h.Status,
@@ -1104,7 +1104,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 				Name:            h.Name,
-				Hostid:          h.ID,
+				ExternalHostID:          h.ID,
 				MonitorID:       mid,
 				GroupID:         groupID,
 				Description:     h.Description,
@@ -1132,7 +1132,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			// Host doesn't exist, add it
 			hNew := model.Host{
 				Name:            h.Name,
-				Hostid:          h.ID,
+				ExternalHostID:          h.ID,
 				MonitorID:       mid,
 				GroupID:         groupID,
 				Description:     h.Description,
@@ -1180,7 +1180,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		// Skip 'not found' check for SNMP monitors as they don't provide a master host list
 		if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
 			for _, localHost := range localHosts {
-				if _, ok := monitorHostIDs[localHost.Hostid]; ok {
+				if _, ok := monitorHostIDs[localHost.ExternalHostID]; ok {
 					continue
 				}
 				reason := "host not found on monitor"
@@ -1244,7 +1244,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}
 	}
 
-	h, err := client.GetHostByID(context.Background(), host.Hostid)
+	h, err := client.GetHostByID(context.Background(), host.ExternalHostID)
 	if err != nil {
 		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(id, err.Error())
@@ -1253,7 +1253,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 
 	if h == nil {
-		return SyncResult{}, fmt.Errorf("host %s not found on monitor", host.Hostid)
+		return SyncResult{}, fmt.Errorf("host %s not found on monitor", host.ExternalHostID)
 	}
 
 	// Get active_available from metadata
@@ -1287,7 +1287,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 			Name:            h.Name,
-			Hostid:          h.ID,
+			ExternalHostID:          h.ID,
 			MonitorID:       mid,
 			GroupID:         groupID,
 			Enabled:         h.Enabled,
@@ -1309,7 +1309,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		// Host doesn't exist, add it
 		newHost := model.Host{
 			Name:            h.Name,
-			Hostid:          h.ID,
+			ExternalHostID:          h.ID,
 			MonitorID:       mid,
 			GroupID:         groupID,
 			Description:     h.Description,
@@ -1431,7 +1431,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 	}
 
 	monitorHost := monitors.Host{
-		ID:          host.Hostid,
+		ID:          host.ExternalHostID,
 		Name:        host.Name,
 		IPAddress:   host.IPAddr,
 		Description: host.Description,
@@ -1444,10 +1444,10 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 			"snmp_port":      fmt.Sprintf("%d", host.SNMPPort),
 		},
 	}
-	if host.Hostid == "" {
+	if host.ExternalHostID == "" {
 		// Try to find host by name first to avoid duplicates
 		if existing, err := client.GetHostByName(context.Background(), host.Name); err == nil && existing != nil && existing.ID != "" {
-			host.Hostid = existing.ID
+			host.ExternalHostID = existing.ID
 			_ = repository.UpdateHostDAO(host.ID, host)
 			monitorHost.ID = existing.ID
 
@@ -1469,7 +1469,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 				return result, fmt.Errorf("failed to create host in monitor: %w", err)
 			}
 			if created.ID != "" {
-				host.Hostid = created.ID
+				host.ExternalHostID = created.ID
 				_ = repository.UpdateHostDAO(host.ID, host)
 			}
 		}
@@ -1481,7 +1481,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 			return result, fmt.Errorf("failed to update host in monitor: %w", err)
 		}
 	}
-	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.Hostid, "monitor": monitor.Name, "group": groupName}, nil, "")
+	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.ExternalHostID, "monitor": monitor.Name, "group": groupName}, nil, "")
 
 	result.Added++
 	result.Total = 1

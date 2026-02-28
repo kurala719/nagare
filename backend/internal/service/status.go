@@ -113,7 +113,7 @@ func determineItemStatus(i model.Item) int {
 		return 0
 	}
 	// Item status is independent of host's overall health status
-	if i.ItemID == "" {
+	if i.ExternalItemID == "" {
 		return 2
 	}
 	// 'N/A' indicates a polling failure or missing instance for this specific device

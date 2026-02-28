@@ -1,0 +1,21 @@
+>>> Loading config from: configs/nagare_config.json
+>>> Initializing Database...
+2026/02/28 10:31:26 [system] [1] starting application 
+
+2026/02/28 10:31:26 [31;1mD:/Nagare_Project/nagare/backend/internal/repository/log.go:10 [35;1mError 1146 (42S02): Table 'nagare.log_entries' doesn't exist
+[0m[33m[7.742ms] [34;1m[rows:0][0m INSERT INTO `log_entries` (`created_at`,`updated_at`,`deleted_at`,`type`,`level`,`message`,`context`,`user_id`,`ip`) VALUES ('2026-02-28 10:31:26.245','2026-02-28 10:31:26.245',NULL,'system',1,'starting application','',NULL,'')
+2026/02/28 10:31:26 log write failed: Error 1146 (42S02): Table 'nagare.log_entries' doesn't exist
+2026/02/28 10:31:26 [system] [1] database connection established 
+
+2026/02/28 10:31:26 [31;1mD:/Nagare_Project/nagare/backend/internal/repository/log.go:10 [35;1mError 1146 (42S02): Table 'nagare.log_entries' doesn't exist
+[0m[33m[1.418ms] [34;1m[rows:0][0m INSERT INTO `log_entries` (`created_at`,`updated_at`,`deleted_at`,`type`,`level`,`message`,`context`,`user_id`,`ip`) VALUES ('2026-02-28 10:31:26.251','2026-02-28 10:31:26.251',NULL,'system',1,'database connection established','',NULL,'')
+2026/02/28 10:31:26 log write failed: Error 1146 (42S02): Table 'nagare.log_entries' doesn't exist
+>>> Running Database Migrations...
+
+2026/02/28 10:31:26 [31;1mD:/Nagare_Project/nagare/backend/internal/migration/migration.go:356 [35;1mError 1146 (42S02): Table 'nagare.triggers' doesn't exist
+[0m[33m[3.236ms] [34;1m[rows:0][0m SELECT count(*) FROM `triggers` WHERE severity = 5 AND `triggers`.`deleted_at` IS NULL
+
+2026/02/28 10:31:26 [31;1mD:/Nagare_Project/nagare/backend/internal/migration/migration.go:47 [35;1mError 1824 (HY000): Failed to open the referenced table 'alerts'
+[0m[33m[1.812ms] [34;1m[rows:0][0m CREATE TABLE `triggers` (`id` bigint unsigned AUTO_INCREMENT,`created_at` datetime(3) NULL,`updated_at` datetime(3) NULL,`deleted_at` datetime(3) NULL,`name` longtext,`entity` longtext,`severity` bigint,`alert_id` bigint unsigned,`alert_status` bigint,`alert_group_id` bigint unsigned,`alert_monitor_id` bigint unsigned,`alert_host_id` bigint unsigned,`alert_item_id` bigint unsigned,`alert_query` longtext,`log_type` longtext,`log_level` bigint,`log_query` longtext,`item_status` bigint,`item_value_threshold` double,`item_value_threshold_max` double,`item_value_operator` longtext,`enabled` bigint DEFAULT 1,`status` bigint,PRIMARY KEY (`id`),INDEX `idx_triggers_deleted_at` (`deleted_at`),CONSTRAINT `fk_triggers_alert_host` FOREIGN KEY (`alert_host_id`) REFERENCES `hosts`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,CONSTRAINT `fk_triggers_alert_item` FOREIGN KEY (`alert_item_id`) REFERENCES `items`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,CONSTRAINT `fk_triggers_alert` FOREIGN KEY (`alert_id`) REFERENCES `alerts`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,CONSTRAINT `fk_triggers_alert_group` FOREIGN KEY (`alert_group_id`) REFERENCES `groups`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,CONSTRAINT `fk_triggers_alert_monitor` FOREIGN KEY (`alert_monitor_id`) REFERENCES `monitors`(`id`) ON DELETE SET NULL ON UPDATE CASCADE)
+2026/02/28 10:31:26 [system] [4] application failed to start {"error":"Error 1824 (HY000): Failed to open the referenced table 'alerts'"}
+2026/02/28 10:31:26 log write skipped (db not ready): application failed to start

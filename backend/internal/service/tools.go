@@ -38,7 +38,7 @@ func ListTools() []ToolDefinition {
 			InputSchema: schemaObject(map[string]interface{}{
 				"q":        schemaString("Search by name, hostid, ip, description."),
 				"status":   schemaInt("Host status."),
-				"m_id":     schemaInt("Monitor id."),
+				"monitor_id":     schemaInt("Monitor id."),
 				"group_id": schemaInt("Group id."),
 				"ip_addr":  schemaString("Filter by IP address."),
 				"limit":    schemaInt("Max results (default 100)."),
@@ -483,7 +483,7 @@ type alertArgs struct {
 type hostArgs struct {
 	Query     string  `json:"q"`
 	Status    *int    `json:"status"`
-	MonitorID *int    `json:"m_id"`
+	MonitorID *int    `json:"monitor_id"`
 	GroupID   *int    `json:"group_id"`
 	IPAddr    *string `json:"ip_addr"`
 	Limit     *int    `json:"limit"`

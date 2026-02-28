@@ -38,7 +38,7 @@ func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 		query = query.Where("status = ?", *filter.Status)
 	}
 	if filter.MonitorID != nil {
-		query = query.Where("m_id = ?", *filter.MonitorID)
+		query = query.Where("monitor_id = ?", *filter.MonitorID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
@@ -83,7 +83,7 @@ func CountGroupsDAO(filter model.GroupFilter) (int64, error) {
 		query = query.Where("status = ?", *filter.Status)
 	}
 	if filter.MonitorID != nil {
-		query = query.Where("m_id = ?", *filter.MonitorID)
+		query = query.Where("monitor_id = ?", *filter.MonitorID)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -126,7 +126,7 @@ func UpdateGroupDAO(id uint, group model.Group) error {
 		"status":             group.Status,
 		"status_description": group.StatusDescription,
 		"active_available":   group.ActiveAvailable,
-		"m_id":               group.MonitorID,
+		"monitor_id":               group.MonitorID,
 		"external_id":        group.ExternalID,
 		"last_sync_at":       group.LastSyncAt,
 		"external_source":    group.ExternalSource,
@@ -159,5 +159,5 @@ func DeleteGroupByIDDAO(id uint) error {
 
 // DeleteGroupsByMIDDAO deletes all groups associated with a specific monitor
 func DeleteGroupsByMIDDAO(mid uint) error {
-	return database.DB.Where("m_id = ?", mid).Delete(&model.Group{}).Error
+	return database.DB.Where("monitor_id = ?", mid).Delete(&model.Group{}).Error
 }

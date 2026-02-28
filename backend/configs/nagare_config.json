@@ -3,7 +3,7 @@
     "analysis_enabled": true,
     "analysis_min_severity": 2,
     "analysis_timeout_seconds": 180,
-    "language": "zh",
+    "language": "en",
     "model": "",
     "notification_guard_enabled": false,
     "provider_id": 2
@@ -18,70 +18,70 @@
   },
   "external": [
     {
-      "type": "monitor",
+      "id": 1,
       "key": "snmp",
       "name": "SNMP",
-      "id": 1
+      "type": "monitor"
     },
     {
-      "type": "monitor",
+      "id": 2,
       "key": "zabbix",
       "name": "Zabbix",
-      "id": 2
+      "type": "monitor"
     },
     {
-      "type": "monitor",
+      "id": 3,
       "key": "other",
       "name": "Other",
-      "id": 3
+      "type": "monitor"
     },
     {
-      "type": "alarm",
+      "id": 1,
       "key": "zabbix",
       "name": "Zabbix",
-      "id": 1
+      "type": "alarm"
     },
     {
-      "type": "alarm",
+      "id": 2,
       "key": "other",
       "name": "Other",
-      "id": 2
+      "type": "alarm"
     },
     {
-      "type": "provider",
+      "id": 1,
       "key": "gemini",
       "name": "Gemini",
-      "id": 1
+      "type": "provider"
     },
     {
-      "type": "provider",
+      "id": 2,
       "key": "openai",
       "name": "OpenAI",
-      "id": 2
+      "type": "provider"
     },
     {
-      "type": "provider",
+      "id": 3,
       "key": "other",
       "name": "Other",
-      "id": 3
+      "type": "provider"
     },
     {
-      "type": "media",
+      "id": 1,
       "key": "gmail",
       "name": "Gmail",
-      "id": 1
+      "type": "media"
     },
     {
-      "type": "media",
+      "id": 2,
       "key": "qq",
       "name": "QQ",
-      "id": 2
+      "type": "media"
     },
     {
-      "type": "media",
+      "id": 3,
       "key": "other",
       "name": "Other",
-      "id": 3
+      "type": "media"
     }
   ],
   "gmail": {
@@ -112,7 +112,7 @@
   },
   "site_message": {
     "min_alert_severity": 2,
-    "min_log_severity": 3
+    "min_log_severity": 4
   },
   "smtp": {
     "enabled": false,

@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllItemsDAO retrieves all items from the database
@@ -199,7 +200,7 @@ func UpdateItemDAO(id uint, item model.Item) error {
 	return database.DB.Model(&model.Item{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"name":               item.Name,
 		"hid":                item.HID,
-		"itemid":             item.ItemID,
+		"itemid":             item.ExternalItemID,
 		"hostid":             item.ExternalHostID,
 		"value_type":         item.ValueType,
 		"last_value":         item.LastValue,

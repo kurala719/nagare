@@ -503,7 +503,7 @@ func ConsultItemServ(providerID uint, model string, itemID uint) (ChatRes, error
 	systemPrompt := itemAnalysisPrompt(isCn)
 
 	itemData := fmt.Sprintf("Host: %s\nItem Name: %s\nItem ID: %s\nCurrent Value: %s\nUnits: %s",
-		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ItemID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
+		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ExternalItemID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{

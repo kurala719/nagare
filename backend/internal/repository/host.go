@@ -23,7 +23,7 @@ func GetAllHostsDAO() ([]model.Host, error) {
 	if err := database.DB.Model(&model.Host{}).
 		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
 		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.m_id").
+		Joins("left join monitors on monitors.id = hosts.monitor_id").
 		Order("hosts.id desc").
 		Scan(&hosts).Error; err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 	query := database.DB.Model(&model.Host{}).
 		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
 		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.m_id")
+		Joins("left join monitors on monitors.id = hosts.monitor_id")
 
 	if filter.Query != "" {
 		if filter.SearchField != "" {
@@ -57,7 +57,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		}
 	}
 	if filter.MID != nil {
-		query = query.Where("hosts.m_id = ?", *filter.MID)
+		query = query.Where("hosts.monitor_id = ?", *filter.MID)
 	}
 	if filter.GroupID != nil {
 		query = query.Where("hosts.group_id = ?", *filter.GroupID)
@@ -72,7 +72,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		"name":       "hosts.name",
 		"status":     "hosts.status",
 		"enabled":    "hosts.enabled",
-		"m_id":       "hosts.m_id",
+		"monitor_id":       "hosts.monitor_id",
 		"group_id":   "hosts.group_id",
 		"hostid":     "hosts.hostid",
 		"ip_addr":    "hosts.ip_addr",
@@ -115,7 +115,7 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 		}
 	}
 	if filter.MID != nil {
-		query = query.Where("hosts.m_id = ?", *filter.MID)
+		query = query.Where("hosts.monitor_id = ?", *filter.MID)
 	}
 	if filter.GroupID != nil {
 		query = query.Where("hosts.group_id = ?", *filter.GroupID)
@@ -139,7 +139,7 @@ func GetHostByIDDAO(id uint) (model.Host, error) {
 	err := database.DB.Model(&model.Host{}).
 		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
 		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.m_id").
+		Joins("left join monitors on monitors.id = hosts.monitor_id").
 		Where("hosts.id = ?", id).
 		First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -185,7 +185,7 @@ func DeleteHostsByGroupIDDAO(groupID uint) error {
 
 // DeleteHostByMIDDAO deletes all hosts associated with a monitor
 func DeleteHostByMIDDAO(mid uint) error {
-	return database.DB.Where("m_id = ?", mid).Delete(&model.Host{}).Error
+	return database.DB.Where("monitor_id = ?", mid).Delete(&model.Host{}).Error
 }
 
 // UpdateHostDAO updates a host by ID
@@ -194,8 +194,8 @@ func UpdateHostDAO(id uint, h model.Host) error {
 	// This bypasses GORM's zero-value skipping behavior
 	db := database.DB.Model(&model.Host{}).Where("id = ?", id).
 		Update("name", h.Name).
-		Update("hostid", h.Hostid).
-		Update("m_id", h.MonitorID).
+		Update("hostid", h.ExternalHostID).
+		Update("monitor_id", h.MonitorID).
 		Update("group_id", h.GroupID).
 		Update("description", h.Description).
 		Update("enabled", h.Enabled).

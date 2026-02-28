@@ -108,7 +108,7 @@ func AddItemServ(req ItemReq) (ItemResp, error) {
 	item := model.Item{
 		Name:           req.Name,
 		HID:            hid,
-		ItemID:         req.ItemID,
+		ExternalItemID: req.ItemID,
 		ExternalHostID: req.ExternalHostID,
 		ValueType:      valueType,
 		LastValue:      req.Value,
@@ -159,7 +159,7 @@ func UpdateItemServ(id uint, req ItemReq) error {
 	updated := model.Item{
 		Name:              req.Name,
 		HID:               hid,
-		ItemID:            req.ItemID,
+		ExternalItemID:    req.ItemID,
 		ExternalHostID:    req.ExternalHostID,
 		ValueType:         valueType,
 		LastValue:         req.Value,
@@ -203,10 +203,10 @@ func DeleteItemByIDServ(id uint, deleteFromMonitor bool) error {
 		return err
 	}
 
-	if deleteFromMonitor && item.ItemID != "" {
+	if deleteFromMonitor && item.ExternalItemID != "" {
 		host, err := repository.GetHostByIDDAO(item.HID)
 		if err == nil && host.MonitorID > 0 {
-			_ = DeleteItemFromMonitorServ(host.MonitorID, item.ItemID)
+			_ = DeleteItemFromMonitorServ(host.MonitorID, item.ExternalItemID)
 		}
 	}
 
@@ -261,7 +261,7 @@ func GetItemsByHostIDFromMonitorServ(hid uint) ([]ItemResp, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	monitorItems, err := client.GetItems(ctx, host.Hostid)
+	monitorItems, err := client.GetItems(ctx, host.ExternalHostID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get items from monitor: %w", err)
 	}
@@ -318,7 +318,7 @@ func AddItemsByHostIDFromMonitorServ(hid uint) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	monitorItems, err := client.GetItems(ctx, host.Hostid)
+	monitorItems, err := client.GetItems(ctx, host.ExternalHostID)
 	if err != nil {
 		setMonitorStatusError(host.MonitorID)
 		setHostStatusError(hid)
@@ -331,7 +331,7 @@ func AddItemsByHostIDFromMonitorServ(hid uint) error {
 		if err := repository.AddItemDAO(model.Item{
 			Name:           item.Name,
 			HID:            hid,
-			ItemID:         item.ID,
+			ExternalItemID: item.ID,
 			ExternalHostID: item.HostID,
 			ValueType:      item.ValueType,
 			LastValue:      item.Value,
@@ -632,7 +632,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	}
 
 	ctx := context.Background()
-	targetID := host.Hostid
+	targetID := host.ExternalHostID
 	mType := monitors.ParseMonitorType(monitor.Type)
 	fmt.Printf("[DEBUG] pullItemsFromHostServ: monitor_type=%s (%d), host=%s, target=%s\n", mType.String(), monitor.Type, host.Name, targetID)
 
@@ -666,7 +666,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 		// Use IP address as target for SNMP
 		targetID = host.IPAddr
 		if targetID == "" {
-			targetID = host.Hostid
+			targetID = host.ExternalHostID
 		}
 		fmt.Printf("[DEBUG] SNMP Final Target: %s\n", targetID)
 
@@ -676,8 +676,8 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			snmpCfg.CustomOIDs = make(map[string]string)
 			for _, it := range items {
 				// If ItemID looks like an OID, add it to poller
-				if strings.HasPrefix(it.ItemID, "1.3.6") || strings.HasPrefix(it.ItemID, ".") {
-					snmpCfg.CustomOIDs[it.ItemID] = it.Name
+				if strings.HasPrefix(it.ExternalItemID, "1.3.6") || strings.HasPrefix(it.ExternalItemID, ".") {
+					snmpCfg.CustomOIDs[it.ExternalItemID] = it.Name
 				}
 			}
 		}
@@ -709,15 +709,15 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			foundByName := false
 			for _, ex := range existingItems {
 				// Case-insensitive name matching for robustness
-				if strings.EqualFold(strings.TrimSpace(ex.Name), strings.TrimSpace(mItem.Name)) && ex.ItemID != mItem.ID {
+				if strings.EqualFold(strings.TrimSpace(ex.Name), strings.TrimSpace(mItem.Name)) && ex.ExternalItemID != mItem.ID {
 					// Delete old item if it has a legacy OID to prevent duplicates
-					if strings.Contains(ex.ItemID, ".2011.5.25.31.1.1.1.1") {
+					if strings.Contains(ex.ExternalItemID, ".2011.5.25.31.1.1.1.1") {
 						_ = repository.DeleteItemByIDDAO(ex.ID)
 						foundByName = false // Trigger creation of fresh V200 record
 						break
 					}
 
-					ex.ItemID = mItem.ID
+					ex.ExternalItemID = mItem.ID
 					ex.LastValue = mItem.Value
 					ex.Status = status
 					ex.LastSyncAt = &now
@@ -737,7 +737,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 				newItem := model.Item{
 					Name:           mItem.Name,
 					HID:            hid,
-					ItemID:         mItem.ID,
+					ExternalItemID: mItem.ID,
 					ExternalHostID: mItem.HostID,
 					ValueType:      mItem.ValueType,
 					LastValue:      mItem.Value,
@@ -800,7 +800,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	if err == nil && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
 		for _, localItem := range localItems {
 			// Normalize local ItemID for comparison with monitorItemIDs (which are already normalized)
-			normalizedLocalID := localItem.ItemID
+			normalizedLocalID := localItem.ExternalItemID
 			if len(normalizedLocalID) > 0 && normalizedLocalID[0] == '.' {
 				normalizedLocalID = normalizedLocalID[1:]
 			}
@@ -809,7 +809,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 				continue
 			}
 			// Only mark as missing if it's not a special calculated item
-			if strings.HasPrefix(localItem.ItemID, "calculated.") {
+			if strings.HasPrefix(localItem.ExternalItemID, "calculated.") {
 				continue
 			}
 			reason := "item not found on monitor"
@@ -917,7 +917,7 @@ func PullItemOfHostFromMonitorServ(mid, hid, id uint) (SyncResult, error) {
 		}
 	}
 
-	monitorItem, err := client.GetItemByID(context.Background(), item.ItemID)
+	monitorItem, err := client.GetItemByID(context.Background(), item.ExternalItemID)
 	if err != nil {
 		setMonitorStatusError(mid)
 		setItemStatusErrorWithReason(id, err.Error())
@@ -926,7 +926,7 @@ func PullItemOfHostFromMonitorServ(mid, hid, id uint) (SyncResult, error) {
 	}
 
 	if monitorItem == nil {
-		return SyncResult{}, fmt.Errorf("item %s not found on monitor", item.ItemID)
+		return SyncResult{}, fmt.Errorf("item %s not found on monitor", item.ExternalItemID)
 	}
 
 	item.Name = monitorItem.Name
@@ -990,7 +990,7 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 		LogService("error", "push item failed due to monitor mismatch", map[string]interface{}{"item_id": id, "host_id": hid, "monitor_id": mid}, nil, "")
 		return fmt.Errorf("host does not belong to the specified monitor")
 	}
-	if host.Hostid == "" {
+	if host.ExternalHostID == "" {
 		if _, err := PushHostToMonitorServ(mid, hid); err != nil {
 			setHostStatusErrorWithReason(hid, err.Error())
 			setItemStatusErrorWithReason(id, err.Error())
@@ -1045,15 +1045,15 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 	valueType := item.ValueType
 	units := item.Units
 	monitorItem := monitors.Item{
-		ID:        item.ItemID,
-		HostID:    host.Hostid,
+		ID:        item.ExternalItemID,
+		HostID:    host.ExternalHostID,
 		Name:      item.Name,
 		Key:       key,
 		Units:     units,
 		ValueType: valueType,
 		Status:    map[bool]string{true: "1", false: "0"}[item.Enabled == 0],
 	}
-	if item.ItemID == "" {
+	if item.ExternalItemID == "" {
 		created, err := client.CreateItem(context.Background(), monitorItem)
 		if err != nil {
 			setMonitorStatusError(mid)
@@ -1062,7 +1062,7 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 			return fmt.Errorf("failed to create item in monitor: %w", err)
 		}
 		if created.ID != "" {
-			item.ItemID = created.ID
+			item.ExternalItemID = created.ID
 			_ = repository.UpdateItemDAO(item.ID, item)
 		}
 	} else {
@@ -1073,7 +1073,7 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 			return fmt.Errorf("failed to update item in monitor: %w", err)
 		}
 	}
-	LogService("info", "push item to monitor", map[string]interface{}{"item_name": item.Name, "item_id": item.ItemID, "host": host.Name, "monitor": monitor.Name}, nil, "")
+	LogService("info", "push item to monitor", map[string]interface{}{"item_name": item.Name, "item_id": item.ExternalItemID, "host": host.Name, "monitor": monitor.Name}, nil, "")
 	_, _ = recomputeItemStatus(id)
 	return recomputeMonitorRelated(mid)
 }
