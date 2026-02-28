@@ -27,16 +27,15 @@ const (
 
 // AlertReq represents an alert request
 type AlertReq struct {
-	Message   string `json:"message" binding:"required"`
-	Severity  int    `json:"severity"`
-	Status    int    `json:"status"`
-	HostID    uint   `json:"host_id"`
-	ItemID    uint   `json:"item_id"`
-	AlarmID   uint   `json:"alarm_id"`
-	TriggerID *uint  `json:"trigger_id"`
-	Comment   string `json:"comment"`
-	HostName  string `json:"host_name"`
-	ItemName  string `json:"item_name"`
+	Message  string `json:"message" binding:"required"`
+	Severity int    `json:"severity"`
+	Status   int    `json:"status"`
+	HostID   uint   `json:"host_id"`
+	ItemID   uint   `json:"item_id"`
+	AlarmID  uint   `json:"alarm_id"`
+	Comment  string `json:"comment"`
+	HostName string `json:"host_name"`
+	ItemName string `json:"item_name"`
 }
 
 // AlertRes represents an alert response
@@ -48,7 +47,6 @@ type AlertRes struct {
 	HostID    uint      `json:"host_id"`
 	ItemID    uint      `json:"item_id"`
 	AlarmID   uint      `json:"alarm_id"`
-	TriggerID uint      `json:"trigger_id"`
 	Comment   string    `json:"comment"`
 	HostName  string    `json:"host_name"`
 	ItemName  string    `json:"item_name"`
@@ -65,14 +63,14 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 	var alertResponses []AlertRes
 	for _, alert := range alerts {
 		alertRes := AlertRes{
-			ID:        int(alert.ID),
-			Message:   alert.Message,
-			Severity:  alert.Severity,
-			Status:    alert.Status,
-			Comment:   alert.Comment,
-			HostName:  alert.HostName,
-			ItemName:  alert.ItemName,
-			AlarmName: alert.AlarmName,
+			ID:       int(alert.ID),
+			Message:  alert.Message,
+			Severity: alert.Severity,
+			Status:   alert.Status,
+			Comment:  alert.Comment,
+			// HostName:  alert/* .HostName */,
+			// ItemName:  alert/* .ItemName */,
+			// AlarmName: alert/* .AlarmName */,
 			CreatedAt: alert.CreatedAt,
 		}
 		if alert.HostID != nil {
@@ -83,9 +81,6 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 		}
 		if alert.AlarmID != nil {
 			alertRes.AlarmID = *alert.AlarmID
-		}
-		if alert.TriggerID != nil {
-			alertRes.TriggerID = *alert.TriggerID
 		}
 		alertResponses = append(alertResponses, alertRes)
 	}
@@ -101,14 +96,14 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 	responses := make([]AlertRes, 0, len(alerts))
 	for _, alert := range alerts {
 		alertRes := AlertRes{
-			ID:        int(alert.ID),
-			Message:   alert.Message,
-			Severity:  alert.Severity,
-			Status:    alert.Status,
-			Comment:   alert.Comment,
-			HostName:  alert.HostName,
-			ItemName:  alert.ItemName,
-			AlarmName: alert.AlarmName,
+			ID:       int(alert.ID),
+			Message:  alert.Message,
+			Severity: alert.Severity,
+			Status:   alert.Status,
+			Comment:  alert.Comment,
+			// HostName:  alert/* .HostName */,
+			// ItemName:  alert/* .ItemName */,
+			// AlarmName: alert/* .AlarmName */,
 			CreatedAt: alert.CreatedAt,
 		}
 		if alert.HostID != nil {
@@ -119,9 +114,6 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 		}
 		if alert.AlarmID != nil {
 			alertRes.AlarmID = *alert.AlarmID
-		}
-		if alert.TriggerID != nil {
-			alertRes.TriggerID = *alert.TriggerID
 		}
 		responses = append(responses, alertRes)
 	}
@@ -140,14 +132,14 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 		return AlertRes{}, fmt.Errorf("failed to get alert by ID: %w", err)
 	}
 	alertRes := AlertRes{
-		ID:        int(alert.ID),
-		Message:   alert.Message,
-		Severity:  alert.Severity,
-		Status:    alert.Status,
-		Comment:   alert.Comment,
-		HostName:  alert.HostName,
-		ItemName:  alert.ItemName,
-		AlarmName: alert.AlarmName,
+		ID:       int(alert.ID),
+		Message:  alert.Message,
+		Severity: alert.Severity,
+		Status:   alert.Status,
+		Comment:  alert.Comment,
+		// HostName:  alert/* .HostName */,
+		// ItemName:  alert/* .ItemName */,
+		// AlarmName: alert/* .AlarmName */,
 		CreatedAt: alert.CreatedAt,
 	}
 	if alert.HostID != nil {
@@ -158,9 +150,6 @@ func GetAlertByIDServ(id int) (AlertRes, error) {
 	}
 	if alert.AlarmID != nil {
 		alertRes.AlarmID = *alert.AlarmID
-	}
-	if alert.TriggerID != nil {
-		alertRes.TriggerID = *alert.TriggerID
 	}
 	return alertRes, nil
 }
@@ -220,7 +209,8 @@ func AddAlertServ(req AlertReq) error {
 
 	// Fallback to resolving item by Name (scoped to host if available)
 	if itemID == 0 && req.ItemName != "" {
-		items, err := repository.SearchItemsDAO(model.ItemFilter{Query: req.ItemName, HID: &hostID})
+		hostIDStr := fmt.Sprintf("%d", hostID)
+		items, err := repository.SearchItemsDAO(model.ItemFilter{Query: req.ItemName, HostID: &hostIDStr})
 		if err == nil && len(items) > 0 {
 			for _, it := range items {
 				if strings.EqualFold(it.Name, req.ItemName) {
@@ -248,9 +238,6 @@ func AddAlertServ(req AlertReq) error {
 	if itemID > 0 {
 		itID := itemID
 		alert.ItemID = &itID
-	}
-	if req.TriggerID != nil && *req.TriggerID > 0 {
-		alert.TriggerID = req.TriggerID
 	}
 	if err := repository.AddAlertDAO(&alert); err != nil {
 		return err
@@ -507,9 +494,6 @@ func UpdateAlertServ(id int, req AlertReq) error {
 		iID := req.ItemID
 		updatedAlert.ItemID = &iID
 	}
-	if req.TriggerID != nil && *req.TriggerID > 0 {
-		updatedAlert.TriggerID = req.TriggerID
-	}
 
 	return repository.UpdateAlertDAO(id, updatedAlert)
 }
@@ -559,7 +543,7 @@ func GenerateTestAlerts(count int) error {
 		if len(items) > 0 {
 			// Filter items belonging to this host
 			for j := 0; j < len(items); j++ {
-				if items[j].HID == host.ID {
+				if items[j].HostID == host.ID {
 					itemID = items[j].ID
 					break
 				}

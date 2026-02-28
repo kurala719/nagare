@@ -95,18 +95,8 @@ func GetTriggerByIDServ(id uint) (TriggerResp, error) {
 func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 	trigger := model.Trigger{
 		Name:                  req.Name,
-		Entity:                normalizeTriggerEntity(req.Entity),
 		Severity:              req.Severity,
 		AlertID:               req.AlertID,
-		AlertStatus:           req.AlertStatus,
-		AlertGroupID:          req.AlertGroupID,
-		AlertMonitorID:        req.AlertMonitorID,
-		AlertHostID:           req.AlertHostID,
-		AlertItemID:           req.AlertItemID,
-		AlertQuery:            req.AlertQuery,
-		LogType:               req.LogType,
-		LogSeverity:           req.LogSeverity,
-		LogQuery:              req.LogQuery,
 		ItemStatus:            req.ItemStatus,
 		ItemValueThreshold:    req.ItemValueThreshold,
 		ItemValueThresholdMax: req.ItemValueThresholdMax,
@@ -131,18 +121,8 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 	}
 	updated := model.Trigger{
 		Name:                  req.Name,
-		Entity:                normalizeTriggerEntity(req.Entity),
 		Severity:              req.Severity,
 		AlertID:               req.AlertID,
-		AlertStatus:           req.AlertStatus,
-		AlertGroupID:          req.AlertGroupID,
-		AlertMonitorID:        req.AlertMonitorID,
-		AlertHostID:           req.AlertHostID,
-		AlertItemID:           req.AlertItemID,
-		AlertQuery:            req.AlertQuery,
-		LogType:               req.LogType,
-		LogSeverity:           req.LogSeverity,
-		LogQuery:              req.LogQuery,
 		ItemStatus:            req.ItemStatus,
 		ItemValueThreshold:    req.ItemValueThreshold,
 		ItemValueThresholdMax: req.ItemValueThresholdMax,
@@ -150,7 +130,7 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 		Enabled:               req.Enabled,
 		Status:                existing.Status,
 	}
-	
+
 	// Update status based on enabled state
 	if req.Enabled != existing.Enabled {
 		if req.Enabled == 1 {
@@ -175,18 +155,8 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 	return TriggerResp{
 		ID:                    int(trigger.ID),
 		Name:                  trigger.Name,
-		Entity:                trigger.Entity,
 		Severity:              trigger.Severity,
 		AlertID:               trigger.AlertID,
-		AlertStatus:           trigger.AlertStatus,
-		AlertGroupID:          trigger.AlertGroupID,
-		AlertMonitorID:        trigger.AlertMonitorID,
-		AlertHostID:           trigger.AlertHostID,
-		AlertItemID:           trigger.AlertItemID,
-		AlertQuery:            trigger.AlertQuery,
-		LogType:               trigger.LogType,
-		LogSeverity:           trigger.LogSeverity,
-		LogQuery:              trigger.LogQuery,
 		ItemStatus:            trigger.ItemStatus,
 		ItemValueThreshold:    trigger.ItemValueThreshold,
 		ItemValueThresholdMax: trigger.ItemValueThresholdMax,
@@ -198,11 +168,11 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 
 // ExecuteTriggersForItem runs matching triggers for an item update
 func ExecuteTriggersForItem(item model.Item) {
-	triggers, err := repository.GetActiveTriggersForEntityDAO("item")
+	triggers, err := repository.GetActiveTriggersDAO()
 	if err != nil {
 		return
 	}
-	
+
 	for _, trigger := range triggers {
 		if !matchItemTrigger(trigger, item) {
 			continue
@@ -215,10 +185,10 @@ func ExecuteTriggersForItem(item model.Item) {
 // generateAlertFromItemTrigger creates an alert when an item trigger matches
 func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 	// Deduplication: Check for existing active alerts for this item
-	hostID := int(item.HID)
+	hostID := int(item.HostID)
 	itemID := int(item.ID)
 	status := 0
-	
+
 	activeAlerts, err := repository.SearchAlertsDAO(model.AlertFilter{
 		HostID: &hostID,
 		ItemID: &itemID,
@@ -231,7 +201,7 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 	}
 
 	// Build alert message with item information
-	host, _ := repository.GetHostByIDDAO(item.HID)
+	host, _ := repository.GetHostByIDDAO(item.HostID)
 	hostName := "Unknown"
 	if host.ID > 0 {
 		hostName = host.Name
@@ -252,12 +222,11 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 
 	// Create the alert
 	alertReq := AlertReq{
-		Message:   message,
-		Severity:  severity,
-		HostID:    item.HID,
-		ItemID:    item.ID,
-		TriggerID: &trigger.ID,
-		Comment:   comment,
+		Message:  message,
+		Severity: severity,
+		HostID:   item.HostID,
+		ItemID:   item.ID,
+		Comment:  comment,
 	}
 
 	_ = AddAlertServ(alertReq)
@@ -267,7 +236,7 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 		"item_id":      item.ID,
 		"item_name":    item.Name,
 		"item_value":   item.LastValue,
-		"host_id":      item.HID,
+		"host_id":      item.HostID,
 		"host_name":    hostName,
 	}, nil, "")
 }
@@ -294,18 +263,8 @@ func describeItemTriggerCondition(trigger model.Trigger) string {
 }
 
 func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
-	entity := normalizeTriggerEntity(trigger.Entity)
+	entity := normalizeTriggerEntity("")
 	if entity != "item" {
-		return false
-	}
-	
-	// If a specific item is specified, it must match
-	if trigger.AlertItemID != nil && item.ID != *trigger.AlertItemID {
-		return false
-	}
-	
-	// If a specific host is specified, it must match
-	if trigger.AlertHostID != nil && item.HID != *trigger.AlertHostID {
 		return false
 	}
 
@@ -330,7 +289,7 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 		}
 		threshold := *trigger.ItemValueThreshold
 		operator := strings.TrimSpace(trigger.ItemValueOperator)
-		
+
 		matched := false
 		switch operator {
 		case ">":
@@ -360,12 +319,12 @@ func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 				matched = val < minThreshold || val > maxThreshold
 			}
 		}
-		
+
 		if !matched {
 			return false
 		}
 	}
-	
+
 	return true
 }
 

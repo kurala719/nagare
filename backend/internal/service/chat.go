@@ -484,7 +484,7 @@ func ConsultItemServ(providerID uint, model string, itemID uint) (ChatRes, error
 	}
 
 	// Get host data for context
-	host, err := repository.GetHostByIDDAO(item.HID)
+	host, err := repository.GetHostByIDDAO(item.HostID)
 	if err != nil {
 		return ChatRes{}, fmt.Errorf("failed to get host: %w", err)
 	}
@@ -503,7 +503,7 @@ func ConsultItemServ(providerID uint, model string, itemID uint) (ChatRes, error
 	systemPrompt := itemAnalysisPrompt(isCn)
 
 	itemData := fmt.Sprintf("Host: %s\nItem Name: %s\nItem ID: %s\nCurrent Value: %s\nUnits: %s",
-		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ExternalItemID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
+		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(item.Name), item.ExternalID, sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{
@@ -911,8 +911,8 @@ func buildNetworkStatusContext(alerts []AlertRes, metrics []MetricSnapshot, heal
 		for i := 0; i < max; i++ {
 			metric := metrics[i]
 			builder.WriteString(fmt.Sprintf("- host=%s item=%s value=%s %s status=%d updated=%s\n",
-				sanitizeSensitiveText(metric.HostName),
-				sanitizeSensitiveText(metric.ItemName),
+				fmt.Sprintf("%d", metric.HostID),
+				fmt.Sprintf("%d", metric.ItemID),
 				sanitizeSensitiveText(metric.Value),
 				sanitizeSensitiveText(metric.Units),
 				metric.Status,

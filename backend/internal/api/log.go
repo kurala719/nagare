@@ -72,7 +72,6 @@ func searchLogs(c *gin.Context, logType string) ([]service.LogResp, int64, error
 	}
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	filter := model.LogFilter{
-		Type:      logType,
 		Severity:  severityPtr,
 		Query:     normalizeLogQueryParam(c.Query("q")),
 		Limit:     limit,

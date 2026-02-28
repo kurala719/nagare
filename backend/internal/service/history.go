@@ -116,7 +116,7 @@ func recordItemHistory(item model.Item, sampledAt time.Time) {
 	}
 	_ = repository.AddItemHistoryDAO(model.ItemHistory{
 		ItemID:    item.ID,
-		HostID:    item.HID,
+		HostID:    item.HostID,
 		Value:     item.LastValue,
 		Units:     item.Units,
 		Status:    item.Status,
@@ -231,7 +231,7 @@ func GenerateTestHistoryServ() error {
 
 		if err := repository.AddItemHistoryDAO(model.ItemHistory{
 			ItemID:    item.ID,
-			HostID:    item.HID,
+			HostID:    item.HostID,
 			Value:     fmt.Sprintf("%.2f", baseValue),
 			Units:     item.Units,
 			Status:    1,

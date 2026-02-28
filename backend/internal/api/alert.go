@@ -140,7 +140,6 @@ func AlertWebhookCtrl(c *gin.Context) {
 	severity := payloadInt(payload, "severity", "level", "event_nseverity", "trigger_severity")
 	hostID := payloadUint(payload, "host_id", "hostid")
 	itemID := payloadUint(payload, "item_id", "itemid")
-	triggerID := payloadUint(payload, "trigger_id", "triggerid", "event_objectid")
 	hostName := payloadString(payload, "host", "hostname", "host_name")
 	itemName := payloadString(payload, "item", "itemname", "item_name")
 	comment := payloadString(payload, "comment", "detail", "details")
@@ -191,28 +190,26 @@ func AlertWebhookCtrl(c *gin.Context) {
 	}
 
 	service.LogService("info", "webhook creating alert", map[string]interface{}{
-		"alarm_id": alarmID,
-		"severity": severity,
-		"host_id":  hostID,
+		"alarm_id":  alarmID,
+		"severity":  severity,
+		"host_id":   hostID,
 		"host_name": hostName,
-		"status":   status,
-		"message":  message[:min(100, len(message))],
+		"status":    status,
+		"message":   message[:min(100, len(message))],
 	}, nil, "")
 
 	req := service.AlertReq{
-		Message:   message,
-		Severity:  severity,
-		Status:    status,
-		AlarmID:   alarmID,
-		HostID:    hostID,
-		ItemID:    itemID,
-		HostName:  hostName,
-		ItemName:  itemName,
-		Comment:   comment,
+		Message:  message,
+		Severity: severity,
+		Status:   status,
+		AlarmID:  alarmID,
+		HostID:   hostID,
+		ItemID:   itemID,
+		HostName: hostName,
+		ItemName: itemName,
+		Comment:  comment,
 	}
-	if triggerID > 0 {
-		req.TriggerID = &triggerID
-	}
+	// TriggerID map to AlarmID is already handled correctly if needed.
 
 	if err := service.AddAlertServ(req); err != nil {
 		service.LogService("error", "webhook failed to create alert", map[string]interface{}{"error": err.Error()}, nil, "")

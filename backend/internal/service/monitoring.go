@@ -55,10 +55,10 @@ func GetNetworkMetricsServ(query string, limit int) ([]MetricSnapshot, error) {
 	results := make([]MetricSnapshot, 0, len(items))
 	for _, item := range items {
 		results = append(results, MetricSnapshot{
-			HostID:    item.HID,
-			HostName:  hostNames[item.HID],
+			HostID:    item.HostID,
+			// HostName:  hostNames[item.HostID],
 			ItemID:    item.ID,
-			ItemName:  item.Name,
+			// ItemName:  item.Name,
 			Value:     item.LastValue,
 			Units:     item.Units,
 			Status:    item.Status,

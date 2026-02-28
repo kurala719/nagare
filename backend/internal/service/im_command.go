@@ -23,7 +23,7 @@ func init() {
 						allowed = true
 					}
 				}
-				
+
 				if !allowed {
 					return "You are not authorized to execute commands.", nil
 				}
@@ -101,9 +101,9 @@ func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
 	whitelist, err := getQQWhitelist(qqID, whitelistType)
 	if err != nil {
 		LogService("info", "whitelist lookup info", map[string]interface{}{
-			"qqID":      qqID,
-			"type":      whitelistType,
-			"error":     err.Error(),
+			"qqID":  qqID,
+			"type":  whitelistType,
+			"error": err.Error(),
 		}, nil, "")
 		// Don't return false yet, proceed to fallback logic below
 	} else if whitelist != nil {
@@ -155,7 +155,7 @@ func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
 	if !isGroup {
 		if u, err := repository.GetUserByQQDAO(qqID); err == nil && u.ID > 0 {
 			LogService("info", "QQ ID found in users table, allowing", map[string]interface{}{
-				"qqID": qqID,
+				"qqID":   qqID,
 				"userID": u.ID,
 			}, nil, "")
 			return true
@@ -434,7 +434,6 @@ func handleLogsCommand(args []string, rawArgs string) (IMCommandResult, error) {
 	}
 
 	filter := model.LogFilter{
-		Type:   options["type"],
 		Query:  options["q"],
 		Limit:  limit,
 		Offset: 0,

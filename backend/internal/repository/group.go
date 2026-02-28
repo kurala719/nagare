@@ -126,11 +126,9 @@ func UpdateGroupDAO(id uint, group model.Group) error {
 		"enabled":            group.Enabled,
 		"status":             group.Status,
 		"status_description": group.StatusDescription,
-		"active_available":   group.ActiveAvailable,
 		"monitor_id":         group.MonitorID,
 		"external_id":        group.ExternalID,
 		"last_sync_at":       group.LastSyncAt,
-		"external_source":    group.ExternalSource,
 		"health_score":       group.HealthScore,
 	}).Error
 }

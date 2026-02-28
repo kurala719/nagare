@@ -2,11 +2,11 @@ package repository
 
 import (
 	"errors"
-	"time"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllUsersDAO retrieves all users from the database
@@ -163,21 +163,4 @@ func GetUserIDByUsernameDAO(username string) (uint, error) {
 		return 0, model.ErrNotFound
 	}
 	return user.ID, err
-}
-
-// SaveEmailVerificationDAO saves or updates an email verification code
-func SaveEmailVerificationDAO(ev model.EmailVerification) error {
-	// Remove existing codes for this email first
-	database.DB.Where("email = ?", ev.Email).Delete(&model.EmailVerification{})
-	return database.DB.Create(&ev).Error
-}
-
-// FindEmailVerificationDAO retrieves a verification code by email and code
-func FindEmailVerificationDAO(email, code string) (model.EmailVerification, error) {
-	var ev model.EmailVerification
-	err := database.DB.Where("email = ? AND code = ? AND expires_at > ?", email, code, time.Now()).First(&ev).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return ev, model.ErrNotFound
-	}
-	return ev, err
 }

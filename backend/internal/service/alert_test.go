@@ -41,7 +41,7 @@ func TestMergeAlertComment(t *testing.T) {
 }
 
 func TestAlertAnalysisPrompt(t *testing.T) {
-	prompt := alertAnalysisPrompt()
+	prompt := alertAnalysisPrompt(true)
 	if prompt == "" {
 		t.Error("alertAnalysisPrompt() returned empty string")
 	}

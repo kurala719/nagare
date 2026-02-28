@@ -15,17 +15,17 @@ import (
 
 // HostReq represents a host request
 type HostReq struct {
-	Name           string `json:"name" binding:"required"`
-	MID            uint   `json:"monitor_id"`
-	GroupID        uint   `json:"group_id"`
-	ExternalHostID string `json:"hostid"`
-	Description    string `json:"description"`
-	Enabled        int    `json:"enabled"`
-	IPAddr         string `json:"ip_addr"`
-	Comment        string `json:"comment"`
-	SSHUser        string `json:"ssh_user"`
-	SSHPassword    string `json:"ssh_password"`
-	SSHPort        int    `json:"ssh_port"`
+	Name        string `json:"name" binding:"required"`
+	MID         uint   `json:"monitor_id"`
+	GroupID     uint   `json:"group_id"`
+	ExternalID  string `json:"hostid"`
+	Description string `json:"description"`
+	Enabled     int    `json:"enabled"`
+	IPAddr      string `json:"ip_addr"`
+	Comment     string `json:"comment"`
+	SSHUser     string `json:"ssh_user"`
+	SSHPassword string `json:"ssh_password"`
+	SSHPort     int    `json:"ssh_port"`
 	// SNMP Configuration
 	SNMPCommunity       string     `json:"snmp_community"`
 	SNMPVersion         string     `json:"snmp_version"`
@@ -43,21 +43,21 @@ type HostReq struct {
 
 // HostResp represents a host response
 type HostResp struct {
-	ID             int    `json:"id"`
-	Name           string `json:"name"`
-	MID            uint   `json:"monitor_id"`
-	GroupID        uint   `json:"group_id"`
-	GroupName      string `json:"group_name"`
-	MonitorName    string `json:"monitor_name"`
-	ExternalHostID string `json:"hostid"`
-	Description    string `json:"description"`
-	Enabled        int    `json:"enabled"`
-	Status         int    `json:"status"`
-	StatusDesc     string `json:"status_description"`
-	IPAddr         string `json:"ip_addr"`
-	Comment        string `json:"comment"`
-	SSHUser        string `json:"ssh_user"`
-	SSHPort        int    `json:"ssh_port"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	MID         uint   `json:"monitor_id"`
+	GroupID     uint   `json:"group_id"`
+	GroupName   string `json:"group_name"`
+	MonitorName string `json:"monitor_name"`
+	ExternalID  string `json:"hostid"`
+	Description string `json:"description"`
+	Enabled     int    `json:"enabled"`
+	Status      int    `json:"status"`
+	StatusDesc  string `json:"status_description"`
+	IPAddr      string `json:"ip_addr"`
+	Comment     string `json:"comment"`
+	SSHUser     string `json:"ssh_user"`
+	SSHPort     int    `json:"ssh_port"`
 	// SNMP Configuration
 	SNMPCommunity       string     `json:"snmp_community"`
 	SNMPVersion         string     `json:"snmp_version"`
@@ -124,8 +124,8 @@ func DeleteHostsByMIDServ(mid uint, deleteFromMonitor bool) error {
 		hosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 		if err == nil {
 			for _, h := range hosts {
-				if h.ExternalHostID != "" {
-					_ = DeleteHostFromMonitorServ(mid, h.ExternalHostID)
+				if h.ExternalID != "" {
+					_ = DeleteHostFromMonitorServ(mid, h.ExternalID)
 				}
 			}
 		}
@@ -143,8 +143,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 
 	newHost := model.Host{
 		Name:                h.Name,
-		ExternalHostID:      h.ExternalHostID,
-		MonitorID:           h.MID,
+		ExternalID:          h.ExternalID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
@@ -195,7 +194,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	if h.MID == 0 {
 		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})
 		if sErr == nil && len(internalMonitors) > 0 {
-			newHost.MonitorID = internalMonitors[0].ID
+			h.MID = internalMonitors[0].ID
 		}
 	}
 
@@ -206,13 +205,13 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	// Auto-push to monitor asynchronously if MID is set AND PushToMonitor is true
-	if newHost.MonitorID > 0 && h.PushToMonitor {
-		LogService("info", "triggering async auto-push for new host", map[string]interface{}{"host_id": newHost.ID, "monitor_id": newHost.MonitorID}, nil, "")
+	if h.MID > 0 && h.PushToMonitor {
+		LogService("info", "triggering async auto-push for new host", map[string]interface{}{"host_id": newHost.ID, "monitor_id": h.MID}, nil, "")
 		go func(mid, hid uint) {
 			if _, pushErr := PushHostToMonitorServ(mid, hid); pushErr != nil {
 				LogService("error", "async auto-push failed", map[string]interface{}{"host_id": hid, "monitor_id": mid, "error": pushErr.Error()}, nil, "")
 			}
-		}(newHost.MonitorID, newHost.ID)
+		}(h.MID, newHost.ID)
 	}
 
 	// Final reload to ensure we have all fields from DB (defaults etc)
@@ -221,17 +220,17 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	return HostResp{
-		ID:             int(newHost.ID),
-		Name:           newHost.Name,
-		MID:            newHost.MonitorID,
-		GroupID:        newHost.GroupID,
-		ExternalHostID: newHost.ExternalHostID,
-		Description:    newHost.Description,
-		Enabled:        newHost.Enabled,
-		Status:         newHost.Status,
-		StatusDesc:     newHost.StatusDescription,
-		IPAddr:         newHost.IPAddr,
-		Comment:        newHost.Comment,
+		ID:          int(newHost.ID),
+		Name:        newHost.Name,
+		MID:         h.MID,
+		GroupID:     newHost.GroupID,
+		ExternalID:  newHost.ExternalID,
+		Description: newHost.Description,
+		Enabled:     newHost.Enabled,
+		Status:      newHost.Status,
+		StatusDesc:  newHost.StatusDescription,
+		IPAddr:      newHost.IPAddr,
+		Comment:     newHost.Comment,
 	}, nil
 }
 
@@ -241,10 +240,6 @@ func UpdateHostServ(id uint, h HostReq) error {
 	if err != nil {
 		return err
 	}
-	monitorID := h.MID
-	if monitorID == 0 {
-		monitorID = existing.MonitorID
-	}
 
 	if h.GroupID == 0 {
 		return fmt.Errorf("group is required")
@@ -252,8 +247,7 @@ func UpdateHostServ(id uint, h HostReq) error {
 
 	updated := model.Host{
 		Name:                h.Name,
-		ExternalHostID:      h.ExternalHostID,
-		MonitorID:           monitorID,
+		ExternalID:          h.ExternalID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
@@ -270,17 +264,12 @@ func UpdateHostServ(id uint, h HostReq) error {
 		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
 		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
 		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
-		ActiveAvailable:     existing.ActiveAvailable,
 		LastSyncAt:          existing.LastSyncAt,
-		ExternalSource:      existing.ExternalSource,
 		Status:              existing.Status,
 		StatusDescription:   existing.StatusDescription,
 	}
 	if h.LastSyncAt != nil {
 		updated.LastSyncAt = h.LastSyncAt
-	}
-	if h.ExternalSource != "" {
-		updated.ExternalSource = h.ExternalSource
 	}
 	if h.SSHPort == 0 {
 		updated.SSHPort = 22
@@ -314,13 +303,13 @@ func UpdateHostServ(id uint, h HostReq) error {
 	}
 
 	// Auto-push to monitor asynchronously only if PushToMonitor is true
-	if updated.MonitorID > 0 && h.PushToMonitor {
-		LogService("info", "triggering async auto-push for host update", map[string]interface{}{"host_id": id, "monitor_id": updated.MonitorID}, nil, "")
+	if h.MID > 0 && h.PushToMonitor {
+		LogService("info", "triggering async auto-push for host update", map[string]interface{}{"host_id": id, "monitor_id": h.MID}, nil, "")
 		go func(mid, hid uint) {
 			if _, pushErr := PushHostToMonitorServ(mid, hid); pushErr != nil {
 				LogService("error", "async auto-push failed for host update", map[string]interface{}{"host_id": hid, "monitor_id": mid, "error": pushErr.Error()}, nil, "")
 			}
-		}(updated.MonitorID, id)
+		}(h.MID, id)
 	}
 
 	if refreshed, err := repository.GetHostByIDDAO(id); err == nil {
@@ -366,9 +355,15 @@ func DeleteHostByIDServ(id uint, deleteFromMonitor bool) error {
 	}
 
 	// 2. Delete from monitor if requested
-	if deleteFromMonitor && host.MonitorID > 0 && host.ExternalHostID != "" {
-		if err := DeleteHostFromMonitorServ(host.MonitorID, host.ExternalHostID); err != nil {
-			return fmt.Errorf("failed to delete host from monitor: %w", err)
+	if deleteFromMonitor && host.ExternalID != "" {
+		monitorID := uint(0)
+		if g, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+			monitorID = g.MonitorID
+		}
+		if monitorID > 0 {
+			if err := DeleteHostFromMonitorServ(monitorID, host.ExternalID); err != nil {
+				return fmt.Errorf("failed to delete host from monitor: %w", err)
+			}
 		}
 	}
 
@@ -438,13 +433,13 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 		}
 		status := mapMonitorHostStatus(h.Status, activeAvailable)
 		hosts = append(hosts, HostResp{
-			Name:           h.Name,
-			ExternalHostID: h.ID,
-			Description:    h.Description,
-			IPAddr:         h.IPAddress,
-			Enabled:        1,
-			Status:         status,
-			StatusDesc:     statusDesc,
+			Name:        h.Name,
+			ExternalID:  h.ID,
+			Description: h.Description,
+			IPAddr:      h.IPAddress,
+			Enabled:     1,
+			Status:      status,
+			StatusDesc:  statusDesc,
 		})
 	}
 	return hosts, nil
@@ -529,11 +524,10 @@ func hostToResp(h model.Host) HostResp {
 	return HostResp{
 		ID:                  int(h.ID),
 		Name:                h.Name,
-		MID:                 h.MonitorID,
 		GroupID:             h.GroupID,
-		GroupName:           h.GroupName,
-		MonitorName:         h.MonitorName,
-		ExternalHostID:      h.ExternalHostID,
+		GroupName:           "",
+		MonitorName:         "",
+		ExternalID:          h.ExternalID,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
 		Status:              h.Status,
@@ -550,7 +544,6 @@ func hostToResp(h model.Host) HostResp {
 		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
 		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
 		LastSyncAt:          h.LastSyncAt,
-		ExternalSource:      h.ExternalSource,
 		HealthScore:         h.HealthScore,
 	}
 }
@@ -661,7 +654,6 @@ func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallba
 			}
 			newGroup := model.Group{
 				Name:       newGroupName,
-				MonitorID:  mid,
 				Enabled:    1,
 				ExternalID: "",
 			}
@@ -684,7 +676,6 @@ func resolveHostGroupIDFromMetadata(mid uint, metadata map[string]string, fallba
 	newGroup := model.Group{
 		Name:       newGroupName,
 		ExternalID: externalGroupIDs[0],
-		MonitorID:  mid,
 		Enabled:    1,
 	}
 	newGroup.Status = determineGroupStatus(newGroup, monitorDomain.Status)
@@ -828,16 +819,16 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			if errors.Is(err, model.ErrNotFound) {
 				if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
 					// Adopt if it's from Nagare Internal or unassigned
-					if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
+					if mid == 1 || mid == 0 {
 						existingHost = globalHost
 						err = nil
-						LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": globalHost.MonitorID, "new_mid": mid}, nil, "")
+						LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": mid, "new_mid": mid}, nil, "")
 					} else {
 						// Found on another REAL monitor? This shouldn't usually happen with same HostID
 						// But we should probably not create a duplicate if we found one globally
 						existingHost = globalHost
 						err = nil
-						LogService("warn", "host found on different monitor during sync", map[string]interface{}{"host_name": h.Name, "existing_mid": globalHost.MonitorID, "target_mid": mid}, nil, "")
+						LogService("warn", "host found on different monitor during sync", map[string]interface{}{"host_name": h.Name, "existing_mid": mid, "target_mid": mid}, nil, "")
 					}
 				}
 			} else {
@@ -863,20 +854,17 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 				Name:              h.Name,
-				ExternalHostID:    h.ID,
-				MonitorID:         mid,
+				ExternalID:        h.ID,
 				GroupID:           groupID,
 				Description:       h.Description,
 				Enabled:           h.Enabled,
 				Status:            status,
 				StatusDescription: finalStatusDesc,
-				ActiveAvailable:   activeAvailable,
 				IPAddr:            h.IPAddress,
 				SSHUser:           existingHost.SSHUser,
 				SSHPassword:       "", // UpdateHostDAO won't update if empty
 				SSHPort:           existingHost.SSHPort,
 				LastSyncAt:        &now,
-				ExternalSource:    monitor.Name,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -888,17 +876,14 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			// Host strictly doesn't exist, add it
 			hNew := model.Host{
 				Name:              h.Name,
-				ExternalHostID:    h.ID,
-				MonitorID:         mid,
+				ExternalID:        h.ID,
 				GroupID:           groupID,
 				Description:       h.Description,
 				Enabled:           h.Enabled,
 				Status:            status,
 				StatusDescription: statusDesc,
-				ActiveAvailable:   activeAvailable,
 				IPAddr:            h.IPAddress,
 				LastSyncAt:        &now,
-				ExternalSource:    monitor.Name,
 			}
 			if err := repository.AddHostDAO(&hNew); err != nil {
 				setMonitorStatusError(mid)
@@ -933,7 +918,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		// Skip 'not found' check for SNMP monitors as they don't provide a master host list
 		if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
 			for _, localHost := range localHosts {
-				if _, ok := monitorHostIDs[localHost.ExternalHostID]; ok {
+				if _, ok := monitorHostIDs[localHost.ExternalID]; ok {
 					continue
 				}
 				reason := "host not found on monitor"
@@ -963,7 +948,9 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		return SyncResult{}, fmt.Errorf("failed to get host: %w", err)
 	}
 	setHostStatusSyncing(id)
-	if host.MonitorID != mid {
+
+	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
+	if gErr != nil || hostGroup.MonitorID != mid {
 		setHostStatusErrorWithReason(id, "host does not belong to the specified monitor")
 		LogService("error", "pull host failed due to monitor mismatch", map[string]interface{}{"host_id": id, "monitor_id": mid}, nil, "")
 		return SyncResult{}, fmt.Errorf("host does not belong to the specified monitor")
@@ -997,7 +984,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}
 	}
 
-	h, err := client.GetHostByID(context.Background(), host.ExternalHostID)
+	h, err := client.GetHostByID(context.Background(), host.ExternalID)
 	if err != nil {
 		setMonitorStatusError(mid)
 		setHostStatusErrorWithReason(id, err.Error())
@@ -1006,15 +993,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 
 	if h == nil {
-		return SyncResult{}, fmt.Errorf("host %s not found on monitor", host.ExternalHostID)
-	}
-
-	// Get active_available from metadata
-	activeAvailable := ""
-	if h.Metadata != nil {
-		if value, ok := h.Metadata["active_available"]; ok {
-			activeAvailable = value
-		}
+		return SyncResult{}, fmt.Errorf("host %s not found on monitor", host.ExternalID)
 	}
 
 	// Check if host already exists
@@ -1022,7 +1001,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	if err != nil {
 		// Try global search by external ID to prevent duplicates
 		if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
-			if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
+			if mid == 1 || mid == 0 {
 				existingHost = globalHost
 				err = nil
 				LogService("info", "adopting host during single sync", map[string]interface{}{"host_name": h.Name, "new_mid": mid}, nil, "")
@@ -1039,15 +1018,13 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	if err == nil {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-			Name:            h.Name,
-			ExternalHostID:  h.ID,
-			MonitorID:       mid,
-			GroupID:         groupID,
-			Enabled:         h.Enabled,
-			ActiveAvailable: activeAvailable,
-			IPAddr:          h.IPAddress,
-			SSHUser:         existingHost.SSHUser,
-			SSHPort:         existingHost.SSHPort,
+			Name:       h.Name,
+			ExternalID: h.ID,
+			GroupID:    groupID,
+			Enabled:    h.Enabled,
+			IPAddr:     h.IPAddress,
+			SSHUser:    existingHost.SSHUser,
+			SSHPort:    existingHost.SSHPort,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -1058,14 +1035,12 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		result.Updated++
 		// Host doesn't exist, add it
 		newHost := model.Host{
-			Name:            h.Name,
-			ExternalHostID:  h.ID,
-			MonitorID:       mid,
-			GroupID:         groupID,
-			Description:     h.Description,
-			Enabled:         h.Enabled,
-			ActiveAvailable: activeAvailable,
-			IPAddr:          h.IPAddress,
+			Name:        h.Name,
+			ExternalID:  h.ID,
+			GroupID:     groupID,
+			Description: h.Description,
+			Enabled:     h.Enabled,
+			IPAddr:      h.IPAddress,
 		}
 
 		if err := repository.AddHostDAO(&newHost); err != nil {
@@ -1095,15 +1070,13 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 	}
 	setHostStatusSyncing(id)
 
-	if host.MonitorID != mid {
-		if host.MonitorID == 0 {
-			host.MonitorID = mid
-			_ = repository.UpdateHostDAO(host.ID, host)
-		} else {
-			setHostStatusErrorWithReason(id, "host does not belong to the specified monitor")
-			LogService("error", "push host failed due to monitor mismatch", map[string]interface{}{"host_id": id, "monitor_id": mid}, nil, "")
-			return result, fmt.Errorf("host does not belong to the specified monitor")
-		}
+	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
+
+	if gErr == nil && hostGroup.MonitorID != mid {
+		// Cannot push host if it is tied to another monitor's group
+		setHostStatusErrorWithReason(id, "host does not belong to the specified monitor")
+		LogService("error", "push host failed due to monitor mismatch", map[string]interface{}{"host_id": id, "monitor_id": mid}, nil, "")
+		return result, fmt.Errorf("host does not belong to the specified monitor (belongs to monitor %v)", hostGroup.MonitorID)
 	}
 
 	monitor, err := GetMonitorByIDServ(mid)
@@ -1178,7 +1151,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 	}
 
 	monitorHost := monitors.Host{
-		ID:          host.ExternalHostID,
+		ID:          host.ExternalID,
 		Name:        host.Name,
 		IPAddress:   host.IPAddr,
 		Description: host.Description,
@@ -1191,10 +1164,10 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 			"snmp_port":      fmt.Sprintf("%d", host.SNMPPort),
 		},
 	}
-	if host.ExternalHostID == "" {
+	if host.ExternalID == "" {
 		// Try to find host by name first to avoid duplicates
 		if existing, err := client.GetHostByName(context.Background(), host.Name); err == nil && existing != nil && existing.ID != "" {
-			host.ExternalHostID = existing.ID
+			host.ExternalID = existing.ID
 			_ = repository.UpdateHostDAO(host.ID, host)
 			monitorHost.ID = existing.ID
 
@@ -1216,7 +1189,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 				return result, fmt.Errorf("failed to create host in monitor: %w", err)
 			}
 			if created.ID != "" {
-				host.ExternalHostID = created.ID
+				host.ExternalID = created.ID
 				_ = repository.UpdateHostDAO(host.ID, host)
 			}
 		}
@@ -1228,7 +1201,7 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 			return result, fmt.Errorf("failed to update host in monitor: %w", err)
 		}
 	}
-	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.ExternalHostID, "monitor": monitor.Name, "group": groupName}, nil, "")
+	LogService("info", "push host to monitor", map[string]interface{}{"host_name": host.Name, "host_id": host.ExternalID, "monitor": monitor.Name, "group": groupName}, nil, "")
 
 	result.Added++
 	result.Total = 1
@@ -1246,11 +1219,12 @@ func TestSNMPServ(hid uint) (SyncResult, error) {
 		return SyncResult{}, err
 	}
 
-	if host.MonitorID == 0 {
-		return SyncResult{}, fmt.Errorf("host has no monitor assigned")
+	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
+	if gErr != nil || hostGroup.MonitorID == 0 {
+		return SyncResult{}, fmt.Errorf("host has no monitor assigned via its group")
 	}
 
-	monitor, err := repository.GetMonitorByIDDAO(host.MonitorID)
+	monitor, err := repository.GetMonitorByIDDAO(hostGroup.MonitorID)
 	if err != nil {
 		// Fallback: If no monitor assigned, try to find "Nagare Internal"
 		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})

@@ -88,24 +88,9 @@ func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
 		return 0
 	}
 
-	// Handle monitor-reported availability: 0=unknown, 1=available, 2=not_available
-	if h.ActiveAvailable == "2" {
-		return 2
-	}
-	if h.ActiveAvailable == "1" {
-		return 1
-	}
-
-	if h.ActiveAvailable == "0" && h.MonitorID != 1 {
-		return 0 // Changed from 1 to 0: unknown availability is Inactive
-	}
-
-	// For Nagare Internal (SNMP) or providers without availability flags, default to Active if no error
-	if h.MonitorID == 1 || h.ActiveAvailable == "" {
-		return 1
-	}
-
-	return 0
+	// Without ActiveAvailable or MonitorID on the Host, we default to Active (1)
+	// when there are no errors from the Monitor or Group.
+	return 1
 }
 
 func determineItemStatus(i model.Item) int {
@@ -113,7 +98,7 @@ func determineItemStatus(i model.Item) int {
 		return 0
 	}
 	// Item status is independent of host's overall health status
-	if i.ExternalItemID == "" {
+	if i.ExternalID == "" {
 		return 2
 	}
 	// 'N/A' indicates a polling failure or missing instance for this specific device
@@ -150,10 +135,7 @@ func determineTriggerStatus(t model.Trigger) int {
 	if t.Enabled == 0 {
 		return 0
 	}
-	// Entity must be valid (defaults to "item" now)
-	if t.Entity != "" && t.Entity != "alert" && t.Entity != "log" && t.Entity != "item" {
-		return 2
-	}
+
 	return 1
 }
 
@@ -164,11 +146,6 @@ func determineGroupStatus(group model.Group, monitorStatus int) int {
 
 	// If the monitor is in error, the group should be too
 	if monitorStatus == 2 {
-		return 2
-	}
-
-	// Check external monitor-reported availability (2 = not_available)
-	if group.ActiveAvailable == "2" {
 		return 2
 	}
 
@@ -372,17 +349,14 @@ func recomputeHostStatus(hid uint) (int, error) {
 		return 0, err
 	}
 
-	monitorStatus := 1
-	if host.MonitorID > 0 {
-		if m, err := repository.GetMonitorByIDDAO(host.MonitorID); err == nil {
-			monitorStatus = m.Status
-		}
-	}
-
 	groupStatus := 1
+	monitorStatus := 1
 	if host.GroupID > 0 {
 		if g, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
 			groupStatus = g.Status
+			if m, err := repository.GetMonitorByIDDAO(g.MonitorID); err == nil {
+				monitorStatus = m.Status
+			}
 		}
 	}
 
@@ -415,7 +389,7 @@ func recomputeItemStatus(id uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	_, err = repository.GetHostByIDDAO(item.HID)
+	_, err = repository.GetHostByIDDAO(item.HostID)
 	if err != nil {
 		status := determineItemStatus(item)
 		if status == 2 {

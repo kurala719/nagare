@@ -41,25 +41,19 @@ type ActionFilter struct {
 // TriggerFilter represents search and filter options for triggers
 // Query matches name (LIKE)
 type TriggerFilter struct {
-	Query          string
-	Status         *int
-	Severity       *int
-	Entity         *string
-	AlertID        *uint
-	AlertMonitorID *uint
-	AlertGroupID   *uint
-	AlertHostID    *uint
-	AlertItemID    *uint
-	Limit          int
-	Offset         int
-	SortBy         string
-	SortOrder      string
+	Query     string
+	Status    *int
+	Severity  *int
+	AlertID   *uint
+	Limit     int
+	Offset    int
+	SortBy    string
+	SortOrder string
 }
 
 // LogFilter represents search and filter options for logs
 // Query matches message/context (LIKE)
 type LogFilter struct {
-	Type      string
 	Severity  *int
 	Query     string
 	Limit     int

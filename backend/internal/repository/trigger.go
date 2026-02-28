@@ -30,33 +30,20 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 	if filter.Severity != nil {
 		query = query.Where("severity = ?", *filter.Severity)
 	}
-	if filter.Entity != nil {
-		query = query.Where("entity = ?", *filter.Entity)
-	}
+
 	if filter.AlertID != nil {
 		query = query.Where("alert_id = ?", *filter.AlertID)
 	}
-	if filter.AlertMonitorID != nil {
-		query = query.Where("alert_monitor_id = ?", *filter.AlertMonitorID)
-	}
-	if filter.AlertGroupID != nil {
-		query = query.Where("alert_group_id = ?", *filter.AlertGroupID)
-	}
-	if filter.AlertHostID != nil {
-		query = query.Where("alert_host_id = ?", *filter.AlertHostID)
-	}
-	if filter.AlertItemID != nil {
-		query = query.Where("alert_item_id = ?", *filter.AlertItemID)
-	}
+
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":         "name",
-		"status":       "status",
-		"enabled":      "enabled",
-		"entity":       "entity",
-		"severity":     "severity",
-		"created_at":   "created_at",
-		"updated_at":   "updated_at",
-		"id":           "id",
+		"name":       "name",
+		"status":     "status",
+		"enabled":    "enabled",
+		"entity":     "entity",
+		"severity":   "severity",
+		"created_at": "created_at",
+		"updated_at": "updated_at",
+		"id":         "id",
 	}, "id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
@@ -83,24 +70,11 @@ func CountTriggersDAO(filter model.TriggerFilter) (int64, error) {
 	if filter.Severity != nil {
 		query = query.Where("severity = ?", *filter.Severity)
 	}
-	if filter.Entity != nil {
-		query = query.Where("entity = ?", *filter.Entity)
-	}
+
 	if filter.AlertID != nil {
 		query = query.Where("alert_id = ?", *filter.AlertID)
 	}
-	if filter.AlertMonitorID != nil {
-		query = query.Where("alert_monitor_id = ?", *filter.AlertMonitorID)
-	}
-	if filter.AlertGroupID != nil {
-		query = query.Where("alert_group_id = ?", *filter.AlertGroupID)
-	}
-	if filter.AlertHostID != nil {
-		query = query.Where("alert_host_id = ?", *filter.AlertHostID)
-	}
-	if filter.AlertItemID != nil {
-		query = query.Where("alert_item_id = ?", *filter.AlertItemID)
-	}
+
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return 0, err
@@ -127,18 +101,8 @@ func AddTriggerDAO(trigger model.Trigger) error {
 func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 	return database.DB.Model(&model.Trigger{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"name":                     trigger.Name,
-		"entity":                   trigger.Entity,
 		"severity":                 trigger.Severity,
 		"alert_id":                 trigger.AlertID,
-		"alert_status":             trigger.AlertStatus,
-		"alert_group_id":           trigger.AlertGroupID,
-		"alert_monitor_id":         trigger.AlertMonitorID,
-		"alert_host_id":            trigger.AlertHostID,
-		"alert_item_id":            trigger.AlertItemID,
-		"alert_query":              trigger.AlertQuery,
-		"log_type":                 trigger.LogType,
-		"log_level":                trigger.LogSeverity,
-		"log_query":                trigger.LogQuery,
 		"item_status":              trigger.ItemStatus,
 		"item_value_threshold":     trigger.ItemValueThreshold,
 		"item_value_threshold_max": trigger.ItemValueThresholdMax,
@@ -167,16 +131,10 @@ func GetActiveTriggersForSeverityDAO(severity int) ([]model.Trigger, error) {
 	return triggers, nil
 }
 
-// GetActiveTriggersForEntityDAO retrieves triggers by entity
-func GetActiveTriggersForEntityDAO(entity string) ([]model.Trigger, error) {
+// GetActiveTriggersDAO retrieves all active triggers
+func GetActiveTriggersDAO() ([]model.Trigger, error) {
 	var triggers []model.Trigger
-	if entity == "alert" {
-		if err := database.DB.Where("enabled = ? AND (LOWER(entity) = ? OR entity = '' OR entity IS NULL)", 1, entity).Find(&triggers).Error; err != nil {
-			return nil, err
-		}
-		return triggers, nil
-	}
-	if err := database.DB.Where("enabled = ? AND LOWER(entity) = ?", 1, entity).Find(&triggers).Error; err != nil {
+	if err := database.DB.Where("enabled = ?", 1).Find(&triggers).Error; err != nil {
 		return nil, err
 	}
 	return triggers, nil

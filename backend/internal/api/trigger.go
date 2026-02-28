@@ -38,26 +38,6 @@ func SearchTriggersCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid alert_id")
 		return
 	}
-	alertMonitorID, err := parseOptionalUint(c, "alert_monitor_id")
-	if err != nil {
-		respondBadRequest(c, "invalid alert_monitor_id")
-		return
-	}
-	alertGroupID, err := parseOptionalUint(c, "alert_group_id")
-	if err != nil {
-		respondBadRequest(c, "invalid alert_group_id")
-		return
-	}
-	alertHostID, err := parseOptionalUint(c, "alert_host_id")
-	if err != nil {
-		respondBadRequest(c, "invalid alert_host_id")
-		return
-	}
-	alertItemID, err := parseOptionalUint(c, "alert_item_id")
-	if err != nil {
-		respondBadRequest(c, "invalid alert_item_id")
-		return
-	}
 	limit := 100
 	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
 		limit = *l
@@ -66,25 +46,15 @@ func SearchTriggersCtrl(c *gin.Context) {
 	if o, err := parseOptionalInt(c, "offset"); err == nil && o != nil {
 		offset = *o
 	}
-	var entityPtr *string
-	entity := c.Query("entity")
-	if entity != "" {
-		entityPtr = &entity
-	}
 	filter := model.TriggerFilter{
-		Query:          c.Query("q"),
-		Status:         status,
-		Severity:       severity,
-		Entity:         entityPtr,
-		AlertID:        alertID,
-		AlertMonitorID: alertMonitorID,
-		AlertGroupID:   alertGroupID,
-		AlertHostID:    alertHostID,
-		AlertItemID:    alertItemID,
-		Limit:          limit,
-		Offset:         offset,
-		SortBy:         c.Query("sort"),
-		SortOrder:      c.Query("order"),
+		Query:     c.Query("q"),
+		Status:    status,
+		Severity:  severity,
+		AlertID:   alertID,
+		Limit:     limit,
+		Offset:    offset,
+		SortBy:    c.Query("sort"),
+		SortOrder: c.Query("order"),
 	}
 	triggers, err := service.SearchTriggersServ(filter)
 	if err != nil {

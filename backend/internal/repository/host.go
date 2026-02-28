@@ -21,9 +21,6 @@ type HostWithItems struct {
 func GetAllHostsDAO() ([]model.Host, error) {
 	var hosts []model.Host
 	if err := database.DB.Model(&model.Host{}).
-		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
-		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.monitor_id").
 		Order("hosts.id desc").
 		Scan(&hosts).Error; err != nil {
 		return nil, err
@@ -33,10 +30,7 @@ func GetAllHostsDAO() ([]model.Host, error) {
 
 // SearchHostsDAO retrieves hosts by filter
 func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
-	query := database.DB.Model(&model.Host{}).
-		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
-		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.monitor_id")
+	query := database.DB.Model(&model.Host{})
 
 	if filter.Query != "" {
 		if filter.SearchField != "" {
@@ -44,20 +38,20 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 			case "name":
 				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
 			case "hostid":
-				query = query.Where("hosts.hostid LIKE ?", "%"+filter.Query+"%")
+				query = query.Where("hosts.external_id LIKE ?", "%"+filter.Query+"%")
 			case "ip_addr":
 				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")
 			case "description":
 				query = query.Where("hosts.description LIKE ?", "%"+filter.Query+"%")
 			default:
-				query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+				query = query.Where("hosts.name LIKE ? OR hosts.external_id LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 			}
 		} else {
-			query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			query = query.Where("hosts.name LIKE ? OR hosts.external_id LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 		}
 	}
 	if filter.MID != nil {
-		query = query.Where("hosts.monitor_id = ?", *filter.MID)
+		query = query.Where("hosts.group_id IN (SELECT id FROM `groups` WHERE monitor_id = ?)", *filter.MID)
 	}
 	if filter.GroupID != nil {
 		query = query.Where("hosts.group_id = ?", *filter.GroupID)
@@ -69,16 +63,15 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		query = query.Where("hosts.ip_addr = ?", *filter.IPAddr)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "hosts.name",
-		"status":     "hosts.status",
-		"enabled":    "hosts.enabled",
-		"monitor_id": "hosts.monitor_id",
-		"group_id":   "hosts.group_id",
-		"hostid":     "hosts.hostid",
-		"ip_addr":    "hosts.ip_addr",
-		"created_at": "hosts.created_at",
-		"updated_at": "hosts.updated_at",
-		"id":         "hosts.id",
+		"name":        "hosts.name",
+		"status":      "hosts.status",
+		"enabled":     "hosts.enabled",
+		"group_id":    "hosts.group_id",
+		"external_id": "hosts.external_id",
+		"ip_addr":     "hosts.ip_addr",
+		"created_at":  "hosts.created_at",
+		"updated_at":  "hosts.updated_at",
+		"id":          "hosts.id",
 	}, "hosts.id desc")
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
@@ -102,20 +95,20 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 			case "name":
 				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
 			case "hostid":
-				query = query.Where("hosts.hostid LIKE ?", "%"+filter.Query+"%")
+				query = query.Where("hosts.external_id LIKE ?", "%"+filter.Query+"%")
 			case "ip_addr":
 				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")
 			case "description":
 				query = query.Where("hosts.description LIKE ?", "%"+filter.Query+"%")
 			default:
-				query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+				query = query.Where("hosts.name LIKE ? OR hosts.external_id LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 			}
 		} else {
-			query = query.Where("hosts.name LIKE ? OR hosts.hostid LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			query = query.Where("hosts.name LIKE ? OR hosts.external_id LIKE ? OR hosts.ip_addr LIKE ? OR hosts.description LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 		}
 	}
 	if filter.MID != nil {
-		query = query.Where("hosts.monitor_id = ?", *filter.MID)
+		query = query.Where("hosts.group_id IN (SELECT id FROM `groups` WHERE monitor_id = ?)", *filter.MID)
 	}
 	if filter.GroupID != nil {
 		query = query.Where("hosts.group_id = ?", *filter.GroupID)
@@ -137,9 +130,6 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 func GetHostByIDDAO(id uint) (model.Host, error) {
 	var host model.Host
 	err := database.DB.Model(&model.Host{}).
-		Select("hosts.*, `groups`.name as group_name, monitors.name as monitor_name").
-		Joins("left join `groups` on `groups`.id = hosts.group_id").
-		Joins("left join monitors on monitors.id = hosts.monitor_id").
 		Where("hosts.id = ?", id).
 		First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -151,7 +141,7 @@ func GetHostByIDDAO(id uint) (model.Host, error) {
 // GetHostByHostIDDAO retrieves a host by external host ID
 func GetHostByHostIDDAO(hostid string) (model.Host, error) {
 	var host model.Host
-	err := database.DB.Where("hostid = ?", hostid).First(&host).Error
+	err := database.DB.Where("external_id = ?", hostid).First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return host, model.ErrNotFound
 	}
@@ -161,7 +151,7 @@ func GetHostByHostIDDAO(hostid string) (model.Host, error) {
 // GetHostByMIDAndHostIDDAO retrieves a host by monitor ID and external host ID
 func GetHostByMIDAndHostIDDAO(mid uint, hostid string) (model.Host, error) {
 	var host model.Host
-	err := database.DB.Where("hostid = ? AND monitor_id = ?", hostid, mid).First(&host).Error
+	err := database.DB.Where("external_id = ? AND group_id IN (SELECT id FROM `groups` WHERE monitor_id = ?)", hostid, mid).First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return host, model.ErrNotFound
 	}
@@ -185,7 +175,7 @@ func DeleteHostsByGroupIDDAO(groupID uint) error {
 
 // DeleteHostByMIDDAO deletes all hosts associated with a monitor
 func DeleteHostByMIDDAO(mid uint) error {
-	return database.DB.Where("monitor_id = ?", mid).Delete(&model.Host{}).Error
+	return database.DB.Where("group_id IN (SELECT id FROM `groups` WHERE monitor_id = ?)", mid).Delete(&model.Host{}).Error
 }
 
 // UpdateHostDAO updates a host by ID
@@ -194,20 +184,17 @@ func UpdateHostDAO(id uint, h model.Host) error {
 	// This bypasses GORM's zero-value skipping behavior
 	db := database.DB.Model(&model.Host{}).Where("id = ?", id).
 		Update("name", h.Name).
-		Update("hostid", h.ExternalHostID).
-		Update("monitor_id", h.MonitorID).
+		Update("external_id", h.ExternalID).
 		Update("group_id", h.GroupID).
 		Update("description", h.Description).
 		Update("enabled", h.Enabled).
 		Update("status", h.Status).
 		Update("status_description", h.StatusDescription).
-		Update("active_available", h.ActiveAvailable).
 		Update("ip_addr", h.IPAddr).
 		Update("comment", h.Comment).
 		Update("ssh_user", h.SSHUser).
 		Update("ssh_port", h.SSHPort).
 		Update("last_sync_at", h.LastSyncAt).
-		Update("external_source", h.ExternalSource).
 		Update("health_score", h.HealthScore)
 
 	if h.SSHPassword != "" {

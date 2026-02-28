@@ -1,0 +1,20 @@
+?   	nagare	[no test files]
+# nagare/internal/service [nagare/internal/service.test]
+internal\service\alert_test.go:44:12: not enough arguments in call to alertAnalysisPrompt
+	have ()
+	want (bool)
+?   	nagare/cmd/debug	[no test files]
+?   	nagare/cmd/server	[no test files]
+?   	nagare/cmd/server/router	[no test files]
+ok  	nagare/internal/api	(cached)
+?   	nagare/internal/database	[no test files]
+?   	nagare/internal/mcp	[no test files]
+?   	nagare/internal/migration	[no test files]
+?   	nagare/internal/model	[no test files]
+?   	nagare/internal/repository	[no test files]
+?   	nagare/internal/repository/llm	[no test files]
+?   	nagare/internal/repository/media	[no test files]
+?   	nagare/internal/repository/monitors	[no test files]
+FAIL	nagare/internal/service [build failed]
+ok  	nagare/internal/service/utils	(cached)
+FAIL

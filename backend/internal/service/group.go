@@ -70,7 +70,6 @@ func SearchGroupsServ(filter model.GroupFilter) ([]GroupResp, error) {
 	groupFilter := model.GroupFilter{
 		Query:     filter.Query,
 		Status:    filter.Status,
-		MonitorID: filter.MonitorID,
 		Limit:     filter.Limit,
 		Offset:    filter.Offset,
 		SortBy:    filter.SortBy,
@@ -92,7 +91,6 @@ func CountGroupsServ(filter model.GroupFilter) (int64, error) {
 	groupFilter := model.GroupFilter{
 		Query:     filter.Query,
 		Status:    filter.Status,
-		MonitorID: filter.MonitorID,
 		Limit:     filter.Limit,
 		Offset:    filter.Offset,
 	}
@@ -118,7 +116,6 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 		Name:        req.Name,
 		Description: req.Description,
 		Enabled:     req.Enabled,
-		MonitorID:   *req.MonitorID,
 	}
 	if req.ExternalID != nil {
 		group.ExternalID = *req.ExternalID
@@ -156,10 +153,10 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 		Name:           req.Name,
 		Description:    req.Description,
 		Enabled:        req.Enabled,
-		MonitorID:      existing.MonitorID,      // Preserve existing value
+      // Preserve existing value
 		ExternalID:     existing.ExternalID,     // Preserve existing value
 		LastSyncAt:     existing.LastSyncAt,     // Preserve existing value
-		ExternalSource: existing.ExternalSource, // Preserve existing value
+ // Preserve existing value
 		Status:         existing.Status,
 		HealthScore:    existing.HealthScore,
 	}
@@ -180,9 +177,6 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 	}
 	if req.LastSyncAt != nil {
 		updated.LastSyncAt = req.LastSyncAt
-	}
-	if req.ExternalSource != nil {
-		updated.ExternalSource = *req.ExternalSource
 	}
 
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
@@ -393,10 +387,8 @@ func groupToResp(group model.Group) GroupResp {
 		Description:    group.Description,
 		Enabled:        group.Enabled,
 		Status:         group.Status,
-		MonitorID:      group.MonitorID,
 		ExternalID:     group.ExternalID,
 		LastSyncAt:     group.LastSyncAt,
-		ExternalSource: group.ExternalSource,
 		HealthScore:    group.HealthScore,
 	}
 }

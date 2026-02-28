@@ -472,10 +472,7 @@ func RegisterUserServ(req RegisterRequest) error {
 		if req.Code == "" {
 			return fmt.Errorf("verification code is required when email is provided")
 		}
-		_, err := repository.FindEmailVerificationDAO(req.Email, req.Code)
-		if err != nil {
-			return fmt.Errorf("invalid or expired verification code")
-		}
+		return errors.New("email verification is currently disabled")
 	}
 
 	if _, err := repository.GetUserByUsernameDAO(req.Username); err == nil {
@@ -509,23 +506,7 @@ func SendRegistrationCodeServ(email string) error {
 		return model.ErrInvalidEmail
 	}
 
-	code := generateVerificationCode(6)
-	expiresAt := time.Now().Add(15 * time.Minute)
-
-	ev := model.EmailVerification{
-		Email:     email,
-		Code:      code,
-		ExpiresAt: expiresAt,
-	}
-
-	if err := repository.SaveEmailVerificationDAO(ev); err != nil {
-		return err
-	}
-
-	subject := "Nagare Registration Verification Code"
-	body := fmt.Sprintf("Your verification code is: %s\nThis code will expire in 15 minutes.", code)
-
-	return SendEmailServ(email, subject, body)
+	return errors.New("email verification is currently disabled")
 }
 
 func generateVerificationCode(length int) string {

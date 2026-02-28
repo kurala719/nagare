@@ -192,16 +192,15 @@ func DeleteItemsByHIDDAO(hid uint) error {
 // DeleteItemsByMIDDAO deletes all items associated with hosts of a specific monitor
 func DeleteItemsByMIDDAO(mid uint) error {
 	// Subquery to find items where host belongs to monitor
-	return database.DB.Where("hid IN (SELECT id FROM hosts WHERE monitor_id = ?)", mid).Delete(&model.Item{}).Error
+	return database.DB.Where("host_id IN (SELECT id FROM hosts WHERE group_id IN (SELECT id FROM `groups` WHERE monitor_id = ?))", mid).Delete(&model.Item{}).Error
 }
 
 // UpdateItemDAO updates an item by ID
 func UpdateItemDAO(id uint, item model.Item) error {
 	return database.DB.Model(&model.Item{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"name":               item.Name,
-		"hid":                item.HID,
-		"itemid":             item.ExternalItemID,
-		"hostid":             item.ExternalHostID,
+		"host_id":            item.HostID,
+		"external_id":        item.ExternalID,
 		"value_type":         item.ValueType,
 		"last_value":         item.LastValue,
 		"units":              item.Units,
@@ -210,7 +209,6 @@ func UpdateItemDAO(id uint, item model.Item) error {
 		"status_description": item.StatusDescription,
 		"comment":            item.Comment,
 		"last_sync_at":       item.LastSyncAt,
-		"external_source":    item.ExternalSource,
 	}).Error
 }
 

@@ -126,7 +126,6 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 				Name:        hostGroup.Name,
 				Description: "Imported from " + monitor.Name,
 				Enabled:     1,
-				MonitorID:   mid,
 				ExternalID:  hostGroup.ID,
 				LastSyncAt:  &now,
 			}
@@ -351,7 +350,6 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 			group.Name = g.Name
 			group.ExternalID = g.ID
 			group.LastSyncAt = &now
-			group.ExternalSource = monitor.Name
 			err := repository.UpdateGroupDAO(group.ID, group)
 			if err == nil {
 				_, _ = recomputeGroupStatus(group.ID)

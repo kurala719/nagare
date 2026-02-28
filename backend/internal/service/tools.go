@@ -36,13 +36,13 @@ func ListTools() []ToolDefinition {
 			Name:        "get_hosts",
 			Description: "List hosts with optional filters.",
 			InputSchema: schemaObject(map[string]interface{}{
-				"q":        schemaString("Search by name, hostid, ip, description."),
-				"status":   schemaInt("Host status."),
-				"monitor_id":     schemaInt("Monitor id."),
-				"group_id": schemaInt("Group id."),
-				"ip_addr":  schemaString("Filter by IP address."),
-				"limit":    schemaInt("Max results (default 100)."),
-				"offset":   schemaInt("Offset for pagination."),
+				"q":          schemaString("Search by name, hostid, ip, description."),
+				"status":     schemaInt("Host status."),
+				"monitor_id": schemaInt("Monitor id."),
+				"group_id":   schemaInt("Group id."),
+				"ip_addr":    schemaString("Filter by IP address."),
+				"limit":      schemaInt("Max results (default 100)."),
+				"offset":     schemaInt("Offset for pagination."),
 			}),
 		},
 		{
@@ -337,34 +337,14 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		alertMonitorID, err := toUintPtr(args.AlertMonitorID)
-		if err != nil {
-			return nil, err
-		}
-		alertGroupID, err := toUintPtr(args.AlertGroupID)
-		if err != nil {
-			return nil, err
-		}
-		alertHostID, err := toUintPtr(args.AlertHostID)
-		if err != nil {
-			return nil, err
-		}
-		alertItemID, err := toUintPtr(args.AlertItemID)
-		if err != nil {
-			return nil, err
-		}
+
 		filter := model.TriggerFilter{
-			Query:          args.Query,
-			Status:         args.Status,
-			Severity:       args.SeverityMin,
-			Entity:         args.Entity,
-			AlertID:        alertID,
-			AlertMonitorID: alertMonitorID,
-			AlertGroupID:   alertGroupID,
-			AlertHostID:    alertHostID,
-			AlertItemID:    alertItemID,
-			Limit:          limit,
-			Offset:         offset,
+			Query:    args.Query,
+			Status:   args.Status,
+			Severity: args.SeverityMin,
+			AlertID:  alertID,
+			Limit:    limit,
+			Offset:   offset,
 		}
 		return SearchTriggersServ(filter)
 	case "get_media":
@@ -391,7 +371,6 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 		}
 		limit, offset := withDefaultLimitOffset(args.Limit, args.Offset)
 		filter := model.LogFilter{
-			Type:     args.Type,
 			Severity: args.Severity,
 			Query:    args.Query,
 			Limit:    limit,

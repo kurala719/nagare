@@ -45,7 +45,6 @@ func SearchLogsServ(filter model.LogFilter) ([]LogResp, error) {
 	for _, e := range entries {
 		result = append(result, LogResp{
 			ID:        int(e.ID),
-			Type:      e.Type,
 			Severity:  e.Severity,
 			Message:   e.Message,
 			Context:   e.Context,
@@ -78,7 +77,6 @@ func logEntry(logType string, severity int, message string, context map[string]i
 	log.Printf("[%s] [%d] %s %s", logType, severity, message, ctx)
 
 	entry := model.LogEntry{
-		Type:     logType,
 		Severity: severity,
 		Message:  message,
 		Context:  ctx,
@@ -104,7 +102,7 @@ func logEntry(logType string, severity int, message string, context map[string]i
 	}
 
 	title := "System Log Notification"
-	if entry.Type == LogTypeService {
+	if "" == LogTypeService {
 		title = "Service Log Notification"
 	}
 	_ = CreateSiteMessageServ(title, entry.Message, "system", entry.Severity, nil)

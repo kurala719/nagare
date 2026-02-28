@@ -13,9 +13,7 @@ func AddLogDAO(entry model.LogEntry) error {
 // SearchLogsDAO retrieves logs by filter
 func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 	query := database.DB.Model(&model.LogEntry{})
-	if filter.Type != "" {
-		query = query.Where("type = ?", filter.Type)
-	}
+	
 	if filter.Severity != nil {
 		query = query.Where("level = ?", *filter.Severity)
 	}
@@ -48,9 +46,7 @@ func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 // CountLogsDAO returns total count for logs by filter
 func CountLogsDAO(filter model.LogFilter) (int64, error) {
 	query := database.DB.Model(&model.LogEntry{})
-	if filter.Type != "" {
-		query = query.Where("type = ?", filter.Type)
-	}
+	
 	if filter.Severity != nil {
 		query = query.Where("level = ?", *filter.Severity)
 	}

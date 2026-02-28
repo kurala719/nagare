@@ -19,30 +19,30 @@ type ActionReq struct {
 	Enabled     int    `json:"enabled"`
 	Description string `json:"description"`
 	// Filter conditions
-	SeverityMin *int   `json:"severity_min"`
-	TriggerID   *uint  `json:"trigger_id"`
-	HostID      *uint  `json:"host_id"`
-	GroupID     *uint  `json:"group_id"`
-	AlertStatus *int   `json:"alert_status"`
-	UserIDs     []uint `json:"user_ids"`
+	SeverityMin *int  `json:"severity_min"`
+	UserID      *uint `json:"user_id"`
+	HostID      *uint `json:"host_id"`
+	GroupID     *uint `json:"group_id"`
+	AlertStatus *int  `json:"alert_status"`
+	// UserIDs removed as multiple users are not supported directly in the action anymore
 }
 
 // ActionResp represents an action response
 type ActionResp struct {
-	ID          int            `json:"id"`
-	Name        string         `json:"name"`
-	MediaID     uint           `json:"media_id"`
-	Template    string         `json:"template"`
-	Enabled     int            `json:"enabled"`
-	Status      int            `json:"status"`
-	Description string         `json:"description"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	MediaID     uint   `json:"media_id"`
+	Template    string `json:"template"`
+	Enabled     int    `json:"enabled"`
+	Status      int    `json:"status"`
+	Description string `json:"description"`
 	// Filter conditions
-	SeverityMin *int           `json:"severity_min"`
-	TriggerID   *uint          `json:"trigger_id"`
-	HostID      *uint          `json:"host_id"`
-	GroupID     *uint          `json:"group_id"`
-	AlertStatus *int           `json:"alert_status"`
-	Users       []UserResponse `json:"users"`
+	SeverityMin *int          `json:"severity_min"`
+	UserID      *uint         `json:"user_id"`
+	HostID      *uint         `json:"host_id"`
+	GroupID     *uint         `json:"group_id"`
+	AlertStatus *int          `json:"alert_status"`
+	User        *UserResponse `json:"user,omitempty"`
 }
 
 func GetAllActionsServ() ([]ActionResp, error) {
@@ -83,13 +83,6 @@ func GetActionByIDServ(id uint) (ActionResp, error) {
 }
 
 func AddActionServ(req ActionReq) (ActionResp, error) {
-	users := make([]model.User, 0)
-	for _, uid := range req.UserIDs {
-		if u, err := repository.GetUserByIDDAO(int(uid)); err == nil {
-			users = append(users, u)
-		}
-	}
-
 	action := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
@@ -97,11 +90,10 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 		Enabled:     req.Enabled,
 		Description: req.Description,
 		SeverityMin: req.SeverityMin,
-		TriggerID:   req.TriggerID,
+		UserID:      req.UserID,
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
-		Users:       users,
 	}
 	if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
 		action.Status = determineActionStatus(action, media)
@@ -120,13 +112,6 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		return err
 	}
 
-	users := make([]model.User, 0)
-	for _, uid := range req.UserIDs {
-		if u, err := repository.GetUserByIDDAO(int(uid)); err == nil {
-			users = append(users, u)
-		}
-	}
-
 	updated := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
@@ -135,11 +120,10 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		Description: req.Description,
 		Status:      existing.Status,
 		SeverityMin: req.SeverityMin,
-		TriggerID:   req.TriggerID,
+		UserID:      req.UserID,
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
-		Users:       users,
 	}
 	// Preserve status unless enabled state or media changed
 	if req.Enabled != existing.Enabled || req.MediaID != existing.MediaID {
@@ -161,9 +145,10 @@ func DeleteActionByIDServ(id uint) error {
 }
 
 func actionToResp(action model.Action) ActionResp {
-	userResps := make([]UserResponse, 0, len(action.Users))
-	for _, u := range action.Users {
-		userResps = append(userResps, userToResp(u))
+	var userResp *UserResponse
+	if action.User != nil {
+		resp := userToResp(*action.User)
+		userResp = &resp
 	}
 
 	return ActionResp{
@@ -175,11 +160,11 @@ func actionToResp(action model.Action) ActionResp {
 		Status:      action.Status,
 		Description: action.Description,
 		SeverityMin: action.SeverityMin,
-		TriggerID:   action.TriggerID,
+		UserID:      action.UserID,
 		HostID:      action.HostID,
 		GroupID:     action.GroupID,
 		AlertStatus: action.AlertStatus,
-		Users:       userResps,
+		User:        userResp,
 	}
 }
 
@@ -275,33 +260,32 @@ func ExecuteActionsForAlert(alert model.Alert) {
 				}, nil, "")
 			}
 
-			// Also send to specifically associated users
-			if len(action.Users) > 0 {
+			// Also send to specifically associated user
+			if action.User != nil {
 				lowerType := strings.ToLower(media.Type)
-				for _, user := range action.Users {
-					userTarget := ""
-					if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
-						userTarget = "user:" + user.QQ
-					} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
-						userTarget = user.Email
-					}
+				user := action.User
+				userTarget := ""
+				if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
+					userTarget = "user:" + user.QQ
+				} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
+					userTarget = user.Email
+				}
 
-					if userTarget != "" {
-						userMedia := media
-						userMedia.Target = userTarget
-						LogService("debug", "sending alert to associated user", map[string]interface{}{
+				if userTarget != "" {
+					userMedia := media
+					userMedia.Target = userTarget
+					LogService("debug", "sending alert to associated user", map[string]interface{}{
+						"action_id": action.ID,
+						"user_id":   user.ID,
+						"target":    userTarget,
+					}, nil, "")
+					if err := ExecuteAction(action, userMedia, replacements); err != nil {
+						LogService("error", "user action execution failed", map[string]interface{}{
 							"action_id": action.ID,
 							"user_id":   user.ID,
 							"target":    userTarget,
+							"error":     err.Error(),
 						}, nil, "")
-						if err := ExecuteAction(action, userMedia, replacements); err != nil {
-							LogService("error", "user action execution failed", map[string]interface{}{
-								"action_id": action.ID,
-								"user_id":   user.ID,
-								"target":    userTarget,
-								"error":     err.Error(),
-							}, nil, "")
-						}
 					}
 				}
 			}
@@ -340,13 +324,15 @@ func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 			ctx.host = &host
 		}
 	}
-	if ctx.host == nil && ctx.item != nil && ctx.item.HID > 0 {
-		if host, err := repository.GetHostByIDDAO(ctx.item.HID); err == nil {
+	if ctx.host == nil && ctx.item != nil && ctx.item.HostID > 0 {
+		if host, err := repository.GetHostByIDDAO(ctx.item.HostID); err == nil {
 			ctx.host = &host
 		}
 	}
 	if ctx.host != nil {
-		ctx.monitorID = ctx.host.MonitorID
+		if grp, err := repository.GetGroupByIDDAO(ctx.host.GroupID); err == nil {
+			ctx.monitorID = grp.MonitorID
+		}
 		ctx.groupID = ctx.host.GroupID
 	}
 	return ctx
@@ -354,62 +340,60 @@ func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 
 func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 	alert := ctx.alert
-	
+
 	// Severity Check
 	if action.SeverityMin != nil && alert.Severity < *action.SeverityMin {
 		LogService("debug", "action filter mismatch: severity", map[string]interface{}{"action_id": action.ID, "alert_severity": alert.Severity, "min_severity": *action.SeverityMin}, nil, "")
 		return false
 	}
-	
+
 	// Status Check
-	// If AlertStatus is nil or -1, ignore status filter. 
+	// If AlertStatus is nil or -1, ignore status filter.
 	// (Note: default 0 means only active alerts)
 	if action.AlertStatus != nil && *action.AlertStatus != -1 && alert.Status != *action.AlertStatus {
 		LogService("debug", "action filter mismatch: status", map[string]interface{}{"action_id": action.ID, "alert_status": alert.Status, "filter_status": *action.AlertStatus}, nil, "")
 		return false
 	}
-	
-		// Host Check
-		// Ignore if nil or 0
-		if action.HostID != nil && *action.HostID > 0 {
-			// Alert must be associated with this host
-			var hostID uint = 0
-			if alert.HostID != nil {
-				hostID = *alert.HostID
-			}
-			if ctx.host != nil {
-				hostID = ctx.host.ID
-			}
-			if hostID != *action.HostID {
-				LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
-				return false
-			}
+
+	// Host Check
+	// Ignore if nil or 0
+	if action.HostID != nil && *action.HostID > 0 {
+		// Alert must be associated with this host
+		var hostID uint = 0
+		if alert.HostID != nil {
+			hostID = *alert.HostID
 		}
-		
-		// Group Check
-		// Ignore if nil or 0
-		if action.GroupID != nil && *action.GroupID > 0 {
-			if ctx.groupID != *action.GroupID {
-				LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
-				return false
-			}
+		if ctx.host != nil {
+			hostID = ctx.host.ID
 		}
-		
-		// Trigger ID Check
-		if action.TriggerID != nil && *action.TriggerID > 0 {
-			matched := (alert.TriggerID != nil && *alert.TriggerID == *action.TriggerID) || (alert.AlarmID != nil && *alert.AlarmID == *action.TriggerID)
-			if !matched {
-				LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
-					"action_id":         action.ID,
-					"alert_trigger_id": alert.TriggerID,
-					"alert_alarm_id":   alert.AlarmID,
-					"filter_trigger_id": *action.TriggerID,
-				}, nil, "")
-				return false
-			}
+		if hostID != *action.HostID {
+			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
+			return false
 		}
-	
-	
+	}
+
+	// Group Check
+	// Ignore if nil or 0
+	if action.GroupID != nil && *action.GroupID > 0 {
+		if ctx.groupID != *action.GroupID {
+			LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
+			return false
+		}
+	}
+
+	// Trigger ID Check
+	if action.UserID != nil && *action.UserID > 0 {
+		matched := (alert.AlarmID != nil && *alert.AlarmID == *action.UserID)
+		if !matched {
+			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
+				"action_id":         action.ID,
+				"alert_alarm_id":    alert.AlarmID,
+				"filter_trigger_id": *action.UserID,
+			}, nil, "")
+			return false
+		}
+	}
+
 	return true
 }
 
