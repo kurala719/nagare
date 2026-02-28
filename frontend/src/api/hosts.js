@@ -86,13 +86,7 @@ export function pushHostsToMonitor(monitorId) {
   })
 }
 
-export function testSNMP(id) {
-  return request({
-    url: `/monitoring/snmp-poll-direct/${id}`,
-    method: 'post',
-    timeout: 120000
-  })
-}
+
 
 export function probeSnmpOid(id, oid) {
   const encodedOid = encodeURIComponent(oid || '')

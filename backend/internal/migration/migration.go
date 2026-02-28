@@ -81,9 +81,6 @@ func InitDBTables() error {
 	if err := ensureDefaultAdmin(); err != nil {
 		return err
 	}
-	if err := ensureDefaultMonitor(); err != nil {
-		return err
-	}
 	if err := ensureDefaultReportConfig(); err != nil {
 		return err
 	}
@@ -200,29 +197,6 @@ func ensureDefaultAdmin() error {
 		return database.DB.Create(&admin).Error
 	}
 	return nil
-}
-
-func ensureDefaultMonitor() error {
-	var count int64
-	if err := database.DB.Model(&model.Monitor{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count == 0 {
-		defaultMonitor := model.Monitor{
-			Name:        "Nagare Internal",
-			URL:         "localhost",
-			Type:        1, // SNMP
-			Enabled:     1,
-			Status:      1,
-			Description: "System default internal monitoring engine",
-		}
-		// Set ID to 1 explicitly
-		defaultMonitor.ID = 1
-		return database.DB.Create(&defaultMonitor).Error
-	}
-
-	// Enforce Type 1 (SNMP) for ID 1 if it exists
-	return database.DB.Model(&model.Monitor{}).Where("id = ?", 1).Update("type", 1).Error
 }
 
 func ensureDefaultReportConfig() error {

@@ -10,277 +10,21 @@ import (
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
 	"nagare/internal/service/utils"
-
-	"github.com/gosnmp/gosnmp"
 )
-
-type SNMPOIDProbeResult struct {
-	HostID       uint   `json:"host_id"`
-	HostName     string `json:"host_name"`
-	Target       string `json:"target"`
-	OID          string `json:"oid"`
-	Version      string `json:"version"`
-	Port         int    `json:"port"`
-	Success      bool   `json:"success"`
-	Value        string `json:"value,omitempty"`
-	ValueType    string `json:"value_type,omitempty"`
-	RawType      string `json:"raw_type,omitempty"`
-	DurationMs   int64  `json:"duration_ms"`
-	Error        string `json:"error,omitempty"`
-	CommunityLen int    `json:"community_len,omitempty"`
-	Reachable    bool   `json:"reachable"`
-	ReachableBy  string `json:"reachable_by,omitempty"`
-}
-
-func normalizeProbeOID(oid string) string {
-	oid = strings.TrimSpace(oid)
-	if oid == "" {
-		return oid
-	}
-	if strings.HasPrefix(oid, ".") {
-		return oid
-	}
-	return "." + oid
-}
-
-func formatProbePDU(v gosnmp.SnmpPDU) (string, string) {
-	typeName := v.Type.String()
-	switch v.Type {
-	case gosnmp.OctetString:
-		if bytes, ok := v.Value.([]byte); ok {
-			isBinary := false
-			for _, b := range bytes {
-				if (b < 32 && b != 9 && b != 10 && b != 13) || b > 126 {
-					isBinary = true
-					break
-				}
-			}
-			if isBinary {
-				return fmt.Sprintf("%x", bytes), typeName
-			}
-			return string(bytes), typeName
-		}
-		return "", typeName
-	case gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32, gosnmp.Counter64, gosnmp.TimeTicks:
-		return fmt.Sprintf("%d", gosnmp.ToBigInt(v.Value)), typeName
-	case gosnmp.ObjectIdentifier, gosnmp.IPAddress:
-		return fmt.Sprintf("%v", v.Value), typeName
-	case gosnmp.NoSuchObject:
-		return "NoSuchObject", typeName
-	case gosnmp.NoSuchInstance:
-		return "NoSuchInstance", typeName
-	case gosnmp.EndOfMibView:
-		return "EndOfMibView", typeName
-	case gosnmp.Null:
-		return "N/A", typeName
-	default:
-		return fmt.Sprintf("%v", v.Value), typeName
-	}
-}
-
-func probeSingleOID(gs *gosnmp.GoSNMP, oid string) (*gosnmp.SnmpPDU, error) {
-	packet, err := gs.Get([]string{normalizeProbeOID(oid)})
-	if err != nil {
-		return nil, err
-	}
-	if packet == nil || len(packet.Variables) == 0 {
-		return nil, fmt.Errorf("empty SNMP response")
-	}
-	return &packet.Variables[0], nil
-}
-
-// ProbeSNMPOIDServ probes one SNMP OID on a host and returns raw debug output.
-func ProbeSNMPOIDServ(hid uint, oid string) (SNMPOIDProbeResult, error) {
-	host, err := repository.GetHostByIDDAO(hid)
-	if err != nil {
-		return SNMPOIDProbeResult{}, err
-	}
-
-	markHostFromProbe := func(success bool, reason string) {
-		if success {
-			_ = repository.UpdateHostStatusAndDescriptionDAO(host.ID, 1, "")
-		} else {
-			if strings.TrimSpace(reason) == "" {
-				reason = "SNMP probe failed"
-			}
-			_ = repository.UpdateHostStatusAndDescriptionDAO(host.ID, 2, reason)
-		}
-		if refreshed, rErr := repository.GetHostByIDDAO(host.ID); rErr == nil {
-			recordHostHistory(refreshed, time.Now().UTC())
-		}
-	}
-
-	normOID := normalizeProbeOID(oid)
-	if normOID == "" {
-		return SNMPOIDProbeResult{}, fmt.Errorf("oid is required")
-	}
-
-	target := strings.TrimSpace(host.IPAddr)
-	if target == "" {
-		target = strings.TrimSpace(host.ExternalHostID)
-	}
-	if target == "" {
-		return SNMPOIDProbeResult{}, fmt.Errorf("host has no SNMP target (ip_addr/hostid empty)")
-	}
-
-	version := strings.TrimSpace(host.SNMPVersion)
-	if version == "" {
-		version = "v2c"
-	}
-	port := host.SNMPPort
-	if port == 0 {
-		port = 161
-	}
-	community := strings.TrimSpace(host.SNMPCommunity)
-	if community == "" {
-		community = "public"
-	}
-
-	res := SNMPOIDProbeResult{
-		HostID:       host.ID,
-		HostName:     host.Name,
-		Target:       target,
-		OID:          normOID,
-		Version:      version,
-		Port:         port,
-		CommunityLen: len(community),
-		Reachable:    false,
-	}
-
-	gs := &gosnmp.GoSNMP{
-		Target:  target,
-		Port:    uint16(port),
-		Timeout: 5 * time.Second,
-		Retries: 1,
-		MaxOids: 1,
-	}
-
-	switch version {
-	case "v3":
-		gs.Version = gosnmp.Version3
-		gs.SecurityModel = gosnmp.UserSecurityModel
-		level := host.SNMPV3SecurityLevel
-		if level == "" {
-			level = "NoAuthNoPriv"
-		}
-		switch level {
-		case "AuthNoPriv":
-			gs.MsgFlags = gosnmp.AuthNoPriv
-		case "AuthPriv":
-			gs.MsgFlags = gosnmp.AuthPriv
-		default:
-			gs.MsgFlags = gosnmp.NoAuthNoPriv
-		}
-		authPass := host.SNMPV3AuthPass
-		if authPass != "" {
-			if decrypted, decErr := utils.Decrypt(authPass); decErr == nil {
-				authPass = decrypted
-			}
-		}
-		privPass := host.SNMPV3PrivPass
-		if privPass != "" {
-			if decrypted, decErr := utils.Decrypt(privPass); decErr == nil {
-				privPass = decrypted
-			}
-		}
-		sp := &gosnmp.UsmSecurityParameters{UserName: host.SNMPV3User}
-		if level != "NoAuthNoPriv" {
-			sp.AuthenticationPassphrase = authPass
-			switch host.SNMPV3AuthProtocol {
-			case "MD5":
-				sp.AuthenticationProtocol = gosnmp.MD5
-			default:
-				sp.AuthenticationProtocol = gosnmp.SHA
-			}
-		}
-		if level == "AuthPriv" {
-			sp.PrivacyPassphrase = privPass
-			switch host.SNMPV3PrivProtocol {
-			case "DES":
-				sp.PrivacyProtocol = gosnmp.DES
-			default:
-				sp.PrivacyProtocol = gosnmp.AES
-			}
-		}
-		gs.SecurityParameters = sp
-	case "v1":
-		gs.Version = gosnmp.Version1
-		gs.Community = community
-	default:
-		gs.Version = gosnmp.Version2c
-		gs.Community = community
-	}
-
-	start := time.Now()
-	if err := gs.Connect(); err != nil {
-		res.DurationMs = time.Since(start).Milliseconds()
-		res.Error = fmt.Sprintf("connect failed: %v", err)
-		res.Success = false
-		markHostFromProbe(false, res.Error)
-		return res, nil
-	}
-	defer gs.Conn.Close()
-
-	pdu, err := probeSingleOID(gs, normOID)
-	res.DurationMs = time.Since(start).Milliseconds()
-	if err != nil {
-		requestedErr := err
-		origTimeout := gs.Timeout
-		origRetries := gs.Retries
-		gs.Timeout = 2 * time.Second
-		gs.Retries = 0
-		fallbackOids := []string{".1.3.6.1.2.1.1.3.0", ".1.3.6.1.2.1.1.5.0"}
-		for _, fallbackOID := range fallbackOids {
-			fallbackPDU, fallbackErr := probeSingleOID(gs, fallbackOID)
-			if fallbackErr == nil && fallbackPDU != nil {
-				fallbackVal, fallbackType := formatProbePDU(*fallbackPDU)
-				res.Success = true
-				res.Reachable = true
-				res.ReachableBy = normalizeProbeOID(fallbackOID)
-				res.Value = fmt.Sprintf("reachable via %s = %s", normalizeProbeOID(fallbackOID), fallbackVal)
-				res.ValueType = fallbackType
-				res.RawType = fallbackPDU.Type.String()
-				res.Error = fmt.Sprintf("requested OID %s failed: %v", normOID, requestedErr)
-				markHostFromProbe(true, "")
-				gs.Timeout = origTimeout
-				gs.Retries = origRetries
-				return res, nil
-			}
-		}
-		gs.Timeout = origTimeout
-		gs.Retries = origRetries
-
-		res.Error = requestedErr.Error()
-		res.Success = false
-		res.Reachable = false
-		markHostFromProbe(false, res.Error)
-		return res, nil
-	}
-
-	value, valueType := formatProbePDU(*pdu)
-	res.Value = value
-	res.ValueType = valueType
-	res.RawType = pdu.Type.String()
-	res.Success = true
-	res.Reachable = true
-	res.ReachableBy = normOID
-	markHostFromProbe(true, "")
-	return res, nil
-}
 
 // HostReq represents a host request
 type HostReq struct {
-	Name        string `json:"name" binding:"required"`
-	MID         uint   `json:"monitor_id"`
-	GroupID     uint   `json:"group_id"`
-	ExternalHostID      string `json:"hostid"`
-	Description string `json:"description"`
-	Enabled     int    `json:"enabled"`
-	IPAddr      string `json:"ip_addr"`
-	Comment     string `json:"comment"`
-	SSHUser     string `json:"ssh_user"`
-	SSHPassword string `json:"ssh_password"`
-	SSHPort     int    `json:"ssh_port"`
+	Name           string `json:"name" binding:"required"`
+	MID            uint   `json:"monitor_id"`
+	GroupID        uint   `json:"group_id"`
+	ExternalHostID string `json:"hostid"`
+	Description    string `json:"description"`
+	Enabled        int    `json:"enabled"`
+	IPAddr         string `json:"ip_addr"`
+	Comment        string `json:"comment"`
+	SSHUser        string `json:"ssh_user"`
+	SSHPassword    string `json:"ssh_password"`
+	SSHPort        int    `json:"ssh_port"`
 	// SNMP Configuration
 	SNMPCommunity       string     `json:"snmp_community"`
 	SNMPVersion         string     `json:"snmp_version"`
@@ -298,21 +42,21 @@ type HostReq struct {
 
 // HostResp represents a host response
 type HostResp struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	MID         uint   `json:"monitor_id"`
-	GroupID     uint   `json:"group_id"`
-	GroupName   string `json:"group_name"`
-	MonitorName string `json:"monitor_name"`
-	ExternalHostID      string `json:"hostid"`
-	Description string `json:"description"`
-	Enabled     int    `json:"enabled"`
-	Status      int    `json:"status"`
-	StatusDesc  string `json:"status_description"`
-	IPAddr      string `json:"ip_addr"`
-	Comment     string `json:"comment"`
-	SSHUser     string `json:"ssh_user"`
-	SSHPort     int    `json:"ssh_port"`
+	ID             int    `json:"id"`
+	Name           string `json:"name"`
+	MID            uint   `json:"monitor_id"`
+	GroupID        uint   `json:"group_id"`
+	GroupName      string `json:"group_name"`
+	MonitorName    string `json:"monitor_name"`
+	ExternalHostID string `json:"hostid"`
+	Description    string `json:"description"`
+	Enabled        int    `json:"enabled"`
+	Status         int    `json:"status"`
+	StatusDesc     string `json:"status_description"`
+	IPAddr         string `json:"ip_addr"`
+	Comment        string `json:"comment"`
+	SSHUser        string `json:"ssh_user"`
+	SSHPort        int    `json:"ssh_port"`
 	// SNMP Configuration
 	SNMPCommunity       string     `json:"snmp_community"`
 	SNMPVersion         string     `json:"snmp_version"`
@@ -398,7 +142,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 
 	newHost := model.Host{
 		Name:                h.Name,
-		ExternalHostID:              h.ExternalHostID,
+		ExternalHostID:      h.ExternalHostID,
 		MonitorID:           h.MID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
@@ -476,17 +220,17 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	return HostResp{
-		ID:          int(newHost.ID),
-		Name:        newHost.Name,
-		MID:         newHost.MonitorID,
-		GroupID:     newHost.GroupID,
-		ExternalHostID:      newHost.ExternalHostID,
-		Description: newHost.Description,
-		Enabled:     newHost.Enabled,
-		Status:      newHost.Status,
-		StatusDesc:  newHost.StatusDescription,
-		IPAddr:      newHost.IPAddr,
-		Comment:     newHost.Comment,
+		ID:             int(newHost.ID),
+		Name:           newHost.Name,
+		MID:            newHost.MonitorID,
+		GroupID:        newHost.GroupID,
+		ExternalHostID: newHost.ExternalHostID,
+		Description:    newHost.Description,
+		Enabled:        newHost.Enabled,
+		Status:         newHost.Status,
+		StatusDesc:     newHost.StatusDescription,
+		IPAddr:         newHost.IPAddr,
+		Comment:        newHost.Comment,
 	}, nil
 }
 
@@ -507,7 +251,7 @@ func UpdateHostServ(id uint, h HostReq) error {
 
 	updated := model.Host{
 		Name:                h.Name,
-		ExternalHostID:              h.ExternalHostID,
+		ExternalHostID:      h.ExternalHostID,
 		MonitorID:           monitorID,
 		GroupID:             h.GroupID,
 		Description:         h.Description,
@@ -693,13 +437,13 @@ func GetHostsFromMonitorServ(mid uint) ([]HostResp, error) {
 		}
 		status := mapMonitorHostStatus(h.Status, activeAvailable)
 		hosts = append(hosts, HostResp{
-			Name:        h.Name,
-			ExternalHostID:      h.ID,
-			Description: h.Description,
-			IPAddr:      h.IPAddress,
-			Enabled:     1,
-			Status:      status,
-			StatusDesc:  statusDesc,
+			Name:           h.Name,
+			ExternalHostID: h.ID,
+			Description:    h.Description,
+			IPAddr:         h.IPAddress,
+			Enabled:        1,
+			Status:         status,
+			StatusDesc:     statusDesc,
 		})
 	}
 	return hosts, nil
@@ -788,7 +532,7 @@ func hostToResp(h model.Host) HostResp {
 		GroupID:             h.GroupID,
 		GroupName:           h.GroupName,
 		MonitorName:         h.MonitorName,
-		ExternalHostID:              h.ExternalHostID,
+		ExternalHostID:      h.ExternalHostID,
 		Description:         h.Description,
 		Enabled:             h.Enabled,
 		Status:              h.Status,
@@ -1104,7 +848,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 				Name:            h.Name,
-				ExternalHostID:          h.ID,
+				ExternalHostID:  h.ID,
 				MonitorID:       mid,
 				GroupID:         groupID,
 				Description:     h.Description,
@@ -1132,7 +876,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			// Host doesn't exist, add it
 			hNew := model.Host{
 				Name:            h.Name,
-				ExternalHostID:          h.ID,
+				ExternalHostID:  h.ID,
 				MonitorID:       mid,
 				GroupID:         groupID,
 				Description:     h.Description,
@@ -1287,7 +1031,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 			Name:            h.Name,
-			ExternalHostID:          h.ID,
+			ExternalHostID:  h.ID,
 			MonitorID:       mid,
 			GroupID:         groupID,
 			Enabled:         h.Enabled,
@@ -1309,7 +1053,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		// Host doesn't exist, add it
 		newHost := model.Host{
 			Name:            h.Name,
-			ExternalHostID:          h.ID,
+			ExternalHostID:  h.ID,
 			MonitorID:       mid,
 			GroupID:         groupID,
 			Description:     h.Description,
