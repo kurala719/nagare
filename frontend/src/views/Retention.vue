@@ -166,7 +166,7 @@ const loadPolicies = async () => {
         { type: 'host_history', desc: t('retention.typeDescriptions.host_history') },
         { type: 'network_history', desc: t('retention.typeDescriptions.network_history') },
         { type: 'chat', desc: t('retention.typeDescriptions.chat') },
-        { type: 'ansible_jobs', desc: t('retention.typeDescriptions.ansible_jobs') },
+
         { type: 'reports', desc: t('retention.typeDescriptions.reports') },
         { type: 'site_messages', desc: t('retention.typeDescriptions.site_messages') }
       ]

@@ -83,9 +83,7 @@ func CleanOldDataDAO(dataType string, days int) (int64, error) {
 	case "chat":
 		res := database.DB.Unscoped().Where("created_at < ?", cutoff).Delete(&model.Chat{})
 		result = res.RowsAffected
-	case "ansible_jobs":
-		res := database.DB.Unscoped().Where("created_at < ?", cutoff).Delete(&model.AnsibleJob{})
-		result = res.RowsAffected
+
 	case "reports":
 		res := database.DB.Unscoped().Where("created_at < ?", cutoff).Delete(&model.Report{})
 		result = res.RowsAffected

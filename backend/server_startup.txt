@@ -248,3 +248,407 @@
 2026/02/28 11:09:09 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
 2026/02/28 11:09:19 [QQ-WS] Attempting positive connection to ws://localhost:3001
 2026/02/28 11:09:19 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:09:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:09:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:09:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:09:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:09:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:09:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:09:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:09:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:09:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:09:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:09:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:09:29 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:09:29 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:09:39 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:09:39 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:09:49 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:09:49 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:09:59 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:00 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:10:10 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:10 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:10:20 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:20 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:10:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:10:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:10:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:10:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:10:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:10:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:10:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:10:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:10:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:10:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:10:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:10:30 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:30 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:10:40 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:40 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:10:50 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:10:50 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:11:00 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:00 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:11:10 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:10 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:11:20 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:20 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:11:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:11:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:11:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:11:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:11:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:11:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:11:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:11:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:11:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:11:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:11:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:11:30 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:30 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:11:40 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:40 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:11:50 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:11:50 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:12:00 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:00 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:12:10 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:10 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:12:20 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:20 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:12:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:12:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:12:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:12:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:12:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:12:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:12:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:12:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:12:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:12:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:12:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:12:30 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:30 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:12:40 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:40 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:12:50 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:12:50 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:13:00 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:00 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:13:10 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:10 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:13:20 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:20 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:13:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:13:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:13:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:13:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:13:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:13:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:13:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:13:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:13:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:13:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:13:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:13:30 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:30 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:13:40 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:40 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:13:50 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:13:50 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:14:00 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:00 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:14:10 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:10 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:14:20 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:20 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:14:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:14:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:14:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:14:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:14:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:14:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:14:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:14:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:14:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:14:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:14:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:14:30 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:14:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:14:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:14:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:15:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:15:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:15:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:15:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:15:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:15:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:15:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:15:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:15:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:15:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:15:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:15:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:15:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:15:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:15:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:15:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:15:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:15:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:16:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:16:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:16:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:16:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:16:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:16:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:16:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:16:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:16:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:16:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:16:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:16:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:16:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:16:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:16:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:16:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:16:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:16:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:17:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:17:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:17:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:17:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:17:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:17:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:17:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:17:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:17:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:17:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:17:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:17:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:17:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:17:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:17:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:17:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:17:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:17:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:18:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:18:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:18:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:18:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:18:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:18:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:18:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:18:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:18:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:18:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:18:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:18:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:18:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:18:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:18:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:18:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:18:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:18:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:19:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:19:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:19:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:19:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:19:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:19:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:19:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:19:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:19:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:19:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:19:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:19:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:19:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:19:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:19:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:31 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:19:41 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:41 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:19:51 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:19:51 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:20:01 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:01 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:20:11 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:11 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:20:21 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:21 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:20:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:20:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:20:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:20:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:20:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:20:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:20:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:20:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:20:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:20:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:20:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:20:31 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:20:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:20:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:20:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:21:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:21:12 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:12 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:21:22 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:22 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:21:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:21:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:21:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:21:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:21:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:21:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:21:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:21:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:21:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:21:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:21:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:21:32 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:21:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:21:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:21:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:22:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:22:12 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:12 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:22:22 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:22 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:22:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:22:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:22:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:22:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:22:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:22:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:22:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:22:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:22:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:22:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:22:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:22:32 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:22:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:22:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:22:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:23:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:23:12 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:12 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:23:22 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:22 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:23:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:23:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:23:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:23:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:23:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:23:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:23:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:23:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:23:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:23:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:23:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:23:32 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:23:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:23:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:23:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:24:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:24:12 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:12 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:24:22 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:22 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:24:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:24:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:24:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:24:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:24:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:24:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:24:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:24:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:24:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:24:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:24:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:24:32 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:24:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:24:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:24:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:25:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:25:12 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:12 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:25:22 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:22 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+>>> AutoSync: Pulling data from monitors...
+2026/02/28 11:25:29 [system] [1] auto sync started: pulling data from all monitors 
+2026/02/28 11:25:29 [system] [1] auto sync processing monitors {"concurrency":2,"count":1}
+2026/02/28 11:25:29 [system] [1] auto sync syncing monitor {"monitor_id":1,"name":"Nagare Internal"}
+2026/02/28 11:25:29 [service] [1] host sync started {"monitor_id":1}
+2026/02/28 11:25:29 [service] [2] monitor returned zero hosts {"monitor_id":1,"monitor_name":"Nagare Internal","monitor_type":1,"monitor_url":"localhost","monitor_user":""}
+2026/02/28 11:25:29 [service] [1] host sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:25:29 [service] [1] Sync hosts Finished: sync hosts: total=0 added=0 updated=0 failed=0 {"entity":"hosts","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:25:29 [service] [1] item sync started {"monitor_id":1}
+2026/02/28 11:25:29 [service] [1] item sync finished {"added":0,"monitor_id":1,"updated":0}
+2026/02/28 11:25:29 [service] [1] Sync items Finished: sync items: total=0 added=0 updated=0 failed=0 {"entity":"items","host_id":0,"monitor_id":1,"result":{"added":0,"updated":0,"failed":0,"total":0}}
+2026/02/28 11:25:29 [system] [1] auto sync finished: all monitors processed 
+2026/02/28 11:25:32 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:32 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:25:42 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:42 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:25:52 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:25:52 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...
+2026/02/28 11:26:02 [QQ-WS] Attempting positive connection to ws://localhost:3001
+2026/02/28 11:26:02 [QQ-WS] Positive connection failed: failed to dial positive websocket: dial tcp [::1]:3001: connectex: No connection could be made because the target machine actively refused it., retrying in 10s...

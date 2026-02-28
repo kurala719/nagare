@@ -1,4 +1,4 @@
-import { createRouter,createWebHashHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import { ElMessageBox } from 'element-plus'
 import i18n from '../i18n'
 import { getToken, getUserPrivileges } from '@/utils/auth'
@@ -222,43 +222,26 @@ const routes = [
     component: () => import('@/views/Reports.vue'),
     meta: { requiresAuth: true, minPrivilege: 2 }
   },
-  {
-    path: '/ansible/playbooks',
-    name: 'AnsiblePlaybooks',
-    component: () => import('@/views/AnsiblePlaybook.vue'),
-    meta: { requiresAuth: true, minPrivilege: 2 }
-  },
-  {
-    path: '/ansible/jobs',
-    name: 'AnsibleJobs',
-    component: () => import('@/views/AnsibleJob.vue'),
-    meta: { requiresAuth: true, minPrivilege: 2 }
-  },
-  {
-    path: '/ansible/jobs/:id',
-    name: 'AnsibleJobDetail',
-    component: () => import('@/views/AnsibleJob.vue'),
-    meta: { requiresAuth: true, minPrivilege: 2 }
-  },
+
   {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard'
   },
   {
     path: '/',
-    redirect:'/dashboard'
+    redirect: '/dashboard'
   }
 ]
 
 const router = createRouter({
-  history:createWebHashHistory(),
+  history: createWebHashHistory(),
   routes
 })
 
 router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.meta?.requiresAuth
   const token = getToken()
-  
+
   console.log(`Routing to: ${to.path}, RequiresAuth: ${requiresAuth}, HasToken: ${!!token}`)
 
   if (!requiresAuth) {

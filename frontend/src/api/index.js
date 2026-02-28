@@ -12,7 +12,7 @@ import * as actions from './actions';
 import * as media from './media';
 import * as providers from './providers';
 import * as reports from './reports';
-import * as ansible from './ansible';
+
 import * as siteMessages from './siteMessage';
 import * as knowledgeBase from './knowledgeBase';
 import * as retention from './retention';
@@ -33,7 +33,7 @@ export default {
   media,
   providers,
   reports,
-  ansible,
+
   siteMessages,
   knowledgeBase,
   retention,

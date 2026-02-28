@@ -69,8 +69,7 @@ func InitDBTables() error {
 		&model.ReportConfig{},
 		&model.KnowledgeBase{},
 		&model.SiteMessage{},
-		&model.AnsiblePlaybook{},
-		&model.AnsibleJob{},
+
 		&model.RetentionPolicy{},
 		&model.PacketAnalysis{},
 	); err != nil {

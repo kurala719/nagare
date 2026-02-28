@@ -370,27 +370,6 @@ type KnowledgeBase struct {
 	Category string `gorm:"size:50;index" json:"category"`
 }
 
-// AnsiblePlaybook stores YAML content for Ansible operations
-type AnsiblePlaybook struct {
-	gorm.Model
-	Name        string `gorm:"size:255" json:"name"`
-	Description string `gorm:"type:text" json:"description"`
-	Content     string `gorm:"type:text" json:"content"` // YAML content
-	Tags        string `gorm:"size:255" json:"tags"`     // Comma-separated tags
-}
-
-// AnsibleJob tracks execution of playbooks
-type AnsibleJob struct {
-	gorm.Model
-	PlaybookID  uint            `json:"playbook_id"`
-	Playbook    AnsiblePlaybook `gorm:"foreignKey:PlaybookID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Status      string          `gorm:"size:50" json:"status"` // "pending", "running", "success", "failed"
-	Output      string          `gorm:"type:longtext" json:"output"`
-	TriggeredBy *uint           `gorm:"index" json:"triggered_by"`
-	User        *User           `gorm:"foreignKey:TriggeredBy;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	HostFilter  string          `gorm:"size:255" json:"host_filter"` // Specific host or group filter
-}
-
 // ReportConfig stores configuration for automated report generation
 type ReportConfig struct {
 	gorm.Model

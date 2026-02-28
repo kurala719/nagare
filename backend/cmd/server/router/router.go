@@ -129,7 +129,7 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupQQWhitelistRoutes(rg)
 	setupReportRoutes(rg)
 	setupSiteMessageRoutes(rg)
-	setupAnsibleRoutes(rg)
+
 	setupRetentionRoutes(rg)
 	setupPacketAnalysisRoutes(rg)
 }
