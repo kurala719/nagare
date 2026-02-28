@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchTriggerData(params) {
   return request({
-    url: '/monitor/triggers',
+    url: '/alert/triggers',
     method: 'get',
     params: {
       limit: 100,
@@ -14,7 +14,7 @@ export function fetchTriggerData(params) {
 
 export function addTrigger(data) {
   return request({
-    url: '/monitor/triggers',
+    url: '/alert/triggers',
     method: 'post',
     data
   })
@@ -22,7 +22,7 @@ export function addTrigger(data) {
 
 export function updateTrigger(id, data) {
   return request({
-    url: `/monitor/triggers/${id}`,
+    url: `/alert/triggers/${id}`,
     method: 'put',
     data
   })
@@ -30,7 +30,7 @@ export function updateTrigger(id, data) {
 
 export function deleteTrigger(id) {
   return request({
-    url: `/monitor/triggers/${id}`,
+    url: `/alert/triggers/${id}`,
     method: 'delete'
   })
 }

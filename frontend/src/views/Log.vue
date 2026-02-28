@@ -43,10 +43,6 @@
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" class="logs-tabs">
-      <el-tab-pane :label="$t('logs.serviceTitle')" name="service" />
-      <el-tab-pane v-if="canViewSystem" :label="$t('logs.systemTitle')" name="system" />
-    </el-tabs>
 
     <div v-if="loading && logs.length === 0" class="loading-state">
       <el-icon class="is-loading" size="50" color="#409EFF"><Loading /></el-icon>
@@ -155,7 +151,7 @@
 import { defineComponent, markRaw } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, Refresh, Download, Delete, View } from '@element-plus/icons-vue'
-import { fetchSystemLogs, fetchServiceLogs } from '@/api/logs'
+import { fetchSystemLogs } from '@/api/logs'
 import { getUserPrivileges } from '@/utils/auth'
 import request from '@/utils/request'
 
@@ -173,7 +169,6 @@ export default defineComponent({
       error: null,
       search: '',
       severityFilter: 'all',
-      activeTab: 'service',
       pageSize: 50,
       currentPage: 1,
       totalLogs: 0,
@@ -198,10 +193,6 @@ export default defineComponent({
     }
   },
   watch: {
-    activeTab() {
-      this.currentPage = 1
-      this.loadLogs(true)
-    },
     search() {
       this.debouncedSearch()
     },
@@ -218,9 +209,6 @@ export default defineComponent({
     },
   },
   created() {
-    if (!this.canViewSystem) {
-      this.activeTab = 'service'
-    }
     this.loadLogs(true)
   },
   beforeUnmount() {
@@ -260,9 +248,7 @@ export default defineComponent({
           order: this.sortOrder,
           with_total: 1,
         }
-        const response = this.activeTab === 'system'
-          ? await fetchSystemLogs(params)
-          : await fetchServiceLogs(params)
+        const response = await fetchSystemLogs(params)
         
         const data = Array.isArray(response)
           ? response
@@ -374,7 +360,7 @@ export default defineComponent({
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      link.setAttribute('download', `nagare_logs_${this.activeTab}_${new Date().toISOString()}.csv`)
+      link.setAttribute('download', `nagare_logs_system_${new Date().toISOString()}.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
@@ -389,7 +375,7 @@ export default defineComponent({
         )
         
         await request({
-          url: `/system/logs/${this.activeTab}`,
+          url: `/system/logs/system`,
           method: 'DELETE'
         })
         

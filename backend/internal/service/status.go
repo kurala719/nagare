@@ -12,7 +12,7 @@ func determineMonitorStatus(m model.Monitor) int {
 		return 0
 	}
 	// Explicit error description overrides optimistic status
-	if m.StatusDescription != "" && m.StatusDescription != "Nagare Internal Monitoring Service (Active)" {
+	if m.StatusDescription != "" {
 		return 2
 	}
 	// SNMP monitors are active if enabled, as polling is per-host
@@ -74,7 +74,7 @@ func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
 	// This ensures that Nagare's internal polling failures (like auth or timeout)
 	// are not overridden by stale 'available' data from Zabbix.
 	// We exclude generic "host is not active" to allow recovery during sync.
-	if h.StatusDescription != "" && h.StatusDescription != "Nagare Internal Monitoring Service (Active)" && h.StatusDescription != "host is not active" {
+	if h.StatusDescription != "" && h.StatusDescription != "host is not active" {
 		return 2
 	}
 

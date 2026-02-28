@@ -137,28 +137,26 @@
           <div class="monitor-card-body">
             <p class="monitor-desc">{{ monitor.description || $t('monitors.noDescription') }}</p>
             <div class="monitor-status-row">
-              <el-tag :type="(monitor.id === 1 || monitor.enabled === 1) ? 'success' : 'info'" size="small">
-                {{ (monitor.id === 1 || monitor.enabled === 1) ? $t('common.enabled') : $t('common.disabled') }}
+              <el-tag :type="monitor.enabled === 1 ? 'success' : 'info'" size="small">
+                {{ monitor.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
               </el-tag>
-              <el-tooltip :content="monitor.id === 1 ? $t('common.reasonActive') : (monitor.status_reason || getStatusInfo(monitor.status).reason)" placement="top">
-                <el-tag :type="monitor.id === 1 ? 'success' : getStatusInfo(monitor.status).type" size="small" effect="dark">
-                  {{ monitor.id === 1 ? $t('common.statusActive') : getStatusInfo(monitor.status).label }}
+              <el-tooltip :content="monitor.status_reason || getStatusInfo(monitor.status).reason" placement="top">
+                <el-tag :type="getStatusInfo(monitor.status).type" size="small" effect="dark">
+                  {{ getStatusInfo(monitor.status).label }}
                 </el-tag>
               </el-tooltip>
             </div>
             <div style="margin-top: 12px">
               <span style="font-size: 12px; color: var(--text-muted)">Health</span>
-              <el-progress :percentage="monitor.id === 1 ? 100 : monitor.health_score" :status="getHealthStatus(monitor.id === 1 ? 100 : monitor.health_score)" :stroke-width="4" />
+              <el-progress :percentage="monitor.health_score" :status="getHealthStatus(monitor.health_score)" :stroke-width="4" />
             </div>
           </div>
 
           <div class="monitor-card-footer">
             <el-button-group>
-              <el-tooltip :content="$t('monitors.properties')" placement="bottom">
-                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" :disabled="monitor.id === 1" />
-              </el-tooltip>
+                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
               <el-tooltip v-if="monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
-                <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" :disabled="monitor.id === 1" />
+                <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
               </el-tooltip>
               <el-tooltip :content="$t('monitors.delete')" placement="bottom">
                 <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" :disabled="monitor.id === 1" />

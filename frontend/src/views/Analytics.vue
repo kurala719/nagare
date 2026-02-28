@@ -150,7 +150,7 @@ const summaryStats = computed(() => [
 
 const fetchAnalytics = async () => {
   try {
-    const res = await axios.get('/api/v1/analytics/alerts')
+    const res = await axios.get('/api/v1/analysis/analytics/alerts')
     if (res.success) {
       analyticsData.value = res.data
       updateCharts(res.data)
@@ -342,7 +342,7 @@ const initCharts = () => {
 const triggerChaosStorm = async () => {
   chaosLoading.value = true
   try {
-    const res = await axios.post('/api/v1/chaos/alert-storm')
+    const res = await axios.post('/api/v1/analysis/chaos/alert-storm')
     if (res.success) {
       ElMessage.success('Alert storm triggered! Check the dashboard or alert list.')
     }

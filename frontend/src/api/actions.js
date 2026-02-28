@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchActionData(params) {
   return request({
-    url: '/monitor/actions',
+    url: '/delivery/actions',
     method: 'get',
     params: {
       limit: 100,
@@ -14,7 +14,7 @@ export function fetchActionData(params) {
 
 export function addAction(data) {
   return request({
-    url: '/monitor/actions',
+    url: '/delivery/actions',
     method: 'post',
     data
   })
@@ -22,7 +22,7 @@ export function addAction(data) {
 
 export function updateAction(id, data) {
   return request({
-    url: `/monitor/actions/${id}`,
+    url: `/delivery/actions/${id}`,
     method: 'put',
     data
   })
@@ -30,14 +30,14 @@ export function updateAction(id, data) {
 
 export function deleteAction(id) {
   return request({
-    url: `/monitor/actions/${id}`,
+    url: `/delivery/actions/${id}`,
     method: 'delete'
   })
 }
 
 export function getActionById(id) {
   return request({
-    url: `/monitor/actions/${id}`,
+    url: `/delivery/actions/${id}`,
     method: 'get'
   })
 }

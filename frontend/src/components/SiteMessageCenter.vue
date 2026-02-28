@@ -164,7 +164,7 @@ const connectWebSocket = () => {
 
   // Use the same host as the frontend to let Vite proxy handle the WebSocket connection
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const url = `${protocol}//${window.location.host}/api/v1/site-messages/ws?token=${token}`
+  const url = `${protocol}//${window.location.host}/api/v1/delivery/site-messages/ws?token=${token}`
 
   
   ws = new WebSocket(url)

@@ -2,21 +2,21 @@ import request from '@/utils/request'
 
 export function fetchSystemStatus() {
   return request({
-    url: '/sys/system/status',
+    url: '/system/status',
     method: 'get'
   })
 }
 
 export function fetchHealthScore() {
   return request({
-    url: '/sys/system/health',
+    url: '/system/health',
     method: 'get'
   })
 }
 
 export function fetchNetworkStatusHistory(params) {
   return request({
-    url: '/sys/system/health/history',
+    url: '/system/health/history',
     method: 'get',
     params
   })
@@ -24,7 +24,7 @@ export function fetchNetworkStatusHistory(params) {
 
 export function fetchNetworkMetrics(params) {
   return request({
-    url: '/sys/system/metrics',
+    url: '/system/metrics',
     method: 'get',
     params
   })

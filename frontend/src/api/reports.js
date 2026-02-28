@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchReports(params) {
   return request({
-    url: '/analytics/reports',
+    url: '/analysis/reports',
     method: 'get',
     params
   })
@@ -10,42 +10,42 @@ export function fetchReports(params) {
 
 export function getReport(id) {
   return request({
-    url: `/analytics/reports/${id}`,
+    url: `/analysis/reports/${id}`,
     method: 'get'
   })
 }
 
 export function fetchReportContent(id) {
   return request({
-    url: `/analytics/reports/${id}/content`,
+    url: `/analysis/reports/${id}/content`,
     method: 'get'
   })
 }
 
 export function generateDailyReport() {
   return request({
-    url: '/analytics/reports/generate/daily',
+    url: '/analysis/reports/generate/daily',
     method: 'post'
   })
 }
 
 export function generateWeeklyReport() {
   return request({
-    url: '/analytics/reports/generate/weekly',
+    url: '/analysis/reports/generate/weekly',
     method: 'post'
   })
 }
 
 export function generateMonthlyReport() {
   return request({
-    url: '/analytics/reports/generate/monthly',
+    url: '/analysis/reports/generate/monthly',
     method: 'post'
   })
 }
 
 export function generateCustomReport(data) {
   return request({
-    url: '/analytics/reports/generate/custom',
+    url: '/analysis/reports/generate/custom',
     method: 'post',
     data
   })
@@ -53,7 +53,7 @@ export function generateCustomReport(data) {
 
 export function deleteReport(id) {
   return request({
-    url: `/analytics/reports/${id}`,
+    url: `/analysis/reports/${id}`,
     method: 'delete'
   })
 }
@@ -64,7 +64,7 @@ export function bulkDeleteReports(ids) {
 
 export function downloadReport(id) {
   return request({
-    url: `/analytics/reports/${id}/download`,
+    url: `/analysis/reports/${id}/download`,
     method: 'get',
     responseType: 'blob'
   })
@@ -72,14 +72,14 @@ export function downloadReport(id) {
 
 export function getReportConfig() {
   return request({
-    url: '/analytics/reports/config',
+    url: '/analysis/reports/config',
     method: 'get'
   })
 }
 
 export function updateReportConfig(data) {
   return request({
-    url: '/analytics/reports/config',
+    url: '/analysis/reports/config',
     method: 'put',
     data
   })

@@ -2,14 +2,14 @@ import request from '@/utils/request'
 
 export function fetchRetentionPolicies() {
   return request({
-    url: '/sys/retention/policies',
+    url: '/system/retention/policies',
     method: 'get'
   })
 }
 
 export function updateRetentionPolicy(data) {
   return request({
-    url: '/sys/retention/policies',
+    url: '/system/retention/policies',
     method: 'post',
     data
   })
@@ -17,7 +17,7 @@ export function updateRetentionPolicy(data) {
 
 export function performRetentionCleanup() {
   return request({
-    url: '/sys/retention/cleanup',
+    url: '/system/retention/cleanup',
     method: 'post'
   })
 }

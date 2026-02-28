@@ -205,18 +205,18 @@ func UpdateMonitorServ(id int, m MonitorReq) error {
 	}
 
 	updated := model.Monitor{
-		Name:        m.Name,
-		URL:         m.URL,
-		Username:    m.Username,
-		Password:    m.Password,
-		AuthToken:   m.AuthToken,
-		EventToken:  eventToken,
-		Description: m.Description,
-		Type:        monitorType,
-		Enabled:     m.Enabled,
-		Status:      existing.Status,
+		Name:              m.Name,
+		URL:               m.URL,
+		Username:          m.Username,
+		Password:          m.Password,
+		AuthToken:         m.AuthToken,
+		EventToken:        eventToken,
+		Description:       m.Description,
+		Type:              monitorType,
+		Enabled:           m.Enabled,
+		Status:            existing.Status,
 		StatusDescription: existing.StatusDesc,
-		HealthScore: existing.HealthScore,
+		HealthScore:       existing.HealthScore,
 	}
 	if err := repository.UpdateMonitorDAO(id, updated); err != nil {
 		return err
@@ -328,12 +328,5 @@ func monitorToResp(m model.Monitor) MonitorResp {
 		HealthScore: m.HealthScore,
 	}
 
-	// Nagare Internal (ID 1) is always active
-	if resp.ID == 1 {
-		resp.Enabled = 1
-		resp.Status = 1
-		resp.StatusDesc = "Nagare Internal Monitoring Service (Active)"
-		resp.HealthScore = 100
-	}
 	return resp
 }

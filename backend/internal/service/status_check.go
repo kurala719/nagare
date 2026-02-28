@@ -59,7 +59,7 @@ func StartStatusChecks() {
 			_ = CheckAllProvidersStatusServ()
 		}
 		_ = CheckAllGroupsStatusServ()
-		
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -119,13 +119,6 @@ func CheckAllMonitorsStatusServ() []StatusCheckResult {
 
 func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 	result := StatusCheckResult{ID: monitor.ID, Name: monitor.Name, Status: monitor.Status}
-	
-	// Nagare Internal (ID 1) is always active
-	if monitor.ID == 1 {
-		_ = repository.UpdateMonitorStatusAndDescriptionDAO(monitor.ID, 1, "")
-		result.Status = 1
-		return result
-	}
 
 	if monitor.Enabled == 0 {
 		_ = repository.UpdateMonitorStatusAndDescriptionDAO(monitor.ID, 0, "")

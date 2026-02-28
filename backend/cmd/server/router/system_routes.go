@@ -1,17 +1,17 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"nagare/internal/api"
 	"nagare/internal/mcp"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupSystemRoutes(rg *gin.RouterGroup) {
-	system := rg.Group("/system")
-	system.GET("/health", api.GetHealthScoreCtrl)
-	system.GET("/health/history", api.GetNetworkStatusHistoryCtrl)
-	system.GET("/metrics", api.GetNetworkMetricsCtrl)
-	system.GET("/status", api.GetSystemStatusCtrl)
+	rg.GET("/health", api.GetHealthScoreCtrl)
+	rg.GET("/health/history", api.GetNetworkStatusHistoryCtrl)
+	rg.GET("/metrics", api.GetNetworkMetricsCtrl)
+	rg.GET("/status", api.GetSystemStatusCtrl)
 }
 
 func setupConfigurationRoutes(rg *gin.RouterGroup) {
@@ -28,7 +28,6 @@ func setupLogRoutes(rg *gin.RouterGroup) {
 	// Routes with privilege level 2
 	logs := rg.Group("/logs", api.PrivilegesMiddleware(2))
 	logs.GET("/system", api.GetSystemLogsCtrl)
-	logs.GET("/service", api.GetServiceLogsCtrl)
 
 	// Admin clear logs - privilege level 3
 	logsAdmin := rg.Group("/logs", api.PrivilegesMiddleware(3))

@@ -858,6 +858,7 @@ const messages = {
       communication: 'Communication Channels',
       media: 'Notification Targets',
       provider: 'AI & Services',
+      providers: 'AI Providers',
       system: 'Platform Settings',
       user: 'Identity Management',
       registerApplication: 'On-boarding Requests',
@@ -865,7 +866,13 @@ const messages = {
       auditLog: 'Audit Logs',
       configuration: 'System Config',
       profile: 'User Profile',
-      about: 'About'
+      about: 'About',
+      maintenance: 'Maintenance',
+      delivery: 'Delivery',
+      users: 'Users',
+      insights: 'Insight',
+      alerting: 'Incident Response',
+      observability: 'Observability'
     },
     media: {
       title: 'Media',
@@ -2192,6 +2199,7 @@ const messages = {
       communication: '通知渠道',
       media: '通知对象',
       provider: 'AI 与服务',
+      providers: '服务商管理',
       system: '平台设置',
       user: '身份管理',
       registerApplication: '入驻申请',
@@ -2199,7 +2207,14 @@ const messages = {
       auditLog: '审计日志',
       configuration: '系统配置',
       profile: '个人资料',
-      about: '关于'
+      about: '关于',
+      maintenance: '运维服务',
+      delivery: '交付分发',
+      users: '用户管理',
+      insights: '洞察分析',
+      alerting: '事件响应',
+      observability: '可观测性',
+      system: '平台设置'
     },
     media: {
       title: '媒介',

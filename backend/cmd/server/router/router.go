@@ -64,9 +64,7 @@ func InitRouter() {
 	// Setup all routes
 	apiGroup := r.Group("/api/v1")
 	apiGroup.Use(api.AuditLogMiddleware())
-	apiGroup.POST("/snmp-poll-direct/:id", api.TestSNMPCtrl)
 	setupAllRoutes(apiGroup)
-	setupMcpRoutes(apiGroup)
 
 	// Start WebSocket Hub
 	go service.GlobalHub.Run()
@@ -104,51 +102,57 @@ func InitRouter() {
 }
 
 func setupAllRoutes(rg *gin.RouterGroup) {
-	// --- AUTH & USER GROUP ---
-	authGroup := rg.Group("/auth")
-	setupPublicRoutes(authGroup)
+	// --- 1. ALERT GROUP ---
+	alertGroup := rg.Group("/alert")
+	setupAlarmRoutes(alertGroup)
+	setupAlertRoutes(alertGroup)
+	setupTriggerRoutes(alertGroup)
 
-	userGroup := rg.Group("/user")
-	setupUserRoutes(userGroup)
-	setupUserInformationRoutes(userGroup)
+	// --- 2. MONITORING GROUP ---
+	monitoringGroup := rg.Group("/monitoring")
+	setupMonitorRoutes(monitoringGroup)
+	setupGroupRoutes(monitoringGroup)
+	setupHostRoutes(monitoringGroup)
+	setupItemRoutes(monitoringGroup)
+	monitoringGroup.POST("/snmp-poll-direct/:id", api.TestSNMPCtrl)
 
-	// --- INFRASTRUCTURE GROUP ---
-	infraGroup := rg.Group("/infra")
-	setupGroupRoutes(infraGroup)
-	setupHostRoutes(infraGroup)
+	// --- 3. MAINTENANCE GROUP ---
+	maintenanceGroup := rg.Group("/maintenance")
+	maintenanceGroup.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	setupIMRoutes(maintenanceGroup)
 
-	// --- MONITORING GROUP ---
-	monitorGroup := rg.Group("/monitor")
-	setupMonitorRoutes(monitorGroup)
-	setupAlarmRoutes(monitorGroup)
-	setupItemRoutes(monitorGroup)
-	setupAlertRoutes(monitorGroup)
-	setupTriggerRoutes(monitorGroup)
-	setupActionRoutes(monitorGroup)
+	// --- 4. SYSTEM GROUP ---
+	systemGroup := rg.Group("/system")
+	setupLogRoutes(systemGroup)
+	setupAuditLogRoutes(systemGroup)
+	setupRetentionRoutes(systemGroup)
+	setupConfigurationRoutes(systemGroup)
+	setupSystemRoutes(systemGroup)
+	setupMcpRoutes(systemGroup)
 
-	// --- SYSTEM & CONFIG GROUP ---
-	sysGroup := rg.Group("/sys")
-	setupConfigurationRoutes(sysGroup)
-	setupSystemRoutes(sysGroup)
-	setupLogRoutes(sysGroup)
-	setupAuditLogRoutes(sysGroup)
-	setupMediaRoutes(sysGroup)
-	setupProviderRoutes(sysGroup)
-	setupRetentionRoutes(sysGroup)
-	setupSiteMessageRoutes(sysGroup)
+	// --- 5. DELIVERY GROUP ---
+	deliveryGroup := rg.Group("/delivery")
+	setupActionRoutes(deliveryGroup)
+	setupMediaRoutes(deliveryGroup)
+	setupSiteMessageRoutes(deliveryGroup)
+	setupQQWhitelistRoutes(deliveryGroup)
 
-	// --- TOOLING & OPERATIONS GROUP ---
-	toolGroup := rg.Group("/tooling")
-	setupIMRoutes(toolGroup)
-	setupChaosRoutes(toolGroup)
-	setupPacketAnalysisRoutes(toolGroup)
-	setupKnowledgeBaseRoutes(toolGroup)
+	// --- 6. ANALYSIS GROUP ---
+	analysisGroup := rg.Group("/analysis")
+	setupAnalyticsRoutes(analysisGroup)
+	setupReportRoutes(analysisGroup)
+	setupPacketAnalysisRoutes(analysisGroup)
+	setupChaosRoutes(analysisGroup)
 
-	// --- ANALYTICS & DASHBOARD GROUP ---
-	analyticsGroup := rg.Group("/analytics")
-	setupAnalyticsRoutes(analyticsGroup)
-	setupReportRoutes(analyticsGroup)
+	// --- 7. USERS GROUP ---
+	usersGroup := rg.Group("/users")
+	setupUserRoutes(usersGroup)
+	setupUserInformationRoutes(usersGroup)
+	setupPublicRoutes(usersGroup)
 
-	// Uncategorized
-	setupQQWhitelistRoutes(rg)
+	// --- 8. AI SERVICE GROUP ---
+	aiServiceGroup := rg.Group("/ai")
+	setupProviderRoutes(aiServiceGroup)
+	setupKnowledgeBaseRoutes(aiServiceGroup)
+	setupChatRoutes(aiServiceGroup)
 }
