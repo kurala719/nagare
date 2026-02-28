@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"nagare/internal/database"
-	"nagare/internal/model"
 	"nagare/internal/service"
 )
 
@@ -17,12 +16,7 @@ func main() {
 
 	err = database.InitDBFromConfig()
 	if err != nil {
-		log.Fatalf("InitDB error: %v", err)
+		log.Fatalf("DB connection error: %v", err)
 	}
-
-	var items []model.Item
-	database.DB.Limit(20).Find(&items)
-	for _, it := range items {
-		fmt.Printf("Item ID: %d, HID: %d, Name: %s\n", it.ID, it.HID, it.Name)
-	}
+	fmt.Println("DB connection successful!")
 }

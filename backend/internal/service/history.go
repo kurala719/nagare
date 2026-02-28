@@ -23,6 +23,8 @@ type HostHistoryResp struct {
 	HostID            uint      `json:"host_id"`
 	Status            int       `json:"status"`
 	StatusDescription string    `json:"status_description"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
 	IPAddr            string    `json:"ip_addr"`
 	SampledAt         time.Time `json:"sampled_at"`
 }
@@ -74,6 +76,8 @@ func GetHostHistoryServ(hostID uint, from, to *time.Time, limit int) ([]HostHist
 			HostID:            row.HostID,
 			Status:            row.Status,
 			StatusDescription: row.StatusDescription,
+			ItemTotal:         row.ItemTotal,
+			ItemActive:        row.ItemActive,
 			IPAddr:            row.IPAddr,
 			SampledAt:         row.SampledAt,
 		})
@@ -124,13 +128,30 @@ func recordHostHistory(host model.Host, sampledAt time.Time) {
 	if sampledAt.IsZero() {
 		sampledAt = time.Now().UTC()
 	}
-	_ = repository.AddHostHistoryDAO(model.HostHistory{
+
+	totalCount := 0
+	activeCount := 0
+	items, err := repository.GetItemsByHIDDAO(host.ID)
+	if err != nil {
+		fmt.Printf("[ERROR] recordHostHistory: GetItemsByHIDDAO failed for HostID=%d: %v\n", host.ID, err)
+	} else {
+		totalCount = len(items)
+		for _, it := range items {
+			if it.Status == 1 { // Assuming 1 is Active
+				activeCount++
+			}
+		}
+	}
+	h := model.HostHistory{
 		HostID:            host.ID,
 		Status:            host.Status,
 		StatusDescription: host.StatusDescription,
+		ItemTotal:         totalCount,
+		ItemActive:        activeCount,
 		IPAddr:            host.IPAddr,
 		SampledAt:         sampledAt,
-	})
+	}
+	_ = repository.AddHostHistoryDAO(h)
 }
 
 func recordNetworkStatusSnapshot(sampledAt time.Time) {

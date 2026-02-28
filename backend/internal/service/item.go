@@ -526,6 +526,7 @@ func PullItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 }
 
 func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error) {
+	fmt.Printf("[DEBUG] pullItemsFromHostServ: Starting sync for MID=%d, HID=%d\n", mid, hid)
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
 	setHostStatusSyncing(hid)
@@ -852,6 +853,10 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	// Update host LastSyncAt after successful poll
 	nowHost := time.Now().UTC()
 	_ = repository.UpdateHostLastSyncAtDAO(hid, &nowHost)
+
+	if refreshed, err := repository.GetHostByIDDAO(hid); err == nil {
+		recordHostHistory(refreshed, nowHost)
+	}
 
 	if host.GroupID > 0 {
 		_, _ = recomputeGroupStatus(host.GroupID)

@@ -147,12 +147,6 @@
               <div class="card-header">
                 <span>{{ $t('hosts.itemStatusChart') }}</span>
                 <div class="card-actions">
-                  <el-switch
-                    v-model="compareMode"
-                    size="small"
-                    :active-text="$t('common.comparePrevious')"
-                    style="margin-right: 8px;"
-                  />
                   <el-date-picker
                     v-model="historyRange"
                     type="datetimerange"
@@ -162,23 +156,25 @@
                     size="small"
                     class="range-picker"
                   />
-                  <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+                  <el-button size="small" type="primary" plain @click="handleSync" :loading="syncing">
+                    {{ $t('common.sync') || 'Sync' }}
+                  </el-button>
+                  <el-button size="small" @click="handleRefresh" :loading="loading">{{ $t('common.refresh') }}</el-button>
+                  <el-switch
+                    v-model="compareMode"
+                    :active-text="$t('hosts.compareTrends') || 'Compare'"
+                    size="small"
+                    class="compare-switch"
+                  />
                 </div>
               </div>
             </template>
-            <el-skeleton v-if="historyLoading" animated :rows="8" />
-            <el-alert
-              v-else-if="historyError"
-              :title="historyError"
-              type="error"
-              show-icon
-              :closable="false"
-              class="chart-alert"
-            />
-            <el-empty v-else-if="historyEmpty" :description="$t('common.noHistoryData')" />
-            <div v-show="!historyLoading && !historyError && !historyEmpty">
-              <div ref="statusChartRef" class="chart"></div>
-              <div class="status-legend">
+            <el-skeleton v-if="loading" animated :rows="8" />
+            <el-empty v-else-if="items.length === 0" :description="$t('common.noData')" />
+            <div v-else>
+              <div v-show="!compareMode" ref="statusChartRef" class="chart"></div>
+              <div v-show="compareMode" ref="itemTrendChartRef" class="chart"></div>
+              <div v-show="!compareMode" class="status-legend">
                 <span class="legend-title">{{ $t('hosts.statusLegendTitle') }}:</span>
                 <span class="legend-item">
                   <span class="legend-dot" style="background: #909399;"></span>
@@ -290,7 +286,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { fetchHostHistory, getHostById } from '@/api/hosts'
-import { fetchItemsByHost, fetchItemHistory } from '@/api/items'
+import { fetchItemsByHost, fetchItemHistory, pullItemsFromHost } from '@/api/items'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -300,17 +296,16 @@ const statusChartRef = ref(null)
 const cpuChartRef = ref(null)
 const memChartRef = ref(null)
 const netChartRef = ref(null)
+const itemTrendChartRef = ref(null)
+const compareMode = ref(false)
 const showColumnDialog = ref(false)
 const showImportantOnly = ref(true)
 const historyRange = ref([])
-const historyLoading = ref(false)
-const historyError = ref(null)
-const historyEmpty = ref(false)
-const compareMode = ref(false)
 const reportGenerating = ref(false)
 const reportSnapshot = ref(null)
 const reportCanvasRef = ref(null)
 const loading = ref(false)
+const syncing = ref(false)
 const error = ref(null)
 const geoInfo = ref(null)
 const geoLoading = ref(false)
@@ -366,6 +361,7 @@ let statusChart
 let cpuChart
 let memChart
 let netChart
+let itemTrendChart
 
 // Column configuration for items table
 const availableColumns = [
@@ -554,13 +550,26 @@ const loadMetricHistory = async () => {
   })
   const netItems = items.value.filter(i => {
     const n = i.name.toLowerCase()
-    // Match: Network, Ethernet, Interface, Traffic, Speed, Bytes/sec, etc.
+    // Match: Network, Ethernet, Interface, Traffic, Speed, Bytes/sec, Bits/sec, etc.
     // Exclude: uptime, status, interface type
     return (n.includes('traffic') || n.includes('bps') || n.includes('speed') || n.includes('bandwidth') || 
-            n.includes('byte') || (n.includes('network') && !n.includes('uptime')) || 
+            n.includes('byte') || n.includes('bits') || n.includes('interface') ||
+            (n.includes('network') && !n.includes('uptime')) || 
             (n.includes('eth') && !n.includes('interface type')) ||
             (n.includes('if') && n.includes('speed'))) && 
            !n.includes('uptime') && !n.includes('status') && !n.includes('interface type')
+  }).sort((a, b) => {
+    const na = a.name.toLowerCase()
+    const nb = b.name.toLowerCase()
+    const aIsTraffic = na.includes('traffic') || na.includes('byte') || na.includes('bit') || na.includes('bps')
+    const bIsTraffic = nb.includes('traffic') || nb.includes('byte') || nb.includes('bit') || nb.includes('bps')
+    if (aIsTraffic && !bIsTraffic) return -1
+    if (!aIsTraffic && bIsTraffic) return 1
+    const aIsIn = na.includes('receive') || na.includes('in')
+    const bIsIn = nb.includes('receive') || nb.includes('in')
+    if (aIsIn && !bIsIn) return -1
+    if (!aIsIn && bIsIn) return 1
+    return 0
   })
 
   console.log('[HostDetail] All items:', items.value)
@@ -618,161 +627,107 @@ const loadMetricHistory = async () => {
   ])
 }
 
-const buildStatusChart = (series, prevSeries = []) => {
+const buildStatusChart = () => {
   if (!statusChartRef.value) return
   if (!statusChart) {
     statusChart = echarts.init(statusChartRef.value)
   }
-  const chartSeries = [
-    {
-      name: t('common.currentPeriod'),
-      type: 'line',
-      step: 'end',
-      showSymbol: false,
-      data: series,
-      lineStyle: { width: 2 },
-    }
-  ]
-  if (prevSeries.length > 0) {
-    chartSeries.push({
-      name: t('common.previousPeriod'),
-      type: 'line',
-      step: 'end',
-      showSymbol: false,
-      data: prevSeries,
-      itemStyle: { color: '#909399' },
-      lineStyle: { type: 'dashed', width: 2 },
-    })
-  }
+
+  const totals = stats.value
+  const data = []
+  if (totals.active > 0) data.push({ value: totals.active, name: t('common.statusActive'), itemStyle: { color: '#67C23A' } })
+  if (totals.error > 0) data.push({ value: totals.error, name: t('common.statusError'), itemStyle: { color: '#F56C6C' } })
+  if (totals.syncing > 0) data.push({ value: totals.syncing, name: t('common.statusSyncing'), itemStyle: { color: '#E6A23C' } })
+  if (totals.inactive > 0) data.push({ value: totals.inactive, name: t('common.statusInactive'), itemStyle: { color: '#909399' } })
+
   statusChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    legend: { show: false },
+    series: [
+      {
+        name: t('hosts.itemStatusChart'),
+        type: 'pie',
+        radius: '70%',
+        center: ['50%', '50%'],
+        label: {
+          show: true,
+          formatter: '{b}: {c} ({d}%)'
+        },
+        data
+      }
+    ]
+  }, { notMerge: true })
+  
+  statusChart.resize()
+}
+
+const buildTrendChart = (history = []) => {
+  if (!itemTrendChartRef.value || history.length === 0) return
+  if (!itemTrendChart) {
+    itemTrendChart = echarts.init(itemTrendChartRef.value)
+  }
+
+  const activeData = history.map(h => [new Date(h.sampled_at || h.SampledAt).getTime(), h.item_active ?? h.ItemActive ?? 0])
+  const totalData = history.map(h => [new Date(h.sampled_at || h.SampledAt).getTime(), h.item_total ?? h.ItemTotal ?? 0])
+
+  itemTrendChart.setOption({
+    title: {
+      text: t('hosts.activeItemsTrend') || 'Active Items Trend',
+      left: 'center',
+      textStyle: { fontSize: 14, fontWeight: 'normal' }
+    },
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        let tip = ''
-        params.forEach((point) => {
-          const value = point.data?.[1]
-          const time = new Date(point.data?.[0])
-          const timeLabel = Number.isNaN(time.getTime()) ? '-' : time.toLocaleString()
-          tip += `<div style="margin-bottom:4px;"><strong>${point.seriesName}</strong><br/>${timeLabel}<br/>${t('items.status')}: ${statusLabel(value)}</div>`
+        const date = new Date(params[0].value[0])
+        let str = `${date.toLocaleString()}<br/>`
+        params.forEach(p => {
+          str += `${p.marker} ${p.seriesName}: ${p.value[1]}<br/>`
         })
-        return tip
+        return str
+      }
+    },
+    legend: { bottom: 0 },
+    grid: { top: 40, left: '3%', right: '4%', bottom: '15%', containLabel: true },
+    xAxis: { type: 'time', splitLine: { show: false } },
+    yAxis: { type: 'value', min: 0 },
+    series: [
+      {
+        name: t('hosts.activeItems') || 'Active',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        areaStyle: {
+          opacity: 0.1,
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#67c23a' },
+            { offset: 1, color: '#67c23a00' }
+          ])
+        },
+        itemStyle: { color: '#67c23a' },
+        data: activeData
       },
-    },
-    legend: {
-      show: prevSeries.length > 0,
-      data: prevSeries.length > 0 ? [t('common.currentPeriod'), t('common.previousPeriod')] : [],
-    },
-    visualMap: {
-      show: false,
-      dimension: 1,
-      pieces: [
-        { value: 0, color: '#909399' },  // Inactive - gray
-        { value: 1, color: '#67C23A' },  // Active - green
-        { value: 2, color: '#F56C6C' },  // Error - red
-        { value: 3, color: '#E6A23C' },  // Syncing - orange
-      ],
-      seriesIndex: 0,
-    },
-    grid: { left: 80, right: 20, top: prevSeries.length > 0 ? 40 : 20, bottom: 40 },
-    xAxis: { type: 'time' },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 3,
-      interval: 1,
-      axisLabel: {
-        formatter: (value) => statusLabel(value),
-      },
-    },
-    series: chartSeries
+      {
+        name: t('items.total') || 'Total',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        itemStyle: { color: '#409eff' },
+        lineStyle: { type: 'dashed', width: 1 },
+        data: totalData
+      }
+    ]
   }, { notMerge: true })
-}
-
-const loadHistory = async () => {
-  const hostId = Number(route.params.id)
-  if (!hostId) return
-  historyLoading.value = true
-  historyError.value = null
-  historyEmpty.value = false
-  try {
-    const [start, end] = resolveRangeWindow()
-    const from = Math.floor(start.getTime() / 1000)
-    const to = Math.floor(end.getTime() / 1000)
-    
-    // Fetch current period
-    const resp = await fetchHostHistory(hostId, {
-      from,
-      to,
-      limit: 500,
-    })
-    const payload = resp?.data || resp || []
-    let rows = Array.isArray(payload) ? payload : []
-    
-    if (rows.length === 0) {
-      const fallbackResp = await fetchHostHistory(hostId, { limit: 500 })
-      const fallbackPayload = fallbackResp?.data || fallbackResp || []
-      rows = Array.isArray(fallbackPayload) ? fallbackPayload : []
-      if (rows.length === 0) {
-        historyEmpty.value = true
-        buildStatusChart([], [])
-        return
-      }
-    }
-    
-    const series = []
-    rows.forEach((row) => {
-      const sampledAt = row.sampled_at || row.SampledAt
-      const status = row.status ?? row.Status
-      if (sampledAt === undefined || status === undefined) return
-      const time = new Date(sampledAt).getTime()
-      if (Number.isNaN(time)) return
-      series.push([time, Number(status)])
-    })
-    
-    // Fetch previous period if compare mode is enabled
-    let prevSeries = []
-    if (compareMode.value) {
-      const duration = end.getTime() - start.getTime()
-      const prevStart = new Date(start.getTime() - duration)
-      const prevEnd = new Date(start.getTime())
-      const prevFrom = Math.floor(prevStart.getTime() / 1000)
-      const prevTo = Math.floor(prevEnd.getTime() / 1000)
-      
-      try {
-        const prevResp = await fetchHostHistory(hostId, {
-          from: prevFrom,
-          to: prevTo,
-          limit: 500,
-        })
-        const prevPayload = prevResp?.data || prevResp || []
-        const prevRows = Array.isArray(prevPayload) ? prevPayload : []
-        
-        prevRows.forEach((row) => {
-          const sampledAt = row.sampled_at || row.SampledAt
-          const status = row.status ?? row.Status
-          if (sampledAt === undefined || status === undefined) return
-          const time = new Date(sampledAt).getTime()
-          if (Number.isNaN(time)) return
-          // Shift timestamps to align with current period
-          const shiftedTime = time + duration
-          prevSeries.push([shiftedTime, Number(status)])
-        })
-      } catch (err) {
-        console.warn('Failed to load previous period:', err)
-      }
-    }
-    
-    historyEmpty.value = series.length === 0
-    await nextTick()
-    buildStatusChart(series, prevSeries)
-  } catch (err) {
-    historyError.value = err?.message || t('common.historyLoadFailed')
-    await nextTick()
-    buildStatusChart([], [])
-  } finally {
-    historyLoading.value = false
+  
+  if (itemTrendChart) {
+    itemTrendChart.resize()
   }
 }
+
+const hostHistory = ref([])
 
 const setDefaultHistoryRange = () => {
   if (Array.isArray(historyRange.value) && historyRange.value.length === 2) return
@@ -797,10 +752,34 @@ const fetchGeoInfo = async (ip) => {
   }
 }
 
+const disposeCharts = () => {
+  if (statusChart) {
+    statusChart.dispose()
+    statusChart = null
+  }
+  if (cpuChart) {
+    cpuChart.dispose()
+    cpuChart = null
+  }
+  if (memChart) {
+    memChart.dispose()
+    memChart = null
+  }
+  if (netChart) {
+    netChart.dispose()
+    netChart = null
+  }
+  if (itemTrendChart) {
+    itemTrendChart.dispose()
+    itemTrendChart = null
+  }
+}
+
 const loadData = async () => {
   const hostId = Number(route.params.id)
   if (!hostId) return
   
+  disposeCharts()
   loading.value = true
   error.value = null
   
@@ -831,12 +810,22 @@ const loadData = async () => {
       status: i.status ?? i.Status ?? 0,
       status_reason: i.Reason || i.reason || i.Error || i.error || i.ErrorMessage || i.error_message || i.LastError || i.last_error || i.Comment || i.comment || '',
     }))
-    
     console.log('[HostDetail] Loaded items:', items.value)
-    
-    await Promise.allSettled([
-      loadHistory()
-    ])
+
+    const [start, end] = resolveRangeWindow()
+    const historyResp = await fetchHostHistory(hostId, {
+      from: Math.floor(start.getTime() / 1000),
+      to: Math.floor(end.getTime() / 1000),
+      limit: 500 // Increased limit to ensure we see the latest points
+    })
+    const historyData = Array.isArray(historyResp) ? historyResp : (historyResp.data || [])
+    hostHistory.value = historyData.map(h => ({
+      sampled_at: h.sampled_at || h.SampledAt,
+      item_active: h.item_active ?? h.ItemActive ?? 0,
+      item_total: h.item_total ?? h.ItemTotal ?? 0,
+      status: h.status ?? h.Status ?? 0
+    }))
+    console.log('[HostDetail] Loaded host history:', hostHistory.value)
   } catch (err) {
     console.error('Failed to load host detail data', err)
     error.value = err.message || 'Failed to load host data'
@@ -844,12 +833,41 @@ const loadData = async () => {
     loading.value = false
   }
   
-  // Wait for DOM to update after loading state changes
+  // Load charts after loading state is cleared and DOM is updated
   await nextTick()
+  buildStatusChart()
+  if (compareMode.value) {
+    buildTrendChart(hostHistory.value)
+  }
   
-  // Load metric history after charts are rendered
   console.log('[HostDetail] Loading metric history after DOM update...')
   loadMetricHistory()
+}
+
+const handleRefresh = () => {
+  // Clear range to ensure we get the latest data if no manual range was picked
+  if (historyRange.value && historyRange.value.length === 0) {
+    historyRange.value = []
+  }
+  loadData()
+}
+
+const handleSync = async () => {
+  const hostId = Number(route.params.id)
+  if (!hostId || !host.value.monitor_id) return
+  
+  syncing.value = true
+  try {
+    await pullItemsFromHost(host.value.monitor_id, hostId)
+    ElMessage.success(t('common.syncSuccess') || 'Sync successful')
+    // Reload everything after sync
+    await loadData()
+  } catch (err) {
+    console.error('Sync failed', err)
+    ElMessage.error(t('common.syncFailed') || 'Sync failed')
+  } finally {
+    syncing.value = false
+  }
 }
 
 const onResize = () => {
@@ -857,6 +875,7 @@ const onResize = () => {
   if (cpuChart) cpuChart.resize()
   if (memChart) memChart.resize()
   if (netChart) netChart.resize()
+  if (itemTrendChart) itemTrendChart.resize()
 }
 
 onMounted(() => {
@@ -872,15 +891,19 @@ onBeforeUnmount(() => {
   if (cpuChart) cpuChart.dispose()
   if (memChart) memChart.dispose()
   if (netChart) netChart.dispose()
+  if (itemTrendChart) itemTrendChart.dispose()
+})
+
+watch(compareMode, async (val) => {
+  await nextTick()
+  if (val) {
+    buildTrendChart(hostHistory.value)
+  } else {
+    buildStatusChart()
+  }
 })
 
 watch(historyRange, () => {
-  loadHistory()
-  loadMetricHistory()
-})
-
-watch(compareMode, () => {
-  loadHistory()
   loadMetricHistory()
 })
 
@@ -979,6 +1002,9 @@ async function generateReport() {
 .chart {
   width: 100%;
   height: 320px;
+}
+.compare-switch {
+  margin-left: 8px;
 }
 .card-header {
   display: flex;

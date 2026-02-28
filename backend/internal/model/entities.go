@@ -135,6 +135,8 @@ type HostHistory struct {
 	Host              Host      `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Status            int       `json:"status"`
 	StatusDescription string    `json:"status_description"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
 	IPAddr            string    `json:"ip_addr"`
 	SampledAt         time.Time `gorm:"index" json:"sampled_at"`
 }

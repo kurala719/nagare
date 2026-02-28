@@ -110,10 +110,10 @@ func pullAllMonitors() {
 			LogSystem("error", "auto sync groups failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
 		}
 
-		if _, err := pullHostsFromMonitorServ(monitor.ID, false); err != nil {
+		if _, err := pullHostsFromMonitorServ(monitor.ID, true); err != nil {
 			LogSystem("error", "auto sync hosts failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
 		}
-		if _, err := pullItemsFromMonitorServ(monitor.ID, false); err != nil {
+		if _, err := pullItemsFromMonitorServ(monitor.ID, true); err != nil {
 			LogSystem("error", "auto sync items failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
 		}
 	})

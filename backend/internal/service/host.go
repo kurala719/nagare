@@ -862,19 +862,21 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			}
 
 			if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-				Name:            h.Name,
-				ExternalHostID:  h.ID,
-				MonitorID:       mid,
-				GroupID:         groupID,
-				Description:     h.Description,
-				Enabled:         h.Enabled,
-				ActiveAvailable: activeAvailable,
-				IPAddr:          h.IPAddress,
-				SSHUser:         existingHost.SSHUser,
-				SSHPassword:     "", // UpdateHostDAO won't update if empty
-				SSHPort:         existingHost.SSHPort,
-				LastSyncAt:      &now,
-				ExternalSource:  monitor.Name,
+				Name:              h.Name,
+				ExternalHostID:    h.ID,
+				MonitorID:         mid,
+				GroupID:           groupID,
+				Description:       h.Description,
+				Enabled:           h.Enabled,
+				Status:            status,
+				StatusDescription: finalStatusDesc,
+				ActiveAvailable:   activeAvailable,
+				IPAddr:            h.IPAddress,
+				SSHUser:           existingHost.SSHUser,
+				SSHPassword:       "", // UpdateHostDAO won't update if empty
+				SSHPort:           existingHost.SSHPort,
+				LastSyncAt:        &now,
+				ExternalSource:    monitor.Name,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
 				LogService("error", "pull hosts failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -890,16 +892,18 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		} else if errors.Is(err, model.ErrNotFound) {
 			// Host strictly doesn't exist, add it
 			hNew := model.Host{
-				Name:            h.Name,
-				ExternalHostID:  h.ID,
-				MonitorID:       mid,
-				GroupID:         groupID,
-				Description:     h.Description,
-				Enabled:         h.Enabled,
-				ActiveAvailable: activeAvailable,
-				IPAddr:          h.IPAddress,
-				LastSyncAt:      &now,
-				ExternalSource:  monitor.Name,
+				Name:              h.Name,
+				ExternalHostID:    h.ID,
+				MonitorID:         mid,
+				GroupID:           groupID,
+				Description:       h.Description,
+				Enabled:           h.Enabled,
+				Status:            status,
+				StatusDescription: statusDesc,
+				ActiveAvailable:   activeAvailable,
+				IPAddr:            h.IPAddress,
+				LastSyncAt:        &now,
+				ExternalSource:    monitor.Name,
 			}
 			if err := repository.AddHostDAO(&hNew); err != nil {
 				setMonitorStatusError(mid)

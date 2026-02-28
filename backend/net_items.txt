@@ -1,0 +1,22 @@
+HostHistory count: 80
+Network Item Candidates:
+  - Name: 'Interface ens160: Inbound packets discarded', Units: ''
+  - Name: 'Interface ens160: Inbound packets with errors', Units: ''
+  - Name: 'Interface ens160: Bits received', Units: 'bps'
+  - Name: 'Interface ens160: Outbound packets discarded', Units: ''
+  - Name: 'Interface ens160: Outbound packets with errors', Units: ''
+  - Name: 'Interface ens160: Bits sent', Units: 'bps'
+  - Name: 'Interrupts per second', Units: ''
+  - Name: 'Context switches per second', Units: ''
+  - Name: 'Interface ens160: Operational status', Units: ''
+  - Name: 'Interface ens160: Speed', Units: 'Gbps'
+  - Name: 'Interface ens160: Interface type', Units: ''
+  - Name: 'Number of values synchronized with the database per second', Units: '!vps'
+  - Name: 'Number of processed numeric (float) values per second', Units: '!vps'
+  - Name: 'Number of processed log values per second', Units: '!vps'
+  - Name: 'Number of processed not supported values per second', Units: '!vps'
+  - Name: 'Number of processed character values per second', Units: '!vps'
+  - Name: 'Number of processed text values per second', Units: '!vps'
+  - Name: 'Number of processed numeric (unsigned) values per second', Units: '!vps'
+  - Name: 'Number of processed values per second', Units: '!vps'
+Total network candidates: 19
