@@ -263,6 +263,8 @@ func AddAlertServ(req AlertReq) error {
 		"host_id":  alert.HostID,
 	}, nil, "")
 
+	_ = CreateSiteMessageServ(alert.Message, alert.Comment, "alert", alert.Severity, nil)
+
 	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	go analyzeAndNotifyAlert(alert)
 	return nil

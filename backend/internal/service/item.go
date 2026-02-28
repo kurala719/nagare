@@ -505,7 +505,7 @@ func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		hostResult, err := pullItemsFromHostServ(mid, host.ID, recordHistory)
 		if err != nil {
 			setHostStatusErrorWithReason(host.ID, err.Error())
-			LogService("error", "pull items failed for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "error": err.Error()}, nil, "")
+			LogService("warn", "pull items failed for host", map[string]interface{}{"monitor_id": mid, "host_id": host.ID, "error": err.Error()}, nil, "")
 		} else {
 			// Using atomic addition for thread-safe result tracking if needed,
 			// but here we just log progress as the final SyncEvent result will be partial

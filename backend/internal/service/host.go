@@ -926,7 +926,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			go func(hid uint, hName string) {
 				itemsRes, err := PullItemsFromHostServ(mid, hid)
 				if err != nil {
-					LogService("error", "cascaded item sync failed", map[string]interface{}{"host_id": hid, "name": hName, "error": err.Error()}, nil, "")
+					LogService("warn", "cascaded item sync failed", map[string]interface{}{"host_id": hid, "name": hName, "error": err.Error()}, nil, "")
 				} else {
 					LogService("debug", "cascaded item sync finished", map[string]interface{}{"host_id": hid, "name": hName, "added": itemsRes.Added, "updated": itemsRes.Updated}, nil, "")
 				}

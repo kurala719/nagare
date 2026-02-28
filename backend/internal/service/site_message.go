@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"nagare/internal/model"
 	"nagare/internal/repository"
 )
@@ -22,11 +23,15 @@ func CreateSiteMessageServ(title, content, msgType string, severity int, userID 
 	// Filter based on severity if it's a broadcast message (userID is nil)
 	if userID == nil {
 		if msgType == "alert" {
-			if severity < siteMessageMinAlertSeverity() {
+			minAlert := siteMessageMinAlertSeverity()
+			if severity < minAlert {
+				log.Printf("[debug] site message dropped: alert severity below minimum. severity=%d min=%d title=%s", severity, minAlert, title)
 				return nil
 			}
 		} else {
-			if severity < siteMessageMinLogSeverity() {
+			minLog := siteMessageMinLogSeverity()
+			if severity < minLog {
+				log.Printf("[debug] site message dropped: log severity below minimum. severity=%d min=%d title=%s", severity, minLog, title)
 				return nil
 			}
 		}
@@ -40,11 +45,11 @@ func CreateSiteMessageServ(title, content, msgType string, severity int, userID 
 		UserID:   userID,
 		IsRead:   0,
 	}
-	
+
 	if err := repository.AddSiteMessageDAO(msg); err != nil {
 		return fmt.Errorf("failed to save site message: %w", err)
 	}
-	
+
 	// Broadcast real-time
 	BroadcastMessage(map[string]interface{}{
 		"event": "site_message",
@@ -58,7 +63,7 @@ func CreateSiteMessageServ(title, content, msgType string, severity int, userID 
 			CreatedAt: msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		},
 	})
-	
+
 	return nil
 }
 
@@ -68,7 +73,7 @@ func GetSiteMessagesServ(userID *uint, unreadOnly bool, limit, offset int) ([]Si
 	if err != nil {
 		return nil, fmt.Errorf("failed to get site messages: %w", err)
 	}
-	
+
 	result := make([]SiteMessageResp, 0, len(messages))
 	for _, m := range messages {
 		result = append(result, SiteMessageResp{
