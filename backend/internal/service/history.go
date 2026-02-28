@@ -142,6 +142,14 @@ func recordHostHistory(host model.Host, sampledAt time.Time) {
 			}
 		}
 	}
+
+	// Safety check: Don't record history with 0 items if the host should have items,
+	// or if we are in the middle of a sync where items haven't been populated yet.
+	if totalCount == 0 && activeCount == 0 {
+		fmt.Printf("[DEBUG] recordHostHistory: Skipping snapshot for HostID=%d because item counts are 0\n", host.ID)
+		return
+	}
+
 	h := model.HostHistory{
 		HostID:            host.ID,
 		Status:            host.Status,

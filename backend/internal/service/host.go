@@ -883,11 +883,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				result.Failed++
 				continue
 			}
-			if recordHistory {
-				if refreshed, err := repository.GetHostByIDDAO(existingHost.ID); err == nil {
-					recordHostHistory(refreshed, time.Now().UTC())
-				}
-			}
 			result.Updated++
 		} else if errors.Is(err, model.ErrNotFound) {
 			// Host strictly doesn't exist, add it
@@ -910,11 +905,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				LogService("error", "pull hosts failed to add host", map[string]interface{}{"monitor_id": mid, "host_name": h.Name, "host_external_id": h.ID, "error": err.Error()}, nil, "")
 				result.Failed++
 				continue
-			}
-			if recordHistory {
-				if created, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID); err == nil {
-					recordHostHistory(created, time.Now().UTC())
-				}
 			}
 			result.Added++
 		}
@@ -1065,9 +1055,6 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			return SyncResult{}, fmt.Errorf("failed to update host: %w", err)
 		}
 		_, _ = recomputeHostStatus(existingHost.ID)
-		if refreshed, err := repository.GetHostByIDDAO(existingHost.ID); err == nil {
-			recordHostHistory(refreshed, time.Now().UTC())
-		}
 		result.Updated++
 		// Host doesn't exist, add it
 		newHost := model.Host{
@@ -1087,9 +1074,6 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			return SyncResult{}, fmt.Errorf("failed to add host: %w", err)
 		}
 		_, _ = recomputeHostStatus(newHost.ID)
-		if created, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID); err == nil {
-			recordHostHistory(created, time.Now().UTC())
-		}
 		result.Added++
 	}
 
