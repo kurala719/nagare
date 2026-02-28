@@ -224,8 +224,8 @@ func ensureDefaultReportConfig() error {
 
 func fixForeignKeyColumnTypes() error {
 	tablesToFix := map[string][]string{
-		"hosts":                       {"m_id", "group_id"},
-		"groups":                      {"m_id"},
+		"hosts":                       {"monitor_id", "group_id"},
+		"groups":                      {"monitor_id"},
 		"items":                       {"hid"},
 		"item_histories":              {"item_id", "host_id"},
 		"host_histories":              {"host_id"},
@@ -274,7 +274,7 @@ func fixForeignKeyColumnTypes() error {
 					switch column {
 					case "group_id", "alert_group_id":
 						refTable = "groups"
-					case "m_id", "alert_monitor_id":
+					case "monitor_id", "alert_monitor_id":
 						refTable = "monitors"
 					case "hid", "host_id", "alert_host_id":
 						refTable = "hosts"
@@ -432,7 +432,53 @@ func preSchemaUpdates() error {
 				return err
 			}
 		}
+		// If m_id exists, we need to handle it
+		if database.DB.Migrator().HasColumn("hosts", "m_id") {
+			if !database.DB.Migrator().HasColumn("hosts", "monitor_id") {
+				// Just rename if monitor_id doesn't exist
+				if err := database.DB.Migrator().RenameColumn("hosts", "m_id", "monitor_id"); err != nil {
+					return err
+				}
+			} else {
+				// Both exist (could happen if migration was interrupted or partially applied)
+				// Move data from m_id to monitor_id where monitor_id is null/empty
+				_ = database.DB.Exec("UPDATE hosts SET monitor_id = m_id WHERE monitor_id IS NULL OR monitor_id = 0")
+				// Then drop m_id
+				_ = database.DB.Migrator().DropColumn("hosts", "m_id")
+			}
+		}
 	}
+	if database.DB.Migrator().HasTable("groups") {
+		if database.DB.Migrator().HasColumn("groups", "m_id") {
+			if !database.DB.Migrator().HasColumn("groups", "monitor_id") {
+				if err := database.DB.Migrator().RenameColumn("groups", "m_id", "monitor_id"); err != nil {
+					return err
+				}
+			} else {
+				_ = database.DB.Exec("UPDATE `groups` SET monitor_id = m_id WHERE monitor_id IS NULL OR monitor_id = 0")
+				_ = database.DB.Migrator().DropColumn("groups", "m_id")
+			}
+		}
+	}
+
+	// Clean up historical duplicates of hosts and groups caused by the m_id schema issue
+	if database.DB.Migrator().HasTable("hosts") {
+		_ = database.DB.Exec(`
+			UPDATE hosts AS h1
+			JOIN hosts AS h2 ON h1.hostid = h2.hostid AND h1.monitor_id = h2.monitor_id
+			SET h1.deleted_at = CURRENT_TIMESTAMP(3)
+			WHERE h1.id > h2.id AND h1.deleted_at IS NULL AND h2.deleted_at IS NULL
+		`)
+	}
+	if database.DB.Migrator().HasTable("groups") {
+		_ = database.DB.Exec(`
+			UPDATE ` + "`groups`" + ` AS g1
+			JOIN ` + "`groups`" + ` AS g2 ON g1.external_id = g2.external_id AND g1.monitor_id = g2.monitor_id
+			SET g1.deleted_at = CURRENT_TIMESTAMP(3)
+			WHERE g1.id > g2.id AND g1.deleted_at IS NULL AND g2.deleted_at IS NULL
+		`)
+	}
+
 	if database.DB.Migrator().HasTable("triggers") {
 		if database.DB.Migrator().HasColumn("triggers", "alert_site_id") && !database.DB.Migrator().HasColumn("triggers", "alert_group_id") {
 			if err := database.DB.Migrator().RenameColumn("triggers", "alert_site_id", "alert_group_id"); err != nil {

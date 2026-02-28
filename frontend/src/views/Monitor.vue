@@ -1,7 +1,10 @@
 <template>
   <div class="nagare-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('monitors.title') }}</h1>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h1 class="page-title">{{ $t('monitors.title') }}</h1>
+        <el-button size="small" @click="$router.back()">{{ $t('common.back') }}</el-button>
+      </div>
       <p class="page-subtitle">{{ totalMonitors }} {{ $t('dashboard.monitors') }}</p>
     </div>
 
@@ -80,7 +83,7 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('monitors.cancel') }}</el-button>
-      <el-button type="primary" @click="onCreate">{{ $t('monitors.createBtn') }}</el-button>
+      <el-button type="primary" @click="onCreate" :loading="saving">{{ $t('monitors.createBtn') }}</el-button>
     </template>  
   </el-dialog>
 
@@ -159,7 +162,7 @@
                 <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
               </el-tooltip>
               <el-tooltip :content="$t('monitors.delete')" placement="bottom">
-                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" :disabled="monitor.id === 1" />
+                <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" />
               </el-tooltip>
             </el-button-group>
           </div>
@@ -201,7 +204,6 @@
       </el-form-item>
       <el-form-item :label="$t('monitors.type')">
         <el-select v-model="selectedMonitor.type" style="width: 100%;">
-          <el-option v-if="selectedMonitor.id === 1" label="SNMP" :value="1" />
           <el-option label="Zabbix" :value="2" />
           <el-option label="Other" :value="3" />
         </el-select>
@@ -215,7 +217,7 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelProperties">{{ $t('monitors.cancel') }}</el-button>
-      <el-button type="primary" @click="saveProperties">{{ $t('monitors.save') }}</el-button>
+      <el-button type="primary" @click="saveProperties" :loading="updating">{{ $t('monitors.save') }}</el-button>
     </template>
   </el-dialog>
 
@@ -308,6 +310,8 @@ export default {
         newMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 2 },
         selectedMonitor: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
         loading: false,
+        saving: false,
+        updating: false,
         error: null,
         search: '',
         searchField: 'all',
@@ -557,6 +561,7 @@ export default {
         this.propertiesDialogVisible = false;
       },
       async saveProperties() {
+        this.updating = true;
         try {
           const updateData = {
             name: this.selectedMonitor.name,
@@ -584,6 +589,8 @@ export default {
             message: 'Failed to update monitor: ' + (err.message || 'Unknown error'),
           });
           console.error('Error updating monitor:', err);
+        } finally {
+          this.updating = false;
         }
       },
       async regenerateEventToken() {
@@ -672,6 +679,7 @@ export default {
           return;
         }
         
+        this.saving = true;
         try {
           const monitorData = {
             name: this.newMonitor.name,
@@ -710,12 +718,20 @@ export default {
               message: 'Monitor created successfully!',
             });
           }
+
+          // Handle redirection if query param exists
+          const redirect = this.$route.query.redirect;
+          if (redirect) {
+            this.$router.push(redirect);
+          }
         } catch (err) {
           ElMessage({
             type: 'error',
             message: 'Failed to create monitor: ' + (err.message || 'Unknown error'),
           });
           console.error('Error creating monitor:', err);
+        } finally {
+          this.saving = false;
         }
       },
       async onLogin(monitor) {

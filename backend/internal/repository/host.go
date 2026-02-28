@@ -72,7 +72,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 		"name":       "hosts.name",
 		"status":     "hosts.status",
 		"enabled":    "hosts.enabled",
-		"monitor_id":       "hosts.monitor_id",
+		"monitor_id": "hosts.monitor_id",
 		"group_id":   "hosts.group_id",
 		"hostid":     "hosts.hostid",
 		"ip_addr":    "hosts.ip_addr",
@@ -161,7 +161,7 @@ func GetHostByHostIDDAO(hostid string) (model.Host, error) {
 // GetHostByMIDAndHostIDDAO retrieves a host by monitor ID and external host ID
 func GetHostByMIDAndHostIDDAO(mid uint, hostid string) (model.Host, error) {
 	var host model.Host
-	err := database.DB.Where("hostid = ? AND m_id = ?", hostid, mid).First(&host).Error
+	err := database.DB.Where("hostid = ? AND monitor_id = ?", hostid, mid).First(&host).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return host, model.ErrNotFound
 	}

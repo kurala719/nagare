@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -820,16 +821,30 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			}
 		}
 
-		existingHost, err := repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
+		var existingHost model.Host
+		existingHost, err = repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 		if err != nil {
-			// Try global search by external ID to prevent duplicates from other monitors (like Nagare Internal)
-			if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
-				// If found globally and it's either in Nagare Internal (ID 1) or has no monitor, adopt it
-				if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
-					existingHost = globalHost
-					err = nil
-					LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": globalHost.MonitorID, "new_mid": mid}, nil, "")
+			// If not found on THIS monitor, try global search to prevent duplicates (e.g. from Nagare Internal)
+			if errors.Is(err, model.ErrNotFound) {
+				if globalHost, gErr := repository.GetHostByHostIDDAO(h.ID); gErr == nil {
+					// Adopt if it's from Nagare Internal or unassigned
+					if globalHost.MonitorID == 1 || globalHost.MonitorID == 0 {
+						existingHost = globalHost
+						err = nil
+						LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": globalHost.MonitorID, "new_mid": mid}, nil, "")
+					} else {
+						// Found on another REAL monitor? This shouldn't usually happen with same HostID
+						// But we should probably not create a duplicate if we found one globally
+						existingHost = globalHost
+						err = nil
+						LogService("warn", "host found on different monitor during sync", map[string]interface{}{"host_name": h.Name, "existing_mid": globalHost.MonitorID, "target_mid": mid}, nil, "")
+					}
 				}
+			} else {
+				// Real database error? Skip this host to avoid creating a duplicate due to lookup failure
+				LogService("error", "pull hosts failed to look up host", map[string]interface{}{"monitor_id": mid, "host_id": h.ID, "error": err.Error()}, nil, "")
+				result.Failed++
+				continue
 			}
 		}
 
@@ -872,8 +887,8 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				}
 			}
 			result.Updated++
-		} else {
-			// Host doesn't exist, add it
+		} else if errors.Is(err, model.ErrNotFound) {
+			// Host strictly doesn't exist, add it
 			hNew := model.Host{
 				Name:            h.Name,
 				ExternalHostID:  h.ID,

@@ -192,7 +192,7 @@ func DeleteItemsByHIDDAO(hid uint) error {
 // DeleteItemsByMIDDAO deletes all items associated with hosts of a specific monitor
 func DeleteItemsByMIDDAO(mid uint) error {
 	// Subquery to find items where host belongs to monitor
-	return database.DB.Where("hid IN (SELECT id FROM hosts WHERE m_id = ?)", mid).Delete(&model.Item{}).Error
+	return database.DB.Where("hid IN (SELECT id FROM hosts WHERE monitor_id = ?)", mid).Delete(&model.Item{}).Error
 }
 
 // UpdateItemDAO updates an item by ID

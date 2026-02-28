@@ -211,9 +211,21 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		snippet := string(respBody)
+		if len(snippet) > 100 {
+			snippet = snippet[:100] + "..."
+		}
+		return nil, fmt.Errorf("Zabbix API request failed (status %d): %s", resp.StatusCode, snippet)
+	}
+
 	var zabbixResp zabbixResponse
 	if err := json.Unmarshal(respBody, &zabbixResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		snippet := string(respBody)
+		if len(snippet) > 100 {
+			snippet = snippet[:100] + "..."
+		}
+		return nil, fmt.Errorf("failed to unmarshal response: %w (body snippet: %s)", err, snippet)
 	}
 
 	if zabbixResp.Error != nil {
@@ -256,9 +268,21 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 				return nil, fmt.Errorf("failed to read retry response: %w", err)
 			}
 
+			if resp2.StatusCode != http.StatusOK {
+				snippet := string(respBody2)
+				if len(snippet) > 100 {
+					snippet = snippet[:100] + "..."
+				}
+				return nil, fmt.Errorf("Zabbix API retry request failed (status %d): %s", resp2.StatusCode, snippet)
+			}
+
 			var zabbixResp2 zabbixResponse
 			if err := json.Unmarshal(respBody2, &zabbixResp2); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal retry response: %w", err)
+				snippet := string(respBody2)
+				if len(snippet) > 100 {
+					snippet = snippet[:100] + "..."
+				}
+				return nil, fmt.Errorf("failed to unmarshal retry response: %w (body snippet: %s)", err, snippet)
 			}
 
 			if zabbixResp2.Error != nil {

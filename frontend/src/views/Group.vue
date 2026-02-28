@@ -2,7 +2,10 @@
   <div class="nagare-container">
     <div class="page-header">
       <div class="header-main">
-        <h1 class="page-title">{{ $t('groups.title') }}</h1>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h1 class="page-title">{{ $t('groups.title') }}</h1>
+          <el-button size="small" @click="$router.back()">{{ $t('common.back') }}</el-button>
+        </div>
         <div class="header-info">
           <p class="page-subtitle">{{ totalGroups }} {{ $t('dashboard.groups') }}</p>
           <div class="refresh-info" v-if="lastUpdated">
@@ -205,8 +208,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelCreate">{{ $t('groups.cancel') }}</el-button>
-      <el-button @click="onCreate(false)">{{ $t('common.saveLocally') }}</el-button>
-      <el-button type="primary" @click="onCreate(true)">{{ $t('common.saveAndPush') }}</el-button>
+      <el-button @click="onCreate(false)" :loading="saving">{{ $t('common.saveLocally') }}</el-button>
+      <el-button type="primary" @click="onCreate(true)" :loading="saving">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
@@ -229,8 +232,8 @@
     </el-form>
     <template #footer>
       <el-button @click="cancelProperties">{{ $t('groups.cancel') }}</el-button>
-      <el-button @click="saveProperties(false)">{{ $t('common.saveLocally') }}</el-button>
-      <el-button type="primary" @click="saveProperties(true)">{{ $t('common.saveAndPush') }}</el-button>
+      <el-button @click="saveProperties(false)" :loading="updating">{{ $t('common.saveLocally') }}</el-button>
+      <el-button type="primary" @click="saveProperties(true)" :loading="updating">{{ $t('common.saveAndPush') }}</el-button>
     </template>
   </el-dialog>
 
@@ -337,6 +340,8 @@ export default {
       sortBy: '',
       sortOrder: '',
       loading: false,
+      saving: false,
+      updating: false,
       error: null,
       search: '',
       searchField: 'all',
@@ -637,6 +642,7 @@ export default {
       } catch (err) {
         return;
       }
+      this.updating = true;
       try {
         await updateGroup(this.selectedGroup.id, {
           name: this.selectedGroup.name,
@@ -651,6 +657,8 @@ export default {
         ElMessage.success(msg);
       } catch (err) {
         ElMessage.error(this.$t('groups.updateFailed') + ': ' + (err.message || ''));
+      } finally {
+        this.updating = false;
       }
     },
     cancelCreate() {
@@ -663,6 +671,7 @@ export default {
       } catch (err) {
         return;
       }
+      this.saving = true;
       try {
         const mid = this.newGroup.monitor_id;
         const payload = { ...this.newGroup, push_to_monitor: pushToMonitor };
@@ -675,8 +684,16 @@ export default {
           : this.$t('groups.created');
         this.newGroup = { name: '', description: '', enabled: 1, monitor_id: 0 };
         ElMessage.success(msg);
+
+        // Handle redirection if query param exists
+        const redirect = this.$route.query.redirect;
+        if (redirect) {
+          this.$router.push(redirect);
+        }
       } catch (err) {
         ElMessage.error(this.$t('groups.createFailed') + ': ' + (err.message || ''));
+      } finally {
+        this.saving = false;
       }
     },
     async onPull(group) {

@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetAllGroupsDAO retrieves all groups
@@ -44,7 +45,7 @@ func SearchGroupsDAO(filter model.GroupFilter) ([]model.Group, error) {
 		"name":       "name",
 		"status":     "status",
 		"enabled":    "enabled",
-		"monitor_id": "m_id",
+		"monitor_id": "monitor_id",
 		"created_at": "created_at",
 		"updated_at": "updated_at",
 		"id":         "id",
@@ -110,7 +111,7 @@ func AddGroupDAO(group model.Group) error {
 // GetGroupByExternalIDDAO retrieves a group by its external ID and monitor ID
 func GetGroupByExternalIDDAO(externalID string, monitorID uint) (model.Group, error) {
 	var group model.Group
-	err := database.DB.Where("external_id = ? AND m_id = ?", externalID, monitorID).First(&group).Error
+	err := database.DB.Where("external_id = ? AND monitor_id = ?", externalID, monitorID).First(&group).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return group, model.ErrNotFound
 	}
@@ -126,7 +127,7 @@ func UpdateGroupDAO(id uint, group model.Group) error {
 		"status":             group.Status,
 		"status_description": group.StatusDescription,
 		"active_available":   group.ActiveAvailable,
-		"monitor_id":               group.MonitorID,
+		"monitor_id":         group.MonitorID,
 		"external_id":        group.ExternalID,
 		"last_sync_at":       group.LastSyncAt,
 		"external_source":    group.ExternalSource,

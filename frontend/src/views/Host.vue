@@ -2,7 +2,10 @@
   <div class="nagare-container">
     <div class="page-header">
       <div class="header-main">
-        <h1 class="page-title">{{ $t('hosts.title') }}</h1>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h1 class="page-title">{{ $t('hosts.title') }}</h1>
+          <el-button size="small" @click="$router.back()">{{ $t('common.back') }}</el-button>
+        </div>
         <div class="header-info">
           <p class="page-subtitle">{{ totalHosts }} {{ $t('dashboard.hosts') }}</p>
           <div class="refresh-info" v-if="lastUpdated">
@@ -1130,6 +1133,7 @@ export default {
         return;
       }
       
+      this.saving = true;
       try {
         const updateData = {
           name: this.selectedHost.name,
@@ -1180,6 +1184,8 @@ export default {
           message: (pushToMonitor ? 'Push failed: ' : this.$t('hosts.updateFailed') + ': ') + (err.message || this.$t('hosts.unknownError')),
         });
         console.error('Error updating host:', err);
+      } finally {
+        this.saving = false;
       }
     },
 
@@ -1214,6 +1220,7 @@ export default {
         return;
       }
       
+      this.saving = true;
       try {
         const hostData = {
           name: this.newHost.name,
@@ -1254,12 +1261,20 @@ export default {
           type: 'success',
           message: msg,
         });
+
+        // Handle redirection if query param exists
+        const redirect = this.$route.query.redirect;
+        if (redirect) {
+          this.$router.push(redirect);
+        }
       } catch (err) {
         ElMessage({
           type: 'error',
           message: this.$t('hosts.createFailed') + ': ' + (err.message || this.$t('hosts.unknownError')),
         });
         console.error('Error creating host:', err);
+      } finally {
+        this.saving = false;
       }
     },
     cancelCreate() {
