@@ -237,23 +237,21 @@ export default defineComponent({
     }
 
     const menuItems = computed(() => [
-      { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1, icon: 'DataBoard' },
-      { key: 'insights_group', label: 'menu.insights', minPrivilege: 1, icon: 'PieChart', children: [
+      { key: 'dashboard_group', label: 'menu.databoard', minPrivilege: 1, icon: 'DataBoard', children: [
+        { key: 'dashboard', path: '/dashboard', label: 'menu.databoard', minPrivilege: 1 },
         { key: 'systemStatus', path: '/system-status', label: 'menu.systemStatus', minPrivilege: 1 },
         { key: 'metricRacing', path: '/metric-racing', label: 'menu.metricRacing', minPrivilege: 1 },
         { key: 'analytics', path: '/analytics', label: 'menu.analytics', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
       ]},
-      { key: 'inventory_group', label: 'menu.inventory', minPrivilege: 1, icon: 'Box', children: [
+      { key: 'infrastructure_group', label: 'menu.inventory', minPrivilege: 1, icon: 'Box', children: [
         { key: 'group', path: '/group', label: 'menu.group', minPrivilege: 1 },
         { key: 'host', path: '/host', label: 'menu.host', minPrivilege: 1 },
       ]},
-      { key: 'observability_group', label: 'menu.observability', minPrivilege: 1, icon: 'Odometer', children: [
-        { key: 'metrics', path: '/item', label: 'menu.item', minPrivilege: 1 },
+      { key: 'monitoring_group', label: 'menu.observability', minPrivilege: 1, icon: 'Odometer', children: [
         { key: 'monitor', path: '/monitor', label: 'menu.monitor', minPrivilege: 1 },
+        { key: 'items', path: '/item', label: 'menu.item', minPrivilege: 1 },
         { key: 'alarm', path: '/alarm', label: 'menu.alarm', minPrivilege: 1 },
-      ]},
-      { key: 'alerting_group', label: 'menu.alerting', minPrivilege: 1, icon: 'Bell', children: [
         { key: 'alert', path: '/alert', label: 'menu.alert', minPrivilege: 1 },
         { key: 'trigger', path: '/trigger', label: 'menu.trigger', minPrivilege: 2 },
         { key: 'action', path: '/action', label: 'menu.action', minPrivilege: 2 },
@@ -261,17 +259,16 @@ export default defineComponent({
       { key: 'tooling_group', label: 'menu.tooling', minPrivilege: 1, icon: 'Tools', children: [
         { key: 'terminal', path: '/terminal', label: 'menu.terminal', minPrivilege: 1 },
         { key: 'packetAnalysis', path: '/packet-analysis', label: 'packets.title', minPrivilege: 1 },
-
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
       ]},
       { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
+        { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
         { key: 'provider', path: '/provider', label: 'menu.provider', minPrivilege: 2 },
-        { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
         { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
         { key: 'auditLog', path: '/audit-log', label: 'menu.auditLog', minPrivilege: 2 },
-        { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
         { key: 'retention', path: '/retention', label: 'retention.title', minPrivilege: 3 },
+        { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
         { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},
       { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1, icon: 'User' },

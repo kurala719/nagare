@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchProviderData(params) {
   return request({
-    url: '/providers',
+    url: '/sys/providers',
     method: 'get',
     params: {
       limit: 100,
@@ -14,7 +14,7 @@ export function fetchProviderData(params) {
 
 export function addProvider(data) {
   return request({
-    url: '/providers',
+    url: '/sys/providers',
     method: 'post',
     data
   })
@@ -22,7 +22,7 @@ export function addProvider(data) {
 
 export function updateProvider(id, data) {
   return request({
-    url: `/providers/${id}`,
+    url: `/sys/providers/${id}`,
     method: 'put',
     data
   })
@@ -30,35 +30,35 @@ export function updateProvider(id, data) {
 
 export function deleteProvider(id) {
   return request({
-    url: `/providers/${id}`,
+    url: `/sys/providers/${id}`,
     method: 'delete'
   })
 }
 
 export function checkProviderStatus(id) {
   return request({
-    url: `/providers/${id}/check`,
+    url: `/sys/providers/${id}/check`,
     method: 'post'
   })
 }
 
 export function checkAllProvidersStatus() {
   return request({
-    url: '/providers/check',
+    url: '/sys/providers/check',
     method: 'post'
   })
 }
 
 export function fetchProviderModels(id) {
   return request({
-    url: `/providers/${id}/fetch-models`,
+    url: `/sys/providers/${id}/fetch-models`,
     method: 'post'
   })
 }
 
 export function fetchModelsDirect(data) {
   return request({
-    url: '/providers/fetch-models-direct',
+    url: '/sys/providers/fetch-models-direct',
     method: 'post',
     data
   })
@@ -66,7 +66,7 @@ export function fetchModelsDirect(data) {
 
 export function getProviderById(id) {
   return request({
-    url: `/providers/${id}`,
+    url: `/sys/providers/${id}`,
     method: 'get'
   })
 }

@@ -1,8 +1,7 @@
 <template>
   <el-config-provider :locale="elementLocale">
     <div class="app-wrapper">
-      <router-view v-if="isStandaloneLayout" />
-      <MainLayout v-else />
+      <router-view />
     </div>
   </el-config-provider>
 </template>
@@ -15,13 +14,12 @@ import { ElConfigProvider } from 'element-plus'
 import en from 'element-plus/dist/locale/en.mjs'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
-const MainLayout = defineAsyncComponent(() => import('@/layout/MainLayout.vue'))
+
 
 export default defineComponent({
   name: 'App',
   components: {
-    ElConfigProvider,
-    MainLayout
+    ElConfigProvider
   },
   setup() {
     const route = useRoute()
@@ -35,11 +33,7 @@ export default defineComponent({
       }
     })
 
-    const isStandaloneLayout = computed(() => {
-      // Default to true only for specific routes
-      const layout = route.meta?.layout
-      return layout === 'auth' || layout === 'status'
-    })
+
 
     onMounted(() => {
       const storedTheme = localStorage.getItem('nagare_theme')
@@ -63,8 +57,7 @@ export default defineComponent({
     })
 
     return {
-      elementLocale,
-      isStandaloneLayout
+      elementLocale
     }
   }
 })

@@ -6,7 +6,7 @@ import request from '../utils/request';
 export function getMainConfig() {
     return request({
         method: 'GET',
-        url: '/config',
+        url: '/sys/config',
     });
 }
 
@@ -16,7 +16,7 @@ export function getMainConfig() {
 export function getAllConfig() {
     return request({
         method: 'GET',
-        url: '/config',
+        url: '/sys/config',
     });
 }
 
@@ -26,7 +26,7 @@ export function getAllConfig() {
 export function updateConfig(data) {
     return request({
         method: 'PUT',
-        url: '/config',
+        url: '/sys/config',
         data,
     });
 }
@@ -37,7 +37,7 @@ export function updateConfig(data) {
 export function saveConfig() {
     return request({
         method: 'POST',
-        url: '/config/save',
+        url: '/sys/config/save',
     });
 }
 
@@ -47,7 +47,7 @@ export function saveConfig() {
 export function reloadConfig() {
     return request({
         method: 'POST',
-        url: '/config/reload',
+        url: '/sys/config/reload',
     });
 }
 
@@ -57,6 +57,6 @@ export function reloadConfig() {
 export function resetConfig() {
     return request({
         method: 'POST',
-        url: '/config/reset',
+        url: '/sys/config/reset',
     });
 }

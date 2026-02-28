@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchHostData(params) {
   return request({
-    url: '/hosts',
+    url: '/infra/hosts',
     method: 'get',
     params: {
       limit: 100,
@@ -14,7 +14,7 @@ export function fetchHostData(params) {
 
 export function addHost(data) {
   return request({
-    url: '/hosts',
+    url: '/infra/hosts',
     method: 'post',
     data
   })
@@ -22,7 +22,7 @@ export function addHost(data) {
 
 export function updateHost(id, data) {
   return request({
-    url: `/hosts/${id}`,
+    url: `/infra/hosts/${id}`,
     method: 'put',
     data
   })
@@ -30,21 +30,21 @@ export function updateHost(id, data) {
 
 export function deleteHost(id, push = false) {
   return request({
-    url: `/hosts/${id}${push ? '?push=true' : ''}`,
+    url: `/infra/hosts/${id}${push ? '?push=true' : ''}`,
     method: 'delete'
   })
 }
 
 export function getHostById(id) {
   return request({
-    url: `/hosts/${id}`,
+    url: `/infra/hosts/${id}`,
     method: 'get'
   })
 }
 
 export function consultHostAI(id, params) {
   return request({
-    url: `/hosts/${id}/consult`,
+    url: `/infra/hosts/${id}/consult`,
     method: 'post',
     params
   })
@@ -52,7 +52,7 @@ export function consultHostAI(id, params) {
 
 export function fetchHostHistory(id, params) {
   return request({
-    url: `/hosts/${id}/history`,
+    url: `/infra/hosts/${id}/history`,
     method: 'get',
     params
   })
@@ -60,28 +60,28 @@ export function fetchHostHistory(id, params) {
 
 export function pullHostFromMonitor(monitorId, hostId) {
   return request({
-    url: `/monitors/${monitorId}/hosts/${hostId}/pull`,
+    url: `/monitor/monitors/${monitorId}/hosts/${hostId}/pull`,
     method: 'post'
   })
 }
 
 export function pushHostToMonitor(monitorId, hostId) {
   return request({
-    url: `/monitors/${monitorId}/hosts/${hostId}/push`,
+    url: `/monitor/monitors/${monitorId}/hosts/${hostId}/push`,
     method: 'post'
   })
 }
 
 export function syncHostsFromMonitor(monitorId) {
   return request({
-    url: `/monitors/${monitorId}/hosts/pull`,
+    url: `/monitor/monitors/${monitorId}/hosts/pull`,
     method: 'post'
   })
 }
 
 export function pushHostsToMonitor(monitorId) {
   return request({
-    url: `/monitors/${monitorId}/hosts/push`,
+    url: `/monitor/monitors/${monitorId}/hosts/push`,
     method: 'post'
   })
 }
@@ -97,7 +97,7 @@ export function testSNMP(id) {
 export function probeSnmpOid(id, oid) {
   const encodedOid = encodeURIComponent(oid || '')
   return request({
-    url: `/hosts/${id}/snmp/probe${encodedOid ? `?oid=${encodedOid}` : ''}`,
+    url: `/infra/hosts/${id}/snmp/probe${encodedOid ? `?oid=${encodedOid}` : ''}`,
     method: 'post',
     timeout: 120000
   })

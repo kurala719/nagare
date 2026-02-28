@@ -104,32 +104,51 @@ func InitRouter() {
 }
 
 func setupAllRoutes(rg *gin.RouterGroup) {
-	setupConfigurationRoutes(rg)
-	setupMonitorRoutes(rg)
-	setupAlarmRoutes(rg)
-	setupGroupRoutes(rg)
-	setupHostRoutes(rg)
-	setupAlertRoutes(rg)
-	setupSystemRoutes(rg)
-	setupPublicRoutes(rg)
-	setupIMRoutes(rg)
-	setupMediaRoutes(rg)
-	setupActionRoutes(rg)
-	setupTriggerRoutes(rg)
-	setupLogRoutes(rg)
-	setupAuditLogRoutes(rg)
-	setupAnalyticsRoutes(rg)
-	setupChaosRoutes(rg)
-	setupItemRoutes(rg)
-	setupChatRoutes(rg)
-	setupProviderRoutes(rg)
-	setupKnowledgeBaseRoutes(rg)
-	setupUserRoutes(rg)
-	setupUserInformationRoutes(rg)
-	setupQQWhitelistRoutes(rg)
-	setupReportRoutes(rg)
-	setupSiteMessageRoutes(rg)
+	// --- AUTH & USER GROUP ---
+	authGroup := rg.Group("/auth")
+	setupPublicRoutes(authGroup)
 
-	setupRetentionRoutes(rg)
-	setupPacketAnalysisRoutes(rg)
+	userGroup := rg.Group("/user")
+	setupUserRoutes(userGroup)
+	setupUserInformationRoutes(userGroup)
+
+	// --- INFRASTRUCTURE GROUP ---
+	infraGroup := rg.Group("/infra")
+	setupGroupRoutes(infraGroup)
+	setupHostRoutes(infraGroup)
+
+	// --- MONITORING GROUP ---
+	monitorGroup := rg.Group("/monitor")
+	setupMonitorRoutes(monitorGroup)
+	setupAlarmRoutes(monitorGroup)
+	setupItemRoutes(monitorGroup)
+	setupAlertRoutes(monitorGroup)
+	setupTriggerRoutes(monitorGroup)
+	setupActionRoutes(monitorGroup)
+
+	// --- SYSTEM & CONFIG GROUP ---
+	sysGroup := rg.Group("/sys")
+	setupConfigurationRoutes(sysGroup)
+	setupSystemRoutes(sysGroup)
+	setupLogRoutes(sysGroup)
+	setupAuditLogRoutes(sysGroup)
+	setupMediaRoutes(sysGroup)
+	setupProviderRoutes(sysGroup)
+	setupRetentionRoutes(sysGroup)
+	setupSiteMessageRoutes(sysGroup)
+
+	// --- TOOLING & OPERATIONS GROUP ---
+	toolGroup := rg.Group("/tooling")
+	setupIMRoutes(toolGroup)
+	setupChaosRoutes(toolGroup)
+	setupPacketAnalysisRoutes(toolGroup)
+	setupKnowledgeBaseRoutes(toolGroup)
+
+	// --- ANALYTICS & DASHBOARD GROUP ---
+	analyticsGroup := rg.Group("/analytics")
+	setupAnalyticsRoutes(analyticsGroup)
+	setupReportRoutes(analyticsGroup)
+
+	// Uncategorized
+	setupQQWhitelistRoutes(rg)
 }

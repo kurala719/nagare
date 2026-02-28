@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchAlertData(params) {
   return request({
-    url: '/alerts',
+    url: '/monitor/alerts',
     method: 'get',
     params: {
       limit: 100,
@@ -14,14 +14,14 @@ export function fetchAlertData(params) {
 
 export function getAlertById(id) {
   return request({
-    url: `/alerts/${id}`,
+    url: `/monitor/alerts/${id}`,
     method: 'get'
   })
 }
 
 export function addAlert(data) {
   return request({
-    url: '/alerts',
+    url: '/monitor/alerts',
     method: 'post',
     data
   })
@@ -29,7 +29,7 @@ export function addAlert(data) {
 
 export function updateAlert(id, data) {
   return request({
-    url: `/alerts/${id}`,
+    url: `/monitor/alerts/${id}`,
     method: 'put',
     data
   })
@@ -37,14 +37,14 @@ export function updateAlert(id, data) {
 
 export function deleteAlert(id) {
   return request({
-    url: `/alerts/${id}`,
+    url: `/monitor/alerts/${id}`,
     method: 'delete'
   })
 }
 
 export function consultAlertAI(id, params) {
   return request({
-    url: `/alerts/${id}/consult`,
+    url: `/monitor/alerts/${id}/consult`,
     method: 'post',
     params
   })
@@ -52,14 +52,14 @@ export function consultAlertAI(id, params) {
 
 export function getAlertScore() {
   return request({
-    url: '/alerts/score',
+    url: '/monitor/alerts/score',
     method: 'get'
   })
 }
 
 export function generateTestAlerts() {
   return request({
-    url: '/alerts/generate-test',
+    url: '/monitor/alerts/generate-test',
     method: 'post'
   })
 }

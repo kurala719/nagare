@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchGroupData(params) {
   return request({
-    url: '/groups',
+    url: '/infra/groups',
     method: 'get',
     params: {
       limit: 100,
@@ -14,21 +14,21 @@ export function fetchGroupData(params) {
 
 export function getGroupById(id) {
   return request({
-    url: `/groups/${id}`,
+    url: `/infra/groups/${id}`,
     method: 'get'
   })
 }
 
 export function fetchGroupDetail(id) {
   return request({
-    url: `/groups/${id}/detail`,
+    url: `/infra/groups/${id}/detail`,
     method: 'get'
   })
 }
 
 export function addGroup(data) {
   return request({
-    url: '/groups',
+    url: '/infra/groups',
     method: 'post',
     data
   })
@@ -36,7 +36,7 @@ export function addGroup(data) {
 
 export function updateGroup(id, data) {
   return request({
-    url: `/groups/${id}`,
+    url: `/infra/groups/${id}`,
     method: 'put',
     data
   })
@@ -44,35 +44,35 @@ export function updateGroup(id, data) {
 
 export function deleteGroup(id, push = false) {
   return request({
-    url: `/groups/${id}${push ? '?push=true' : ''}`,
+    url: `/infra/groups/${id}${push ? '?push=true' : ''}`,
     method: 'delete'
   })
 }
 
 export function checkGroupStatus(id) {
   return request({
-    url: `/groups/${id}/check`,
+    url: `/infra/groups/${id}/check`,
     method: 'post'
   })
 }
 
 export function checkAllGroupsStatus() {
   return request({
-    url: '/groups/check',
+    url: '/infra/groups/check',
     method: 'post'
   })
 }
 
 export function pullGroup(id) {
   return request({
-    url: `/groups/${id}/pull`,
+    url: `/infra/groups/${id}/pull`,
     method: 'post'
   })
 }
 
 export function pushGroup(id) {
   return request({
-    url: `/groups/${id}/push`,
+    url: `/infra/groups/${id}/push`,
     method: 'post'
   })
 }

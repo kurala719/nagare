@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchAlarmData(params) {
   return request({
-    url: '/alarms',
+    url: '/monitor/alarms',
     method: 'get',
     params: {
       limit: 100,
@@ -14,14 +14,14 @@ export function fetchAlarmData(params) {
 
 export function getAlarmById(id) {
   return request({
-    url: `/alarms/${id}`,
+    url: `/monitor/alarms/${id}`,
     method: 'get'
   })
 }
 
 export function addAlarm(data) {
   return request({
-    url: '/alarms',
+    url: '/monitor/alarms',
     method: 'post',
     data
   })
@@ -29,7 +29,7 @@ export function addAlarm(data) {
 
 export function updateAlarm(id, data) {
   return request({
-    url: `/alarms/${id}`,
+    url: `/monitor/alarms/${id}`,
     method: 'put',
     data
   })
@@ -37,14 +37,14 @@ export function updateAlarm(id, data) {
 
 export function deleteAlarm(id) {
   return request({
-    url: `/alarms/${id}`,
+    url: `/monitor/alarms/${id}`,
     method: 'delete'
   })
 }
 
 export function loginAlarm(id, data) {
   return request({
-    url: `/alarms/${id}/login`,
+    url: `/monitor/alarms/${id}/login`,
     method: 'post',
     data
   })
@@ -52,21 +52,21 @@ export function loginAlarm(id, data) {
 
 export function regenerateAlarmEventToken(id) {
   return request({
-    url: `/alarms/${id}/event-token`,
+    url: `/monitor/alarms/${id}/event-token`,
     method: 'post'
   })
 }
 
 export function refreshAlarmEventToken(id, token) {
   return request({
-    url: `/alarms/${id}/event-token/refresh?token=${token}`,
+    url: `/monitor/alarms/${id}/event-token/refresh?token=${token}`,
     method: 'post'
   })
 }
 
 export function setupAlarmMedia(id, data) {
   return request({
-    url: `/alarms/${id}/setup-media`,
+    url: `/monitor/alarms/${id}/setup-media`,
     method: 'post',
     data
   })

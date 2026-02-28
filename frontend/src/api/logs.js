@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchSystemLogs(params) {
   return request({
-    url: '/logs/system',
+    url: '/sys/logs/system',
     method: 'get',
     params
   })
@@ -10,7 +10,7 @@ export function fetchSystemLogs(params) {
 
 export function fetchServiceLogs(params) {
   return request({
-    url: '/logs/service',
+    url: '/sys/logs/service',
     method: 'get',
     params
   })
