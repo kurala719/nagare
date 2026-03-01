@@ -896,10 +896,18 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			hasExistingHost = true
 		}
 
-		if status == 0 && hasExistingHost && (existingHost.Status == 1 || existingHost.Status == 2) {
-			status = existingHost.Status
-			if status == 2 && statusDesc == "" {
-				statusDesc = existingHost.StatusDescription
+		if status == 0 && hasExistingHost {
+			if statusDesc != "" {
+				status = 2
+			} else {
+				if existingHost.Status == 1 || existingHost.Status == 2 {
+					status = existingHost.Status
+					if status == 2 && existingHost.StatusDescription != "" {
+						statusDesc = existingHost.StatusDescription
+					}
+				} else {
+					status = 0
+				}
 			}
 		}
 
@@ -1090,12 +1098,40 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}
 	}
 	status := mapMonitorHostStatus(h.Status, activeAvailable)
-	if status == 0 && statusDesc != "" {
-		status = 2
+	if status == 0 {
+		if statusDesc != "" {
+			status = 2
+		} else {
+			if err == nil {
+				if existingHost.Status == 1 || existingHost.Status == 2 {
+					status = existingHost.Status
+					if status == 2 && existingHost.StatusDescription != "" {
+						statusDesc = existingHost.StatusDescription
+					}
+				} else {
+					status = 0
+				}
+			} else {
+				if host.Status == 1 || host.Status == 2 {
+					status = host.Status
+					if status == 2 && host.StatusDescription != "" {
+						statusDesc = host.StatusDescription
+					}
+				} else {
+					status = 0
+				}
+			}
+		}
 	}
 
 	if err == nil {
 		// Host exists, update it
+		now := time.Now().UTC()
+		finalStatusDesc := statusDesc
+		if finalStatusDesc == "" && status != 1 && existingHost.StatusDescription != "" {
+			finalStatusDesc = existingHost.StatusDescription
+		}
+
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
 			Name:              h.Name,
 			ExternalID:        h.ID,
@@ -1103,11 +1139,11 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Description:       h.Description,
 			Enabled:           h.Enabled,
 			Status:            status,
-			StatusDescription: statusDesc,
+			StatusDescription: finalStatusDesc,
 			IPAddr:            h.IPAddress,
 			SSHUser:           existingHost.SSHUser,
 			SSHPort:           existingHost.SSHPort,
-			LastSyncAt:        existingHost.LastSyncAt,
+			LastSyncAt:        &now,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -1116,6 +1152,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}
 		_, _ = recomputeHostStatus(existingHost.ID)
 		result.Updated++
+	} else if errors.Is(err, model.ErrNotFound) {
 		// Host doesn't exist, add it
 		newHost := model.Host{
 			Name:              h.Name,
@@ -1135,6 +1172,11 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		}
 		_, _ = recomputeHostStatus(newHost.ID)
 		result.Added++
+	} else {
+		setHostStatusErrorWithReason(id, err.Error())
+		LogService("error", "pull host failed to resolve existing host", map[string]interface{}{"monitor_id": mid, "host_id": id, "external_id": h.ID, "error": err.Error()}, nil, "")
+		result.Failed++
+		return SyncResult{}, fmt.Errorf("failed to resolve existing host: %w", err)
 	}
 
 	_ = recomputeMonitorRelated(mid)

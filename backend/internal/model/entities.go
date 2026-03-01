@@ -180,7 +180,6 @@ type Action struct {
 	Name        string `gorm:"type:varchar(255)" json:"name"`
 	MediaID     uint   `gorm:"type:bigint unsigned" json:"media_id"`
 	Media       Media  `gorm:"foreignKey:MediaID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Template    string `gorm:"type:text" json:"template"`             // message template
 	Enabled     int    `gorm:"type:tinyint;default:1" json:"enabled"` // 0 = disabled, 1 = enabled
 	Status      int    `gorm:"type:tinyint" json:"status"`            // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	Description string `gorm:"type:varchar(1024)" json:"description"`
@@ -190,8 +189,7 @@ type Action struct {
 	GroupID     *uint  `gorm:"index;type:bigint unsigned" json:"group_id"` // Optional: specific group
 	Group       *Group `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	AlertStatus *int   `gorm:"type:tinyint;default:0" json:"alert_status"` // Filter by alert status (0=active, 1=ack, 2=resolved)
-	UserID      *uint  `gorm:"index;type:bigint unsigned" json:"user_id"`
-	User        *User  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Users       []User `gorm:"many2many:action_users;" json:"-"`
 }
 
 // Trigger represents a rule that filters alerts or logs to invoke an action

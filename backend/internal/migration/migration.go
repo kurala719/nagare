@@ -2,6 +2,7 @@ package migration
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -547,6 +548,18 @@ func preSchemaUpdates() error {
 
 func applySchemaUpdates() error {
 	// Explicitly remove deprecated columns that AutoMigrate does not drop.
+	// Drop template and user_id from actions table
+	if database.DB.Migrator().HasColumn(&model.Action{}, "template") {
+		if err := database.DB.Migrator().DropColumn(&model.Action{}, "template"); err != nil {
+			log.Printf("Failed to drop template column from actions: %v", err)
+		}
+	}
+	if database.DB.Migrator().HasColumn(&model.Action{}, "user_id") {
+		if err := database.DB.Migrator().DropColumn(&model.Action{}, "user_id"); err != nil {
+			log.Printf("Failed to drop user_id column from actions: %v", err)
+		}
+	}
+
 	if database.DB.Migrator().HasColumn(&model.Trigger{}, "action_id") {
 		if err := database.DB.Migrator().DropColumn(&model.Trigger{}, "action_id"); err != nil {
 			return err

@@ -104,7 +104,6 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="template" :label="$t('actions.template')" min-width="220" show-overflow-tooltip sortable="custom" />
       <el-table-column :label="$t('common.enabled')" width="110" align="center" prop="enabled" sortable="custom">
         <template #default="{ row }">
           <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
@@ -192,9 +191,6 @@
           <el-option v-for="t in triggerOptions" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('actions.template')">
-        <el-input v-model="newAction.template" type="textarea" :placeholder="$t('actions.templateHint')" />
-      </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newAction.enabled" :active-value="1" :inactive-value="0" />
       </el-form-item>
@@ -257,9 +253,6 @@
         <el-select v-model="selectedAction.trigger_id" clearable filterable style="width: 100%;" :loading="loadingTriggers" placeholder="Select specific trigger (optional)">
           <el-option v-for="t in triggerOptions" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
-      </el-form-item>
-      <el-form-item :label="$t('actions.template')">
-        <el-input v-model="selectedAction.template" type="textarea" />
       </el-form-item>
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedAction.enabled" :active-value="1" :inactive-value="0" />
@@ -363,7 +356,6 @@ export default {
       newAction: {
         name: '',
         media_id: 0,
-        template: '',
         enabled: 1,
         status: 1,
         description: '',
@@ -378,7 +370,6 @@ export default {
         id: 0,
         name: '',
         media_id: 0,
-        template: '',
         enabled: 1,
         status: 1,
         description: '',
@@ -502,7 +493,6 @@ export default {
           const payload = {
             name: action.name,
             media_id: action.media_id,
-            template: action.template,
             enabled: enabledOverride === 'nochange' ? action.enabled : (enabledOverride === 'enable' ? 1 : 0),
             status: statusOverride === 'nochange' ? action.status : statusOverride,
             description: action.description,
@@ -561,7 +551,6 @@ export default {
           id: a.ID || a.id || 0,
           name: a.Name || a.name || '',
           media_id: a.MediaID || a.media_id || 0,
-          template: a.Template || a.template || '',
           enabled: a.Enabled ?? a.enabled ?? 1,
           status: a.Status ?? a.status ?? 0,
           status_reason: a.Reason || a.reason || a.Error || a.error || a.ErrorMessage || a.error_message || a.LastError || a.last_error || '',
@@ -621,7 +610,6 @@ export default {
       this.newAction = {
         name: '',
         media_id: 0,
-        template: '',
         enabled: 1,
         status: 1,
         description: '',
@@ -663,7 +651,6 @@ export default {
         await updateAction(this.selectedAction.id, {
           name: this.selectedAction.name,
           media_id: this.selectedAction.media_id,
-          template: this.selectedAction.template,
           enabled: this.selectedAction.enabled,
           status: this.selectedAction.status,
           description: this.selectedAction.description,

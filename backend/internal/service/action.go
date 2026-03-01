@@ -15,16 +15,14 @@ import (
 type ActionReq struct {
 	Name        string `json:"name" binding:"required"`
 	MediaID     uint   `json:"media_id"`
-	Template    string `json:"template"`
 	Enabled     int    `json:"enabled"`
 	Description string `json:"description"`
 	// Filter conditions
-	SeverityMin *int  `json:"severity_min"`
-	UserID      *uint `json:"user_id"`
-	HostID      *uint `json:"host_id"`
-	GroupID     *uint `json:"group_id"`
-	AlertStatus *int  `json:"alert_status"`
-	// UserIDs removed as multiple users are not supported directly in the action anymore
+	SeverityMin *int   `json:"severity_min"`
+	HostID      *uint  `json:"host_id"`
+	GroupID     *uint  `json:"group_id"`
+	AlertStatus *int   `json:"alert_status"`
+	UserIDs     []uint `json:"user_ids"`
 }
 
 // ActionResp represents an action response
@@ -32,17 +30,15 @@ type ActionResp struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	MediaID     uint   `json:"media_id"`
-	Template    string `json:"template"`
 	Enabled     int    `json:"enabled"`
 	Status      int    `json:"status"`
 	Description string `json:"description"`
 	// Filter conditions
-	SeverityMin *int          `json:"severity_min"`
-	UserID      *uint         `json:"user_id"`
-	HostID      *uint         `json:"host_id"`
-	GroupID     *uint         `json:"group_id"`
-	AlertStatus *int          `json:"alert_status"`
-	User        *UserResponse `json:"user,omitempty"`
+	SeverityMin *int           `json:"severity_min"`
+	HostID      *uint          `json:"host_id"`
+	GroupID     *uint          `json:"group_id"`
+	AlertStatus *int           `json:"alert_status"`
+	Users       []UserResponse `json:"users,omitempty"`
 }
 
 func GetAllActionsServ() ([]ActionResp, error) {
@@ -86,15 +82,22 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 	action := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
-		Template:    req.Template,
 		Enabled:     req.Enabled,
 		Description: req.Description,
 		SeverityMin: req.SeverityMin,
-		UserID:      req.UserID,
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
 	}
+
+	// Bind users
+	for _, uid := range req.UserIDs {
+		user, err := repository.GetUserByIDDAO(int(uid))
+		if err == nil {
+			action.Users = append(action.Users, user)
+		}
+	}
+
 	if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
 		action.Status = determineActionStatus(action, media)
 	} else {
@@ -115,16 +118,22 @@ func UpdateActionServ(id uint, req ActionReq) error {
 	updated := model.Action{
 		Name:        req.Name,
 		MediaID:     req.MediaID,
-		Template:    req.Template,
 		Enabled:     req.Enabled,
 		Description: req.Description,
 		Status:      existing.Status,
 		SeverityMin: req.SeverityMin,
-		UserID:      req.UserID,
 		HostID:      req.HostID,
 		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
 	}
+
+	for _, uid := range req.UserIDs {
+		user, err := repository.GetUserByIDDAO(int(uid))
+		if err == nil {
+			updated.Users = append(updated.Users, user)
+		}
+	}
+
 	// Preserve status unless enabled state or media changed
 	if req.Enabled != existing.Enabled || req.MediaID != existing.MediaID {
 		if media, err := repository.GetMediaByIDDAO(req.MediaID); err == nil {
@@ -145,26 +154,23 @@ func DeleteActionByIDServ(id uint) error {
 }
 
 func actionToResp(action model.Action) ActionResp {
-	var userResp *UserResponse
-	if action.User != nil {
-		resp := userToResp(*action.User)
-		userResp = &resp
+	var usersResp []UserResponse
+	for _, u := range action.Users {
+		usersResp = append(usersResp, userToResp(u))
 	}
 
 	return ActionResp{
 		ID:          int(action.ID),
 		Name:        action.Name,
 		MediaID:     action.MediaID,
-		Template:    action.Template,
 		Enabled:     action.Enabled,
 		Status:      action.Status,
 		Description: action.Description,
 		SeverityMin: action.SeverityMin,
-		UserID:      action.UserID,
 		HostID:      action.HostID,
 		GroupID:     action.GroupID,
 		AlertStatus: action.AlertStatus,
-		User:        userResp,
+		Users:       usersResp,
 	}
 }
 
@@ -260,10 +266,9 @@ func ExecuteActionsForAlert(alert model.Alert) {
 				}, nil, "")
 			}
 
-			// Also send to specifically associated user
-			if action.User != nil {
+			// Also send to specifically associated users
+			for _, user := range action.Users {
 				lowerType := strings.ToLower(media.Type)
-				user := action.User
 				userTarget := ""
 				if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
 					userTarget = "user:" + user.QQ
@@ -295,10 +300,7 @@ func ExecuteActionsForAlert(alert model.Alert) {
 
 // ExecuteAction sends a message via the action's media
 func ExecuteAction(action model.Action, media model.Media, replacements map[string]string) error {
-	msg := action.Template
-	if msg == "" {
-		msg = "Alert: {{message}}"
-	}
+	msg := "Alert: {{message}}"
 	msg = renderMessageTemplate(msg, replacements)
 	msg = appendAlertDetails(msg, replacements)
 	return sendMediaMessage(media, msg)
@@ -377,19 +379,6 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 	if action.GroupID != nil && *action.GroupID > 0 {
 		if ctx.groupID != *action.GroupID {
 			LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
-			return false
-		}
-	}
-
-	// Trigger ID Check
-	if action.UserID != nil && *action.UserID > 0 {
-		matched := (alert.AlarmID != nil && *alert.AlarmID == *action.UserID)
-		if !matched {
-			LogService("debug", "action filter mismatch: trigger/alarm", map[string]interface{}{
-				"action_id":         action.ID,
-				"alert_alarm_id":    alert.AlarmID,
-				"filter_trigger_id": *action.UserID,
-			}, nil, "")
 			return false
 		}
 	}

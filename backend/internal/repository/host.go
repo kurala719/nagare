@@ -2,6 +2,10 @@ package repository
 
 import (
 	"errors"
+	"log"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	"nagare/internal/database"
@@ -180,6 +184,12 @@ func DeleteHostByMIDDAO(mid uint) error {
 
 // UpdateHostDAO updates a host by ID
 func UpdateHostDAO(id uint, h model.Host) error {
+	traceEnabled := isHostStatusTraceEnabled()
+	prevStatus, prevDesc := 0, ""
+	if traceEnabled {
+		prevStatus, prevDesc = getHostStatusSnapshot(id)
+	}
+
 	// Use individual Update calls to ensure all fields including zero values are updated
 	// This bypasses GORM's zero-value skipping behavior
 	db := database.DB.Model(&model.Host{}).Where("id = ?", id).
@@ -201,6 +211,10 @@ func UpdateHostDAO(id uint, h model.Host) error {
 		db = db.Update("ssh_password", h.SSHPassword)
 	}
 
+	if traceEnabled {
+		traceHostStatusTransition("UpdateHostDAO", id, prevStatus, prevDesc, h.Status, h.StatusDescription)
+	}
+
 	return db.Error
 }
 
@@ -211,7 +225,17 @@ func UpdateHostHealthScoreDAO(id uint, score int) error {
 
 // UpdateHostStatusDAO updates only the status for a host
 func UpdateHostStatusDAO(id uint, status int) error {
-	return database.DB.Model(&model.Host{}).Where("id = ?", id).Update("status", status).Error
+	traceEnabled := isHostStatusTraceEnabled()
+	prevStatus, prevDesc := 0, ""
+	if traceEnabled {
+		prevStatus, prevDesc = getHostStatusSnapshot(id)
+	}
+
+	err := database.DB.Model(&model.Host{}).Where("id = ?", id).Update("status", status).Error
+	if traceEnabled {
+		traceHostStatusTransition("UpdateHostStatusDAO", id, prevStatus, prevDesc, status, prevDesc)
+	}
+	return err
 }
 
 // UpdateHostStatusAndCommentDAO updates status and comment for a host
@@ -224,10 +248,48 @@ func UpdateHostStatusAndCommentDAO(id uint, status int, comment string) error {
 
 // UpdateHostStatusAndDescriptionDAO updates status and status_description for a host
 func UpdateHostStatusAndDescriptionDAO(id uint, status int, statusDesc string) error {
-	return database.DB.Model(&model.Host{}).Where("id = ?", id).Updates(map[string]interface{}{
+	traceEnabled := isHostStatusTraceEnabled()
+	prevStatus, prevDesc := 0, ""
+	if traceEnabled {
+		prevStatus, prevDesc = getHostStatusSnapshot(id)
+	}
+
+	err := database.DB.Model(&model.Host{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"status":             status,
 		"status_description": statusDesc,
 	}).Error
+	if traceEnabled {
+		traceHostStatusTransition("UpdateHostStatusAndDescriptionDAO", id, prevStatus, prevDesc, status, statusDesc)
+	}
+	return err
+}
+
+func isHostStatusTraceEnabled() bool {
+	value := strings.TrimSpace(strings.ToLower(os.Getenv("NAGARE_TRACE_HOST_STATUS")))
+	return value == "1" || value == "true" || value == "yes" || value == "on"
+}
+
+func getHostStatusSnapshot(id uint) (int, string) {
+	host, err := GetHostByIDDAO(id)
+	if err != nil {
+		return -1, ""
+	}
+	return host.Status, host.StatusDescription
+}
+
+func traceHostStatusTransition(op string, id uint, oldStatus int, oldDesc string, newStatus int, newDesc string) {
+	if oldStatus == newStatus && oldDesc == newDesc {
+		return
+	}
+
+	caller := "unknown"
+	if pc, _, _, ok := runtime.Caller(2); ok {
+		if fn := runtime.FuncForPC(pc); fn != nil {
+			caller = fn.Name()
+		}
+	}
+
+	log.Printf("[HOST-STATUS-TRACE] op=%s host_id=%d caller=%s from=%d(%q) to=%d(%q)", op, id, caller, oldStatus, oldDesc, newStatus, newDesc)
 }
 
 // UpdateHostLastSyncAtDAO updates only the last_sync_at for a host
