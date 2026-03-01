@@ -11,8 +11,8 @@ func determineMonitorStatus(m model.Monitor) int {
 	if m.Enabled == 0 {
 		return 0
 	}
-	if m.Status == 2 || m.Status == 3 {
-		return m.Status
+	if m.Status == 2 {
+		return 2
 	}
 	if m.AuthToken != "" {
 		return 1
@@ -179,6 +179,19 @@ func setMonitorRelatedError(mid uint, reason string) {
 
 func setHostStatusSyncing(hid uint) {
 	_ = repository.UpdateHostStatusDAO(hid, 3)
+	host, err := repository.GetHostByIDDAO(hid)
+	if err != nil {
+		return
+	}
+	if host.GroupID == 0 {
+		return
+	}
+	if group, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
+		_, _ = recomputeGroupStatus(group.ID)
+		if group.MonitorID > 0 {
+			_, _ = recomputeMonitorStatus(group.MonitorID)
+		}
+	}
 }
 
 func setHostStatusError(hid uint) {
@@ -195,6 +208,11 @@ func setHostStatusErrorWithReason(hid uint, reason string) {
 
 func setItemStatusSyncing(id uint) {
 	_ = repository.UpdateItemStatusDAO(id, 3)
+	item, err := repository.GetItemByIDDAO(id)
+	if err != nil || item.HostID == 0 {
+		return
+	}
+	setHostStatusSyncing(item.HostID)
 }
 
 func setItemStatusError(id uint) {
@@ -227,6 +245,15 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 		return 0, err
 	}
 	status := determineMonitorStatus(monitor)
+	groupsForStatus, groupsErr := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
+	if groupsErr == nil && status == 1 {
+		for _, g := range groupsForStatus {
+			if g.Enabled != 0 && g.Status == 3 {
+				status = 3
+				break
+			}
+		}
+	}
 	if status == 2 {
 		_ = repository.UpdateMonitorStatusDAO(mid, status)
 	} else {
@@ -242,8 +269,8 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 			baseScore = 50
 		}
 
-		groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
-		if err == nil && len(groups) > 0 {
+		groups := groupsForStatus
+		if groupsErr == nil && len(groups) > 0 {
 			weightedSum := 0
 			totalWeight := 0
 			for _, g := range groups {
@@ -298,6 +325,15 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	}
 
 	status := determineGroupStatus(group, monitorStatus)
+	hostsInGroup, hostsErr := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
+	if hostsErr == nil && status == 1 {
+		for _, h := range hostsInGroup {
+			if h.Enabled != 0 && h.Status == 3 {
+				status = 3
+				break
+			}
+		}
+	}
 	statusDesc := group.StatusDescription
 	if status != 2 {
 		statusDesc = ""
@@ -305,8 +341,7 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	_ = repository.UpdateGroupStatusAndDescriptionDAO(gid, status, statusDesc)
 
 	// Propagate status change to hosts in this group
-	hostsInGroup, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
-	if err == nil {
+	if hostsErr == nil {
 		for _, h := range hostsInGroup {
 			_, _ = recomputeHostStatus(h.ID)
 		}
@@ -321,8 +356,8 @@ func recomputeGroupStatus(gid uint) (int, error) {
 			baseScore = 50
 		}
 
-		hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
-		if err == nil && len(hosts) > 0 {
+		hosts := hostsInGroup
+		if hostsErr == nil && len(hosts) > 0 {
 			weightedSum := 0
 			totalWeight := 0
 			for _, h := range hosts {
@@ -347,6 +382,9 @@ func recomputeGroupStatus(gid uint) (int, error) {
 		}
 	}
 	_ = repository.UpdateGroupHealthScoreDAO(gid, score)
+	if group.MonitorID > 0 {
+		_, _ = recomputeMonitorStatus(group.MonitorID)
+	}
 
 	return status, nil
 }

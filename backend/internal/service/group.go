@@ -58,6 +58,10 @@ func GetAllGroupsServ() ([]GroupResp, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get groups: %w", err)
 	}
+	for _, g := range groups {
+		_, _ = recomputeGroupStatus(g.ID)
+	}
+	groups, _ = repository.GetAllGroupsDAO()
 	result := make([]GroupResp, 0, len(groups))
 	for _, s := range groups {
 		result = append(result, groupToResp(s))
@@ -67,6 +71,13 @@ func GetAllGroupsServ() ([]GroupResp, error) {
 
 // SearchGroupsServ retrieves groups by filter
 func SearchGroupsServ(filter model.GroupFilter) ([]GroupResp, error) {
+	allGroups, allErr := repository.GetAllGroupsDAO()
+	if allErr == nil {
+		for _, g := range allGroups {
+			_, _ = recomputeGroupStatus(g.ID)
+		}
+	}
+
 	groupFilter := model.GroupFilter{
 		Query:     filter.Query,
 		Status:    filter.Status,
@@ -99,6 +110,7 @@ func CountGroupsServ(filter model.GroupFilter) (int64, error) {
 
 // GetGroupByIDServ retrieves a group by ID
 func GetGroupByIDServ(id uint) (GroupResp, error) {
+	_, _ = recomputeGroupStatus(id)
 	group, err := repository.GetGroupByIDDAO(id)
 	if err != nil {
 		return GroupResp{}, fmt.Errorf("failed to get group: %w", err)
