@@ -37,7 +37,7 @@ func SearchHostsDAO(filter model.HostFilter) ([]model.Host, error) {
 			switch filter.SearchField {
 			case "name":
 				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
-			case "hostid":
+			case "external_id":
 				query = query.Where("hosts.external_id LIKE ?", "%"+filter.Query+"%")
 			case "ip_addr":
 				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")
@@ -94,7 +94,7 @@ func CountHostsDAO(filter model.HostFilter) (int64, error) {
 			switch filter.SearchField {
 			case "name":
 				query = query.Where("hosts.name LIKE ?", "%"+filter.Query+"%")
-			case "hostid":
+			case "external_id":
 				query = query.Where("hosts.external_id LIKE ?", "%"+filter.Query+"%")
 			case "ip_addr":
 				query = query.Where("hosts.ip_addr LIKE ?", "%"+filter.Query+"%")

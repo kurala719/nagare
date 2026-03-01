@@ -38,6 +38,11 @@ func SearchTriggersCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid alert_id")
 		return
 	}
+	itemID, err := parseOptionalUint(c, "item_id")
+	if err != nil {
+		respondBadRequest(c, "invalid item_id")
+		return
+	}
 	limit := 100
 	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
 		limit = *l
@@ -51,6 +56,7 @@ func SearchTriggersCtrl(c *gin.Context) {
 		Status:    status,
 		Severity:  severity,
 		AlertID:   alertID,
+		ItemID:    itemID,
 		Limit:     limit,
 		Offset:    offset,
 		SortBy:    c.Query("sort"),

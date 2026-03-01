@@ -14,7 +14,7 @@ func GetAllItemsDAO() ([]model.Item, error) {
 	var items []model.Item
 	if err := database.DB.Model(&model.Item{}).
 		Select("items.*, hosts.name as host_name").
-		Joins("left join hosts on hosts.id = items.hid").
+		Joins("left join hosts on hosts.id = items.host_id").
 		Order("items.id desc").
 		Scan(&items).Error; err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func GetAllItemsDAO() ([]model.Item, error) {
 func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 	query := database.DB.Model(&model.Item{}).
 		Select("items.*, hosts.name as host_name").
-		Joins("left join hosts on hosts.id = items.hid")
+		Joins("left join hosts on hosts.id = items.host_id")
 
 	if filter.Query != "" {
 		if filter.SearchField != "" {
@@ -37,19 +37,19 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 				query = query.Where("items.last_value LIKE ?", "%"+filter.Query+"%")
 			case "comment":
 				query = query.Where("items.comment LIKE ?", "%"+filter.Query+"%")
-			case "itemid":
-				query = query.Where("items.itemid LIKE ?", "%"+filter.Query+"%")
-			case "hostid":
-				query = query.Where("items.hostid LIKE ?", "%"+filter.Query+"%")
+			case "external_id":
+				query = query.Where("items.external_id LIKE ?", "%"+filter.Query+"%")
+			case "host_id":
+				query = query.Where("items.host_id LIKE ?", "%"+filter.Query+"%")
 			default:
-				query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+				query = query.Where("items.name LIKE ? OR items.external_id LIKE ? OR items.host_id LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 			}
 		} else {
-			query = query.Where("items.name LIKE ? OR items.itemid LIKE ? OR items.hostid LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			query = query.Where("items.name LIKE ? OR items.external_id LIKE ? OR items.host_id LIKE ? OR items.comment LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 		}
 	}
 	if filter.HID != nil {
-		query = query.Where("items.hid = ?", *filter.HID)
+		query = query.Where("items.host_id = ?", *filter.HID)
 	}
 	if filter.ValueType != nil {
 		query = query.Where("items.value_type = ?", *filter.ValueType)
@@ -58,10 +58,10 @@ func SearchItemsDAO(filter model.ItemFilter) ([]model.Item, error) {
 		query = query.Where("items.status = ?", *filter.Status)
 	}
 	if filter.HostID != nil {
-		query = query.Where("items.hostid = ?", *filter.HostID)
+		query = query.Where("items.host_id = ?", *filter.HostID)
 	}
 	if filter.ItemID != nil {
-		query = query.Where("items.itemid = ?", *filter.ItemID)
+		query = query.Where("items.external_id = ?", *filter.ItemID)
 	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "items.name",
@@ -93,19 +93,19 @@ func CountItemsDAO(filter model.ItemFilter) (int64, error) {
 			switch filter.SearchField {
 			case "name":
 				query = query.Where("name LIKE ?", "%"+filter.Query+"%")
-			case "itemid":
-				query = query.Where("itemid LIKE ?", "%"+filter.Query+"%")
-			case "hostid":
-				query = query.Where("hostid LIKE ?", "%"+filter.Query+"%")
+			case "external_id":
+				query = query.Where("external_id LIKE ?", "%"+filter.Query+"%")
+			case "host_id":
+				query = query.Where("host_id LIKE ?", "%"+filter.Query+"%")
 			default:
-				query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+				query = query.Where("name LIKE ? OR external_id LIKE ? OR host_id LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 			}
 		} else {
-			query = query.Where("name LIKE ? OR itemid LIKE ? OR hostid LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
+			query = query.Where("name LIKE ? OR external_id LIKE ? OR host_id LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%", "%"+filter.Query+"%")
 		}
 	}
 	if filter.HID != nil {
-		query = query.Where("hid = ?", *filter.HID)
+		query = query.Where("host_id = ?", *filter.HID)
 	}
 	if filter.ValueType != nil {
 		query = query.Where("value_type = ?", *filter.ValueType)
@@ -114,10 +114,10 @@ func CountItemsDAO(filter model.ItemFilter) (int64, error) {
 		query = query.Where("status = ?", *filter.Status)
 	}
 	if filter.HostID != nil {
-		query = query.Where("hostid = ?", *filter.HostID)
+		query = query.Where("host_id = ?", *filter.HostID)
 	}
 	if filter.ItemID != nil {
-		query = query.Where("itemid = ?", *filter.ItemID)
+		query = query.Where("external_id = ?", *filter.ItemID)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -136,7 +136,7 @@ func GetItemByIDDAO(id uint) (model.Item, error) {
 	var item model.Item
 	err := database.DB.Model(&model.Item{}).
 		Select("items.*, hosts.name as host_name").
-		Joins("left join hosts on hosts.id = items.hid").
+		Joins("left join hosts on hosts.id = items.host_id").
 		Where("items.id = ?", id).
 		First(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -148,7 +148,7 @@ func GetItemByIDDAO(id uint) (model.Item, error) {
 // GetItemByItemIDDAO retrieves an item by external item ID
 func GetItemByItemIDDAO(itemID string) (model.Item, error) {
 	var item model.Item
-	err := database.DB.Where("itemid = ?", itemID).First(&item).Error
+	err := database.DB.Where("external_id = ?", itemID).First(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return item, model.ErrNotFound
 	}
@@ -158,7 +158,7 @@ func GetItemByItemIDDAO(itemID string) (model.Item, error) {
 // GetItemsByHIDDAO retrieves all items for a specific host
 func GetItemsByHIDDAO(hid uint) ([]model.Item, error) {
 	var items []model.Item
-	if err := database.DB.Where("hid = ?", hid).Find(&items).Error; err != nil {
+	if err := database.DB.Where("host_id = ?", hid).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -167,7 +167,7 @@ func GetItemsByHIDDAO(hid uint) ([]model.Item, error) {
 // GetItemByHIDAndItemIDDAO retrieves an item by host ID and external item ID
 func GetItemByHIDAndItemIDDAO(hid uint, itemID string) (model.Item, error) {
 	var item model.Item
-	err := database.DB.Where("hid = ? AND itemid = ?", hid, itemID).First(&item).Error
+	err := database.DB.Where("host_id = ? AND external_id = ?", hid, itemID).First(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return item, model.ErrNotFound
 	}
@@ -186,7 +186,7 @@ func DeleteItemByIDDAO(id uint) error {
 
 // DeleteItemsByHIDDAO deletes all items associated with a specific host
 func DeleteItemsByHIDDAO(hid uint) error {
-	return database.DB.Where("hid = ?", hid).Delete(&model.Item{}).Error
+	return database.DB.Where("host_id = ?", hid).Delete(&model.Item{}).Error
 }
 
 // DeleteItemsByMIDDAO deletes all items associated with hosts of a specific monitor

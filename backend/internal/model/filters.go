@@ -45,6 +45,7 @@ type TriggerFilter struct {
 	Status    *int
 	Severity  *int
 	AlertID   *uint
+	ItemID    *uint
 	Limit     int
 	Offset    int
 	SortBy    string

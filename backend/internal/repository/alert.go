@@ -10,8 +10,8 @@ func GetAllAlertsDAO() ([]model.Alert, error) {
 	var alerts []model.Alert
 	if err := database.DB.Model(&model.Alert{}).
 		Select("alerts.*, hosts.name as host_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name").
-		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.hostid = alerts.host_id)").
-		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.itemid = alerts.item_id)").
+		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.external_id = alerts.host_id)").
+		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
 		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
 		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL").
 		Order("alerts.id desc").
@@ -25,8 +25,8 @@ func GetAllAlertsDAO() ([]model.Alert, error) {
 func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 	query := database.DB.Model(&model.Alert{}).
 		Select("alerts.*, hosts.name as host_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name").
-		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.hostid = alerts.host_id)").
-		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.itemid = alerts.item_id)").
+		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.external_id = alerts.host_id)").
+		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
 		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
 		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL")
 
@@ -103,8 +103,8 @@ func GetAlertByIDDAO(id int) (model.Alert, error) {
 	var alert model.Alert
 	err := database.DB.Model(&model.Alert{}).
 		Select("alerts.*, hosts.name as host_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name").
-		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.hostid = alerts.host_id)").
-		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.itemid = alerts.item_id)").
+		Joins("LEFT JOIN hosts ON hosts.id = alerts.host_id OR (alerts.host_id > 0 AND hosts.external_id = alerts.host_id)").
+		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
 		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
 		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL").
 		Where("alerts.id = ?", id).

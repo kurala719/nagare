@@ -15,6 +15,7 @@ type TriggerReq struct {
 	Entity                string   `json:"entity"`
 	Severity              int      `json:"severity"`
 	AlertID               *uint    `json:"alert_id"`
+	ItemID                *uint    `json:"item_id"`
 	AlertStatus           *int     `json:"alert_status"`
 	AlertGroupID          *uint    `json:"alert_group_id"`
 	AlertMonitorID        *uint    `json:"alert_monitor_id"`
@@ -38,6 +39,7 @@ type TriggerResp struct {
 	Entity                string   `json:"entity"`
 	Severity              int      `json:"severity"`
 	AlertID               *uint    `json:"alert_id"`
+	ItemID                *uint    `json:"item_id"`
 	AlertStatus           *int     `json:"alert_status"`
 	AlertGroupID          *uint    `json:"alert_group_id"`
 	AlertMonitorID        *uint    `json:"alert_monitor_id"`
@@ -123,6 +125,7 @@ func UpdateTriggerServ(id uint, req TriggerReq) error {
 		Name:                  req.Name,
 		Severity:              req.Severity,
 		AlertID:               req.AlertID,
+		ItemID:                req.ItemID,
 		ItemStatus:            req.ItemStatus,
 		ItemValueThreshold:    req.ItemValueThreshold,
 		ItemValueThresholdMax: req.ItemValueThresholdMax,
@@ -157,6 +160,7 @@ func triggerToResp(trigger model.Trigger) TriggerResp {
 		Name:                  trigger.Name,
 		Severity:              trigger.Severity,
 		AlertID:               trigger.AlertID,
+		ItemID:                trigger.ItemID,
 		ItemStatus:            trigger.ItemStatus,
 		ItemValueThreshold:    trigger.ItemValueThreshold,
 		ItemValueThresholdMax: trigger.ItemValueThresholdMax,

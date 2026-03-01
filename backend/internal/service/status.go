@@ -11,22 +11,13 @@ func determineMonitorStatus(m model.Monitor) int {
 	if m.Enabled == 0 {
 		return 0
 	}
-	// Explicit error description overrides optimistic status
-	if m.StatusDescription != "" {
+	if m.StatusDescription != "" || m.Status == 2 {
 		return 2
 	}
-	// SNMP monitors are active if enabled, as polling is per-host
-	if m.Type == 1 { // SNMP
+	if m.AuthToken != "" || m.Type == 1 {
 		return 1
 	}
-	// Monitor status is independent - based on its own connectivity/token
-	if m.AuthToken != "" {
-		return 1
-	}
-	if m.Username == "" && m.Password == "" {
-		return 0
-	}
-	return 1
+	return 0
 }
 
 func determineAlarmStatus(a model.Alarm) int {
@@ -56,56 +47,29 @@ func determineProviderStatus(p model.Provider) int {
 }
 
 func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
-	if h.Enabled == 0 {
+	if h.Enabled == 0 || h.Status == 0 || groupStatus == 0 {
 		return 0
 	}
-
-	// If the monitor is in error, the host should be too
-	if monitorStatus == 2 {
+	if h.StatusDescription != "" || h.Status == 2 || groupStatus == 2 {
 		return 2
 	}
-
-	// If the monitor is in error, the host MUST be in error
-	if monitorStatus == 2 {
-		return 2
+	if (h.Status == 1 || h.Status == 3) && (groupStatus == 1 || groupStatus == 3) {
+		return 1
 	}
-
-	// If the host has an explicit error description, keep it in error state.
-	// This ensures that Nagare's internal polling failures (like auth or timeout)
-	// are not overridden by stale 'available' data from Zabbix.
-	// We exclude generic "host is not active" to allow recovery during sync.
-	if h.StatusDescription != "" && h.StatusDescription != "host is not active" {
-		return 2
-	}
-
-	// If the group is in error, the host should be too
-	if groupStatus == 2 {
-		return 2
-	}
-
-	// If monitor or group is inactive, host is inactive
-	if monitorStatus == 0 || groupStatus == 0 {
-		return 0
-	}
-
-	// Without ActiveAvailable or MonitorID on the Host, we default to Active (1)
-	// when there are no errors from the Monitor or Group.
-	return 1
+	return h.Status
 }
 
-func determineItemStatus(i model.Item) int {
-	if i.Enabled == 0 {
+func determineItemStatus(i model.Item, hostStatus int) int {
+	if i.Enabled == 0 || hostStatus == 0 {
 		return 0
 	}
-	// Item status is independent of host's overall health status
-	if i.ExternalID == "" {
+	if i.StatusDescription != "" || i.Status == 2 || hostStatus == 2 {
 		return 2
 	}
-	// 'N/A' indicates a polling failure or missing instance for this specific device
-	if i.LastValue == "" || i.LastValue == "N/A" {
-		return 2
+	if hostStatus == 1 || hostStatus == 3 {
+		return 1
 	}
-	return 1
+	return i.Status
 }
 
 func determineMediaStatus(m model.Media) int {
@@ -140,22 +104,16 @@ func determineTriggerStatus(t model.Trigger) int {
 }
 
 func determineGroupStatus(group model.Group, monitorStatus int) int {
-	if group.Enabled == 0 {
+	if group.Enabled == 0 || monitorStatus == 0 {
 		return 0
 	}
-
-	// If the monitor is in error, the group should be too
-	if monitorStatus == 2 {
+	if group.StatusDescription != "" || group.Status == 2 || monitorStatus == 2 {
 		return 2
 	}
-
-	// If monitor is inactive, group is inactive
-	if monitorStatus == 0 {
-		return 0
+	if monitorStatus == 1 || monitorStatus == 3 {
+		return 1
 	}
-
-	// Default: Enabled and no specific error, mark as Active
-	return 1
+	return 0
 }
 
 func setMonitorStatusSyncing(mid uint) {
@@ -389,15 +347,12 @@ func recomputeItemStatus(id uint) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	_, err = repository.GetHostByIDDAO(item.HostID)
-	if err != nil {
-		status := determineItemStatus(item)
-		if status == 2 {
-			return status, repository.UpdateItemStatusDAO(id, status)
-		}
-		return status, repository.UpdateItemStatusAndDescriptionDAO(id, status, "")
+	hostStatus := 0
+	if host, err := repository.GetHostByIDDAO(item.HostID); err == nil {
+		hostStatus = host.Status
 	}
-	status := determineItemStatus(item)
+
+	status := determineItemStatus(item, hostStatus)
 	if status == 2 {
 		if err := repository.UpdateItemStatusDAO(id, status); err != nil {
 			return status, err

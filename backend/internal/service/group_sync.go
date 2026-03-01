@@ -125,6 +125,7 @@ func pullGroupsFromMonitorServ(mid uint, allowInactive bool) (SyncResult, error)
 			newGroup := model.Group{
 				Name:        hostGroup.Name,
 				Description: "Imported from " + monitor.Name,
+				MonitorID:   mid,
 				Enabled:     1,
 				ExternalID:  hostGroup.ID,
 				LastSyncAt:  &now,

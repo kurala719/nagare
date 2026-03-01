@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"nagare/internal/database"
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/monitors"
@@ -82,7 +83,7 @@ func GetAllHostsServ() ([]HostResp, error) {
 	for _, h := range hosts {
 		result = append(result, hostToResp(h))
 	}
-	return result, nil
+	return enrichHostResps(result), nil
 }
 
 // SearchHostsServ retrieves hosts by filter
@@ -95,7 +96,7 @@ func SearchHostsServ(filter model.HostFilter) ([]HostResp, error) {
 	for _, h := range hosts {
 		result = append(result, hostToResp(h))
 	}
-	return result, nil
+	return enrichHostResps(result), nil
 }
 
 // CountHostsServ returns total count for hosts by filter
@@ -109,7 +110,8 @@ func GetHostByIDServ(id uint) (HostResp, error) {
 	if err != nil {
 		return HostResp{}, fmt.Errorf("failed to get host: %w", err)
 	}
-	return hostToResp(host), nil
+	resps := enrichHostResps([]HostResp{hostToResp(host)})
+	return resps[0], nil
 }
 
 // DeleteHostsByMIDServ deletes all hosts by monitor ID and their items
@@ -517,6 +519,52 @@ type SyncResult struct {
 	Updated int `json:"updated"`
 	Failed  int `json:"failed"`
 	Total   int `json:"total"`
+}
+
+// enrichHostResps adds MonitorID, GroupName, and MonitorName without N+1 queries
+func enrichHostResps(hosts []HostResp) []HostResp {
+	if len(hosts) == 0 {
+		return hosts
+	}
+	groupIDs := make([]uint, 0)
+	for _, h := range hosts {
+		if h.GroupID > 0 {
+			groupIDs = append(groupIDs, h.GroupID)
+		}
+	}
+	if len(groupIDs) == 0 {
+		return hosts
+	}
+
+	groupMap := make(map[uint]model.Group)
+	monitorMap := make(map[uint]model.Monitor)
+	var groups []model.Group
+	database.DB.Where("id IN ?", groupIDs).Find(&groups)
+	monitorIDs := make([]uint, 0)
+	for _, g := range groups {
+		groupMap[g.ID] = g
+		if g.MonitorID > 0 {
+			monitorIDs = append(monitorIDs, g.MonitorID)
+		}
+	}
+	if len(monitorIDs) > 0 {
+		var monitors []model.Monitor
+		database.DB.Where("id IN ?", monitorIDs).Find(&monitors)
+		for _, m := range monitors {
+			monitorMap[m.ID] = m
+		}
+	}
+
+	for i, h := range hosts {
+		if g, ok := groupMap[h.GroupID]; ok {
+			hosts[i].GroupName = g.Name
+			hosts[i].MID = g.MonitorID
+			if m, ok := monitorMap[g.MonitorID]; ok {
+				hosts[i].MonitorName = m.Name
+			}
+		}
+	}
+	return hosts
 }
 
 // hostToResp converts a domain Host to HostResp

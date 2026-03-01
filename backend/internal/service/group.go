@@ -89,10 +89,10 @@ func SearchGroupsServ(filter model.GroupFilter) ([]GroupResp, error) {
 // CountGroupsServ returns total count for groups by filter
 func CountGroupsServ(filter model.GroupFilter) (int64, error) {
 	groupFilter := model.GroupFilter{
-		Query:     filter.Query,
-		Status:    filter.Status,
-		Limit:     filter.Limit,
-		Offset:    filter.Offset,
+		Query:  filter.Query,
+		Status: filter.Status,
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
 	}
 	return repository.CountGroupsDAO(groupFilter)
 }
@@ -125,16 +125,16 @@ func AddGroupServ(req GroupReq) (GroupResp, error) {
 	if err := repository.AddGroupDAO(group); err != nil {
 		return GroupResp{}, fmt.Errorf("failed to add group: %w", err)
 	}
-	// Fetch ID 
+	// Fetch ID
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{Query: group.Name})
 	if err == nil && len(groups) > 0 {
 		created := groups[len(groups)-1]
-		
+
 		// Auto-push to monitor if MID is set AND PushToMonitor is true
 		if created.MonitorID > 0 && req.PushToMonitor {
 			_ = PushGroupToMonitorServ(created.MonitorID, created.ID)
 		}
-		
+
 		group, _ = repository.GetGroupByIDDAO(created.ID)
 	}
 	return groupToResp(group), nil
@@ -150,15 +150,15 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 
 	// Update fields from request
 	updated := model.Group{
-		Name:           req.Name,
-		Description:    req.Description,
-		Enabled:        req.Enabled,
-      // Preserve existing value
-		ExternalID:     existing.ExternalID,     // Preserve existing value
-		LastSyncAt:     existing.LastSyncAt,     // Preserve existing value
- // Preserve existing value
-		Status:         existing.Status,
-		HealthScore:    existing.HealthScore,
+		Name:        req.Name,
+		Description: req.Description,
+		Enabled:     req.Enabled,
+		// Preserve existing value
+		ExternalID: existing.ExternalID, // Preserve existing value
+		LastSyncAt: existing.LastSyncAt, // Preserve existing value
+		// Preserve existing value
+		Status:      existing.Status,
+		HealthScore: existing.HealthScore,
 	}
 
 	// Only update if provided in request
@@ -182,17 +182,17 @@ func UpdateGroupServ(id uint, req GroupReq) error {
 	if err := repository.UpdateGroupDAO(id, updated); err != nil {
 		return err
 	}
-	
+
 	// Auto-push to monitor if PushToMonitor is true
 	if updated.MonitorID > 0 && req.PushToMonitor {
 		_ = PushGroupToMonitorServ(updated.MonitorID, id)
 	} else if updated.MonitorID > 0 && (updated.Name != existing.Name || updated.Description != existing.Description) {
-		// Existing logic: still push if name/desc changed? 
-        // User asked to SEPARATE it. So maybe I should REMOVE this auto-push logic if they didn't explicitly ask for it.
-        // Actually, if they asked to separate it, it means they want to control it.
-        // I will remove the auto-push on name change and rely on the flag.
+		// Existing logic: still push if name/desc changed?
+		// User asked to SEPARATE it. So maybe I should REMOVE this auto-push logic if they didn't explicitly ask for it.
+		// Actually, if they asked to separate it, it means they want to control it.
+		// I will remove the auto-push on name change and rely on the flag.
 	}
-	
+
 	return nil
 }
 
@@ -382,13 +382,14 @@ func PushGroupConfigServ(id uint) error {
 
 func groupToResp(group model.Group) GroupResp {
 	return GroupResp{
-		ID:             int(group.ID),
-		Name:           group.Name,
-		Description:    group.Description,
-		Enabled:        group.Enabled,
-		Status:         group.Status,
-		ExternalID:     group.ExternalID,
-		LastSyncAt:     group.LastSyncAt,
-		HealthScore:    group.HealthScore,
+		ID:          int(group.ID),
+		Name:        group.Name,
+		Description: group.Description,
+		Enabled:     group.Enabled,
+		Status:      group.Status,
+		MonitorID:   group.MonitorID,
+		ExternalID:  group.ExternalID,
+		LastSyncAt:  group.LastSyncAt,
+		HealthScore: group.HealthScore,
 	}
 }

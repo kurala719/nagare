@@ -95,7 +95,7 @@ type Item struct {
 	Host              Host       `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	ExternalID        string     `gorm:"column:external_id;type:varchar(64)" json:"external_id"` // External ID from monitoring system
 	ValueType         string     `gorm:"type:varchar(100)" json:"value_type"`
-	LastValue         string     `gorm:"type:varchar(255)" json:"last_value"`
+	LastValue         string     `gorm:"type:text" json:"last_value"`
 	Units             string     `gorm:"type:varchar(100)" json:"units"`
 	Enabled           int        `gorm:"type:tinyint;default:1" json:"enabled"`       // 0 = disabled, 1 = enabled
 	Status            int        `gorm:"type:tinyint" json:"status"`                  // 0 = inactive, 1 = active, 2 = error, 3 = syncing
@@ -111,7 +111,7 @@ type ItemHistory struct {
 	Item      Item      `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	HostID    uint      `gorm:"index;type:bigint unsigned" json:"host_id"`
 	Host      Host      `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Value     string    `gorm:"type:varchar(128)" json:"value"`
+	Value     string    `gorm:"type:varchar(2048)" json:"value"`
 	Units     string    `gorm:"type:varchar(100)" json:"units"`
 	Status    int       `gorm:"type:tinyint" json:"status"`
 	SampledAt time.Time `gorm:"index:idx_item_sampled,priority:2" json:"sampled_at"`
@@ -149,7 +149,7 @@ type NetworkStatusHistory struct {
 // Alert represents an alert/notification
 type Alert struct {
 	gorm.Model
-	Message   string   `gorm:"type:varchar(512)" json:"message"`
+	Message   string   `gorm:"type:varchar(2048)" json:"message"`
 	Severity  int      `gorm:"type:tinyint" json:"severity"`
 	Status    int      `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
 	AlarmID   *uint    `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
@@ -201,6 +201,8 @@ type Trigger struct {
 	Severity              int      `gorm:"type:tinyint" json:"severity"`
 	AlertID               *uint    `gorm:"column:alert_id;type:bigint unsigned" json:"alert_id"`
 	Alert                 *Alert   `gorm:"foreignKey:AlertID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	ItemID                *uint    `gorm:"column:item_id;type:bigint unsigned" json:"item_id"`
+	Item                  *Item    `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	ItemStatus            *int     `gorm:"column:item_status;type:tinyint" json:"item_status"`
 	ItemValueThreshold    *float64 `gorm:"column:item_value_threshold" json:"item_value_threshold"`
 	ItemValueThresholdMax *float64 `gorm:"column:item_value_threshold_max" json:"item_value_threshold_max"`

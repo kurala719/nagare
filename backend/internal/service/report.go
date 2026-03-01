@@ -434,7 +434,7 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	// 5. Top CPU Hosts
 	type cpuResult struct {
 		ID         uint   `gorm:"column:id"`
-		HID        uint   `gorm:"column:hid"`
+		HostID     uint   `gorm:"column:host_id"`
 		Name       string `gorm:"column:name"`
 		LastValue  string `gorm:"column:last_value"`
 		Units      string `gorm:"column:units"`
@@ -444,8 +444,8 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	}
 	var cpuResults []cpuResult
 	database.DB.Table("items").
-		Select("items.id, items.hid, items.name, items.last_value, items.units, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
-		Joins("left join hosts on hosts.id = items.hid").
+		Select("items.id, items.host_id, items.name, items.last_value, items.units, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
+		Joins("left join hosts on hosts.id = items.host_id").
 		Where("(items.name LIKE ? OR items.name LIKE ? OR items.name LIKE ?) AND items.last_value != ''", "%CPU%", "%cpu%", "%处理器%").
 		Order("(items.last_value + 0) desc").
 		Limit(20).

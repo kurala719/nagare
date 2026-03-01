@@ -35,6 +35,10 @@ func SearchTriggersDAO(filter model.TriggerFilter) ([]model.Trigger, error) {
 		query = query.Where("alert_id = ?", *filter.AlertID)
 	}
 
+	if filter.ItemID != nil {
+		query = query.Where("item_id = ?", *filter.ItemID)
+	}
+
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
@@ -73,6 +77,10 @@ func CountTriggersDAO(filter model.TriggerFilter) (int64, error) {
 
 	if filter.AlertID != nil {
 		query = query.Where("alert_id = ?", *filter.AlertID)
+	}
+
+	if filter.ItemID != nil {
+		query = query.Where("item_id = ?", *filter.ItemID)
 	}
 
 	var total int64
