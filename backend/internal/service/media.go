@@ -2,7 +2,6 @@
 
 import (
 	"fmt"
-	"strings"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -10,24 +9,22 @@ import (
 
 // MediaReq represents a media request
 type MediaReq struct {
-	Name        string                 `json:"name" binding:"required"`
-	Type        string                 `json:"type" binding:"required"`
-	Target      string                 `json:"target" binding:"required"`
-	Params      map[string]interface{} `json:"params"`
-	Enabled     int                    `json:"enabled"`
-	Description string                 `json:"description"`
+	Name        string `json:"name" binding:"required"`
+	Type        string `json:"type" binding:"required"`
+	Target      string `json:"target" binding:"required"`
+	Enabled     int    `json:"enabled"`
+	Description string `json:"description"`
 }
 
 // MediaResp represents a media response
 type MediaResp struct {
-	ID          int               `json:"id"`
-	Name        string            `json:"name"`
-	Type        string            `json:"type"`
-	Target      string            `json:"target"`
-	Params      map[string]string `json:"params"`
-	Enabled     int               `json:"enabled"`
-	Status      int               `json:"status"`
-	Description string            `json:"description"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Target      string `json:"target"`
+	Enabled     int    `json:"enabled"`
+	Status      int    `json:"status"`
+	Description string `json:"description"`
 }
 
 func GetAllMediaServ() ([]MediaResp, error) {
@@ -109,12 +106,10 @@ func TestMediaServ(id uint) error {
 }
 
 func AddMediaServ(req MediaReq) (MediaResp, error) {
-	params := coerceMediaParams(req.Params)
 	media := model.Media{
 		Name:        req.Name,
 		Type:        req.Type,
 		Target:      req.Target,
-		Params:      params,
 		Enabled:     req.Enabled,
 		Status:      determineMediaStatus(model.Media{Enabled: req.Enabled, Type: req.Type, Target: req.Target}),
 		Description: req.Description,
@@ -130,12 +125,10 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 	if err != nil {
 		return err
 	}
-	params := coerceMediaParams(req.Params)
 	updated := model.Media{
 		Name:        req.Name,
 		Type:        req.Type,
 		Target:      req.Target,
-		Params:      params,
 		Enabled:     req.Enabled,
 		Status:      existing.Status,
 		Description: req.Description,
@@ -161,23 +154,10 @@ func mediaToResp(media model.Media) MediaResp {
 		Name:        media.Name,
 		Type:        media.Type,
 		Target:      media.Target,
-		Params:      media.Params,
 		Enabled:     media.Enabled,
 		Status:      media.Status,
 		Description: media.Description,
 	}
-}
-
-func coerceMediaParams(incoming map[string]interface{}) map[string]string {
-	params := map[string]string{}
-	for key, value := range incoming {
-		if value == nil {
-			params[key] = ""
-			continue
-		}
-		params[key] = strings.TrimSpace(fmt.Sprint(value))
-	}
-	return params
 }
 
 // BackfillMediaParamsAndTargetsServ is now a no-op as MediaType is removed

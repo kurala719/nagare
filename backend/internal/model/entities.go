@@ -26,17 +26,11 @@ type Host struct {
 	SSHPassword       string `gorm:"column:ssh_password;type:varchar(255)" json:"-"`
 	SSHPort           int    `gorm:"column:ssh_port;default:22" json:"ssh_port"`
 	// SNMP Configuration
-	SNMPCommunity       string     `gorm:"column:snmp_community;type:varchar(100)" json:"snmp_community"`
-	SNMPVersion         string     `gorm:"column:snmp_version;type:varchar(20)" json:"snmp_version"` // "v1", "v2c", "v3"
-	SNMPPort            int        `gorm:"column:snmp_port;default:161" json:"snmp_port"`
-	SNMPV3User          string     `gorm:"column:snmp_v3_user;type:varchar(100)" json:"snmp_v3_user"`
-	SNMPV3AuthPass      string     `gorm:"column:snmp_v3_auth_pass;type:varchar(255)" json:"-"`
-	SNMPV3PrivPass      string     `gorm:"column:snmp_v3_priv_pass;type:varchar(255)" json:"-"`
-	SNMPV3AuthProtocol  string     `gorm:"column:snmp_v3_auth_protocol;type:varchar(50)" json:"snmp_v3_auth_protocol"`
-	SNMPV3PrivProtocol  string     `gorm:"column:snmp_v3_priv_protocol;type:varchar(50)" json:"snmp_v3_priv_protocol"`
-	SNMPV3SecurityLevel string     `gorm:"column:snmp_v3_security_level;type:varchar(50)" json:"snmp_v3_security_level"`
-	LastSyncAt          *time.Time `json:"last_sync_at"`
-	HealthScore         int        `gorm:"column:health_score;default:100" json:"health_score"`
+	SNMPCommunity string     `gorm:"column:snmp_community;type:varchar(100)" json:"snmp_community"`
+	SNMPVersion   string     `gorm:"column:snmp_version;type:varchar(20)" json:"snmp_version"` // "v1", "v2c"
+	SNMPPort      int        `gorm:"column:snmp_port;default:161" json:"snmp_port"`
+	LastSyncAt    *time.Time `json:"last_sync_at"`
+	HealthScore   int        `gorm:"column:health_score;default:100" json:"health_score"`
 }
 
 // Group represents a logical group of hosts
@@ -110,8 +104,6 @@ type ItemHistory struct {
 	gorm.Model
 	ItemID    uint      `gorm:"index:idx_item_sampled,priority:1;type:bigint unsigned" json:"item_id"`
 	Item      Item      `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	HostID    uint      `gorm:"index;type:bigint unsigned" json:"host_id"`
-	Host      Host      `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Value     string    `gorm:"type:varchar(2048)" json:"value"`
 	Units     string    `gorm:"type:varchar(100)" json:"units"`
 	Status    int       `gorm:"type:tinyint" json:"status"`
@@ -163,13 +155,12 @@ type Alert struct {
 // Media represents a notification delivery target
 type Media struct {
 	gorm.Model
-	Name        string            `gorm:"type:varchar(100)" json:"name"`
-	Type        string            `gorm:"type:varchar(50)" json:"type"`    // "email", "other", "qq", etc.
-	Target      string            `gorm:"type:varchar(255)" json:"target"` // address/endpoint/number
-	Params      map[string]string `gorm:"type:json;serializer:json" json:"params"`
-	Enabled     int               `gorm:"type:tinyint;default:1" json:"enabled"` // 0 = disabled, 1 = enabled
-	Status      int               `gorm:"type:tinyint" json:"status"`            // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	Description string            `gorm:"type:varchar(1024)" json:"description"`
+	Name        string `gorm:"type:varchar(100)" json:"name"`
+	Type        string `gorm:"type:varchar(50)" json:"type"`          // "email", "other", "qq", etc.
+	Target      string `gorm:"type:varchar(255)" json:"target"`       // address/endpoint/number
+	Enabled     int    `gorm:"type:tinyint;default:1" json:"enabled"` // 0 = disabled, 1 = enabled
+	Status      int    `gorm:"type:tinyint" json:"status"`            // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	Description string `gorm:"type:varchar(1024)" json:"description"`
 }
 
 // Action represents an action executed for alerts
@@ -182,10 +173,6 @@ type Action struct {
 	Status      int    `gorm:"type:tinyint" json:"status"`            // 0 = inactive, 1 = active, 2 = error, 3 = syncing
 	Description string `gorm:"type:varchar(1024)" json:"description"`
 	SeverityMin *int   `gorm:"type:tinyint;default:0" json:"severity_min"` // Filter alerts with severity >= this
-	HostID      *uint  `gorm:"index;type:bigint unsigned" json:"host_id"`  // Optional: specific host
-	Host        *Host  `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	GroupID     *uint  `gorm:"index;type:bigint unsigned" json:"group_id"` // Optional: specific group
-	Group       *Group `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	AlertStatus *int   `gorm:"type:tinyint;default:0" json:"alert_status"` // Filter by alert status (0=active, 1=ack, 2=resolved)
 	Users       []User `gorm:"many2many:action_users;" json:"-"`
 }
@@ -243,7 +230,7 @@ type ChatMessage struct {
 // LogEntry represents a system log entry
 type LogEntry struct {
 	gorm.Model
-	Severity int    `gorm:"column:level;type:tinyint" json:"severity"` // 0=info, 1=warn, 2=error
+	Severity int    `gorm:"column:severity;type:tinyint" json:"severity"` // 0=info, 1=warn, 2=error
 	Message  string `gorm:"type:varchar(512)" json:"message"`
 	Context  string `gorm:"type:text" json:"context"`
 	UserID   *uint  `gorm:"type:bigint unsigned" json:"user_id"`

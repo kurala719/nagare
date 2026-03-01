@@ -228,10 +228,10 @@ func fixForeignKeyColumnTypes() error {
 		"hosts":                       {"monitor_id", "group_id"},
 		"groups":                      {"monitor_id"},
 		"items":                       {"hid"},
-		"item_histories":              {"item_id", "host_id"},
+		"item_histories":              {"item_id"},
 		"host_histories":              {"host_id"},
 		"alerts":                      {"alarm_id", "item_id"},
-		"actions":                     {"media_id", "trigger_id", "host_id", "group_id"},
+		"actions":                     {"media_id", "trigger_id"},
 		"triggers":                    {"alert_id", "alert_group_id", "alert_monitor_id", "alert_host_id", "alert_item_id"},
 		"chats":                       {"user_id", "provider_id"},
 		"log_entries":                 {"user_id"},
@@ -355,15 +355,19 @@ func migrateLogSeverityLevels() error {
 	// Check log_entries
 	if database.DB.Migrator().HasTable("log_entries") {
 		var count int64
-		// If we already have logs with level >= 3, assume we've migrated
-		database.DB.Table("log_entries").Where("level >= 3").Count(&count)
+		column := "severity"
+		if !database.DB.Migrator().HasColumn("log_entries", column) && database.DB.Migrator().HasColumn("log_entries", "level") {
+			column = "level"
+		}
+		// If we already have logs with severity >= 3, assume we've migrated
+		database.DB.Table("log_entries").Where(column + " >= 3").Count(&count)
 		if count == 0 {
 			// Bump 2 (Error) -> 4 (High)
-			_ = database.DB.Exec("UPDATE log_entries SET level = 4 WHERE level = 2")
+			_ = database.DB.Exec("UPDATE log_entries SET " + column + " = 4 WHERE " + column + " = 2")
 			// Bump 1 (Warn) -> 2 (Warning) (already 2, but just for clarity or if it was different)
-			_ = database.DB.Exec("UPDATE log_entries SET level = 2 WHERE level = 1")
+			_ = database.DB.Exec("UPDATE log_entries SET " + column + " = 2 WHERE " + column + " = 1")
 			// Bump 0 (Info) -> 1 (Info)
-			_ = database.DB.Exec("UPDATE log_entries SET level = 1 WHERE level = 0")
+			_ = database.DB.Exec("UPDATE log_entries SET " + column + " = 1 WHERE " + column + " = 0")
 
 			// Migrate site_message.min_log_severity config using viper directly
 			currentMin, err := repository.GetMainConfig()
@@ -503,10 +507,18 @@ func preSchemaUpdates() error {
 			return err
 		}
 	}
-	if database.DB.Migrator().HasTable(&model.LogEntry{}) && database.DB.Migrator().HasColumn(&model.LogEntry{}, "level") {
-		// Only run if there are non-numeric values
-		if err := database.DB.Exec("UPDATE log_entries SET level = CASE WHEN CAST(level AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(level AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(level AS CHAR) REGEXP '^[0-9]+$' THEN CAST(level AS UNSIGNED) ELSE NULL END WHERE level IS NOT NULL AND (CAST(level AS CHAR) REGEXP '^[a-zA-Z]+$')").Error; err != nil {
-			return err
+	if database.DB.Migrator().HasTable(&model.LogEntry{}) {
+		column := ""
+		if database.DB.Migrator().HasColumn("log_entries", "severity") {
+			column = "severity"
+		} else if database.DB.Migrator().HasColumn("log_entries", "level") {
+			column = "level"
+		}
+		if column != "" {
+			// Only run if there are non-numeric values
+			if err := database.DB.Exec("UPDATE log_entries SET " + column + " = CASE WHEN CAST(" + column + " AS CHAR) IN ('info','warn','warning','error') THEN CASE CAST(" + column + " AS CHAR) WHEN 'info' THEN 0 WHEN 'warn' THEN 1 WHEN 'warning' THEN 1 WHEN 'error' THEN 2 END WHEN CAST(" + column + " AS CHAR) REGEXP '^[0-9]+$' THEN CAST(" + column + " AS UNSIGNED) ELSE NULL END WHERE " + column + " IS NOT NULL AND (CAST(" + column + " AS CHAR) REGEXP '^[a-zA-Z]+$')").Error; err != nil {
+				return err
+			}
 		}
 	}
 	// Migrate monitor type from string to int: 'snmp' -> 1, 'zabbix' -> 2, 'prometheus' -> 3 (now 'other')
@@ -579,26 +591,65 @@ func applySchemaUpdates() error {
 		}
 	}
 
+	legacyHostColumns := []string{
+		"snmp_v3_user", "snmp_v3_auth_pass", "snmp_v3_priv_pass",
+		"snmp_v3_auth_protocol", "snmp_v3_priv_protocol", "snmp_v3_security_level",
+	}
+	for _, column := range legacyHostColumns {
+		if database.DB.Migrator().HasColumn("hosts", column) {
+			if err := database.DB.Migrator().DropColumn("hosts", column); err != nil {
+				log.Printf("Failed to drop %s column from hosts: %v", column, err)
+			}
+		}
+	}
+
+	legacyActionColumns := []string{"host_id", "group_id"}
+	for _, column := range legacyActionColumns {
+		if database.DB.Migrator().HasColumn("actions", column) {
+			if err := database.DB.Migrator().DropColumn("actions", column); err != nil {
+				log.Printf("Failed to drop %s column from actions: %v", column, err)
+			}
+		}
+	}
+
+	if database.DB.Migrator().HasColumn("item_histories", "host_id") {
+		if err := database.DB.Migrator().DropColumn("item_histories", "host_id"); err != nil {
+			log.Printf("Failed to drop host_id column from item_histories: %v", err)
+		}
+	}
+
+	if database.DB.Migrator().HasColumn("media", "params") {
+		if err := database.DB.Migrator().DropColumn("media", "params"); err != nil {
+			log.Printf("Failed to drop params column from media: %v", err)
+		}
+	}
+
 	if database.DB.Migrator().HasColumn(&model.Trigger{}, "action_id") {
 		if err := database.DB.Migrator().DropColumn(&model.Trigger{}, "action_id"); err != nil {
 			return err
 		}
 	}
 	if database.DB.Migrator().HasTable(&model.LogEntry{}) {
+		if database.DB.Migrator().HasColumn("log_entries", "level") && !database.DB.Migrator().HasColumn("log_entries", "severity") {
+			if err := database.DB.Migrator().RenameColumn("log_entries", "level", "severity"); err != nil {
+				return err
+			}
+		}
+
 		// Check current type to avoid redundant ALTER
 		columnTypes, err := database.DB.Migrator().ColumnTypes("log_entries")
 		if err == nil {
 			var isInt bool
 			for _, ct := range columnTypes {
-				if ct.Name() == "level" {
+				if ct.Name() == "severity" {
 					dbType := strings.ToUpper(ct.DatabaseTypeName())
 					isInt = strings.Contains(dbType, "INT") && !strings.Contains(dbType, "BIGINT")
 					break
 				}
 			}
 			if !isInt {
-				fmt.Println(">>> Migrating log_entries.level to INT...")
-				if err := database.DB.Exec("ALTER TABLE log_entries MODIFY COLUMN level INT").Error; err != nil {
+				fmt.Println(">>> Migrating log_entries.severity to INT...")
+				if err := database.DB.Exec("ALTER TABLE log_entries MODIFY COLUMN severity INT").Error; err != nil {
 					return err
 				}
 			}

@@ -11,7 +11,6 @@ import (
 // ItemHistoryResp represents item history for API responses.
 type ItemHistoryResp struct {
 	ItemID    uint      `json:"item_id"`
-	HostID    uint      `json:"host_id"`
 	Value     string    `json:"value"`
 	Units     string    `json:"units"`
 	Status    int       `json:"status"`
@@ -54,7 +53,6 @@ func GetItemHistoryServ(itemID uint, from, to *time.Time, limit int) ([]ItemHist
 	for _, row := range rows {
 		resp = append(resp, ItemHistoryResp{
 			ItemID:    row.ItemID,
-			HostID:    row.HostID,
 			Value:     row.Value,
 			Units:     row.Units,
 			Status:    row.Status,
@@ -116,7 +114,6 @@ func recordItemHistory(item model.Item, sampledAt time.Time) {
 	}
 	_ = repository.AddItemHistoryDAO(model.ItemHistory{
 		ItemID:    item.ID,
-		HostID:    item.HostID,
 		Value:     item.LastValue,
 		Units:     item.Units,
 		Status:    item.Status,
@@ -231,7 +228,6 @@ func GenerateTestHistoryServ() error {
 
 		if err := repository.AddItemHistoryDAO(model.ItemHistory{
 			ItemID:    item.ID,
-			HostID:    item.HostID,
 			Value:     fmt.Sprintf("%.2f", baseValue),
 			Units:     item.Units,
 			Status:    1,

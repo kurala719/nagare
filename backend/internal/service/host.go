@@ -28,18 +28,12 @@ type HostReq struct {
 	SSHPassword string `json:"ssh_password"`
 	SSHPort     int    `json:"ssh_port"`
 	// SNMP Configuration
-	SNMPCommunity       string     `json:"snmp_community"`
-	SNMPVersion         string     `json:"snmp_version"`
-	SNMPPort            int        `json:"snmp_port"`
-	SNMPV3User          string     `json:"snmp_v3_user"`
-	SNMPV3AuthPass      string     `json:"snmp_v3_auth_pass"`
-	SNMPV3PrivPass      string     `json:"snmp_v3_priv_pass"`
-	SNMPV3AuthProtocol  string     `json:"snmp_v3_auth_protocol"`
-	SNMPV3PrivProtocol  string     `json:"snmp_v3_priv_protocol"`
-	SNMPV3SecurityLevel string     `json:"snmp_v3_security_level"`
-	LastSyncAt          *time.Time `json:"last_sync_at,omitempty"`
-	ExternalSource      string     `json:"external_source,omitempty"`
-	PushToMonitor       bool       `json:"push_to_monitor"`
+	SNMPCommunity  string     `json:"snmp_community"`
+	SNMPVersion    string     `json:"snmp_version"`
+	SNMPPort       int        `json:"snmp_port"`
+	LastSyncAt     *time.Time `json:"last_sync_at,omitempty"`
+	ExternalSource string     `json:"external_source,omitempty"`
+	PushToMonitor  bool       `json:"push_to_monitor"`
 }
 
 // HostResp represents a host response
@@ -60,16 +54,12 @@ type HostResp struct {
 	SSHUser     string `json:"ssh_user"`
 	SSHPort     int    `json:"ssh_port"`
 	// SNMP Configuration
-	SNMPCommunity       string     `json:"snmp_community"`
-	SNMPVersion         string     `json:"snmp_version"`
-	SNMPPort            int        `json:"snmp_port"`
-	SNMPV3User          string     `json:"snmp_v3_user"`
-	SNMPV3AuthProtocol  string     `json:"snmp_v3_auth_protocol"`
-	SNMPV3PrivProtocol  string     `json:"snmp_v3_priv_protocol"`
-	SNMPV3SecurityLevel string     `json:"snmp_v3_security_level"`
-	LastSyncAt          *time.Time `json:"last_sync_at"`
-	ExternalSource      string     `json:"external_source"`
-	HealthScore         int        `json:"health_score"`
+	SNMPCommunity  string     `json:"snmp_community"`
+	SNMPVersion    string     `json:"snmp_version"`
+	SNMPPort       int        `json:"snmp_port"`
+	LastSyncAt     *time.Time `json:"last_sync_at"`
+	ExternalSource string     `json:"external_source"`
+	HealthScore    int        `json:"health_score"`
 }
 
 // GetAllHostsServ retrieves all hosts
@@ -144,24 +134,18 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	newHost := model.Host{
-		Name:                h.Name,
-		ExternalID:          h.ExternalID,
-		GroupID:             h.GroupID,
-		Description:         h.Description,
-		Enabled:             h.Enabled,
-		IPAddr:              h.IPAddr,
-		Comment:             h.Comment,
-		SSHUser:             h.SSHUser,
-		SSHPort:             h.SSHPort,
-		SNMPCommunity:       h.SNMPCommunity,
-		SNMPVersion:         h.SNMPVersion,
-		SNMPPort:            h.SNMPPort,
-		SNMPV3User:          h.SNMPV3User,
-		SNMPV3AuthPass:      h.SNMPV3AuthPass,
-		SNMPV3PrivPass:      h.SNMPV3PrivPass,
-		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
-		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
-		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
+		Name:          h.Name,
+		ExternalID:    h.ExternalID,
+		GroupID:       h.GroupID,
+		Description:   h.Description,
+		Enabled:       h.Enabled,
+		IPAddr:        h.IPAddr,
+		Comment:       h.Comment,
+		SSHUser:       h.SSHUser,
+		SSHPort:       h.SSHPort,
+		SNMPCommunity: h.SNMPCommunity,
+		SNMPVersion:   h.SNMPVersion,
+		SNMPPort:      h.SNMPPort,
 	}
 	if h.SNMPPort == 0 {
 		newHost.SNMPPort = 161
@@ -179,18 +163,6 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		encrypted, err := utils.Encrypt(h.SSHPassword)
 		if err == nil {
 			newHost.SSHPassword = encrypted
-		}
-	}
-	if h.SNMPV3AuthPass != "" {
-		encrypted, err := utils.Encrypt(h.SNMPV3AuthPass)
-		if err == nil {
-			newHost.SNMPV3AuthPass = encrypted
-		}
-	}
-	if h.SNMPV3PrivPass != "" {
-		encrypted, err := utils.Encrypt(h.SNMPV3PrivPass)
-		if err == nil {
-			newHost.SNMPV3PrivPass = encrypted
 		}
 	}
 	if h.MID == 0 {
@@ -248,27 +220,21 @@ func UpdateHostServ(id uint, h HostReq) error {
 	}
 
 	updated := model.Host{
-		Name:                h.Name,
-		ExternalID:          h.ExternalID,
-		GroupID:             h.GroupID,
-		Description:         h.Description,
-		Enabled:             h.Enabled,
-		IPAddr:              h.IPAddr,
-		Comment:             h.Comment,
-		SSHUser:             h.SSHUser,
-		SSHPort:             h.SSHPort,
-		SNMPCommunity:       h.SNMPCommunity,
-		SNMPVersion:         h.SNMPVersion,
-		SNMPPort:            h.SNMPPort,
-		SNMPV3User:          h.SNMPV3User,
-		SNMPV3AuthPass:      h.SNMPV3AuthPass,
-		SNMPV3PrivPass:      h.SNMPV3PrivPass,
-		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
-		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
-		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
-		LastSyncAt:          existing.LastSyncAt,
-		Status:              existing.Status,
-		StatusDescription:   existing.StatusDescription,
+		Name:              h.Name,
+		ExternalID:        h.ExternalID,
+		GroupID:           h.GroupID,
+		Description:       h.Description,
+		Enabled:           h.Enabled,
+		IPAddr:            h.IPAddr,
+		Comment:           h.Comment,
+		SSHUser:           h.SSHUser,
+		SSHPort:           h.SSHPort,
+		SNMPCommunity:     h.SNMPCommunity,
+		SNMPVersion:       h.SNMPVersion,
+		SNMPPort:          h.SNMPPort,
+		LastSyncAt:        existing.LastSyncAt,
+		Status:            existing.Status,
+		StatusDescription: existing.StatusDescription,
 	}
 	if h.LastSyncAt != nil {
 		updated.LastSyncAt = h.LastSyncAt
@@ -283,22 +249,6 @@ func UpdateHostServ(id uint, h HostReq) error {
 		}
 	} else {
 		updated.SSHPassword = existing.SSHPassword
-	}
-	if h.SNMPV3AuthPass != "" {
-		encrypted, err := utils.Encrypt(h.SNMPV3AuthPass)
-		if err == nil {
-			updated.SNMPV3AuthPass = encrypted
-		}
-	} else {
-		updated.SNMPV3AuthPass = existing.SNMPV3AuthPass
-	}
-	if h.SNMPV3PrivPass != "" {
-		encrypted, err := utils.Encrypt(h.SNMPV3PrivPass)
-		if err == nil {
-			updated.SNMPV3PrivPass = encrypted
-		}
-	} else {
-		updated.SNMPV3PrivPass = existing.SNMPV3PrivPass
 	}
 	if err := repository.UpdateHostDAO(id, updated); err != nil {
 		return err
@@ -570,29 +520,25 @@ func enrichHostResps(hosts []HostResp) []HostResp {
 // hostToResp converts a domain Host to HostResp
 func hostToResp(h model.Host) HostResp {
 	return HostResp{
-		ID:                  int(h.ID),
-		Name:                h.Name,
-		GroupID:             h.GroupID,
-		GroupName:           "",
-		MonitorName:         "",
-		ExternalID:          h.ExternalID,
-		Description:         h.Description,
-		Enabled:             h.Enabled,
-		Status:              h.Status,
-		StatusDesc:          h.StatusDescription,
-		IPAddr:              h.IPAddr,
-		Comment:             h.Comment,
-		SSHUser:             h.SSHUser,
-		SSHPort:             h.SSHPort,
-		SNMPCommunity:       h.SNMPCommunity,
-		SNMPVersion:         h.SNMPVersion,
-		SNMPPort:            h.SNMPPort,
-		SNMPV3User:          h.SNMPV3User,
-		SNMPV3AuthProtocol:  h.SNMPV3AuthProtocol,
-		SNMPV3PrivProtocol:  h.SNMPV3PrivProtocol,
-		SNMPV3SecurityLevel: h.SNMPV3SecurityLevel,
-		LastSyncAt:          h.LastSyncAt,
-		HealthScore:         h.HealthScore,
+		ID:            int(h.ID),
+		Name:          h.Name,
+		GroupID:       h.GroupID,
+		GroupName:     "",
+		MonitorName:   "",
+		ExternalID:    h.ExternalID,
+		Description:   h.Description,
+		Enabled:       h.Enabled,
+		Status:        h.Status,
+		StatusDesc:    h.StatusDescription,
+		IPAddr:        h.IPAddr,
+		Comment:       h.Comment,
+		SSHUser:       h.SSHUser,
+		SSHPort:       h.SSHPort,
+		SNMPCommunity: h.SNMPCommunity,
+		SNMPVersion:   h.SNMPVersion,
+		SNMPPort:      h.SNMPPort,
+		LastSyncAt:    h.LastSyncAt,
+		HealthScore:   h.HealthScore,
 	}
 }
 

@@ -653,29 +653,11 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	if mType == monitors.MonitorSNMP {
 		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
 		fmt.Printf("[DEBUG] SNMP Config: IP=%s, Version=%s, Community=%s\n", host.IPAddr, host.SNMPVersion, host.SNMPCommunity)
-		authPass := host.SNMPV3AuthPass
-		if authPass != "" {
-			if decrypted, err := utils.Decrypt(authPass); err == nil {
-				authPass = decrypted
-			}
-		}
-		privPass := host.SNMPV3PrivPass
-		if privPass != "" {
-			if decrypted, err := utils.Decrypt(privPass); err == nil {
-				privPass = decrypted
-			}
-		}
 
 		snmpCfg := monitors.SnmpConfig{
-			Community:       host.SNMPCommunity,
-			Version:         host.SNMPVersion,
-			Port:            host.SNMPPort,
-			V3User:          host.SNMPV3User,
-			V3AuthPass:      authPass,
-			V3PrivPass:      privPass,
-			V3AuthProtocol:  host.SNMPV3AuthProtocol,
-			V3PrivProtocol:  host.SNMPV3PrivProtocol,
-			V3SecurityLevel: host.SNMPV3SecurityLevel,
+			Community: host.SNMPCommunity,
+			Version:   host.SNMPVersion,
+			Port:      host.SNMPPort,
 		}
 		// Use IP address as target for SNMP
 		targetID = host.IPAddr

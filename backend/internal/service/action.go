@@ -19,8 +19,6 @@ type ActionReq struct {
 	Description string `json:"description"`
 	// Filter conditions
 	SeverityMin *int   `json:"severity_min"`
-	HostID      *uint  `json:"host_id"`
-	GroupID     *uint  `json:"group_id"`
 	AlertStatus *int   `json:"alert_status"`
 	UserIDs     []uint `json:"user_ids"`
 }
@@ -35,8 +33,6 @@ type ActionResp struct {
 	Description string `json:"description"`
 	// Filter conditions
 	SeverityMin *int           `json:"severity_min"`
-	HostID      *uint          `json:"host_id"`
-	GroupID     *uint          `json:"group_id"`
 	AlertStatus *int           `json:"alert_status"`
 	Users       []UserResponse `json:"users,omitempty"`
 }
@@ -85,8 +81,6 @@ func AddActionServ(req ActionReq) (ActionResp, error) {
 		Enabled:     req.Enabled,
 		Description: req.Description,
 		SeverityMin: req.SeverityMin,
-		HostID:      req.HostID,
-		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
 	}
 
@@ -122,8 +116,6 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		Description: req.Description,
 		Status:      existing.Status,
 		SeverityMin: req.SeverityMin,
-		HostID:      req.HostID,
-		GroupID:     req.GroupID,
 		AlertStatus: req.AlertStatus,
 	}
 
@@ -167,8 +159,6 @@ func actionToResp(action model.Action) ActionResp {
 		Status:      action.Status,
 		Description: action.Description,
 		SeverityMin: action.SeverityMin,
-		HostID:      action.HostID,
-		GroupID:     action.GroupID,
 		AlertStatus: action.AlertStatus,
 		Users:       usersResp,
 	}
@@ -311,7 +301,6 @@ type alertMatchContext struct {
 	host      *model.Host
 	item      *model.Item
 	monitorID uint
-	groupID   uint
 }
 
 func buildAlertMatchContext(alert model.Alert) alertMatchContext {
@@ -330,7 +319,6 @@ func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 		if grp, err := repository.GetGroupByIDDAO(ctx.host.GroupID); err == nil {
 			ctx.monitorID = grp.MonitorID
 		}
-		ctx.groupID = ctx.host.GroupID
 	}
 	return ctx
 }
@@ -352,26 +340,6 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 		return false
 	}
 
-	// Host Check
-	// Ignore if nil or 0
-	if action.HostID != nil && *action.HostID > 0 {
-		// Alert must be associated with this host
-		var hostID uint = 0
-		if hostID != *action.HostID {
-			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "ctx_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
-			return false
-		}
-	}
-
-	// Group Check
-	// Ignore if nil or 0
-	if action.GroupID != nil && *action.GroupID > 0 {
-		if ctx.groupID != *action.GroupID {
-			LogService("debug", "action filter mismatch: group", map[string]interface{}{"action_id": action.ID, "ctx_group_id": ctx.groupID, "filter_group_id": *action.GroupID}, nil, "")
-			return false
-		}
-	}
-
 	return true
 }
 
@@ -391,7 +359,7 @@ func buildAlertReplacements(ctx alertMatchContext) map[string]string {
 		"{{host_id}}":        hostIDStr,
 		"{{item_id}}":        fmt.Sprintf("%d", alert.ItemID),
 		"{{monitor_id}}":     fmt.Sprintf("%d", ctx.monitorID),
-		"{{group_id}}":       fmt.Sprintf("%d", ctx.groupID),
+		"{{group_id}}":       "0",
 		"{{analysis}}":       alert.Comment,
 		"{{created_at}}":     alert.CreatedAt.Format(time.RFC3339),
 	}

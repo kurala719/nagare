@@ -13,9 +13,9 @@ func AddLogDAO(entry model.LogEntry) error {
 // SearchLogsDAO retrieves logs by filter
 func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 	query := database.DB.Model(&model.LogEntry{})
-	
+
 	if filter.Severity != nil {
-		query = query.Where("level = ?", *filter.Severity)
+		query = query.Where("severity = ?", *filter.Severity)
 	}
 	if filter.Query != "" {
 		query = query.Where("message LIKE ? OR context LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")
@@ -23,7 +23,7 @@ func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "message",
 		"message":    "message",
-		"severity":   "level",
+		"severity":   "severity",
 		"ip":         "ip",
 		"context":    "context",
 		"created_at": "created_at",
@@ -46,9 +46,9 @@ func SearchLogsDAO(filter model.LogFilter) ([]model.LogEntry, error) {
 // CountLogsDAO returns total count for logs by filter
 func CountLogsDAO(filter model.LogFilter) (int64, error) {
 	query := database.DB.Model(&model.LogEntry{})
-	
+
 	if filter.Severity != nil {
-		query = query.Where("level = ?", *filter.Severity)
+		query = query.Where("severity = ?", *filter.Severity)
 	}
 	if filter.Query != "" {
 		query = query.Where("message LIKE ? OR context LIKE ?", "%"+filter.Query+"%", "%"+filter.Query+"%")

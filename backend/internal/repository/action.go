@@ -105,8 +105,6 @@ func UpdateActionDAO(id uint, action model.Action) error {
 		"status":       action.Status,
 		"description":  action.Description,
 		"severity_min": action.SeverityMin,
-		"host_id":      action.HostID,
-		"group_id":     action.GroupID,
 		"alert_status": action.AlertStatus,
 	}).Error; err != nil {
 		tx.Rollback()

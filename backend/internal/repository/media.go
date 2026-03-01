@@ -84,22 +84,11 @@ func GetMediaByIDDAO(id uint) (model.Media, error) {
 
 // AddMediaDAO creates a new media
 func AddMediaDAO(media model.Media) error {
-	// Ensure params is properly encoded for MySQL
-	if media.Params == nil {
-		media.Params = make(map[string]string)
-	}
 	return database.DB.Create(&media).Error
 }
 
 // UpdateMediaDAO updates media by ID
 func UpdateMediaDAO(id uint, media model.Media) error {
-	// Ensure params is properly initialized
-	if media.Params == nil {
-		media.Params = make(map[string]string)
-	}
-
-	// For MySQL compatibility, use the full model update with Save
-	// which properly triggers GORM hooks and type conversion
 	if err := database.DB.Model(&media).Where("id = ?", id).Save(&media).Error; err != nil {
 		return err
 	}
@@ -114,20 +103,4 @@ func DeleteMediaByIDDAO(id uint) error {
 // UpdateMediaStatusDAO updates only status for media
 func UpdateMediaStatusDAO(id uint, status int) error {
 	return database.DB.Model(&model.Media{}).Where("id = ?", id).Update("status", status).Error
-}
-
-// UpdateMediaParamsDAO updates media params by ID
-func UpdateMediaParamsDAO(id uint, params map[string]string) error {
-	if params == nil {
-		params = make(map[string]string)
-	}
-	return database.DB.Model(&model.Media{}).Where("id = ?", id).Update("params", params).Error
-}
-
-// UpdateMediaParamsAndTargetDAO updates media params and target by ID
-func UpdateMediaParamsAndTargetDAO(id uint, params map[string]string, target string) error {
-	return database.DB.Model(&model.Media{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"params": params,
-		"target": target,
-	}).Error
 }
