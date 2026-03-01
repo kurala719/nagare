@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -11,8 +10,6 @@ import (
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/llm"
-
-	"gorm.io/gorm"
 )
 
 // AlertSeverity represents alert severity level
@@ -212,10 +209,10 @@ func ResolveLatestAlertByEventServ(alarmID uint, eventID string, comment string)
 
 	alert, err := repository.FindLatestUnresolvedAlertByEventDAO(alarmID, eventID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
 		return false, err
+	}
+	if alert.ID == 0 {
+		return false, nil
 	}
 
 	mergedComment := strings.TrimSpace(alert.Comment)
@@ -251,10 +248,10 @@ func ResolveActiveAlertByExternalIDServ(externalID string, comment string) (bool
 
 	alert, err := repository.FindLatestUnresolvedAlertByExternalIDDAO(externalID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
 		return false, err
+	}
+	if alert.ID == 0 {
+		return false, nil
 	}
 
 	mergedComment := strings.TrimSpace(alert.Comment)

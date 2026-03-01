@@ -41,9 +41,11 @@ func evaluateThreshold(host model.Host, item model.Item) {
 
 	var alertMsg string
 	var severity int = 0 // 0:Info, 1:Warning, 2:Critical
+	isThresholdItem := false
 
 	// Huawei CPU Thresholds
 	if item.Name == "hwCpuDevDuty" || item.Name == "hwEntityCpuUsage" {
+		isThresholdItem = true
 		if val >= 90 {
 			alertMsg = fmt.Sprintf("Critical CPU Usage: %.2f%% on %s", val, host.Name)
 			severity = 4
@@ -55,6 +57,7 @@ func evaluateThreshold(host model.Host, item model.Item) {
 
 	// Huawei Memory Thresholds
 	if item.Name == "hwEntityMemUsage" || item.Name == "mem_usage_pct" {
+		isThresholdItem = true
 		if val >= 95 {
 			alertMsg = fmt.Sprintf("Critical Memory Usage: %.2f%% on %s", val, host.Name)
 			severity = 4
@@ -66,6 +69,7 @@ func evaluateThreshold(host model.Host, item model.Item) {
 
 	// Huawei Temperature Thresholds
 	if item.Name == "hwEntityTemperature" {
+		isThresholdItem = true
 		// Smart-Fix: If temperature is > 200, it's likely scaled by 10 (e.g. 350 = 35.0C)
 		if val > 200 {
 			val = val / 10.0
@@ -82,6 +86,10 @@ func evaluateThreshold(host model.Host, item model.Item) {
 
 	if alertMsg != "" {
 		triggerAlert(host, item, alertMsg, severity, externalID)
+		return
+	}
+
+	if !isThresholdItem {
 		return
 	}
 

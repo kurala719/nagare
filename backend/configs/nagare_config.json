@@ -1,12 +1,12 @@
 {
   "ai": {
-    "analysis_enabled": false,
+    "analysis_enabled": true,
     "analysis_min_severity": 2,
     "analysis_timeout_seconds": 180,
     "language": "en",
     "model": "",
     "notification_guard_enabled": false,
-    "provider_id": 2
+    "provider_id": 1
   },
   "database": {
     "database_name": "nagare",

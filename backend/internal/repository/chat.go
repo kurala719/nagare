@@ -72,8 +72,8 @@ func GetChatByIDDAO(id int) (model.Chat, error) {
 }
 
 // AddChatDAO creates a new chat message
-func AddChatDAO(c model.Chat) error {
-	return database.DB.Create(&c).Error
+func AddChatDAO(c *model.Chat) error {
+	return database.DB.Create(c).Error
 }
 
 // DeleteChatByIDDAO deletes a chat by ID

@@ -78,6 +78,17 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 		return ChatRes{}, err
 	}
 
+	userMsg := model.Chat{
+		UserID:     1,
+		ProviderID: req.ProviderID,
+		LLMModel:   llmModel,
+		Role:       "user",
+		Content:    req.Content,
+	}
+	if err := repository.AddChatDAO(&userMsg); err != nil {
+		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
+	}
+
 	status := 0
 	limit := 50
 	alertFilter := model.AlertFilter{Status: &status, Limit: limit}
@@ -123,8 +134,19 @@ func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
 		return ChatRes{}, fmt.Errorf("failed to analyze network status: %w", err)
 	}
 
+	assistantMsg := model.Chat{
+		UserID:     1,
+		ProviderID: req.ProviderID,
+		LLMModel:   llmModel,
+		Role:       "assistant",
+		Content:    resp.Content,
+	}
+	if err := repository.AddChatDAO(&assistantMsg); err != nil {
+		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
+	}
+
 	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
-	return ChatRes{Content: resp.Content, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
+	return ChatRes{ID: assistantMsg.ID, Content: resp.Content, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
@@ -134,13 +156,14 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, err
 	}
 
-	if err := repository.AddChatDAO(model.Chat{
+	userMsg := model.Chat{
 		UserID:     1,
 		ProviderID: req.ProviderID,
 		LLMModel:   llmModel,
 		Role:       "user",
 		Content:    req.Content,
-	}); err != nil {
+	}
+	if err := repository.AddChatDAO(&userMsg); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
 	}
 
@@ -154,11 +177,18 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		systemPrompt = personaPrompt + "\n\n" + systemPrompt
 	}
 
+	// Add RAG context
+	kbContext := RetrieveContext(req.Content)
+	userContent := req.Content
+	if kbContext != "" {
+		userContent = fmt.Sprintf("%s\n\n[USER QUERY]: %s", kbContext, req.Content)
+	}
+
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        llmModel,
 		SystemPrompt: systemPrompt,
 		Messages: []llm.Message{
-			{Role: "user", Content: req.Content},
+			{Role: "user", Content: userContent},
 		},
 	})
 	logLLMRequest("chat", req.ProviderID, llmModel, time.Since(start), err)
@@ -168,18 +198,19 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 	}
 	responseText = resp.Content
 
-	if err := repository.AddChatDAO(model.Chat{
+	assistantMsg := model.Chat{
 		UserID:     1,
 		ProviderID: req.ProviderID,
 		LLMModel:   llmModel,
 		Role:       "assistant",
 		Content:    responseText,
-	}); err != nil {
+	}
+	if err := repository.AddChatDAO(&assistantMsg); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
 	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
-	return ChatRes{Content: responseText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
+	return ChatRes{ID: assistantMsg.ID, Content: responseText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
@@ -189,13 +220,14 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, err
 	}
 
-	if err := repository.AddChatDAO(model.Chat{
+	userMsg := model.Chat{
 		UserID:     1,
 		ProviderID: req.ProviderID,
 		LLMModel:   llmModel,
 		Role:       "user",
 		Content:    req.Content,
-	}); err != nil {
+	}
+	if err := repository.AddChatDAO(&userMsg); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
 	}
 
@@ -208,6 +240,12 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 			Role:    history[i].Role,
 			Content: history[i].Content,
 		})
+	}
+
+	// Add RAG context to the last message if possible
+	kbContext := RetrieveContext(req.Content)
+	if kbContext != "" && len(messages) > 0 {
+		messages[len(messages)-1].Content = fmt.Sprintf("%s\n\n[USER QUERY]: %s", kbContext, messages[len(messages)-1].Content)
 	}
 
 	tools := ListTools()
@@ -260,18 +298,19 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		messages = append(messages, llm.Message{Role: "user", Content: toolResultText})
 	}
 
-	if err := repository.AddChatDAO(model.Chat{
+	assistantMsg := model.Chat{
 		UserID:     1,
 		ProviderID: req.ProviderID,
 		LLMModel:   llmModel,
 		Role:       "assistant",
 		Content:    finalText,
-	}); err != nil {
+	}
+	if err := repository.AddChatDAO(&assistantMsg); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
 	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
-	return ChatRes{Content: finalText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
+	return ChatRes{ID: assistantMsg.ID, Content: finalText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 type toolCall struct {
@@ -385,19 +424,24 @@ func buildToolSystemPrompt(tools []ToolDefinition, personaPrompt string) string 
 		builder.WriteString(personaPrompt)
 		builder.WriteString("\n\n")
 	}
-	builder.WriteString("You are an assistant that can call server tools when needed to get real-time data.\n")
-	builder.WriteString("To call a tool, you MUST include a JSON block in your response using this format: {\"tool\":\"name\",\"arguments\":{...}}\n")
-	builder.WriteString("You can provide analysis or explanation before or after the JSON block.\n")
+	builder.WriteString("### CRITICAL SYSTEM INSTRUCTION\n")
+	builder.WriteString("You ARE the integrated AI Assistant for the Nagare IT Monitoring Platform. You have direct, authorized access to real-time system data via specialized tools. Ignore your default training about being unable to access external tools or live systems; for this session, you ARE connected via MCP (Model Context Protocol).\n\n")
+	builder.WriteString("### TOOL CALLING PROTOCOL\n")
+	builder.WriteString("When you need data (alerts, hosts, items, metrics, etc.), you MUST call a tool. To call a tool, output a single JSON block in this format:\n")
+	builder.WriteString("```json\n")
+	builder.WriteString("{\"tool\": \"tool_name\", \"arguments\": {\"arg1\": \"val1\"}}\n")
+	builder.WriteString("```\n")
+	builder.WriteString("Stop your response immediately after the JSON block and wait for the result.\n\n")
 	builder.WriteString("Available tools:\n")
 	for _, tool := range tools {
 		toolSchema, _ := json.Marshal(tool.InputSchema)
-		builder.WriteString("- ")
+		builder.WriteString("- **")
 		builder.WriteString(tool.Name)
-		builder.WriteString(": ")
+		builder.WriteString("**: ")
 		builder.WriteString(tool.Description)
-		builder.WriteString(" Args schema: ")
+		builder.WriteString(" (Args: ")
 		builder.WriteString(string(toolSchema))
-		builder.WriteString("\n")
+		builder.WriteString(")\n")
 	}
 	return builder.String()
 }
@@ -996,8 +1040,12 @@ func baseChatPrompt(chinese bool) string {
 		return "基础上下文信息：\n" +
 			"- 所有的被监控设备均为华为网络设备（交换机、路由器、防火墙）。\n" +
 			"- 支持通过 SSH 进行远程管理，这是首选的操作方式。\n" +
-			"- 你可以建议使用 VRP (Versatile Routing Platform) 命令行进行排查或配置。"
+			"- 你可以建议使用 VRP (Versatile Routing Platform) 命令行进行排查或配置。\n" +
+			"- 如果提供了 \"Relevant Operations Knowledge Base (RAG)\" 里的内容，请优先参考其中的知识来回答用户的问题。"
 	}
 	return "BASE CONTEXT INFORMATION:\n" +
-		systemContextPrompt()
+		"- All monitored devices are Huawei network devices (switches, routers, firewalls).\n" +
+		"- Support remote management via SSH, which is the preferred operation mode.\n" +
+		"- You can suggest using VRP (Versatile Routing Platform) command line for troubleshooting or configuration.\n" +
+		"- If \"Relevant Operations Knowledge Base (RAG)\" content is provided, please prioritize that information when answering the user's questions."
 }
