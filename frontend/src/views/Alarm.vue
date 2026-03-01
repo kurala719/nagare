@@ -19,6 +19,11 @@
           <el-option :label="$t('common.statusSyncing')" :value="3" />
         </el-select>
 
+        <el-select v-model="monitorFilter" placeholder="Monitor" clearable style="width: 200px">
+          <el-option :label="$t('alarms.filterAll')" value="all" />
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+
         <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">
           <el-option :label="$t('common.sortCreatedDesc')" value="created_desc" />
           <el-option :label="$t('common.sortCreatedAsc')" value="created_asc" />
@@ -70,6 +75,11 @@
         <el-select v-model="newAlarm.type" style="width: 100%;">
           <el-option label="Zabbix" :value="1" />
           <el-option label="Other" :value="2" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="Monitor">
+        <el-select v-model="newAlarm.monitor_id" placeholder="Select monitor" style="width: 100%;">
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('alarms.description')">
@@ -134,6 +144,7 @@
           
           <div class="alarm-card-body">
             <p class="alarm-desc">{{ alarm.description || $t('alarms.noDescription') }}</p>
+            <p class="alarm-monitor-name">Monitor: {{ alarm.monitor_name || '-' }}</p>
             <div class="alarm-status-row">
               <el-tag :type="alarm.enabled === 1 ? 'success' : 'info'" size="small">
                 {{ alarm.enabled === 1 ? $t('common.enabled') : $t('common.disabled') }}
@@ -206,6 +217,11 @@
           <el-option label="Other" :value="2" />
         </el-select>
       </el-form-item>
+      <el-form-item label="Monitor">
+        <el-select v-model="selectedAlarm.monitor_id" placeholder="Select monitor" style="width: 100%;">
+          <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item :label="$t('alarms.description')">
         <el-input type="textarea" v-model="selectedAlarm.description" />
       </el-form-item>
@@ -262,6 +278,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { fetchAlarmData, addAlarm, deleteAlarm, updateAlarm, loginAlarm, regenerateAlarmEventToken, setupAlarmMedia } from '@/api/alarms';
+import { fetchMonitorData } from '@/api/monitors';
 
 export default {
   name: 'Alarm',
@@ -281,15 +298,17 @@ export default {
   data() {
     return {
       alarms: [],
+      monitors: [],
       createDialogVisible: false,
       propertiesDialogVisible: false,
-      newAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
-      selectedAlarm: { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
+      newAlarm: { id: 0, monitor_id: '', name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
+      selectedAlarm: { id: 0, monitor_id: '', name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 },
       loading: false,
       error: null,
       search: '',
       searchField: 'all',
       statusFilter: 'all',
+      monitorFilter: 'all',
       refreshTimer: null,
       pageSize: 20,
       currentPage: 1,
@@ -337,6 +356,10 @@ export default {
       this.currentPage = 1;
       this.loadAlarms(true);
     },
+    monitorFilter() {
+      this.currentPage = 1;
+      this.loadAlarms(true);
+    },
     sortKey() {
       this.currentPage = 1;
       this.loadAlarms(true);
@@ -349,8 +372,9 @@ export default {
       this.loadAlarms();
     },
   },
-  created() {
+  async created() {
     this.applySearchFromQuery();
+    await this.loadMonitors();
     this.loadAlarms(true);
   },
   mounted() {
@@ -463,6 +487,7 @@ export default {
         const response = await fetchAlarmData({
           q: this.search || undefined,
           status: this.statusFilter === 'all' ? undefined : this.statusFilter,
+          monitor_id: this.monitorFilter === 'all' ? undefined : this.monitorFilter,
           limit: this.pageSize,
           offset: (this.currentPage - 1) * this.pageSize,
           sort: sortBy,
@@ -481,11 +506,13 @@ export default {
           password: a.Password || a.password || '',
           auth_token: a.AuthToken || a.auth_token || '',
           event_token: a.EventToken || a.event_token || '',
+          monitor_id: a.MonitorID ?? a.monitor_id ?? '',
           enabled: a.Enabled ?? a.enabled ?? 1,
           status: a.Status ?? a.status ?? 0,
           status_reason: a.Reason || a.reason || a.Error || a.error || a.ErrorMessage || a.error_message || a.LastError || a.last_error || '',
           description: a.Description || a.description || '',
           type: a.Type || a.type || '',
+          monitor_name: this.getMonitorName(a.MonitorID ?? a.monitor_id),
         }));
         this.alarms = mapped;
         this.totalAlarms = Number.isFinite(total) ? total : mapped.length;
@@ -495,6 +522,26 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    async loadMonitors() {
+      try {
+        const response = await fetchMonitorData({ limit: 1000, offset: 0 });
+        const data = Array.isArray(response)
+          ? response
+          : (response.data?.items || response.items || response.data || response.monitors || []);
+        this.monitors = data.map((monitor) => ({
+          id: monitor.ID || monitor.id,
+          name: monitor.Name || monitor.name,
+        })).filter((monitor) => monitor.id);
+      } catch (err) {
+        this.monitors = [];
+        console.error('Error loading monitors:', err);
+      }
+    },
+    getMonitorName(monitorId) {
+      if (!monitorId) return '';
+      const monitor = this.monitors.find((item) => Number(item.id) === Number(monitorId));
+      return monitor ? monitor.name : '';
     },
     parseSortKey(key) {
       switch (key) {
@@ -523,6 +570,7 @@ export default {
     async saveProperties() {
       try {
         const updateData = {
+          monitor_id: Number(this.selectedAlarm.monitor_id),
           name: this.selectedAlarm.name,
           url: this.selectedAlarm.url,
           username: this.selectedAlarm.username,
@@ -645,9 +693,17 @@ export default {
         });
         return;
       }
+      if (!this.newAlarm.monitor_id) {
+        ElMessage({
+          type: 'warning',
+          message: 'Please select a monitor',
+        });
+        return;
+      }
 
       try {
         const alarmData = {
+          monitor_id: Number(this.newAlarm.monitor_id),
           name: this.newAlarm.name,
           url: this.newAlarm.url,
           username: this.newAlarm.username,
@@ -665,9 +721,10 @@ export default {
           id: createdAlarm.id,
           auth_token: createdAlarm.auth_token,
           event_token: createdAlarm.event_token,
+          monitor_name: this.getMonitorName(createdAlarm.monitor_id || alarmData.monitor_id),
         });
 
-        this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 };
+        this.newAlarm = { id: 0, monitor_id: '', name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, description: '', type: 1 };
         this.createDialogVisible = false;
 
         if (createdAlarm.auth_token) {
@@ -737,7 +794,7 @@ export default {
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newAlarm = { id: 0, name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 };
+      this.newAlarm = { id: 0, monitor_id: '', name: '', url: '', username: '', password: '', auth_token: '', event_token: '', enabled: 1, status: 1, description: '', type: 1 };
     },
     getStatusInfo(status) {
       const map = {

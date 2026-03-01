@@ -81,6 +81,7 @@ type AlarmFilter struct {
 	Query     string
 	Type      *int
 	Status    *int
+	MonitorID *uint
 	Limit     int
 	Offset    int
 	SortBy    string

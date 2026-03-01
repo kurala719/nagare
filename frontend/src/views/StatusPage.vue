@@ -89,7 +89,7 @@
 <script>
 import { defineComponent, ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { Monitor, Loading, CircleCheckFilled, WarningFilled, CircleCloseFilled } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { getPublicStatus } from '@/api/users'
 
 export default defineComponent({
   name: 'StatusPage',
@@ -125,7 +125,7 @@ export default defineComponent({
       if (showLoading) loading.value = true
       error.value = null
       try {
-        const response = await request.get('/public/status')
+        const response = await getPublicStatus()
         if (response && response.success) {
           statusData.value = response.data
           lastUpdated.value = new Date().toLocaleString()

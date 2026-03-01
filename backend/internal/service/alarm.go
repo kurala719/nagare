@@ -17,6 +17,7 @@ import (
 
 // AlarmReq represents an alarm request
 type AlarmReq struct {
+	MonitorID   uint   `json:"monitor_id" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	URL         string `json:"url" binding:"required"`
 	Username    string `json:"username"`
@@ -31,6 +32,7 @@ type AlarmReq struct {
 // AlarmResp represents an alarm response
 type AlarmResp struct {
 	ID          int    `json:"id"`
+	MonitorID   uint   `json:"monitor_id"`
 	Name        string `json:"name"`
 	URL         string `json:"url"`
 	Username    string `json:"username"`
@@ -146,6 +148,17 @@ func GetAlarmByEventTokenServ(eventToken string) (model.Alarm, error) {
 
 // AddAlarmServ creates a new alarm and optionally attempts to login
 func AddAlarmServ(a AlarmReq) (AlarmResp, error) {
+	if a.MonitorID == 0 {
+		return AlarmResp{}, model.ErrInvalidInput
+	}
+	if _, err := repository.GetMonitorByIDDAO(a.MonitorID); err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return AlarmResp{}, model.ErrInvalidInput
+		}
+		return AlarmResp{}, fmt.Errorf("failed to validate monitor: %w", err)
+	}
+	monitorID := a.MonitorID
+
 	eventToken := strings.TrimSpace(a.EventToken)
 	if eventToken == "" {
 		generated, err := generateAlarmEventToken()
@@ -156,6 +169,7 @@ func AddAlarmServ(a AlarmReq) (AlarmResp, error) {
 	}
 
 	alarm := model.Alarm{
+		MonitorID:   &monitorID,
 		Name:        a.Name,
 		URL:         a.URL,
 		Username:    a.Username,
@@ -198,6 +212,17 @@ func DeleteAlarmServByID(id int) error {
 
 // UpdateAlarmServ updates an existing alarm
 func UpdateAlarmServ(id int, a AlarmReq) error {
+	if a.MonitorID == 0 {
+		return model.ErrInvalidInput
+	}
+	if _, err := repository.GetMonitorByIDDAO(a.MonitorID); err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return model.ErrInvalidInput
+		}
+		return fmt.Errorf("failed to validate monitor: %w", err)
+	}
+	monitorID := a.MonitorID
+
 	existing, err := GetAlarmByIDServ(uint(id))
 	if err != nil {
 		return err
@@ -207,6 +232,7 @@ func UpdateAlarmServ(id int, a AlarmReq) error {
 		eventToken = existing.EventToken
 	}
 	updated := model.Alarm{
+		MonitorID:         &monitorID,
 		Name:              a.Name,
 		URL:               a.URL,
 		Username:          a.Username,
@@ -369,8 +395,13 @@ func SetupAlarmMediaServ(id uint) (AlarmSetupMediaResp, error) {
 
 // alarmToResp converts a domain Alarm to AlarmResp
 func alarmToResp(a model.Alarm) AlarmResp {
+	monitorID := uint(0)
+	if a.MonitorID != nil {
+		monitorID = *a.MonitorID
+	}
 	return AlarmResp{
 		ID:          int(a.ID),
+		MonitorID:   monitorID,
 		Name:        a.Name,
 		URL:         a.URL,
 		Username:    a.Username,

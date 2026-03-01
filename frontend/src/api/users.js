@@ -190,3 +190,10 @@ export function updateUserInformationByUserID(id, data) {
         data,
     })
 }
+
+export function getPublicStatus() {
+    return request({
+        method: 'GET',
+        url: '/users/public/status',
+    })
+}

@@ -29,3 +29,11 @@ export function fetchNetworkMetrics(params) {
     params
   })
 }
+
+export function fetchAuditLogs(params) {
+  return request({
+    url: '/system/audit-logs',
+    method: 'get',
+    params
+  })
+}

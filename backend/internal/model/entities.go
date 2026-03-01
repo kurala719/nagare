@@ -68,17 +68,19 @@ type Monitor struct {
 // Alarm represents an external alert source (e.g., Zabbix)
 type Alarm struct {
 	gorm.Model
-	Name              string `gorm:"type:varchar(255)" json:"name"`
-	URL               string `gorm:"type:varchar(512)" json:"url"`
-	Username          string `gorm:"type:varchar(100)" json:"username"`
-	Password          string `gorm:"type:varchar(255)" json:"password"`
-	AuthToken         string `gorm:"type:varchar(255)" json:"auth_token"`
-	EventToken        string `gorm:"size:64;uniqueIndex" json:"event_token"`
-	Description       string `gorm:"type:varchar(1024)" json:"description"`
-	Type              int    `gorm:"type:tinyint" json:"type"`                    // 1 = snmp, 2 = zabbix, 3 = other
-	Enabled           int    `gorm:"type:tinyint;default:1" json:"enabled"`       // 0 = disabled, 1 = enabled
-	Status            int    `gorm:"type:tinyint" json:"status"`                  // 0 = inactive, 1 = active, 2 = error, 3 = syncing
-	StatusDescription string `gorm:"type:varchar(512)" json:"status_description"` // Reason for error status (e.g., "connection timeout", "authentication failed")
+	MonitorID         *uint   `gorm:"index;type:bigint unsigned" json:"monitor_id"`
+	Monitor           Monitor `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Name              string  `gorm:"type:varchar(255)" json:"name"`
+	URL               string  `gorm:"type:varchar(512)" json:"url"`
+	Username          string  `gorm:"type:varchar(100)" json:"username"`
+	Password          string  `gorm:"type:varchar(255)" json:"password"`
+	AuthToken         string  `gorm:"type:varchar(255)" json:"auth_token"`
+	EventToken        string  `gorm:"size:64;uniqueIndex" json:"event_token"`
+	Description       string  `gorm:"type:varchar(1024)" json:"description"`
+	Type              int     `gorm:"type:tinyint" json:"type"`                    // 1 = snmp, 2 = zabbix, 3 = other
+	Enabled           int     `gorm:"type:tinyint;default:1" json:"enabled"`       // 0 = disabled, 1 = enabled
+	Status            int     `gorm:"type:tinyint" json:"status"`                  // 0 = inactive, 1 = active, 2 = error, 3 = syncing
+	StatusDescription string  `gorm:"type:varchar(512)" json:"status_description"` // Reason for error status (e.g., "connection timeout", "authentication failed")
 }
 
 // Item represents a monitoring item/metric

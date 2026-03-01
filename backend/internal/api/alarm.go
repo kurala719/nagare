@@ -42,10 +42,21 @@ func SearchAlarmsCtrl(c *gin.Context) {
 		respondBadRequest(c, "invalid type")
 		return
 	}
+	monitorIDValue, err := parseOptionalInt(c, "monitor_id")
+	if err != nil {
+		respondBadRequest(c, "invalid monitor_id")
+		return
+	}
+	var monitorID *uint
+	if monitorIDValue != nil {
+		v := uint(*monitorIDValue)
+		monitorID = &v
+	}
 	filter := model.AlarmFilter{
 		Query:     c.Query("q"),
 		Type:      typeValue,
 		Status:    status,
+		MonitorID: monitorID,
 		Limit:     limit,
 		Offset:    offset,
 		SortBy:    c.Query("sort"),

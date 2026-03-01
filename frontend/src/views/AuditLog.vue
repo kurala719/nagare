@@ -99,7 +99,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { fetchAuditLogs as fetchAuditLogsApi } from '@/api/system'
 import { Search, Refresh, User, Download, Loading } from '@element-plus/icons-vue'
 
 const auditLogs = ref([])
@@ -112,12 +112,10 @@ const loading = ref(false)
 const fetchAuditLogs = async () => {
   loading.value = true
   try {
-    const res = await request.get('/api/v1/audit-logs', {
-      params: {
-        limit: pageSize.value,
-        offset: (currentPage.value - 1) * pageSize.value,
-        q: searchQuery.value
-      }
+    const res = await fetchAuditLogsApi({
+      limit: pageSize.value,
+      offset: (currentPage.value - 1) * pageSize.value,
+      q: searchQuery.value
     })
     if (res.success) {
       auditLogs.value = res.data.items || []

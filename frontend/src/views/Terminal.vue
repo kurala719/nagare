@@ -61,7 +61,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
-import { fetchHostData } from '@/api/hosts'
+import { fetchHostData, getHostById } from '@/api/hosts'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
@@ -100,7 +100,7 @@ const hostSSHUser = ref('')
 
 const fetchHostInfo = async (id) => {
   try {
-    const response = await request.get(`/hosts/${id}`)
+    const response = await getHostById(id)
     if (response && response.success) {
       hostName.value = response.data.name
       hostIp.value = response.data.ip_addr

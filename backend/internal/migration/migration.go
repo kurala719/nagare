@@ -231,6 +231,7 @@ func fixForeignKeyColumnTypes() error {
 	tablesToFix := map[string][]string{
 		"hosts":                       {"monitor_id", "group_id"},
 		"groups":                      {"monitor_id"},
+		"alarms":                      {"monitor_id"},
 		"items":                       {"hid"},
 		"item_histories":              {"item_id"},
 		"host_histories":              {"host_id"},
@@ -625,6 +626,15 @@ func applySchemaUpdates() error {
 	if database.DB.Migrator().HasColumn("media", "params") {
 		if err := database.DB.Migrator().DropColumn("media", "params"); err != nil {
 			log.Printf("Failed to drop params column from media: %v", err)
+		}
+	}
+
+	if database.DB.Migrator().HasColumn("alarms", "monitor_id") && database.DB.Migrator().HasTable("monitors") {
+		if err := database.DB.Exec("UPDATE `alarms` SET `monitor_id` = NULL WHERE `monitor_id` = 0").Error; err != nil {
+			log.Printf("Failed to normalize alarms.monitor_id zero values: %v", err)
+		}
+		if err := database.DB.Exec("UPDATE `alarms` SET `monitor_id` = NULL WHERE `monitor_id` IS NOT NULL AND `monitor_id` NOT IN (SELECT id FROM `monitors`)").Error; err != nil {
+			log.Printf("Failed to clean orphan alarms.monitor_id values: %v", err)
 		}
 	}
 

@@ -30,6 +30,9 @@ func SearchAlarmsDAO(filter model.AlarmFilter) ([]model.Alarm, error) {
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
 	}
+	if filter.MonitorID != nil {
+		query = query.Where("monitor_id = ?", *filter.MonitorID)
+	}
 	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
 		"name":       "name",
 		"status":     "status",
@@ -61,6 +64,9 @@ func CountAlarmsDAO(filter model.AlarmFilter) (int64, error) {
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.MonitorID != nil {
+		query = query.Where("monitor_id = ?", *filter.MonitorID)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -102,6 +108,7 @@ func DeleteAlarmByIDDAO(id int) error {
 // UpdateAlarmDAO updates an alarm by ID
 func UpdateAlarmDAO(id int, a model.Alarm) error {
 	return database.DB.Model(&model.Alarm{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"monitor_id":         a.MonitorID,
 		"name":               a.Name,
 		"url":                a.URL,
 		"username":           a.Username,
