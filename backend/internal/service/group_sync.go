@@ -197,7 +197,29 @@ func backfillHostGroupIDsFromMonitor(mid uint, client *monitors.Client) error {
 
 // PullGroupsFromMonitorAutoSyncServ pulls groups for auto sync, bypassing inactive status.
 func PullGroupsFromMonitorAutoSyncServ(mid uint) (SyncResult, error) {
-	return pullGroupsFromMonitorServ(mid, true)
+	result, err := pullGroupsFromMonitorServ(mid, true)
+	if err != nil {
+		return result, err
+	}
+
+	hostResult, hostErr := pullHostsFromMonitorServ(mid, true)
+	if hostErr != nil {
+		LogService("error", "auto sync group pull cascade to hosts failed", map[string]interface{}{
+			"monitor_id": mid,
+			"error":      hostErr.Error(),
+		}, nil, "")
+		return result, hostErr
+	}
+
+	LogService("info", "auto sync group pull cascade to hosts finished", map[string]interface{}{
+		"monitor_id":   mid,
+		"host_added":   hostResult.Added,
+		"host_updated": hostResult.Updated,
+		"host_failed":  hostResult.Failed,
+		"host_total":   hostResult.Total,
+	}, nil, "")
+
+	return result, nil
 }
 
 func normalizeMonitorURL(url string) string {

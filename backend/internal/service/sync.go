@@ -18,7 +18,7 @@ var (
 	syncCancel context.CancelFunc
 )
 
-// StartAutoSync starts periodic pulling of hosts and items from all monitors.
+// StartAutoSync starts periodic pulling from all monitors.
 func StartAutoSync() {
 	if syncCancel != nil {
 		return
@@ -106,16 +106,16 @@ func pullAllMonitors() {
 		}
 
 		LogSystem("info", "auto sync syncing monitor", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name}, nil, "")
-		if _, err := PullGroupsFromMonitorAutoSyncServ(monitor.ID); err != nil {
-			LogSystem("error", "auto sync groups failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
-		}
-
-		if _, err := pullHostsFromMonitorServ(monitor.ID, true); err != nil {
-			LogSystem("error", "auto sync hosts failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
-		}
-		if _, err := pullItemsFromMonitorServ(monitor.ID, true); err != nil {
-			LogSystem("error", "auto sync items failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
+		if err := pullMonitorAutoSyncServ(monitor.ID); err != nil {
+			LogSystem("error", "auto sync monitor pull failed", map[string]interface{}{"monitor_id": monitor.ID, "name": monitor.Name, "error": err.Error()}, nil, "")
 		}
 	})
 	LogSystem("info", "auto sync finished: all monitors processed", nil, nil, "")
+}
+
+func pullMonitorAutoSyncServ(mid uint) error {
+	if _, err := PullGroupsFromMonitorAutoSyncServ(mid); err != nil {
+		return err
+	}
+	return nil
 }
