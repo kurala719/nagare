@@ -561,14 +561,21 @@ func applySchemaUpdates() error {
 	}
 
 	if database.DB.Migrator().HasColumn(&model.Alert{}, "trigger_id") {
-		if err := database.DB.Migrator().DropColumn(&model.Alert{}, "trigger_id"); err != nil {
+		if err := database.DB.Migrator().DropColumn("alerts", "trigger_id"); err != nil {
 			log.Printf("Failed to drop trigger_id column from alerts: %v", err)
 		}
 	}
-
-	if database.DB.Migrator().HasColumn(&model.Alert{}, "host_id") {
-		if err := database.DB.Migrator().DropColumn(&model.Alert{}, "host_id"); err != nil {
-			log.Printf("Failed to drop host_id column from alerts: %v", err)
+	legacyAlertColumns := []string{
+		"host_id", "hostid", "host_name", "hostname",
+		"group_id", "groupid", "group_name", "groupname",
+		"monitor_id", "monitorid", "monitor_name", "monitorname",
+		"item_name", "itemname",
+	}
+	for _, column := range legacyAlertColumns {
+		if database.DB.Migrator().HasColumn("alerts", column) {
+			if err := database.DB.Migrator().DropColumn("alerts", column); err != nil {
+				log.Printf("Failed to drop %s column from alerts: %v", column, err)
+			}
 		}
 	}
 

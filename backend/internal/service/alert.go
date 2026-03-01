@@ -27,12 +27,12 @@ const (
 
 // AlertReq represents an alert request
 type AlertReq struct {
-	Message  string `json:"message" binding:"required"`
-	Severity int    `json:"severity"`
-	Status   int    `json:"status"`
-	ItemID   uint   `json:"item_id"`
-	AlarmID  uint   `json:"alarm_id"`
-	Comment  string `json:"comment"`
+	Message   string `json:"message" binding:"required"`
+	Severity  int    `json:"severity"`
+	Status    int    `json:"status"`
+	ItemID    uint   `json:"item_id"`
+	AlarmID   uint   `json:"alarm_id"`
+	Comment   string `json:"comment"`
 	HostName  string `json:"host_name"`
 	GroupName string `json:"group_name"`
 	ItemName  string `json:"item_name"`
@@ -40,12 +40,12 @@ type AlertReq struct {
 
 // AlertRes represents an alert response
 type AlertRes struct {
-	ID        int       `json:"id"`
-	Message   string    `json:"message"`
-	Severity  int       `json:"severity"`
-	Status    int       `json:"status"`
-	ItemID    uint      `json:"item_id"`
-	AlarmID   uint      `json:"alarm_id"`
+	ID          int       `json:"id"`
+	Message     string    `json:"message"`
+	Severity    int       `json:"severity"`
+	Status      int       `json:"status"`
+	ItemID      uint      `json:"item_id"`
+	AlarmID     uint      `json:"alarm_id"`
 	HostID      uint      `json:"host_id,omitempty"`
 	GroupID     uint      `json:"group_id,omitempty"`
 	MonitorID   uint      `json:"monitor_id,omitempty"`
@@ -54,86 +54,64 @@ type AlertRes struct {
 	GroupName   string    `json:"group_name"`
 	MonitorName string    `json:"monitor_name"`
 	ItemName    string    `json:"item_name"`
-	AlarmName string    `json:"alarm_name"`
-	CreatedAt time.Time `json:"created_at"`
+	AlarmName   string    `json:"alarm_name"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+func buildAlertRes(alert repository.AlertWithContext) AlertRes {
+	alertRes := AlertRes{
+		ID:          int(alert.ID),
+		Message:     alert.Message,
+		Severity:    alert.Severity,
+		Status:      alert.Status,
+		Comment:     alert.Comment,
+		HostName:    alert.HostName,
+		GroupName:   alert.GroupName,
+		MonitorName: alert.MonitorName,
+		ItemName:    alert.ItemName,
+		AlarmName:   alert.AlarmName,
+		CreatedAt:   alert.CreatedAt,
+	}
+	if alert.HostID != nil {
+		alertRes.HostID = *alert.HostID
+	}
+	if alert.GroupID != nil {
+		alertRes.GroupID = *alert.GroupID
+	}
+	if alert.MonitorID != nil {
+		alertRes.MonitorID = *alert.MonitorID
+	}
+	if alert.ItemID != nil {
+		alertRes.ItemID = *alert.ItemID
+	}
+	if alert.AlarmID != nil {
+		alertRes.AlarmID = *alert.AlarmID
+	}
+	return alertRes
 }
 
 // GetAllAlertsServ retrieves all alerts
 func GetAllAlertsServ() ([]AlertRes, error) {
-	alerts, err := repository.GetAllAlertsDAO()
+	alerts, err := repository.GetAllAlertsWithContextDAO()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get alerts: %w", err)
 	}
-	var alertResponses []AlertRes
+	alertResponses := make([]AlertRes, 0, len(alerts))
 	for _, alert := range alerts {
-		alertRes := AlertRes{
-			ID:       int(alert.ID),
-			Message:  alert.Message,
-			Severity: alert.Severity,
-			Status:   alert.Status,
-			Comment:  alert.Comment,
-			HostName:  alert.HostName,
-			GroupName: alert.GroupName,
-			ItemName:  alert.ItemName,
-			AlarmName: alert.AlarmName,
-			CreatedAt: alert.CreatedAt,
-		}
-		if alert.HostID != nil {
-			alertRes.HostID = *alert.HostID
-		}
-		if alert.GroupID != nil {
-			alertRes.GroupID = *alert.GroupID
-		}
-		if alert.MonitorID != nil {
-			alertRes.MonitorID = *alert.MonitorID
-		}
-		if alert.ItemID != nil {
-			alertRes.ItemID = *alert.ItemID
-		}
-		if alert.AlarmID != nil {
-			alertRes.AlarmID = *alert.AlarmID
-		}
-		alertResponses = append(alertResponses, alertRes)
+		alertResponses = append(alertResponses, buildAlertRes(alert))
 	}
 	return alertResponses, nil
 }
 
 // SearchAlertsServ retrieves alerts by filter
 func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
-	alerts, err := repository.SearchAlertsDAO(filter)
+	alerts, err := repository.SearchAlertsWithContextDAO(filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search alerts: %w", err)
 	}
 	responses := make([]AlertRes, 0, len(alerts))
 	for _, alert := range alerts {
-		alertRes := AlertRes{
-			ID:       int(alert.ID),
-			Message:  alert.Message,
-			Severity: alert.Severity,
-			Status:   alert.Status,
-			Comment:  alert.Comment,
-			HostName:  alert.HostName,
-			GroupName: alert.GroupName,
-			ItemName:  alert.ItemName,
-			AlarmName: alert.AlarmName,
-			CreatedAt: alert.CreatedAt,
-		}
-		if alert.HostID != nil {
-			alertRes.HostID = *alert.HostID
-		}
-		if alert.GroupID != nil {
-			alertRes.GroupID = *alert.GroupID
-		}
-		if alert.MonitorID != nil {
-			alertRes.MonitorID = *alert.MonitorID
-		}
-		if alert.ItemID != nil {
-			alertRes.ItemID = *alert.ItemID
-		}
-		if alert.AlarmID != nil {
-			alertRes.AlarmID = *alert.AlarmID
-		}
-		responses = append(responses, alertRes)
+		responses = append(responses, buildAlertRes(alert))
 	}
 	return responses, nil
 }
@@ -145,28 +123,11 @@ func CountAlertsServ(filter model.AlertFilter) (int64, error) {
 
 // GetAlertByIDServ retrieves an alert by ID
 func GetAlertByIDServ(id int) (AlertRes, error) {
-	alert, err := repository.GetAlertByIDDAO(id)
+	alert, err := repository.GetAlertByIDWithContextDAO(id)
 	if err != nil {
 		return AlertRes{}, fmt.Errorf("failed to get alert by ID: %w", err)
 	}
-	alertRes := AlertRes{
-		ID:       int(alert.ID),
-		Message:  alert.Message,
-		Severity: alert.Severity,
-		Status:   alert.Status,
-		Comment:  alert.Comment,
-		// HostName:  alert/* .HostName */,
-		// ItemName:  alert/* .ItemName */,
-		// AlarmName: alert/* .AlarmName */,
-		CreatedAt: alert.CreatedAt,
-	}
-	if alert.ItemID != nil {
-		alertRes.ItemID = *alert.ItemID
-	}
-	if alert.AlarmID != nil {
-		alertRes.AlarmID = *alert.AlarmID
-	}
-	return alertRes, nil
+	return buildAlertRes(alert), nil
 }
 
 // AddAlertServ creates a new alert

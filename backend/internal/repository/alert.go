@@ -3,20 +3,44 @@ package repository
 import (
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
-// GetAllAlertsDAO retrieves all alerts from the database
-func GetAllAlertsDAO() ([]model.Alert, error) {
-	var alerts []model.Alert
-	if err := database.DB.Model(&model.Alert{}).
+type AlertWithContext struct {
+	model.Alert
+	HostID      *uint  `gorm:"column:host_id"`
+	HostName    string `gorm:"column:host_name"`
+	GroupID     *uint  `gorm:"column:group_id"`
+	GroupName   string `gorm:"column:group_name"`
+	MonitorID   *uint  `gorm:"column:monitor_id"`
+	MonitorName string `gorm:"column:monitor_name"`
+	ItemName    string `gorm:"column:item_name"`
+	AlarmName   string `gorm:"column:alarm_name"`
+}
+
+func alertWithContextQuery() *gorm.DB {
+	return database.DB.Model(&model.Alert{}).
 		Select("alerts.*, hosts.id as host_id, hosts.name as host_name, `groups`.id as group_id, `groups`.name as group_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name, monitors.id as monitor_id, monitors.name as monitor_name").
 		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
 		Joins("LEFT JOIN hosts ON hosts.id = items.host_id").
 		Joins("LEFT JOIN `groups` ON `groups`.id = hosts.group_id").
 		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
-		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL").
-		Order("alerts.id desc").
-		Scan(&alerts).Error; err != nil {
+		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL")
+}
+
+// GetAllAlertsDAO retrieves all alerts from the database
+func GetAllAlertsDAO() ([]model.Alert, error) {
+	var alerts []model.Alert
+	if err := database.DB.Model(&model.Alert{}).Order("id desc").Find(&alerts).Error; err != nil {
+		return nil, err
+	}
+	return alerts, nil
+}
+
+func GetAllAlertsWithContextDAO() ([]AlertWithContext, error) {
+	var alerts []AlertWithContext
+	if err := alertWithContextQuery().Order("alerts.id desc").Scan(&alerts).Error; err != nil {
 		return nil, err
 	}
 	return alerts, nil
@@ -24,13 +48,11 @@ func GetAllAlertsDAO() ([]model.Alert, error) {
 
 // SearchAlertsDAO retrieves alerts by filter
 func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
-	query := database.DB.Model(&model.Alert{}).
-		Select("alerts.*, hosts.id as host_id, hosts.name as host_name, `groups`.id as group_id, `groups`.name as group_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name, monitors.id as monitor_id, monitors.name as monitor_name").
-		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
-		Joins("LEFT JOIN hosts ON hosts.id = items.host_id").
-		Joins("LEFT JOIN `groups` ON `groups`.id = hosts.group_id").
-		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
-		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL")
+	query := database.DB.Model(&model.Alert{})
+
+	if filter.HostID != nil {
+		query = query.Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)")
+	}
 
 	if filter.Query != "" {
 		query = query.Where("alerts.message LIKE ?", "%"+filter.Query+"%")
@@ -66,6 +88,50 @@ func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 		query = query.Offset(filter.Offset)
 	}
 	var alerts []model.Alert
+	if err := query.Find(&alerts).Error; err != nil {
+		return nil, err
+	}
+	return alerts, nil
+}
+
+func SearchAlertsWithContextDAO(filter model.AlertFilter) ([]AlertWithContext, error) {
+	query := alertWithContextQuery()
+
+	if filter.Query != "" {
+		query = query.Where("alerts.message LIKE ?", "%"+filter.Query+"%")
+	}
+	if filter.Severity != nil {
+		query = query.Where("alerts.severity = ?", *filter.Severity)
+	}
+	if filter.Status != nil {
+		query = query.Where("alerts.status = ?", *filter.Status)
+	}
+	if filter.AlarmID != nil {
+		query = query.Where("alerts.alarm_id = ?", *filter.AlarmID)
+	}
+	if filter.HostID != nil {
+		query = query.Where("items.host_id = ?", *filter.HostID)
+	}
+	if filter.ItemID != nil {
+		query = query.Where("alerts.item_id = ?", *filter.ItemID)
+	}
+	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
+		"name":       "alerts.message",
+		"message":    "alerts.message",
+		"severity":   "alerts.severity",
+		"status":     "alerts.status",
+		"created_at": "alerts.created_at",
+		"updated_at": "alerts.updated_at",
+		"id":         "alerts.id",
+	}, "alerts.id desc")
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+
+	var alerts []AlertWithContext
 	if err := query.Scan(&alerts).Error; err != nil {
 		return nil, err
 	}
@@ -75,7 +141,7 @@ func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 // CountAlertsDAO returns total count for alerts by filter
 func CountAlertsDAO(filter model.AlertFilter) (int64, error) {
 	query := database.DB.Model(&model.Alert{})
-	
+
 	if filter.HostID != nil {
 		query = query.Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)")
 	}
@@ -108,15 +174,16 @@ func CountAlertsDAO(filter model.AlertFilter) (int64, error) {
 // GetAlertByIDDAO retrieves an alert by ID
 func GetAlertByIDDAO(id int) (model.Alert, error) {
 	var alert model.Alert
-	err := database.DB.Model(&model.Alert{}).
-		Select("alerts.*, hosts.id as host_id, hosts.name as host_name, `groups`.id as group_id, `groups`.name as group_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name, monitors.id as monitor_id, monitors.name as monitor_name").
-		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
-		Joins("LEFT JOIN hosts ON hosts.id = items.host_id").
-		Joins("LEFT JOIN `groups` ON `groups`.id = hosts.group_id").
-		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
-		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL").
-		Where("alerts.id = ?", id).
-		First(&alert).Error
+	err := database.DB.Model(&model.Alert{}).Where("id = ?", id).First(&alert).Error
+	if err != nil {
+		return alert, err
+	}
+	return alert, nil
+}
+
+func GetAlertByIDWithContextDAO(id int) (AlertWithContext, error) {
+	var alert AlertWithContext
+	err := alertWithContextQuery().Where("alerts.id = ?", id).First(&alert).Error
 	if err != nil {
 		return alert, err
 	}
