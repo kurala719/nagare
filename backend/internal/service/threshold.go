@@ -98,14 +98,11 @@ func triggerAlert(host model.Host, item model.Item, message string, severity int
 		}
 	}
 
-	hID := host.ID
-	itID := item.ID
 	alert := model.Alert{
 		Message:  message,
 		Severity: severity,
 		Status:   0,
-		HostID:   &hID,
-		ItemID:   &itID,
+		ItemID:   &item.ID,
 		Comment:  fmt.Sprintf("Automatically detected by Nagare Threshold Engine at %s", time.Now().Format(time.RFC1123)),
 	}
 

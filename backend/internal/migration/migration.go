@@ -230,7 +230,7 @@ func fixForeignKeyColumnTypes() error {
 		"items":                       {"hid"},
 		"item_histories":              {"item_id", "host_id"},
 		"host_histories":              {"host_id"},
-		"alerts":                      {"alarm_id", "trigger_id", "host_id", "item_id"},
+		"alerts":                      {"alarm_id", "item_id"},
 		"actions":                     {"media_id", "trigger_id", "host_id", "group_id"},
 		"triggers":                    {"alert_id", "alert_group_id", "alert_monitor_id", "alert_host_id", "alert_item_id"},
 		"chats":                       {"user_id", "provider_id"},
@@ -557,6 +557,18 @@ func applySchemaUpdates() error {
 	if database.DB.Migrator().HasColumn(&model.Action{}, "user_id") {
 		if err := database.DB.Migrator().DropColumn(&model.Action{}, "user_id"); err != nil {
 			log.Printf("Failed to drop user_id column from actions: %v", err)
+		}
+	}
+
+	if database.DB.Migrator().HasColumn(&model.Alert{}, "trigger_id") {
+		if err := database.DB.Migrator().DropColumn(&model.Alert{}, "trigger_id"); err != nil {
+			log.Printf("Failed to drop trigger_id column from alerts: %v", err)
+		}
+	}
+
+	if database.DB.Migrator().HasColumn(&model.Alert{}, "host_id") {
+		if err := database.DB.Migrator().DropColumn(&model.Alert{}, "host_id"); err != nil {
+			log.Printf("Failed to drop host_id column from alerts: %v", err)
 		}
 	}
 

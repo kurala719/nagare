@@ -228,7 +228,6 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 	alertReq := AlertReq{
 		Message:  message,
 		Severity: severity,
-		HostID:   item.HostID,
 		ItemID:   item.ID,
 		Comment:  comment,
 	}

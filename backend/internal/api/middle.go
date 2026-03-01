@@ -118,7 +118,7 @@ func AccessLogMiddleware() gin.HandlerFunc {
 
 		context := map[string]interface{}{
 			"method":      c.Request.Method,
-			"path":        c.FullPath(),
+			"path":        c.Request.URL.Path,
 			"status":      c.Writer.Status(),
 			"duration_ms": duration,
 			"request_id":  requestID,
@@ -157,7 +157,7 @@ func AuditLogMiddleware() gin.HandlerFunc {
 			Username:  username,
 			Action:    getActionDescription(c),
 			Method:    method,
-			Path:      c.FullPath(),
+			Path:      c.Request.URL.Path,
 			IP:        c.ClientIP(),
 			Status:    c.Writer.Status(),
 			Latency:   latency,

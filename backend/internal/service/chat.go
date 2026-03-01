@@ -455,8 +455,8 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 	systemPrompt := alertAnalysisPrompt(isCn)
 	start := time.Now()
 
-	alertData := fmt.Sprintf("Alert ID: %d\nHost ID: %d\nSeverity: %d\nMessage: %s\nStatus: %d",
-		alert.ID, alert.HostID, alert.Severity, sanitizeSensitiveText(alert.Message), alert.Status)
+	alertData := fmt.Sprintf("Alert ID: %d\nSeverity: %d\nMessage: %s\nStatus: %d",
+		alert.ID, alert.Severity, sanitizeSensitiveText(alert.Message), alert.Status)
 
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        resolvedModel,
@@ -887,10 +887,9 @@ func buildNetworkStatusContext(alerts []AlertRes, metrics []MetricSnapshot, heal
 		}
 		for i := 0; i < max; i++ {
 			alert := alerts[i]
-			builder.WriteString(fmt.Sprintf("- #%d severity=%d host_id=%d item_id=%d message=%s\n",
+			builder.WriteString(fmt.Sprintf("- #%d severity=%d item_id=%d message=%s\n",
 				alert.ID,
 				alert.Severity,
-				alert.HostID,
 				alert.ItemID,
 				sanitizeSensitiveText(alert.Message),
 			))

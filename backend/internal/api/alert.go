@@ -203,7 +203,6 @@ func AlertWebhookCtrl(c *gin.Context) {
 		Severity: severity,
 		Status:   status,
 		AlarmID:  alarmID,
-		HostID:   hostID,
 		ItemID:   itemID,
 		HostName: hostName,
 		ItemName: itemName,

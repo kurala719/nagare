@@ -150,11 +150,7 @@
                                   <div class="meta-item">
                                     <el-icon><Monitor /></el-icon>
                                     <span class="meta-label">Host:</span>
-                                    <router-link v-if="alert.host_name" :to="'/hosts/' + alert.host_id" class="meta-value link">
-                                      {{ alert.host_name }}
-                                    </router-link>
-                                    <span v-else-if="alert.host_id" class="meta-value">{{ 'Host #' + alert.host_id }}</span>
-                                    <span v-else class="meta-value">N/A</span>
+                                    <span v-if="alert.host_name" class="meta-value">{{ alert.host_name }}</span>                                    <span v-else class="meta-value">N/A</span>
                                   </div>
                                 </el-col>
                                 <el-col :span="8">
@@ -669,7 +665,6 @@ export default {
                     status: this.normalizeStatus(a.status ?? ''),
                     status_reason: a.comment || '',
                     created_at: a.created_at || '',
-                    host_id: a.host_id,
                     host_name: a.host_name || '',
                     item_id: a.item_id,
                     item_name: a.item_name || '',
@@ -756,13 +751,19 @@ export default {
                 message: alert.message,
                 severity: this.severityLabelToInt(alert.severity),
                 status: alert.status,
-                host_id: alert.host_id,
                 item_id: alert.item_id,
                 comment: alert.status_reason || '',
             };
-            if (alert.host_id) {
-                this.onHostChange(alert.host_id).then(() => {
-                    this.alertForm.item_id = alert.item_id;
+            if (alert.item_id) {
+                // Since we don't have host_id directly, we fetch the item to find its host
+                fetchItemData({ id: alert.item_id }).then((res) => {
+                   const item = res.data?.items?.[0] || res.items?.[0] || res.data?.[0];
+                   if (item && item.host_id) {
+                       this.alertForm.host_id = item.host_id;
+                       this.onHostChange(item.host_id).then(() => {
+                           this.alertForm.item_id = alert.item_id;
+                       });
+                   }
                 });
             }
             this.dialogVisible = true;
@@ -922,7 +923,6 @@ export default {
                     message: this.currentAlertForAI.message,
                     severity: this.severityLabelToInt(this.currentAlertForAI.severity),
                     status: this.statusStringToInt(this.aiStatus),
-                    host_id: this.currentAlertForAI.host_id,
                     item_id: this.currentAlertForAI.item_id,
                     comment: this.aiComment
                 };

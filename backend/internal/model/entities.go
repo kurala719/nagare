@@ -102,6 +102,7 @@ type Item struct {
 	StatusDescription string     `gorm:"type:varchar(512)" json:"status_description"` // Reason for error status (e.g., "host is down", "pull failed")
 	Comment           string     `gorm:"type:text" json:"comment"`
 	LastSyncAt        *time.Time `json:"last_sync_at"`
+	HealthScore       int        `gorm:"column:health_score;default:100" json:"health_score"`
 }
 
 // ItemHistory tracks item metric values over time.
@@ -149,17 +150,14 @@ type NetworkStatusHistory struct {
 // Alert represents an alert/notification
 type Alert struct {
 	gorm.Model
-	Message   string   `gorm:"type:varchar(2048)" json:"message"`
-	Severity  int      `gorm:"type:tinyint" json:"severity"`
-	Status    int      `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
-	AlarmID   *uint    `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
-	Alarm     *Alarm   `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	TriggerID *uint    `gorm:"column:trigger_id;type:bigint unsigned" json:"trigger_id"`
-	Trigger   *Trigger `gorm:"foreignKey:TriggerID;constraint:-;" json:"-"`
-	HostID    *uint    `gorm:"type:bigint unsigned" json:"host_id"`
-	Host      *Host    `gorm:"foreignKey:HostID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	ItemID    *uint    `gorm:"type:bigint unsigned" json:"item_id"`
-	Comment   string   `gorm:"type:text" json:"comment"`
+	Message  string `gorm:"type:varchar(2048)" json:"message"`
+	Severity int    `gorm:"type:tinyint" json:"severity"`
+	Status   int    `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
+	AlarmID  *uint  `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
+	Alarm    *Alarm `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	ItemID   *uint  `gorm:"type:bigint unsigned" json:"item_id"`
+	Item     *Item  `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Comment  string `gorm:"type:text" json:"comment"`
 }
 
 // Media represents a notification delivery target

@@ -81,10 +81,10 @@ func buildAlarmWebhookURL() string {
 
 	base := strings.TrimRight(host, "/")
 	if strings.HasPrefix(base, "http://") || strings.HasPrefix(base, "https://") {
-		return base + "/api/v1/alerts/webhook"
+		return base + "/api/v1/alert/alerts/webhook"
 	}
 
-	return fmt.Sprintf("http://%s:%d/api/v1/alerts/webhook", base, port)
+	return fmt.Sprintf("http://%s:%d/api/v1/alert/alerts/webhook", base, port)
 }
 
 func generateAlarmEventToken() (string, error) {

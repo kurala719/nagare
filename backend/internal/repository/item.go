@@ -232,3 +232,8 @@ func UpdateItemStatusAndDescriptionDAO(id uint, status int, statusDesc string) e
 		"status_description": statusDesc,
 	}).Error
 }
+
+// UpdateItemHealthScoreDAO updates health score for an item
+func UpdateItemHealthScoreDAO(id uint, score int) error {
+	return database.DB.Model(&model.Item{}).Where("id = ?", id).Update("health_score", score).Error
+}

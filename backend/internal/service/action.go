@@ -321,11 +321,6 @@ func buildAlertMatchContext(alert model.Alert) alertMatchContext {
 			ctx.item = &item
 		}
 	}
-	if alert.HostID != nil && *alert.HostID > 0 {
-		if host, err := repository.GetHostByIDDAO(*alert.HostID); err == nil {
-			ctx.host = &host
-		}
-	}
 	if ctx.host == nil && ctx.item != nil && ctx.item.HostID > 0 {
 		if host, err := repository.GetHostByIDDAO(ctx.item.HostID); err == nil {
 			ctx.host = &host
@@ -362,14 +357,8 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 	if action.HostID != nil && *action.HostID > 0 {
 		// Alert must be associated with this host
 		var hostID uint = 0
-		if alert.HostID != nil {
-			hostID = *alert.HostID
-		}
-		if ctx.host != nil {
-			hostID = ctx.host.ID
-		}
 		if hostID != *action.HostID {
-			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "alert_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
+			LogService("debug", "action filter mismatch: host", map[string]interface{}{"action_id": action.ID, "ctx_host_id": hostID, "filter_host_id": *action.HostID}, nil, "")
 			return false
 		}
 	}
@@ -388,13 +377,18 @@ func matchActionFilter(action model.Action, ctx alertMatchContext) bool {
 
 func buildAlertReplacements(ctx alertMatchContext) map[string]string {
 	alert := ctx.alert
+	var hostIDStr string = "0"
+	if ctx.host != nil {
+		hostIDStr = fmt.Sprintf("%d", ctx.host.ID)
+	}
+
 	return map[string]string{
 		"{{alert_id}}":       fmt.Sprintf("%d", alert.ID),
 		"{{message}}":        alert.Message,
 		"{{severity}}":       fmt.Sprintf("%d", alert.Severity),
 		"{{severity_label}}": severityLabel(alert.Severity),
 		"{{status}}":         fmt.Sprintf("%d", alert.Status),
-		"{{host_id}}":        fmt.Sprintf("%d", alert.HostID),
+		"{{host_id}}":        hostIDStr,
 		"{{item_id}}":        fmt.Sprintf("%d", alert.ItemID),
 		"{{monitor_id}}":     fmt.Sprintf("%d", ctx.monitorID),
 		"{{group_id}}":       fmt.Sprintf("%d", ctx.groupID),

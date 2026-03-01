@@ -263,11 +263,10 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 	score := 100
 	if monitor.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
+	} else if status == 3 && monitor.HealthScore == 0 {
+		score = 0
 	} else {
 		baseScore := 100
-		if status == 3 {
-			baseScore = 50
-		}
 
 		groups := groupsForStatus
 		if groupsErr == nil && len(groups) > 0 {
@@ -350,11 +349,10 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	score := 100
 	if group.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
+	} else if status == 3 && group.HealthScore == 0 {
+		score = 0
 	} else {
 		baseScore := 100
-		if status == 3 {
-			baseScore = 50
-		}
 
 		hosts := hostsInGroup
 		if hostsErr == nil && len(hosts) > 0 {
@@ -416,11 +414,10 @@ func recomputeHostStatus(hid uint) (int, error) {
 	score := 100
 	if host.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
+	} else if status == 3 && host.HealthScore == 0 {
+		score = 0
 	} else {
 		baseScore := 100
-		if status == 3 {
-			baseScore = 50
-		}
 
 		items, err := repository.GetItemsByHIDDAO(hid)
 		if err == nil && len(items) > 0 {
@@ -431,11 +428,7 @@ func recomputeHostStatus(hid uint) (int, error) {
 					continue
 				}
 				activeItemCount++
-				if item.Status == 1 {
-					itemScoreSum += 100
-				} else if item.Status == 3 {
-					itemScoreSum += 50
-				}
+				itemScoreSum += item.HealthScore
 			}
 			if activeItemCount > 0 {
 				itemsScore := itemScoreSum / activeItemCount
@@ -472,6 +465,17 @@ func recomputeItemStatus(id uint) (int, error) {
 			return status, err
 		}
 	}
+
+	score := 100
+	if item.Enabled == 0 || status == 0 || status == 2 {
+		score = 0
+	} else if status == 3 && item.HealthScore == 0 {
+		score = 0
+	} else {
+		score = 100
+	}
+	_ = repository.UpdateItemHealthScoreDAO(id, score)
+
 	return status, nil
 }
 
