@@ -33,8 +33,9 @@ type AlertReq struct {
 	ItemID   uint   `json:"item_id"`
 	AlarmID  uint   `json:"alarm_id"`
 	Comment  string `json:"comment"`
-	HostName string `json:"host_name"`
-	ItemName string `json:"item_name"`
+	HostName  string `json:"host_name"`
+	GroupName string `json:"group_name"`
+	ItemName  string `json:"item_name"`
 }
 
 // AlertRes represents an alert response
@@ -45,9 +46,14 @@ type AlertRes struct {
 	Status    int       `json:"status"`
 	ItemID    uint      `json:"item_id"`
 	AlarmID   uint      `json:"alarm_id"`
-	Comment   string    `json:"comment"`
-	HostName  string    `json:"host_name"`
-	ItemName  string    `json:"item_name"`
+	HostID      uint      `json:"host_id,omitempty"`
+	GroupID     uint      `json:"group_id,omitempty"`
+	MonitorID   uint      `json:"monitor_id,omitempty"`
+	Comment     string    `json:"comment"`
+	HostName    string    `json:"host_name"`
+	GroupName   string    `json:"group_name"`
+	MonitorName string    `json:"monitor_name"`
+	ItemName    string    `json:"item_name"`
 	AlarmName string    `json:"alarm_name"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -66,10 +72,20 @@ func GetAllAlertsServ() ([]AlertRes, error) {
 			Severity: alert.Severity,
 			Status:   alert.Status,
 			Comment:  alert.Comment,
-			// HostName:  alert/* .HostName */,
-			// ItemName:  alert/* .ItemName */,
-			// AlarmName: alert/* .AlarmName */,
+			HostName:  alert.HostName,
+			GroupName: alert.GroupName,
+			ItemName:  alert.ItemName,
+			AlarmName: alert.AlarmName,
 			CreatedAt: alert.CreatedAt,
+		}
+		if alert.HostID != nil {
+			alertRes.HostID = *alert.HostID
+		}
+		if alert.GroupID != nil {
+			alertRes.GroupID = *alert.GroupID
+		}
+		if alert.MonitorID != nil {
+			alertRes.MonitorID = *alert.MonitorID
 		}
 		if alert.ItemID != nil {
 			alertRes.ItemID = *alert.ItemID
@@ -96,10 +112,20 @@ func SearchAlertsServ(filter model.AlertFilter) ([]AlertRes, error) {
 			Severity: alert.Severity,
 			Status:   alert.Status,
 			Comment:  alert.Comment,
-			// HostName:  alert/* .HostName */,
-			// ItemName:  alert/* .ItemName */,
-			// AlarmName: alert/* .AlarmName */,
+			HostName:  alert.HostName,
+			GroupName: alert.GroupName,
+			ItemName:  alert.ItemName,
+			AlarmName: alert.AlarmName,
 			CreatedAt: alert.CreatedAt,
+		}
+		if alert.HostID != nil {
+			alertRes.HostID = *alert.HostID
+		}
+		if alert.GroupID != nil {
+			alertRes.GroupID = *alert.GroupID
+		}
+		if alert.MonitorID != nil {
+			alertRes.MonitorID = *alert.MonitorID
 		}
 		if alert.ItemID != nil {
 			alertRes.ItemID = *alert.ItemID

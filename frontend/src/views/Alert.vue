@@ -146,29 +146,44 @@
                               </div>
               
                               <el-row :gutter="20" class="alert-meta">
-                                <el-col :span="8">
+                                <el-col :span="6">
                                   <div class="meta-item">
                                     <el-icon><Monitor /></el-icon>
                                     <span class="meta-label">Host:</span>
-                                    <span v-if="alert.host_name" class="meta-value">{{ alert.host_name }}</span>                                    <span v-else class="meta-value">N/A</span>
-                                  </div>
-                                </el-col>
-                                <el-col :span="8">
-                                  <div class="meta-item">
-                                    <el-icon><Document /></el-icon>
-                                    <span class="meta-label">Metric:</span>
-                                    <router-link v-if="alert.item_name" :to="'/items/' + alert.item_id" class="meta-value link">
-                                      {{ alert.item_name }}
+                                    <router-link v-if="alert.host_id" :to="'/host/' + alert.host_id + '/detail'" class="meta-value link">
+                                      {{ alert.host_name || 'Host #' + alert.host_id }}
                                     </router-link>
-                                    <span v-else-if="alert.item_id" class="meta-value">{{ 'Item #' + alert.item_id }}</span>
                                     <span v-else class="meta-value">N/A</span>
                                   </div>
                                 </el-col>
-                                <el-col :span="8">
+                                <el-col :span="6">
+                                  <div class="meta-item">
+                                    <el-icon><Folder /></el-icon>
+                                    <span class="meta-label">Group:</span>
+                                    <router-link v-if="alert.group_id" :to="'/group/' + alert.group_id + '/detail'" class="meta-value link">
+                                      {{ alert.group_name || 'Group #' + alert.group_id }}
+                                    </router-link>
+                                    <span v-else class="meta-value">N/A</span>
+                                  </div>
+                                </el-col>
+                                <el-col :span="6">
+                                  <div class="meta-item">
+                                    <el-icon><Document /></el-icon>
+                                    <span class="meta-label">Metric:</span>
+                                    <router-link v-if="alert.item_id" :to="'/item/' + alert.item_id + '/detail'" class="meta-value link">
+                                      {{ alert.item_name || 'Item #' + alert.item_id }}
+                                    </router-link>
+                                    <span v-else class="meta-value">N/A</span>
+                                  </div>
+                                </el-col>
+                                <el-col :span="6">
                                   <div class="meta-item">
                                     <el-icon><Bell /></el-icon>
                                     <span class="meta-label">Source:</span>
-                                    <span class="meta-value">{{ alert.alarm_name || 'System' }}</span>
+                                    <router-link v-if="alert.alarm_name" :to="'/alarm?q=' + alert.alarm_name" class="meta-value link">
+                                      {{ alert.alarm_name }}
+                                    </router-link>
+                                    <span v-else class="meta-value">System</span>
                                   </div>
                                 </el-col>
                               </el-row>
@@ -370,7 +385,7 @@ import { fetchProviderData } from '@/api/providers';
 import { getMainConfig } from '@/api/config';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound, Refresh } from '@element-plus/icons-vue';
+import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound, Refresh, Folder } from '@element-plus/icons-vue';
 
 export default {
     name: 'Alert',
@@ -386,7 +401,8 @@ export default {
         Bell,
         Clock,
         ChatLineRound,
-        Refresh
+        Refresh,
+        Folder
     },
     data() {
       return {
@@ -665,7 +681,10 @@ export default {
                     status: this.normalizeStatus(a.status ?? ''),
                     status_reason: a.comment || '',
                     created_at: a.created_at || '',
+                    host_id: a.host_id,
                     host_name: a.host_name || '',
+                    group_id: a.group_id,
+                    group_name: a.group_name || '',
                     item_id: a.item_id,
                     item_name: a.item_name || '',
                     alarm_id: a.alarm_id,

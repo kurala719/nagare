@@ -57,7 +57,7 @@ func determineHostStatus(h model.Host, _ int, groupStatus int) int {
 		return 2
 	}
 	if h.Status == 3 {
-		return 3
+		return 1
 	}
 	if h.Status == 2 {
 		return 2
@@ -338,13 +338,6 @@ func recomputeGroupStatus(gid uint) (int, error) {
 		statusDesc = ""
 	}
 	_ = repository.UpdateGroupStatusAndDescriptionDAO(gid, status, statusDesc)
-
-	// Propagate status change to hosts in this group
-	if hostsErr == nil {
-		for _, h := range hostsInGroup {
-			_, _ = recomputeHostStatus(h.ID)
-		}
-	}
 
 	score := 100
 	if group.Enabled == 0 || status == 0 || status == 2 {
