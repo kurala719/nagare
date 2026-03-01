@@ -182,14 +182,15 @@ type NetworkStatusHistory struct {
 // Alert represents an alert/notification
 type Alert struct {
 	gorm.Model
-	Message  string `gorm:"type:varchar(2048)" json:"message"`
-	Severity int    `gorm:"type:tinyint" json:"severity"`
-	Status   int    `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
-	AlarmID  *uint  `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
-	Alarm    *Alarm `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	ItemID   *uint  `gorm:"type:bigint unsigned" json:"item_id"`
-	Item     *Item  `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	Comment  string `gorm:"type:text" json:"comment"`
+	Message    string `gorm:"type:varchar(2048)" json:"message"`
+	ExternalID string `gorm:"column:external_id;type:varchar(128);index" json:"external_id"`
+	Severity   int    `gorm:"type:tinyint" json:"severity"`
+	Status     int    `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
+	AlarmID    *uint  `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
+	Alarm      *Alarm `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	ItemID     *uint  `gorm:"type:bigint unsigned" json:"item_id"`
+	Item       *Item  `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Comment    string `gorm:"type:text" json:"comment"`
 }
 
 // Media represents a notification delivery target

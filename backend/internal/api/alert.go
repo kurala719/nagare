@@ -140,6 +140,10 @@ func AlertWebhookCtrl(c *gin.Context) {
 	severity := payloadInt(payload, "severity", "level", "event_nseverity", "trigger_severity")
 	hostID := payloadUint(payload, "host_id", "hostid")
 	itemID := payloadUint(payload, "item_id", "itemid")
+	eventID := payloadString(payload, "event_id", "eventid")
+	if strings.TrimSpace(eventID) == "" {
+		eventID = payloadString(payload, "problem_id", "problemid")
+	}
 	hostName := payloadString(payload, "host", "hostname", "host_name")
 	itemName := payloadString(payload, "item", "itemname", "item_name")
 	comment := payloadString(payload, "comment", "detail", "details")
@@ -175,6 +179,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 	if strings.TrimSpace(comment) == "" {
 		comment = buildAlertContext(payload)
 	}
+	comment = appendEventIDToComment(comment, eventID)
 
 	statusStr := payloadString(payload, "status", "state", "event_value")
 	status := 0 // Default to open
@@ -199,16 +204,35 @@ func AlertWebhookCtrl(c *gin.Context) {
 	}, nil, "")
 
 	req := service.AlertReq{
-		Message:  message,
-		Severity: severity,
-		Status:   status,
-		AlarmID:  alarmID,
-		ItemID:   itemID,
-		HostName: hostName,
-		ItemName: itemName,
-		Comment:  comment,
+		Message:    message,
+		ExternalID: strings.TrimSpace(eventID),
+		Severity:   severity,
+		Status:     status,
+		AlarmID:    alarmID,
+		ItemID:     itemID,
+		HostName:   hostName,
+		ItemName:   itemName,
+		Comment:    comment,
 	}
 	// TriggerID map to AlarmID is already handled correctly if needed.
+
+	if status == 2 {
+		resolved, err := service.ResolveLatestAlertByEventServ(alarmID, eventID, comment)
+		if err != nil {
+			service.LogService("error", "webhook failed to resolve existing alert", map[string]interface{}{"error": err.Error(), "alarm_id": alarmID, "event_id": eventID}, nil, "")
+			respondError(c, err)
+			return
+		}
+		if resolved {
+			service.LogService("info", "webhook resolved existing alert", map[string]interface{}{"alarm_id": alarmID, "event_id": eventID}, nil, "")
+			respondSuccessMessage(c, http.StatusAccepted, "alert resolved")
+			return
+		}
+
+		service.LogService("info", "webhook resolved event with no matching active alert", map[string]interface{}{"alarm_id": alarmID, "event_id": eventID}, nil, "")
+		respondSuccessMessage(c, http.StatusAccepted, "resolved event received")
+		return
+	}
 
 	if err := service.AddAlertServ(req); err != nil {
 		service.LogService("error", "webhook failed to create alert", map[string]interface{}{"error": err.Error()}, nil, "")
@@ -322,6 +346,22 @@ func buildAlertContext(payload map[string]interface{}) string {
 		return ""
 	}
 	return fmt.Sprintf("trigger=%s host=%s event_id=%s event_time=%s", trigger, host, eventID, eventTime)
+}
+
+func appendEventIDToComment(comment string, eventID string) string {
+	eventID = strings.TrimSpace(eventID)
+	if eventID == "" {
+		return strings.TrimSpace(comment)
+	}
+	base := strings.TrimSpace(comment)
+	marker := "event_id=" + eventID
+	if strings.Contains(base, marker) {
+		return base
+	}
+	if base == "" {
+		return marker
+	}
+	return base + " " + marker
 }
 
 // SearchAlertsCtrl handles GET /alert/search

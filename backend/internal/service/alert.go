@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -10,6 +11,8 @@ import (
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/llm"
+
+	"gorm.io/gorm"
 )
 
 // AlertSeverity represents alert severity level
@@ -27,21 +30,23 @@ const (
 
 // AlertReq represents an alert request
 type AlertReq struct {
-	Message   string `json:"message" binding:"required"`
-	Severity  int    `json:"severity"`
-	Status    int    `json:"status"`
-	ItemID    uint   `json:"item_id"`
-	AlarmID   uint   `json:"alarm_id"`
-	Comment   string `json:"comment"`
-	HostName  string `json:"host_name"`
-	GroupName string `json:"group_name"`
-	ItemName  string `json:"item_name"`
+	Message    string `json:"message" binding:"required"`
+	ExternalID string `json:"external_id"`
+	Severity   int    `json:"severity"`
+	Status     int    `json:"status"`
+	ItemID     uint   `json:"item_id"`
+	AlarmID    uint   `json:"alarm_id"`
+	Comment    string `json:"comment"`
+	HostName   string `json:"host_name"`
+	GroupName  string `json:"group_name"`
+	ItemName   string `json:"item_name"`
 }
 
 // AlertRes represents an alert response
 type AlertRes struct {
 	ID          int       `json:"id"`
 	Message     string    `json:"message"`
+	ExternalID  string    `json:"external_id"`
 	Severity    int       `json:"severity"`
 	Status      int       `json:"status"`
 	ItemID      uint      `json:"item_id"`
@@ -62,6 +67,7 @@ func buildAlertRes(alert repository.AlertWithContext) AlertRes {
 	alertRes := AlertRes{
 		ID:          int(alert.ID),
 		Message:     alert.Message,
+		ExternalID:  alert.ExternalID,
 		Severity:    alert.Severity,
 		Status:      alert.Status,
 		Comment:     alert.Comment,
@@ -165,10 +171,11 @@ func AddAlertServ(req AlertReq) error {
 	}
 
 	alert := model.Alert{
-		Message:  req.Message,
-		Severity: req.Severity,
-		Status:   req.Status,
-		Comment:  req.Comment,
+		Message:    req.Message,
+		ExternalID: strings.TrimSpace(req.ExternalID),
+		Severity:   req.Severity,
+		Status:     req.Status,
+		Comment:    req.Comment,
 	}
 	if req.AlarmID > 0 {
 		alarmID := req.AlarmID
@@ -194,6 +201,82 @@ func AddAlertServ(req AlertReq) error {
 	LogService("info", "triggering async analysis and notification", map[string]interface{}{"alert_id": alert.ID}, nil, "")
 	go analyzeAndNotifyAlert(alert)
 	return nil
+}
+
+// ResolveLatestAlertByEventServ resolves the newest unresolved alert for the same alarm+event.
+// Returns true when an alert was resolved, false when no unresolved match exists.
+func ResolveLatestAlertByEventServ(alarmID uint, eventID string, comment string) (bool, error) {
+	if alarmID == 0 || strings.TrimSpace(eventID) == "" {
+		return false, nil
+	}
+
+	alert, err := repository.FindLatestUnresolvedAlertByEventDAO(alarmID, eventID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	mergedComment := strings.TrimSpace(alert.Comment)
+	incoming := strings.TrimSpace(comment)
+	if incoming != "" {
+		if mergedComment == "" {
+			mergedComment = incoming
+		} else if !strings.Contains(mergedComment, incoming) {
+			mergedComment = mergedComment + "\n" + incoming
+		}
+	}
+
+	if err := repository.UpdateAlertStatusAndCommentDAO(alert.ID, 2, mergedComment); err != nil {
+		return false, err
+	}
+
+	LogService("info", "alert resolved from webhook", map[string]interface{}{
+		"alert_id": alert.ID,
+		"alarm_id": alarmID,
+		"event_id": strings.TrimSpace(eventID),
+	}, nil, "")
+
+	return true, nil
+}
+
+// ResolveActiveAlertByExternalIDServ resolves the newest unresolved alert by external_id.
+// Returns true when an alert was resolved, false when no unresolved match exists.
+func ResolveActiveAlertByExternalIDServ(externalID string, comment string) (bool, error) {
+	externalID = strings.TrimSpace(externalID)
+	if externalID == "" {
+		return false, nil
+	}
+
+	alert, err := repository.FindLatestUnresolvedAlertByExternalIDDAO(externalID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	mergedComment := strings.TrimSpace(alert.Comment)
+	incoming := strings.TrimSpace(comment)
+	if incoming != "" {
+		if mergedComment == "" {
+			mergedComment = incoming
+		} else if !strings.Contains(mergedComment, incoming) {
+			mergedComment = mergedComment + "\n" + incoming
+		}
+	}
+
+	if err := repository.UpdateAlertStatusAndCommentDAO(alert.ID, 2, mergedComment); err != nil {
+		return false, err
+	}
+
+	LogService("info", "alert resolved by external_id", map[string]interface{}{
+		"alert_id":    alert.ID,
+		"external_id": externalID,
+	}, nil, "")
+
+	return true, nil
 }
 
 func analyzeAndNotifyAlert(alert model.Alert) {

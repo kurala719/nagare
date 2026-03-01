@@ -178,16 +178,24 @@ func ExecuteTriggersForItem(item model.Item) {
 	}
 
 	for _, trigger := range triggers {
+		externalID := fmt.Sprintf("internal-trigger:%d:item:%d", trigger.ID, item.ID)
 		if !matchItemTrigger(trigger, item) {
+			_, _ = ResolveActiveAlertByExternalIDServ(externalID, fmt.Sprintf("Resolved by internal trigger recovery: %s", trigger.Name))
 			continue
 		}
 		// Generate alert if item trigger matches
-		generateAlertFromItemTrigger(trigger, item)
+		generateAlertFromItemTrigger(trigger, item, externalID)
 	}
 }
 
 // generateAlertFromItemTrigger creates an alert when an item trigger matches
-func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
+func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item, externalID string) {
+	if strings.TrimSpace(externalID) != "" {
+		if active, err := repository.FindLatestUnresolvedAlertByExternalIDDAO(externalID); err == nil && active.ID > 0 {
+			return
+		}
+	}
+
 	// Deduplication: Check for existing active alerts for this item
 	hostID := int(item.HostID)
 	itemID := int(item.ID)
@@ -226,10 +234,11 @@ func generateAlertFromItemTrigger(trigger model.Trigger, item model.Item) {
 
 	// Create the alert
 	alertReq := AlertReq{
-		Message:  message,
-		Severity: severity,
-		ItemID:   item.ID,
-		Comment:  comment,
+		Message:    message,
+		ExternalID: strings.TrimSpace(externalID),
+		Severity:   severity,
+		ItemID:     item.ID,
+		Comment:    comment,
 	}
 
 	_ = AddAlertServ(alertReq)

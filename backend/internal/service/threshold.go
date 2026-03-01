@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"nagare/internal/model"
@@ -30,6 +31,8 @@ func evaluateThreshold(host model.Host, item model.Item) {
 	if item.Enabled == 0 || item.LastValue == "" || item.LastValue == "N/A" {
 		return
 	}
+
+	externalID := fmt.Sprintf("internal-threshold:item:%d", item.ID)
 
 	val, err := strconv.ParseFloat(item.LastValue, 64)
 	if err != nil {
@@ -78,11 +81,20 @@ func evaluateThreshold(host model.Host, item model.Item) {
 	}
 
 	if alertMsg != "" {
-		triggerAlert(host, item, alertMsg, severity)
+		triggerAlert(host, item, alertMsg, severity, externalID)
+		return
 	}
+
+	_, _ = ResolveActiveAlertByExternalIDServ(externalID, fmt.Sprintf("Threshold recovered for item %s on %s", item.Name, host.Name))
 }
 
-func triggerAlert(host model.Host, item model.Item, message string, severity int) {
+func triggerAlert(host model.Host, item model.Item, message string, severity int, externalID string) {
+	if strings.TrimSpace(externalID) != "" {
+		if active, err := repository.FindLatestUnresolvedAlertByExternalIDDAO(externalID); err == nil && active.ID > 0 {
+			return
+		}
+	}
+
 	// Simple suppression: don't create same alert for same item if one exists in last 1 hour
 	recentAlerts, err := repository.SearchAlertsDAO(model.AlertFilter{
 		HostID: uintPtrToIntPtr(&host.ID),
@@ -99,11 +111,12 @@ func triggerAlert(host model.Host, item model.Item, message string, severity int
 	}
 
 	alert := model.Alert{
-		Message:  message,
-		Severity: severity,
-		Status:   0,
-		ItemID:   &item.ID,
-		Comment:  fmt.Sprintf("Automatically detected by Nagare Threshold Engine at %s", time.Now().Format(time.RFC1123)),
+		Message:    message,
+		ExternalID: strings.TrimSpace(externalID),
+		Severity:   severity,
+		Status:     0,
+		ItemID:     &item.ID,
+		Comment:    fmt.Sprintf("Automatically detected by Nagare Threshold Engine at %s", time.Now().Format(time.RFC1123)),
 	}
 
 	_ = repository.AddAlertDAO(&alert)

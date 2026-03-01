@@ -45,27 +45,27 @@
     <el-empty v-else-if="items.length === 0" :description="$t('kb.noItems')" />
 
     <div v-else class="kb-grid">
-      <el-card v-for="item in items" :key="item.ID" 
+      <el-card v-for="item in items" :key="item.ID || item.id" 
         class="kb-card" 
-        :class="{ 'is-selected': isSelected(item.ID) }"
-        @click="toggleSelection(item.ID)"
+        :class="{ 'is-selected': isSelected(item.ID || item.id) }"
+        @click="toggleSelection(item.ID || item.id)"
       >
         <template #header>
           <div class="card-header">
             <div class="header-left">
               <el-checkbox 
-                :model-value="isSelected(item.ID)" 
-                @change="() => toggleSelection(item.ID)" 
+                :model-value="isSelected(item.ID || item.id)" 
+                @change="() => toggleSelection(item.ID || item.id)" 
                 @click.stop
               />
-              <span class="topic">{{ item.Topic }}</span>
+              <span class="topic">{{ item.topic }}</span>
             </div>
-            <el-tag size="small">{{ item.Category }}</el-tag>
+            <el-tag size="small">{{ item.category }}</el-tag>
           </div>
         </template>
-        <div class="content">{{ item.Content }}</div>
+        <div class="content">{{ item.content }}</div>
         <div class="keywords">
-          <el-tag v-for="kw in splitKeywords(item.Keywords)" :key="kw" size="small" type="info" class="kw-tag">
+          <el-tag v-for="kw in splitKeywords(item.keywords)" :key="kw" size="small" type="info" class="kw-tag">
             {{ kw }}
           </el-tag>
         </div>
@@ -83,13 +83,7 @@
           <el-input v-model="form.topic" />
         </el-form-item>
         <el-form-item :label="$t('kb.category')" prop="category">
-          <el-select v-model="form.category" style="width: 100%">
-            <el-option label="Network" value="Network" />
-            <el-option label="Database" value="Database" />
-            <el-option label="Application" value="Application" />
-            <el-option label="System" value="System" />
-            <el-option label="Other" value="Other" />
-          </el-select>
+          <el-input v-model="form.category" :placeholder="$t('kb.categoryPlaceholder') || 'e.g. Network, Database, Security'" />
         </el-form-item>
         <el-form-item :label="$t('kb.keywords')" prop="keywords">
           <el-input v-model="form.keywords" placeholder="Comma separated: OSPF, MTU, Error 1002" />
@@ -139,7 +133,7 @@ const toggleSelection = (id) => {
 }
 
 const selectAll = () => {
-  selectedIds.value = items.value.map(item => item.ID)
+  selectedIds.value = items.value.map(item => item.ID || item.id)
 }
 
 const clearSelection = () => {
@@ -157,7 +151,7 @@ const form = ref({
 const rules = {
   topic: [{ required: true, message: t('kb.topicRequired'), trigger: 'blur' }],
   content: [{ required: true, message: t('kb.contentRequired'), trigger: 'blur' }],
-  category: [{ required: true, message: t('kb.categoryRequired'), trigger: 'change' }]
+  category: [{ required: true, message: t('kb.categoryRequired'), trigger: 'blur' }]
 }
 
 const loadData = async () => {
@@ -191,11 +185,11 @@ const openCreateDialog = () => {
 const openEditDialog = (item) => {
   isEdit.value = true
   form.value = {
-    id: item.ID,
-    topic: item.Topic,
-    content: item.Content,
-    keywords: item.Keywords,
-    category: item.Category
+    id: item.ID || item.id,
+    topic: item.topic,
+    content: item.content,
+    keywords: item.keywords,
+    category: item.category
   }
   dialogVisible.value = true
 }
@@ -205,7 +199,7 @@ const handleDelete = (item) => {
     type: 'warning'
   }).then(async () => {
     try {
-      const res = await deleteKnowledgeBase(item.ID)
+      const res = await deleteKnowledgeBase(item.ID || item.id)
       if (res && res.success) {
         ElMessage.success(t('kb.deleteSuccess'))
         loadData()

@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"errors"
 	"nagare/internal/database"
 	"nagare/internal/model"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -208,11 +210,88 @@ func DeleteAlertByIDDAO(id int) error {
 // UpdateAlertDAO updates an existing alert
 func UpdateAlertDAO(id int, alert model.Alert) error {
 	return database.DB.Model(&model.Alert{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"message":  alert.Message,
-		"severity": alert.Severity,
-		"status":   alert.Status,
-		"alarm_id": alert.AlarmID,
-		"item_id":  alert.ItemID,
-		"comment":  alert.Comment,
+		"message":     alert.Message,
+		"external_id": alert.ExternalID,
+		"severity":    alert.Severity,
+		"status":      alert.Status,
+		"alarm_id":    alert.AlarmID,
+		"item_id":     alert.ItemID,
+		"comment":     alert.Comment,
 	}).Error
+}
+
+// FindLatestUnresolvedAlertByAlarmAndItemDAO finds the newest unresolved alert for the same alarm+item.
+func FindLatestUnresolvedAlertByAlarmAndItemDAO(alarmID uint, itemID uint) (model.Alert, error) {
+	var alert model.Alert
+	if alarmID == 0 || itemID == 0 {
+		return alert, gorm.ErrRecordNotFound
+	}
+	err := database.DB.Model(&model.Alert{}).
+		Where("alarm_id = ? AND item_id = ? AND status <> 2", alarmID, itemID).
+		Order("id desc").
+		First(&alert).Error
+	return alert, err
+}
+
+// UpdateAlertStatusAndCommentDAO updates status and comment for an alert by ID.
+func UpdateAlertStatusAndCommentDAO(id uint, status int, comment string) error {
+	return database.DB.Model(&model.Alert{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":  status,
+		"comment": comment,
+	}).Error
+}
+
+// FindLatestUnresolvedAlertByEventDAO finds the newest unresolved alert matching alarm and event id marker in comment.
+func FindLatestUnresolvedAlertByEventDAO(alarmID uint, eventID string) (model.Alert, error) {
+	var alert model.Alert
+	if alarmID == 0 || strings.TrimSpace(eventID) == "" {
+		return alert, gorm.ErrRecordNotFound
+	}
+	eid := strings.TrimSpace(eventID)
+	err := database.DB.Model(&model.Alert{}).
+		Where("alarm_id = ? AND status <> 2 AND external_id = ?", alarmID, eid).
+		Order("id desc").
+		First(&alert).Error
+	if err == nil {
+		return alert, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return alert, err
+	}
+	err = database.DB.Model(&model.Alert{}).
+		Where("alarm_id = ? AND status <> 2 AND comment LIKE ?", alarmID, "%event_id="+eid+"%").
+		Order("id desc").
+		First(&alert).Error
+	return alert, err
+}
+
+// FindLatestUnresolvedAlertByExternalIDDAO finds newest unresolved alert by external_id.
+func FindLatestUnresolvedAlertByExternalIDDAO(externalID string) (model.Alert, error) {
+	var alert model.Alert
+	eid := strings.TrimSpace(externalID)
+	if eid == "" {
+		return alert, gorm.ErrRecordNotFound
+	}
+	err := database.DB.Model(&model.Alert{}).
+		Where("external_id = ? AND status <> 2", eid).
+		Order("id desc").
+		First(&alert).Error
+	return alert, err
+}
+
+// FindLatestUnresolvedAlertByFingerprintDAO finds the newest unresolved alert using a conservative fingerprint.
+func FindLatestUnresolvedAlertByFingerprintDAO(alarmID uint, itemID uint, message string) (model.Alert, error) {
+	var alert model.Alert
+	query := database.DB.Model(&model.Alert{}).Where("status <> 2")
+	if alarmID > 0 {
+		query = query.Where("alarm_id = ?", alarmID)
+	}
+	if itemID > 0 {
+		query = query.Where("item_id = ?", itemID)
+	}
+	if strings.TrimSpace(message) != "" {
+		query = query.Where("message = ?", strings.TrimSpace(message))
+	}
+	err := query.Order("id desc").First(&alert).Error
+	return alert, err
 }
