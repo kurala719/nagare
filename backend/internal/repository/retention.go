@@ -77,6 +77,12 @@ func CleanOldDataDAO(dataType string, days int) (int64, error) {
 	case "host_history":
 		res := database.DB.Unscoped().Where("sampled_at < ?", cutoff).Delete(&model.HostHistory{})
 		result = res.RowsAffected
+	case "group_history":
+		res := database.DB.Unscoped().Where("sampled_at < ?", cutoff).Delete(&model.GroupHistory{})
+		result = res.RowsAffected
+	case "monitor_history":
+		res := database.DB.Unscoped().Where("sampled_at < ?", cutoff).Delete(&model.MonitorHistory{})
+		result = res.RowsAffected
 	case "network_history":
 		res := database.DB.Unscoped().Where("sampled_at < ?", cutoff).Delete(&model.NetworkStatusHistory{})
 		result = res.RowsAffected

@@ -28,6 +28,40 @@ type HostHistoryResp struct {
 	SampledAt         time.Time `json:"sampled_at"`
 }
 
+// GroupHistoryResp represents group history for API responses.
+type GroupHistoryResp struct {
+	GroupID           uint      `json:"group_id"`
+	Status            int       `json:"status"`
+	StatusDescription string    `json:"status_description"`
+	HostTotal         int       `json:"host_total"`
+	HostActive        int       `json:"host_active"`
+	HostError         int       `json:"host_error"`
+	HostSyncing       int       `json:"host_syncing"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
+	HealthScore       int       `json:"health_score"`
+	SampledAt         time.Time `json:"sampled_at"`
+}
+
+// MonitorHistoryResp represents monitor history for API responses.
+type MonitorHistoryResp struct {
+	MonitorID         uint      `json:"monitor_id"`
+	Status            int       `json:"status"`
+	StatusDescription string    `json:"status_description"`
+	GroupTotal        int       `json:"group_total"`
+	GroupActive       int       `json:"group_active"`
+	GroupError        int       `json:"group_error"`
+	GroupSyncing      int       `json:"group_syncing"`
+	HostTotal         int       `json:"host_total"`
+	HostActive        int       `json:"host_active"`
+	HostError         int       `json:"host_error"`
+	HostSyncing       int       `json:"host_syncing"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
+	HealthScore       int       `json:"health_score"`
+	SampledAt         time.Time `json:"sampled_at"`
+}
+
 // NetworkStatusHistoryResp represents network status history for API responses.
 type NetworkStatusHistoryResp struct {
 	Score         int       `json:"score"`
@@ -77,6 +111,60 @@ func GetHostHistoryServ(hostID uint, from, to *time.Time, limit int) ([]HostHist
 			ItemTotal:         row.ItemTotal,
 			ItemActive:        row.ItemActive,
 			IPAddr:            row.IPAddr,
+			SampledAt:         row.SampledAt,
+		})
+	}
+	return resp, nil
+}
+
+func GetGroupHistoryServ(groupID uint, from, to *time.Time, limit int) ([]GroupHistoryResp, error) {
+	rows, err := repository.ListGroupHistoryDAO(groupID, from, to, limit)
+	if err != nil {
+		return nil, err
+	}
+	reverseGroupHistory(rows)
+	resp := make([]GroupHistoryResp, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, GroupHistoryResp{
+			GroupID:           row.GroupID,
+			Status:            row.Status,
+			StatusDescription: row.StatusDescription,
+			HostTotal:         row.HostTotal,
+			HostActive:        row.HostActive,
+			HostError:         row.HostError,
+			HostSyncing:       row.HostSyncing,
+			ItemTotal:         row.ItemTotal,
+			ItemActive:        row.ItemActive,
+			HealthScore:       row.HealthScore,
+			SampledAt:         row.SampledAt,
+		})
+	}
+	return resp, nil
+}
+
+func GetMonitorHistoryServ(monitorID uint, from, to *time.Time, limit int) ([]MonitorHistoryResp, error) {
+	rows, err := repository.ListMonitorHistoryDAO(monitorID, from, to, limit)
+	if err != nil {
+		return nil, err
+	}
+	reverseMonitorHistory(rows)
+	resp := make([]MonitorHistoryResp, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, MonitorHistoryResp{
+			MonitorID:         row.MonitorID,
+			Status:            row.Status,
+			StatusDescription: row.StatusDescription,
+			GroupTotal:        row.GroupTotal,
+			GroupActive:       row.GroupActive,
+			GroupError:        row.GroupError,
+			GroupSyncing:      row.GroupSyncing,
+			HostTotal:         row.HostTotal,
+			HostActive:        row.HostActive,
+			HostError:         row.HostError,
+			HostSyncing:       row.HostSyncing,
+			ItemTotal:         row.ItemTotal,
+			ItemActive:        row.ItemActive,
+			HealthScore:       row.HealthScore,
 			SampledAt:         row.SampledAt,
 		})
 	}
@@ -194,10 +282,170 @@ func reverseHostHistory(rows []model.HostHistory) {
 	}
 }
 
+func reverseGroupHistory(rows []model.GroupHistory) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+}
+
+func reverseMonitorHistory(rows []model.MonitorHistory) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+}
+
 func reverseNetworkStatusHistory(rows []model.NetworkStatusHistory) {
 	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
+}
+
+func recordGroupHistoryByID(groupID uint, sampledAt time.Time) {
+	group, err := repository.GetGroupByIDDAO(groupID)
+	if err != nil {
+		return
+	}
+	recordGroupHistory(group, sampledAt)
+}
+
+func recordGroupHistory(group model.Group, sampledAt time.Time) {
+	if sampledAt.IsZero() {
+		sampledAt = time.Now().UTC()
+	}
+
+	hosts, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &group.ID})
+	if err != nil {
+		return
+	}
+
+	hostTotal := len(hosts)
+	hostActive := 0
+	hostError := 0
+	hostSyncing := 0
+	itemTotal := 0
+	itemActive := 0
+
+	for _, host := range hosts {
+		switch host.Status {
+		case 1:
+			hostActive++
+		case 2:
+			hostError++
+		case 3:
+			hostSyncing++
+		}
+
+		items, itemsErr := repository.GetItemsByHIDDAO(host.ID)
+		if itemsErr != nil {
+			continue
+		}
+		itemTotal += len(items)
+		for _, item := range items {
+			if item.Status == 1 {
+				itemActive++
+			}
+		}
+	}
+
+	_ = repository.AddGroupHistoryDAO(model.GroupHistory{
+		GroupID:           group.ID,
+		Status:            group.Status,
+		StatusDescription: group.StatusDescription,
+		HostTotal:         hostTotal,
+		HostActive:        hostActive,
+		HostError:         hostError,
+		HostSyncing:       hostSyncing,
+		ItemTotal:         itemTotal,
+		ItemActive:        itemActive,
+		HealthScore:       group.HealthScore,
+		SampledAt:         sampledAt,
+	})
+}
+
+func recordMonitorHistoryByID(monitorID uint, sampledAt time.Time) {
+	monitor, err := repository.GetMonitorByIDDAO(monitorID)
+	if err != nil {
+		return
+	}
+	recordMonitorHistory(monitor, sampledAt)
+}
+
+func recordMonitorHistory(monitor model.Monitor, sampledAt time.Time) {
+	if sampledAt.IsZero() {
+		sampledAt = time.Now().UTC()
+	}
+
+	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &monitor.ID})
+	if err != nil {
+		return
+	}
+
+	groupTotal := len(groups)
+	groupActive := 0
+	groupError := 0
+	groupSyncing := 0
+	hostTotal := 0
+	hostActive := 0
+	hostError := 0
+	hostSyncing := 0
+	itemTotal := 0
+	itemActive := 0
+
+	for _, group := range groups {
+		switch group.Status {
+		case 1:
+			groupActive++
+		case 2:
+			groupError++
+		case 3:
+			groupSyncing++
+		}
+
+		hosts, hostsErr := repository.SearchHostsDAO(model.HostFilter{GroupID: &group.ID})
+		if hostsErr != nil {
+			continue
+		}
+		hostTotal += len(hosts)
+		for _, host := range hosts {
+			switch host.Status {
+			case 1:
+				hostActive++
+			case 2:
+				hostError++
+			case 3:
+				hostSyncing++
+			}
+
+			items, itemsErr := repository.GetItemsByHIDDAO(host.ID)
+			if itemsErr != nil {
+				continue
+			}
+			itemTotal += len(items)
+			for _, item := range items {
+				if item.Status == 1 {
+					itemActive++
+				}
+			}
+		}
+	}
+
+	_ = repository.AddMonitorHistoryDAO(model.MonitorHistory{
+		MonitorID:         monitor.ID,
+		Status:            monitor.Status,
+		StatusDescription: monitor.StatusDescription,
+		GroupTotal:        groupTotal,
+		GroupActive:       groupActive,
+		GroupError:        groupError,
+		GroupSyncing:      groupSyncing,
+		HostTotal:         hostTotal,
+		HostActive:        hostActive,
+		HostError:         hostError,
+		HostSyncing:       hostSyncing,
+		ItemTotal:         itemTotal,
+		ItemActive:        itemActive,
+		HealthScore:       monitor.HealthScore,
+		SampledAt:         sampledAt,
+	})
 }
 
 // GenerateTestHistoryServ - DEVELOPMENT ONLY: Generates sample history data for testing charts

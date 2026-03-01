@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -490,6 +491,7 @@ func recomputeMonitorRelated(mid uint) error {
 	if err != nil {
 		return err
 	}
+	sampledAt := nowUTC()
 
 	// 1. Recompute Groups first (hosts depend on groups)
 	groups, err := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
@@ -513,8 +515,16 @@ func recomputeMonitorRelated(mid uint) error {
 
 	// 3. Recompute Monitor
 	_, _ = recomputeMonitorStatus(mid)
+	recordMonitorHistoryByID(mid, sampledAt)
+	for _, group := range groups {
+		recordGroupHistoryByID(group.ID, sampledAt)
+	}
 
 	return nil
+}
+
+func nowUTC() time.Time {
+	return time.Now().UTC()
 }
 
 func recomputeMediaStatus(id uint) (int, error) {

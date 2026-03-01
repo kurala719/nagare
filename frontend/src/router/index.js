@@ -94,6 +94,12 @@ const routes = [
         meta: { minPrivilege: 1 }
       },
       {
+        path: 'monitor/:id/detail',
+        name: 'MonitorDetail',
+        component: () => import('@/views/MonitorDetail.vue'),
+        meta: { minPrivilege: 1 }
+      },
+      {
         path: 'knowledge-base',
         name: 'KnowledgeBase',
         component: () => import('@/views/KnowledgeBase.vue'),

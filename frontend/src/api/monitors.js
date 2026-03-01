@@ -19,6 +19,14 @@ export function getMonitorById(id) {
   })
 }
 
+export function fetchMonitorHistory(id, params) {
+  return request({
+    url: `/monitoring/monitors/${id}/history`,
+    method: 'get',
+    params
+  })
+}
+
 export function addMonitor(data) {
   return request({
     url: '/monitoring/monitors',

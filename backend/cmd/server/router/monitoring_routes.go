@@ -15,6 +15,7 @@ func setupMonitorRoutes(rg *gin.RouterGroup) {
 		// Privilege level 1
 		monitors.GET("", api.PrivilegesMiddleware(1), api.SearchMonitorsCtrl)
 		monitors.GET("/:id", api.PrivilegesMiddleware(1), api.GetMonitorByIDCtrl)
+		monitors.GET("/:id/history", api.PrivilegesMiddleware(1), api.GetMonitorHistoryCtrl)
 
 		// Privilege level 2
 		monitors.POST("", api.PrivilegesMiddleware(2), api.AddMonitorCtrl)

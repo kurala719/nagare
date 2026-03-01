@@ -157,6 +157,9 @@
 
           <div class="monitor-card-footer">
             <el-button-group>
+              <el-tooltip :content="$t('groups.details')" placement="bottom">
+                <el-button size="small" :icon="Document" @click="$router.push(`/monitor/${monitor.id}/detail`)" />
+              </el-tooltip>
                 <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
               <el-tooltip v-if="monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
                 <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
@@ -265,6 +268,7 @@
 import {
   Check,
   Delete,
+  Document,
   Edit,
   Message,
   Search,
@@ -287,6 +291,7 @@ export default {
     components: {
       Check,
       Delete,
+      Document,
       Edit,
       Message,
       Search,
@@ -332,6 +337,7 @@ export default {
                       // Icons for template usage
                       Check: markRaw(Check),
                       Delete: markRaw(Delete),
+                      Document: markRaw(Document),
                       Edit: markRaw(Edit),
                       Message: markRaw(Message),
                       Search: markRaw(Search),

@@ -60,7 +60,7 @@
         </el-col>
       </el-row>
 
-      <el-row :gutter="16" v-show="!loading && !error">
+      <el-row :gutter="16" v-show="!loading && !error" style="margin-bottom: 16px;">
         <el-col :xs="24" :lg="12">
           <el-card>
             <template #header>{{ $t('groups.hostStatusChart') }}</template>
@@ -68,6 +68,30 @@
           </el-card>
         </el-col>
         <el-col :xs="24" :lg="12">
+          <el-card>
+            <template #header>
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px;">
+                <span>History</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <el-date-picker
+                    v-model="historyRange"
+                    type="datetimerange"
+                    :shortcuts="historyShortcuts"
+                    :start-placeholder="$t('common.startTime')"
+                    :end-placeholder="$t('common.endTime')"
+                    size="small"
+                  />
+                  <el-button size="small" @click="loadHistory" :loading="historyLoading">{{ $t('common.refresh') }}</el-button>
+                </div>
+              </div>
+            </template>
+            <div ref="historyChartRef" class="chart"></div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="16" v-show="!loading && !error">
+        <el-col :span="24">
           <el-card>
             <template #header>
               <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -114,11 +138,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, onBeforeUnmount } from 'vue'
+import { onMounted, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
-import { fetchGroupDetail } from '@/api/groups'
+import { fetchGroupDetail, fetchGroupHistory } from '@/api/groups'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -126,12 +150,51 @@ const group = ref({})
 const summary = ref({ total_hosts: 0, active_hosts: 0, error_hosts: 0, syncing_hosts: 0, total_items: 0 })
 const hosts = ref([])
 const statusChartRef = ref(null)
+const historyChartRef = ref(null)
 const showColumnDialog = ref(false)
 const loading = ref(false)
 const error = ref(null)
 const geoMap = ref({})
 const geoLoadingMap = ref({})
+const historyRange = ref([])
+const historyLoading = ref(false)
 let statusChart
+let historyChart
+
+const historyShortcuts = [
+  {
+    text: '1h',
+    value: () => {
+      const end = new Date()
+      const start = new Date(end.getTime() - 60 * 60 * 1000)
+      return [start, end]
+    },
+  },
+  {
+    text: '6h',
+    value: () => {
+      const end = new Date()
+      const start = new Date(end.getTime() - 6 * 60 * 60 * 1000)
+      return [start, end]
+    },
+  },
+  {
+    text: '24h',
+    value: () => {
+      const end = new Date()
+      const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+      return [start, end]
+    },
+  },
+  {
+    text: '7d',
+    value: () => {
+      const end = new Date()
+      const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000)
+      return [start, end]
+    },
+  },
+]
 
 // Column configuration for hosts table
 const availableColumns = [
@@ -231,6 +294,56 @@ const buildStatusChart = () => {
   }, { notMerge: true })
 }
 
+const buildHistoryChart = (rows) => {
+  if (!historyChartRef.value) return
+  if (!historyChart) {
+    historyChart = echarts.init(historyChartRef.value)
+  }
+
+  const source = Array.isArray(rows) ? rows : []
+  const hostActiveData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.host_active ?? h.HostActive ?? 0])
+  const hostErrorData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.host_error ?? h.HostError ?? 0])
+  const itemActiveData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.item_active ?? h.ItemActive ?? 0])
+
+  historyChart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['Host Active', 'Host Error', 'Item Active'] },
+    xAxis: { type: 'time' },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [
+      { name: 'Host Active', type: 'line', smooth: true, data: hostActiveData },
+      { name: 'Host Error', type: 'line', smooth: true, data: hostErrorData },
+      { name: 'Item Active', type: 'line', smooth: true, data: itemActiveData },
+    ],
+  }, { notMerge: true })
+}
+
+const setDefaultHistoryRange = () => {
+  if (Array.isArray(historyRange.value) && historyRange.value.length === 2) return
+  const end = new Date()
+  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+  historyRange.value = [start, end]
+}
+
+const loadHistory = async () => {
+  const groupId = Number(route.params.id)
+  if (!groupId) return
+
+  historyLoading.value = true
+  try {
+    const [fromDate, toDate] = Array.isArray(historyRange.value) ? historyRange.value : []
+    const from = fromDate ? Math.floor(new Date(fromDate).getTime() / 1000) : undefined
+    const to = toDate ? Math.floor(new Date(toDate).getTime() / 1000) : undefined
+    const resp = await fetchGroupHistory(groupId, { from, to, limit: 500 })
+    const rows = Array.isArray(resp) ? resp : (resp.data || [])
+    buildHistoryChart(rows)
+  } catch (err) {
+    console.error('Failed to load group history', err)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 const loadData = async () => {
   const groupId = Number(route.params.id)
   if (!groupId) return
@@ -257,6 +370,7 @@ const loadData = async () => {
     loading.value = false
     await nextTick()
     buildStatusChart()
+    await loadHistory()
   } catch (err) {
     console.error('Failed to load group detail data', err)
     error.value = err.message || 'Failed to load group data'
@@ -265,13 +379,16 @@ const loadData = async () => {
 }
 
 watch(() => summary.value, () => buildStatusChart(), { deep: true })
+watch(historyRange, () => loadHistory())
 
 const onResize = () => {
   if (statusChart) statusChart.resize()
+  if (historyChart) historyChart.resize()
 }
 
 onMounted(() => {
   loadVisibleColumns()
+  setDefaultHistoryRange()
   loadData()
   window.addEventListener('resize', onResize)
 })
@@ -279,6 +396,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   if (statusChart) statusChart.dispose()
+  if (historyChart) historyChart.dispose()
 })
 </script>
 

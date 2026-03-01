@@ -26,6 +26,14 @@ export function fetchGroupDetail(id) {
   })
 }
 
+export function fetchGroupHistory(id, params) {
+  return request({
+    url: `/monitoring/groups/${id}/history`,
+    method: 'get',
+    params
+  })
+}
+
 export function addGroup(data) {
   return request({
     url: '/monitoring/groups',

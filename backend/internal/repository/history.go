@@ -60,6 +60,50 @@ func ListHostHistoryDAO(hostID uint, from, to *time.Time, limit int) ([]model.Ho
 	return rows, nil
 }
 
+// AddGroupHistoryDAO stores a history snapshot for a group.
+func AddGroupHistoryDAO(history model.GroupHistory) error {
+	return database.DB.Create(&history).Error
+}
+
+// ListGroupHistoryDAO returns group history entries ordered by sampled_at desc.
+func ListGroupHistoryDAO(groupID uint, from, to *time.Time, limit int) ([]model.GroupHistory, error) {
+	query := database.DB.Model(&model.GroupHistory{}).Where("group_id = ?", groupID)
+	if from != nil {
+		query = query.Where("sampled_at >= ?", *from)
+	}
+	if to != nil {
+		query = query.Where("sampled_at <= ?", *to)
+	}
+	limit = normalizeHistoryLimit(limit)
+	var rows []model.GroupHistory
+	if err := query.Order("sampled_at desc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// AddMonitorHistoryDAO stores a history snapshot for a monitor.
+func AddMonitorHistoryDAO(history model.MonitorHistory) error {
+	return database.DB.Create(&history).Error
+}
+
+// ListMonitorHistoryDAO returns monitor history entries ordered by sampled_at desc.
+func ListMonitorHistoryDAO(monitorID uint, from, to *time.Time, limit int) ([]model.MonitorHistory, error) {
+	query := database.DB.Model(&model.MonitorHistory{}).Where("monitor_id = ?", monitorID)
+	if from != nil {
+		query = query.Where("sampled_at >= ?", *from)
+	}
+	if to != nil {
+		query = query.Where("sampled_at <= ?", *to)
+	}
+	limit = normalizeHistoryLimit(limit)
+	var rows []model.MonitorHistory
+	if err := query.Order("sampled_at desc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 // AddNetworkStatusHistoryDAO stores a network status snapshot.
 func AddNetworkStatusHistoryDAO(history model.NetworkStatusHistory) error {
 	return database.DB.Create(&history).Error

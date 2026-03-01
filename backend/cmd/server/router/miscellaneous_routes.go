@@ -13,6 +13,7 @@ func setupGroupRoutes(rg *gin.RouterGroup) {
 		groupsRead := groups.Group("", api.PrivilegesMiddleware(1))
 		groupsRead.GET("", api.SearchGroupsCtrl)
 		groupsRead.GET("/:id", api.GetGroupByIDCtrl)
+		groupsRead.GET("/:id/history", api.GetGroupHistoryCtrl)
 		groupsRead.GET("/:id/detail", api.GetGroupDetailCtrl)
 
 		// Routes with privilege level 2

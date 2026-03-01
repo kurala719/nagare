@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllMonitorsCtrl handles GET /monitors
@@ -76,6 +77,35 @@ func GetMonitorByIDCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccess(c, http.StatusOK, monitor)
+}
+
+// GetMonitorHistoryCtrl handles GET /monitors/:id/history
+func GetMonitorHistoryCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid monitor ID")
+		return
+	}
+	from, err := parseOptionalUnixTime(c, "from")
+	if err != nil {
+		respondBadRequest(c, "invalid from timestamp")
+		return
+	}
+	to, err := parseOptionalUnixTime(c, "to")
+	if err != nil {
+		respondBadRequest(c, "invalid to timestamp")
+		return
+	}
+	limit := 500
+	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
+		limit = *l
+	}
+	items, err := service.GetMonitorHistoryServ(uint(id), from, to, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, items)
 }
 
 // AddMonitorCtrl handles POST /monitors

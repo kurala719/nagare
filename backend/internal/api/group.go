@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllGroupsCtrl handles GET /groups
@@ -51,10 +52,10 @@ func SearchGroupsCtrl(c *gin.Context) {
 		SearchField: c.Query("search_field"),
 		Status:      status,
 		MonitorID:   monitorID,
-		Limit:     limit,
-		Offset:    offset,
-		SortBy:    c.Query("sort"),
-		SortOrder: c.Query("order"),
+		Limit:       limit,
+		Offset:      offset,
+		SortBy:      c.Query("sort"),
+		SortOrder:   c.Query("order"),
 	}
 	groups, err := service.SearchGroupsServ(filter)
 	if err != nil {
@@ -86,6 +87,35 @@ func GetGroupByIDCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccess(c, http.StatusOK, group)
+}
+
+// GetGroupHistoryCtrl handles GET /groups/:id/history
+func GetGroupHistoryCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid group ID")
+		return
+	}
+	from, err := parseOptionalUnixTime(c, "from")
+	if err != nil {
+		respondBadRequest(c, "invalid from timestamp")
+		return
+	}
+	to, err := parseOptionalUnixTime(c, "to")
+	if err != nil {
+		respondBadRequest(c, "invalid to timestamp")
+		return
+	}
+	limit := 500
+	if l, err := parseOptionalInt(c, "limit"); err == nil && l != nil {
+		limit = *l
+	}
+	items, err := service.GetGroupHistoryServ(uint(id), from, to, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, items)
 }
 
 // GetGroupDetailCtrl handles GET /groups/:id/detail

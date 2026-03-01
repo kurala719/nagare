@@ -123,6 +123,44 @@ type HostHistory struct {
 	SampledAt         time.Time `gorm:"index:idx_host_sampled,priority:2" json:"sampled_at"`
 }
 
+// GroupHistory tracks group status over time.
+type GroupHistory struct {
+	gorm.Model
+	GroupID           uint      `gorm:"index:idx_group_sampled,priority:1;type:bigint unsigned" json:"group_id"`
+	Group             Group     `gorm:"foreignKey:GroupID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Status            int       `gorm:"type:tinyint" json:"status"`
+	StatusDescription string    `gorm:"type:varchar(512)" json:"status_description"`
+	HostTotal         int       `json:"host_total"`
+	HostActive        int       `json:"host_active"`
+	HostError         int       `json:"host_error"`
+	HostSyncing       int       `json:"host_syncing"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
+	HealthScore       int       `json:"health_score"`
+	SampledAt         time.Time `gorm:"index:idx_group_sampled,priority:2" json:"sampled_at"`
+}
+
+// MonitorHistory tracks monitor status over time.
+type MonitorHistory struct {
+	gorm.Model
+	MonitorID         uint      `gorm:"index:idx_monitor_sampled,priority:1;type:bigint unsigned" json:"monitor_id"`
+	Monitor           Monitor   `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Status            int       `gorm:"type:tinyint" json:"status"`
+	StatusDescription string    `gorm:"type:varchar(512)" json:"status_description"`
+	GroupTotal        int       `json:"group_total"`
+	GroupActive       int       `json:"group_active"`
+	GroupError        int       `json:"group_error"`
+	GroupSyncing      int       `json:"group_syncing"`
+	HostTotal         int       `json:"host_total"`
+	HostActive        int       `json:"host_active"`
+	HostError         int       `json:"host_error"`
+	HostSyncing       int       `json:"host_syncing"`
+	ItemTotal         int       `json:"item_total"`
+	ItemActive        int       `json:"item_active"`
+	HealthScore       int       `json:"health_score"`
+	SampledAt         time.Time `gorm:"index:idx_monitor_sampled,priority:2" json:"sampled_at"`
+}
+
 // NetworkStatusHistory tracks overall network health over time.
 type NetworkStatusHistory struct {
 	gorm.Model

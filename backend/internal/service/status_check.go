@@ -123,6 +123,7 @@ func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 	if monitor.Enabled == 0 {
 		_ = repository.UpdateMonitorStatusAndDescriptionDAO(monitor.ID, 0, "")
 		result.Status = 0
+		recordMonitorHistoryByID(monitor.ID, time.Now().UTC())
 		return result
 	}
 
@@ -142,6 +143,7 @@ func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 		LogService("error", "monitor status check failed to create client", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "")
 		result.Status = 2
 		result.Error = err.Error()
+		recordMonitorHistoryByID(monitor.ID, time.Now().UTC())
 		return result
 	}
 
@@ -156,6 +158,7 @@ func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 		LogService("error", "monitor status check authentication failed", map[string]interface{}{"monitor_id": monitor.ID, "error": err.Error()}, nil, "")
 		result.Status = 2
 		result.Error = err.Error()
+		recordMonitorHistoryByID(monitor.ID, time.Now().UTC())
 		return result
 	}
 
@@ -164,6 +167,7 @@ func checkMonitorStatus(monitor model.Monitor) StatusCheckResult {
 	}
 	_ = repository.UpdateMonitorStatusAndDescriptionDAO(monitor.ID, 1, "")
 	_ = recomputeMonitorRelated(monitor.ID)
+	recordMonitorHistoryByID(monitor.ID, time.Now().UTC())
 	result.Status = 1
 	return result
 }
@@ -279,8 +283,10 @@ func checkGroupStatus(group model.Group) StatusCheckResult {
 		LogService("error", "group status check failed", map[string]interface{}{"group_id": group.ID, "error": err.Error()}, nil, "")
 		result.Status = 2
 		result.Error = err.Error()
+		recordGroupHistoryByID(group.ID, time.Now().UTC())
 		return result
 	}
 	result.Status = status
+	recordGroupHistoryByID(group.ID, time.Now().UTC())
 	return result
 }
