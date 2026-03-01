@@ -463,12 +463,21 @@ func preSchemaUpdates() error {
 
 	// Clean up historical duplicates of hosts and groups caused by the m_id schema issue
 	if database.DB.Migrator().HasTable("hosts") {
-		_ = database.DB.Exec(`
-			UPDATE hosts AS h1
-			JOIN hosts AS h2 ON h1.hostid = h2.hostid AND h1.monitor_id = h2.monitor_id
-			SET h1.deleted_at = CURRENT_TIMESTAMP(3)
-			WHERE h1.id > h2.id AND h1.deleted_at IS NULL AND h2.deleted_at IS NULL
-		`)
+		hostIDColumn := ""
+		if database.DB.Migrator().HasColumn("hosts", "external_id") {
+			hostIDColumn = "external_id"
+		} else if database.DB.Migrator().HasColumn("hosts", "hostid") {
+			hostIDColumn = "hostid"
+		}
+
+		if hostIDColumn != "" {
+			_ = database.DB.Exec(fmt.Sprintf(`
+				UPDATE hosts AS h1
+				JOIN hosts AS h2 ON h1.%s = h2.%s AND h1.group_id = h2.group_id
+				SET h1.deleted_at = CURRENT_TIMESTAMP(3)
+				WHERE h1.id > h2.id AND h1.deleted_at IS NULL AND h2.deleted_at IS NULL
+			`, hostIDColumn, hostIDColumn))
+		}
 	}
 	if database.DB.Migrator().HasTable("groups") {
 		_ = database.DB.Exec(`

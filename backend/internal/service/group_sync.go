@@ -216,15 +216,19 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 	// 1. Get group and monitor
 	group, err := repository.GetGroupByIDDAO(groupID)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get group: %w", err)
 	}
+	setGroupStatusSyncing(groupID)
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get monitor: %w", err)
 	}
 
 	if monitor.Status == 2 {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("monitor is in error state")
 	}
 
@@ -247,6 +251,7 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 
 	client, err := monitors.NewClient(cfg)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
@@ -255,6 +260,7 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 
 	if monitor.AuthToken == "" {
 		if err := client.Authenticate(ctx); err != nil {
+			setGroupStatusError(groupID)
 			return fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
 		monitor.AuthToken = client.GetAuthToken()
@@ -266,6 +272,7 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 		// Update existing host group
 		err := client.UpdateHostGroup(ctx, group.ExternalID, group.Name)
 		if err != nil {
+			setGroupStatusError(groupID)
 			return fmt.Errorf("failed to update host group: %w", err)
 		}
 	} else {
@@ -280,6 +287,7 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 			// Create new host group
 			extGroupID, err = client.CreateHostGroup(ctx, group.Name)
 			if err != nil {
+				setGroupStatusError(groupID)
 				return fmt.Errorf("failed to create host group: %w", err)
 			}
 			group.ExternalID = extGroupID
@@ -297,15 +305,19 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 	// 1. Get group and monitor
 	group, err := repository.GetGroupByIDDAO(groupID)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get group: %w", err)
 	}
+	setGroupStatusSyncing(groupID)
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get monitor: %w", err)
 	}
 
 	if monitor.Status == 2 {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("monitor is in error state")
 	}
 
@@ -324,6 +336,7 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 
 	client, err := monitors.NewClient(cfg)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to create monitor client: %w", err)
 	}
 
@@ -332,6 +345,7 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 
 	if monitor.AuthToken == "" {
 		if err := client.Authenticate(ctx); err != nil {
+			setGroupStatusError(groupID)
 			return fmt.Errorf("failed to authenticate with monitor: %w", err)
 		}
 		monitor.AuthToken = client.GetAuthToken()
@@ -342,6 +356,7 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 	// We fetch all to ensure we can find by name if ID mismatch, or by ID
 	groups, err := client.GetHostGroupsDetails(ctx)
 	if err != nil {
+		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get host groups: %w", err)
 	}
 
@@ -354,10 +369,13 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 			err := repository.UpdateGroupDAO(group.ID, group)
 			if err == nil {
 				_, _ = recomputeGroupStatus(group.ID)
+			} else {
+				setGroupStatusError(groupID)
 			}
 			return err
 		}
 	}
 
+	setGroupStatusError(groupID)
 	return fmt.Errorf("group not found on monitor")
 }

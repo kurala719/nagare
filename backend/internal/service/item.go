@@ -542,7 +542,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	fmt.Printf("[DEBUG] pullItemsFromHostServ: Starting sync for MID=%d, HID=%d\n", mid, hid)
 	result := SyncResult{}
 	setMonitorStatusSyncing(mid)
-	setHostStatusSyncing(hid)
 
 	host, err := repository.GetHostByIDDAO(hid)
 	if err != nil {
@@ -1097,7 +1096,6 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 // PushItemsFromHostServ pushes all items for a host from local database to remote monitor
 func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 	result := SyncResult{}
-	setHostStatusSyncing(hid)
 
 	// Check host status before proceeding with item push
 	host, err := repository.GetHostByIDDAO(hid)

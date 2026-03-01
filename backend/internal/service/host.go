@@ -859,8 +859,12 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				statusDesc = value
 			}
 		}
+		if status == 0 && statusDesc != "" {
+			status = 2
+		}
 
 		var existingHost model.Host
+		hasExistingHost := false
 		existingHost, err = repository.GetHostByMIDAndHostIDDAO(mid, h.ID)
 		if err != nil {
 			// If not found on THIS monitor, try global search to prevent duplicates (e.g. from Nagare Internal)
@@ -869,12 +873,14 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 					// Adopt if it's from Nagare Internal or unassigned
 					if mid == 1 || mid == 0 {
 						existingHost = globalHost
+						hasExistingHost = true
 						err = nil
 						LogService("info", "adopting host from another monitor", map[string]interface{}{"host_name": h.Name, "old_mid": mid, "new_mid": mid}, nil, "")
 					} else {
 						// Found on another REAL monitor? This shouldn't usually happen with same HostID
 						// But we should probably not create a duplicate if we found one globally
 						existingHost = globalHost
+						hasExistingHost = true
 						err = nil
 						LogService("warn", "host found on different monitor during sync", map[string]interface{}{"host_name": h.Name, "existing_mid": mid, "target_mid": mid}, nil, "")
 					}
@@ -884,6 +890,16 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				LogService("error", "pull hosts failed to look up host", map[string]interface{}{"monitor_id": mid, "host_id": h.ID, "error": err.Error()}, nil, "")
 				result.Failed++
 				continue
+			}
+		}
+		if err == nil {
+			hasExistingHost = true
+		}
+
+		if status == 0 && hasExistingHost && (existingHost.Status == 1 || existingHost.Status == 2) {
+			status = existingHost.Status
+			if status == 2 && statusDesc == "" {
+				statusDesc = existingHost.StatusDescription
 			}
 		}
 
@@ -1063,16 +1079,35 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 	groupID = resolveHostGroupIDFromMetadata(mid, h.Metadata, groupID)
 
+	activeAvailable := ""
+	statusDesc := ""
+	if h.Metadata != nil {
+		if value, ok := h.Metadata["active_available"]; ok {
+			activeAvailable = value
+		}
+		if value, ok := h.Metadata["status_description"]; ok {
+			statusDesc = value
+		}
+	}
+	status := mapMonitorHostStatus(h.Status, activeAvailable)
+	if status == 0 && statusDesc != "" {
+		status = 2
+	}
+
 	if err == nil {
 		// Host exists, update it
 		if err := repository.UpdateHostDAO(existingHost.ID, model.Host{
-			Name:       h.Name,
-			ExternalID: h.ID,
-			GroupID:    groupID,
-			Enabled:    h.Enabled,
-			IPAddr:     h.IPAddress,
-			SSHUser:    existingHost.SSHUser,
-			SSHPort:    existingHost.SSHPort,
+			Name:              h.Name,
+			ExternalID:        h.ID,
+			GroupID:           groupID,
+			Description:       h.Description,
+			Enabled:           h.Enabled,
+			Status:            status,
+			StatusDescription: statusDesc,
+			IPAddr:            h.IPAddress,
+			SSHUser:           existingHost.SSHUser,
+			SSHPort:           existingHost.SSHPort,
+			LastSyncAt:        existingHost.LastSyncAt,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
 			LogService("error", "pull host failed to update host", map[string]interface{}{"monitor_id": mid, "host_id": existingHost.ID, "error": err.Error()}, nil, "")
@@ -1083,12 +1118,14 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		result.Updated++
 		// Host doesn't exist, add it
 		newHost := model.Host{
-			Name:        h.Name,
-			ExternalID:  h.ID,
-			GroupID:     groupID,
-			Description: h.Description,
-			Enabled:     h.Enabled,
-			IPAddr:      h.IPAddress,
+			Name:              h.Name,
+			ExternalID:        h.ID,
+			GroupID:           groupID,
+			Description:       h.Description,
+			Enabled:           h.Enabled,
+			Status:            status,
+			StatusDescription: statusDesc,
+			IPAddr:            h.IPAddress,
 		}
 
 		if err := repository.AddHostDAO(&newHost); err != nil {

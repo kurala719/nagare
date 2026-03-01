@@ -11,10 +11,7 @@ func determineMonitorStatus(m model.Monitor) int {
 	if m.Enabled == 0 {
 		return 0
 	}
-	if m.StatusDescription != "" || m.Status == 2 {
-		return 2
-	}
-	if m.AuthToken != "" || m.Type == 1 {
+	if m.AuthToken != "" {
 		return 1
 	}
 	return 0
@@ -46,30 +43,33 @@ func determineProviderStatus(p model.Provider) int {
 	return 1
 }
 
-func determineHostStatus(h model.Host, monitorStatus int, groupStatus int) int {
-	if h.Enabled == 0 || h.Status == 0 || groupStatus == 0 {
+func determineHostStatus(h model.Host, _ int, groupStatus int) int {
+	if h.Enabled == 0 || groupStatus == 0 {
 		return 0
 	}
-	if h.StatusDescription != "" || h.Status == 2 || groupStatus == 2 {
+	if groupStatus == 2 || h.Status == 2 {
 		return 2
 	}
-	if (h.Status == 1 || h.Status == 3) && (groupStatus == 1 || groupStatus == 3) {
+	if h.Status == 0 {
+		return 0
+	}
+	if h.Status == 1 && (groupStatus == 1 || groupStatus == 3) {
 		return 1
 	}
-	return h.Status
+	return 0
 }
 
 func determineItemStatus(i model.Item, hostStatus int) int {
 	if i.Enabled == 0 || hostStatus == 0 {
 		return 0
 	}
-	if i.StatusDescription != "" || i.Status == 2 || hostStatus == 2 {
+	if hostStatus == 2 {
 		return 2
 	}
 	if hostStatus == 1 || hostStatus == 3 {
 		return 1
 	}
-	return i.Status
+	return 0
 }
 
 func determineMediaStatus(m model.Media) int {
@@ -107,7 +107,7 @@ func determineGroupStatus(group model.Group, monitorStatus int) int {
 	if group.Enabled == 0 || monitorStatus == 0 {
 		return 0
 	}
-	if group.StatusDescription != "" || group.Status == 2 || monitorStatus == 2 {
+	if monitorStatus == 2 {
 		return 2
 	}
 	if monitorStatus == 1 || monitorStatus == 3 {
@@ -202,6 +202,10 @@ func setGroupStatusError(gid uint) {
 	_ = repository.UpdateGroupStatusDAO(gid, 2)
 }
 
+func setGroupStatusSyncing(gid uint) {
+	_ = repository.UpdateGroupStatusDAO(gid, 3)
+}
+
 func recomputeMonitorStatus(mid uint) (int, error) {
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
@@ -268,7 +272,11 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	}
 
 	status := determineGroupStatus(group, monitorStatus)
-	_ = repository.UpdateGroupStatusAndDescriptionDAO(gid, status, group.StatusDescription)
+	statusDesc := group.StatusDescription
+	if status != 2 {
+		statusDesc = ""
+	}
+	_ = repository.UpdateGroupStatusAndDescriptionDAO(gid, status, statusDesc)
 
 	// Propagate status change to hosts in this group
 	hostsInGroup, err := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
@@ -319,7 +327,11 @@ func recomputeHostStatus(hid uint) (int, error) {
 	}
 
 	status := determineHostStatus(host, monitorStatus, groupStatus)
-	_ = repository.UpdateHostStatusAndDescriptionDAO(hid, status, host.StatusDescription)
+	statusDesc := host.StatusDescription
+	if status != 2 {
+		statusDesc = ""
+	}
+	_ = repository.UpdateHostStatusAndDescriptionDAO(hid, status, statusDesc)
 
 	// Compute health score based on status
 	score := 100
