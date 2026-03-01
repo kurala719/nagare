@@ -160,10 +160,14 @@ func FetchModelsDirectServ(req ProviderReq) ([]string, error) {
 	switch req.Type {
 	case 1:
 		providerType = llm.ProviderGemini
-	case 2:
+	case 2, 3:
 		providerType = llm.ProviderOpenAI
 	default:
-		providerType = llm.ProviderGemini
+		if req.URL != "" {
+			providerType = llm.ProviderOpenAI
+		} else {
+			providerType = llm.ProviderGemini
+		}
 	}
 
 	client, err := llm.NewClient(llm.Config{

@@ -606,10 +606,14 @@ func createLLMClient(providerID uint, model string) (*llm.Client, string, error)
 	switch provider.Type {
 	case 1:
 		providerType = llm.ProviderGemini
-	case 2:
+	case 2, 3:
 		providerType = llm.ProviderOpenAI
 	default:
-		providerType = llm.ProviderGemini
+		if provider.URL != "" {
+			providerType = llm.ProviderOpenAI
+		} else {
+			providerType = llm.ProviderGemini
+		}
 	}
 
 	client, err := llm.NewClient(llm.Config{
