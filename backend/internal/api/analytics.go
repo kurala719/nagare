@@ -26,7 +26,7 @@ type DailyCount struct {
 
 // GetAlertAnalyticsCtrl returns data for word cloud, heatmap, and trends
 func GetAlertAnalyticsCtrl(c *gin.Context) {
-	// 1. Get Word Cloud data (top words from last 1000 alerts)
+	// Get Word Cloud data (top words from last 1000 alerts)
 	var alerts []model.Alert
 	database.DB.Order("id desc").Limit(1000).Find(&alerts)
 
@@ -54,7 +54,7 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		}
 	}
 
-	// 2. Get Heatmap data (counts per day for last 90 days)
+	// Get Heatmap data (counts per day for last 90 days)
 	type result struct {
 		Date  string `json:"date"`
 		Count int    `json:"count"`
@@ -73,7 +73,7 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		heatmap = append(heatmap, [2]interface{}{r.Date, r.Count})
 	}
 
-	// 3. Get Severity Distribution
+	// Get Severity Distribution
 	type sevResult struct {
 		Severity int `json:"severity"`
 		Count    int `json:"count"`
@@ -84,7 +84,7 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		Group("severity").
 		Scan(&sevResults)
 
-	// 4. Get Top Noisy Hosts
+	// Get Top Noisy Hosts
 	type hostResult struct {
 		HostID uint   `json:"host_id"`
 		Count  int    `json:"count"`
@@ -100,7 +100,7 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		Limit(10).
 		Scan(&hostResults)
 
-	// 5. Get Alert Trend (last 14 days)
+	// Get Alert Trend (last 14 days)
 	var trendResults []result
 	fourteenDaysAgo := time.Now().AddDate(0, 0, -14)
 	database.DB.Model(&model.Alert{}).
@@ -110,7 +110,7 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 		Order("date").
 		Scan(&trendResults)
 
-	// 6. Summary Stats
+	// Summary Stats
 	var totalAlerts int64
 	database.DB.Model(&model.Alert{}).Count(&totalAlerts)
 
