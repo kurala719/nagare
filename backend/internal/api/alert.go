@@ -52,6 +52,42 @@ func AlertWebhookCtrl(c *gin.Context) {
 		"payload_keys": getMapKeys(payload),
 	}, nil, "")
 
+	eventToken := extractWebhookToken(c, payload)
+	if eventToken == "" {
+		service.LogService("warn", "webhook missing token", map[string]interface{}{
+			"headers": c.Request.Header,
+		}, nil, "")
+		respondError(c, model.ErrUnauthorized)
+		return
+	}
+
+	alarmID, err := resolveWebhookAlarmID(eventToken)
+	if err != nil {
+		service.LogService("error", "webhook token lookup failed", map[string]interface{}{"error": err.Error()}, nil, "")
+		respondError(c, err)
+		return
+	}
+
+	req, hostID, status, err := parseWebhookPayload(payload, alarmID)
+	if err != nil {
+		service.LogService("warn", "webhook missing message", map[string]interface{}{"payload_keys": getMapKeys(payload)}, nil, "")
+		respondBadRequest(c, err.Error())
+		return
+	}
+
+	service.LogService("info", "webhook creating alert", map[string]interface{}{
+		"alarm_id":  req.AlarmID,
+		"severity":  req.Severity,
+		"host_id":   hostID,
+		"host_name": req.HostName,
+		"status":    status,
+		"message":   req.Message[:min(100, len(req.Message))],
+	}, nil, "")
+
+	processWebhookAlert(c, req, status)
+}
+
+func extractWebhookToken(c *gin.Context, payload map[string]interface{}) string {
 	eventToken := strings.TrimSpace(c.GetHeader("X-Alarm-Token"))
 	if eventToken == "" {
 		eventToken = strings.TrimSpace(c.GetHeader("X-Monitor-Token"))
@@ -75,23 +111,17 @@ func AlertWebhookCtrl(c *gin.Context) {
 			eventToken = t
 		}
 	}
+	return eventToken
+}
 
-	var alarmID uint
-	if eventToken == "" {
-		service.LogService("warn", "webhook missing token", map[string]interface{}{
-			"headers": c.Request.Header,
-		}, nil, "")
-		respondError(c, model.ErrUnauthorized)
-		return
-	}
-
+func resolveWebhookAlarmID(eventToken string) (uint, error) {
 	service.LogService("debug", "webhook token found", map[string]interface{}{
 		"token_prefix": eventToken[:min(8, len(eventToken))],
 	}, nil, "")
 
 	if alarm, err := service.GetAlarmByEventTokenServ(eventToken); err == nil {
-		alarmID = alarm.ID
-		service.LogService("debug", "webhook alarm identified", map[string]interface{}{"alarm_id": alarmID}, nil, "")
+		service.LogService("debug", "webhook alarm identified", map[string]interface{}{"alarm_id": alarm.ID}, nil, "")
+		return alarm.ID, nil
 	} else if errors.Is(err, model.ErrNotFound) || errors.Is(err, model.ErrUnauthorized) {
 		// Try to find if it's a monitor token
 		if monitor, mErr := service.GetMonitorByEventTokenServ(eventToken); mErr == nil {
@@ -100,29 +130,29 @@ func AlertWebhookCtrl(c *gin.Context) {
 			if alarms, aErr := service.SearchAlarmsServ(model.AlarmFilter{Query: monitor.Name}); aErr == nil && len(alarms) > 0 {
 				for _, a := range alarms {
 					if strings.EqualFold(a.Name, monitor.Name) {
-						alarmID = uint(a.ID)
-						break
+						return uint(a.ID), nil
 					}
 				}
 			}
 			// If still 0, use the monitor ID. The repository join supports COALESCE(alarms.name, monitors.name).
-			if alarmID == 0 {
-				alarmID = monitor.ID
+			if monitor.ID != 0 {
+				return monitor.ID, nil
 			}
+			return 0, nil
 		} else {
 			if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
 				service.LogService("warn", "webhook token validation failed", map[string]interface{}{"error": err.Error()}, nil, "")
-				respondError(c, err)
-				return
+				return 0, err
 			}
 			service.LogService("debug", "webhook monitor token validated", nil, nil, "")
+			return 0, nil
 		}
 	} else {
-		service.LogService("error", "webhook token lookup failed", map[string]interface{}{"error": err.Error()}, nil, "")
-		respondError(c, err)
-		return
+		return 0, err
 	}
+}
 
+func parseWebhookPayload(payload map[string]interface{}, alarmID uint) (service.AlertReq, uint, int, error) {
 	message := payloadString(payload, "message", "msg", "title", "subject", "alert", "alert_message")
 	// If message looks like unexpanded Zabbix macros or is empty, try fallback fields
 	if strings.TrimSpace(message) == "" || strings.Contains(message, "{ALERT.") || strings.Contains(message, "{EVENT.") {
@@ -132,9 +162,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 	}
 
 	if strings.TrimSpace(message) == "" {
-		service.LogService("warn", "webhook missing message", map[string]interface{}{"payload_keys": getMapKeys(payload)}, nil, "")
-		respondBadRequest(c, "missing message")
-		return
+		return service.AlertReq{}, 0, 0, errors.New("missing message")
 	}
 
 	severity := payloadInt(payload, "severity", "level", "event_nseverity", "trigger_severity")
@@ -194,15 +222,6 @@ func AlertWebhookCtrl(c *gin.Context) {
 		}
 	}
 
-	service.LogService("info", "webhook creating alert", map[string]interface{}{
-		"alarm_id":  alarmID,
-		"severity":  severity,
-		"host_id":   hostID,
-		"host_name": hostName,
-		"status":    status,
-		"message":   message[:min(100, len(message))],
-	}, nil, "")
-
 	req := service.AlertReq{
 		Message:    message,
 		ExternalID: strings.TrimSpace(eventID),
@@ -214,22 +233,25 @@ func AlertWebhookCtrl(c *gin.Context) {
 		ItemName:   itemName,
 		Comment:    comment,
 	}
-	// TriggerID map to AlarmID is already handled correctly if needed.
 
+	return req, hostID, status, nil
+}
+
+func processWebhookAlert(c *gin.Context, req service.AlertReq, status int) {
 	if status == 2 {
-		resolved, err := service.ResolveLatestAlertByEventServ(alarmID, eventID, comment)
+		resolved, err := service.ResolveLatestAlertByEventServ(req.AlarmID, req.ExternalID, req.Comment)
 		if err != nil {
-			service.LogService("error", "webhook failed to resolve existing alert", map[string]interface{}{"error": err.Error(), "alarm_id": alarmID, "event_id": eventID}, nil, "")
+			service.LogService("error", "webhook failed to resolve existing alert", map[string]interface{}{"error": err.Error(), "alarm_id": req.AlarmID, "event_id": req.ExternalID}, nil, "")
 			respondError(c, err)
 			return
 		}
 		if resolved {
-			service.LogService("info", "webhook resolved existing alert", map[string]interface{}{"alarm_id": alarmID, "event_id": eventID}, nil, "")
+			service.LogService("info", "webhook resolved existing alert", map[string]interface{}{"alarm_id": req.AlarmID, "event_id": req.ExternalID}, nil, "")
 			respondSuccessMessage(c, http.StatusAccepted, "alert resolved")
 			return
 		}
 
-		service.LogService("info", "webhook resolved event with no matching active alert", map[string]interface{}{"alarm_id": alarmID, "event_id": eventID}, nil, "")
+		service.LogService("info", "webhook resolved event with no matching active alert", map[string]interface{}{"alarm_id": req.AlarmID, "event_id": req.ExternalID}, nil, "")
 		respondSuccessMessage(c, http.StatusAccepted, "resolved event received")
 		return
 	}
@@ -240,7 +262,7 @@ func AlertWebhookCtrl(c *gin.Context) {
 		return
 	}
 
-	service.LogService("info", "webhook alert created successfully", map[string]interface{}{"alarm_id": alarmID}, nil, "")
+	service.LogService("info", "webhook alert created successfully", map[string]interface{}{"alarm_id": req.AlarmID}, nil, "")
 	respondSuccessMessage(c, http.StatusAccepted, "alert accepted")
 }
 

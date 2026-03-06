@@ -163,7 +163,7 @@ func (m *QQWebSocketManager) handleIncomingMessage(message []byte) {
 		if err := json.Unmarshal(message, &resp); err != nil {
 			return
 		}
-		
+
 		// Log non-zero retcodes for debugging
 		if resp.Retcode != 0 {
 			log.Printf("[QQ-WS] API Response Error: status=%s, retcode=%d, echo=%s", resp.Status, resp.Retcode, resp.Echo)
@@ -270,7 +270,6 @@ func (m *QQWebSocketManager) CallAction(action string, params interface{}) (OneB
 	}
 }
 
-// SendMessage sends a message via WebSocket
 func (m *QQWebSocketManager) SendMessage(ctx context.Context, messageType, userID, groupID, message string) error {
 	params := map[string]interface{}{
 		"message": message,

@@ -42,21 +42,6 @@ func RegisterUserCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusCreated, "registration application submitted")
 }
 
-func SendRegistrationCodeCtrl(c *gin.Context) {
-	var req struct {
-		Email string `json:"email" binding:"required,email"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondBadRequest(c, err.Error())
-		return
-	}
-	if err := service.SendRegistrationCodeServ(req.Email); err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccessMessage(c, http.StatusOK, "verification code sent")
-}
-
 func ResetPasswordCtrl(c *gin.Context) {
 	requesterPrivileges := getRequesterPrivileges(c)
 	if requesterPrivileges >= 3 {
@@ -79,6 +64,21 @@ func ResetPasswordCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccessMessage(c, http.StatusOK, "password reset")
+}
+
+func SendRegistrationCodeCtrl(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, err.Error())
+		return
+	}
+	if err := service.SendRegistrationCodeServ(req.Email); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "verification code sent")
 }
 
 func GetAllUsersCtrl(c *gin.Context) {
