@@ -302,18 +302,14 @@ const buildHistoryChart = (rows) => {
 
   const source = Array.isArray(rows) ? rows : []
   const hostActiveData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.host_active ?? h.HostActive ?? 0])
-  const hostErrorData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.host_error ?? h.HostError ?? 0])
-  const itemActiveData = source.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.item_active ?? h.ItemActive ?? 0])
 
   historyChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Host Active', 'Host Error', 'Item Active'] },
+    legend: { data: ['Host Active'] },
     xAxis: { type: 'time' },
     yAxis: { type: 'value', minInterval: 1 },
     series: [
       { name: 'Host Active', type: 'line', smooth: true, data: hostActiveData },
-      { name: 'Host Error', type: 'line', smooth: true, data: hostErrorData },
-      { name: 'Item Active', type: 'line', smooth: true, data: itemActiveData },
     ],
   }, { notMerge: true })
 }

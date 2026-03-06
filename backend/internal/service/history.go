@@ -10,11 +10,12 @@ import (
 
 // ItemHistoryResp represents item history for API responses.
 type ItemHistoryResp struct {
-	ItemID    uint      `json:"item_id"`
-	Value     string    `json:"value"`
-	Units     string    `json:"units"`
-	Status    int       `json:"status"`
-	SampledAt time.Time `json:"sampled_at"`
+	ItemID      uint      `json:"item_id"`
+	Value       string    `json:"value"`
+	Units       string    `json:"units"`
+	Status      int       `json:"status"`
+	HealthScore int       `json:"health_score"`
+	SampledAt   time.Time `json:"sampled_at"`
 }
 
 // HostHistoryResp represents host history for API responses.
@@ -25,6 +26,7 @@ type HostHistoryResp struct {
 	ItemTotal         int       `json:"item_total"`
 	ItemActive        int       `json:"item_active"`
 	IPAddr            string    `json:"ip_addr"`
+	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `json:"sampled_at"`
 }
 
@@ -35,10 +37,6 @@ type GroupHistoryResp struct {
 	StatusDescription string    `json:"status_description"`
 	HostTotal         int       `json:"host_total"`
 	HostActive        int       `json:"host_active"`
-	HostError         int       `json:"host_error"`
-	HostSyncing       int       `json:"host_syncing"`
-	ItemTotal         int       `json:"item_total"`
-	ItemActive        int       `json:"item_active"`
 	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `json:"sampled_at"`
 }
@@ -50,14 +48,6 @@ type MonitorHistoryResp struct {
 	StatusDescription string    `json:"status_description"`
 	GroupTotal        int       `json:"group_total"`
 	GroupActive       int       `json:"group_active"`
-	GroupError        int       `json:"group_error"`
-	GroupSyncing      int       `json:"group_syncing"`
-	HostTotal         int       `json:"host_total"`
-	HostActive        int       `json:"host_active"`
-	HostError         int       `json:"host_error"`
-	HostSyncing       int       `json:"host_syncing"`
-	ItemTotal         int       `json:"item_total"`
-	ItemActive        int       `json:"item_active"`
 	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `json:"sampled_at"`
 }
@@ -86,11 +76,12 @@ func GetItemHistoryServ(itemID uint, from, to *time.Time, limit int) ([]ItemHist
 	resp := make([]ItemHistoryResp, 0, len(rows))
 	for _, row := range rows {
 		resp = append(resp, ItemHistoryResp{
-			ItemID:    row.ItemID,
-			Value:     row.Value,
-			Units:     row.Units,
-			Status:    row.Status,
-			SampledAt: row.SampledAt,
+			ItemID:      row.ItemID,
+			Value:       row.Value,
+			Units:       row.Units,
+			Status:      row.Status,
+			HealthScore: row.HealthScore,
+			SampledAt:   row.SampledAt,
 		})
 	}
 	return resp, nil
@@ -111,6 +102,7 @@ func GetHostHistoryServ(hostID uint, from, to *time.Time, limit int) ([]HostHist
 			ItemTotal:         row.ItemTotal,
 			ItemActive:        row.ItemActive,
 			IPAddr:            row.IPAddr,
+			HealthScore:       row.HealthScore,
 			SampledAt:         row.SampledAt,
 		})
 	}
@@ -131,10 +123,6 @@ func GetGroupHistoryServ(groupID uint, from, to *time.Time, limit int) ([]GroupH
 			StatusDescription: row.StatusDescription,
 			HostTotal:         row.HostTotal,
 			HostActive:        row.HostActive,
-			HostError:         row.HostError,
-			HostSyncing:       row.HostSyncing,
-			ItemTotal:         row.ItemTotal,
-			ItemActive:        row.ItemActive,
 			HealthScore:       row.HealthScore,
 			SampledAt:         row.SampledAt,
 		})
@@ -156,14 +144,6 @@ func GetMonitorHistoryServ(monitorID uint, from, to *time.Time, limit int) ([]Mo
 			StatusDescription: row.StatusDescription,
 			GroupTotal:        row.GroupTotal,
 			GroupActive:       row.GroupActive,
-			GroupError:        row.GroupError,
-			GroupSyncing:      row.GroupSyncing,
-			HostTotal:         row.HostTotal,
-			HostActive:        row.HostActive,
-			HostError:         row.HostError,
-			HostSyncing:       row.HostSyncing,
-			ItemTotal:         row.ItemTotal,
-			ItemActive:        row.ItemActive,
 			HealthScore:       row.HealthScore,
 			SampledAt:         row.SampledAt,
 		})
@@ -201,11 +181,12 @@ func recordItemHistory(item model.Item, sampledAt time.Time) {
 		sampledAt = time.Now().UTC()
 	}
 	_ = repository.AddItemHistoryDAO(model.ItemHistory{
-		ItemID:    item.ID,
-		Value:     item.LastValue,
-		Units:     item.Units,
-		Status:    item.Status,
-		SampledAt: sampledAt,
+		ItemID:      item.ID,
+		Value:       item.LastValue,
+		Units:       item.Units,
+		Status:      item.Status,
+		HealthScore: item.HealthScore,
+		SampledAt:   sampledAt,
 	})
 }
 
@@ -242,6 +223,7 @@ func recordHostHistory(host model.Host, sampledAt time.Time) {
 		ItemTotal:         totalCount,
 		ItemActive:        activeCount,
 		IPAddr:            host.IPAddr,
+		HealthScore:       host.HealthScore,
 		SampledAt:         sampledAt,
 	}
 	_ = repository.AddHostHistoryDAO(h)
@@ -353,10 +335,6 @@ func recordGroupHistory(group model.Group, sampledAt time.Time) {
 		StatusDescription: group.StatusDescription,
 		HostTotal:         hostTotal,
 		HostActive:        hostActive,
-		HostError:         hostError,
-		HostSyncing:       hostSyncing,
-		ItemTotal:         itemTotal,
-		ItemActive:        itemActive,
 		HealthScore:       group.HealthScore,
 		SampledAt:         sampledAt,
 	})
@@ -435,14 +413,6 @@ func recordMonitorHistory(monitor model.Monitor, sampledAt time.Time) {
 		StatusDescription: monitor.StatusDescription,
 		GroupTotal:        groupTotal,
 		GroupActive:       groupActive,
-		GroupError:        groupError,
-		GroupSyncing:      groupSyncing,
-		HostTotal:         hostTotal,
-		HostActive:        hostActive,
-		HostError:         hostError,
-		HostSyncing:       hostSyncing,
-		ItemTotal:         itemTotal,
-		ItemActive:        itemActive,
 		HealthScore:       monitor.HealthScore,
 		SampledAt:         sampledAt,
 	})

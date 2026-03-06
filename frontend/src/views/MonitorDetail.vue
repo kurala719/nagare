@@ -48,20 +48,8 @@
         </el-col>
         <el-col :xs="12" :md="4">
           <el-card shadow="never">
-            <div class="stat-label">{{ $t('items.title') }}</div>
-            <div class="stat-value">{{ summary.item_total }}</div>
-          </el-card>
-        </el-col>
-        <el-col :xs="12" :md="4">
-          <el-card shadow="never">
             <div class="stat-label">{{ $t('common.statusActive') }}</div>
             <div class="stat-value" style="color: var(--el-color-success)">{{ summary.host_active }}</div>
-          </el-card>
-        </el-col>
-        <el-col :xs="12" :md="4">
-          <el-card shadow="never">
-            <div class="stat-label">{{ $t('common.statusError') }}</div>
-            <div class="stat-value" style="color: var(--el-color-danger)">{{ summary.host_error }}</div>
           </el-card>
         </el-col>
       </el-row>
@@ -128,8 +116,6 @@ const summary = ref({
   group_total: 0,
   host_total: 0,
   host_active: 0,
-  host_error: 0,
-  item_total: 0,
 })
 const loading = ref(false)
 const error = ref(null)
@@ -221,17 +207,15 @@ const buildHistoryChart = (rows) => {
   const points = Array.isArray(rows) ? rows : []
   const groupActive = points.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.group_active ?? h.GroupActive ?? 0])
   const hostActive = points.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.host_active ?? h.HostActive ?? 0])
-  const itemActive = points.map((h) => [new Date(h.sampled_at || h.SampledAt).getTime(), h.item_active ?? h.ItemActive ?? 0])
 
   historyChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Group Active', 'Host Active', 'Item Active'] },
+    legend: { data: ['Group Active', 'Host Active'] },
     xAxis: { type: 'time' },
     yAxis: { type: 'value', minInterval: 1 },
     series: [
       { name: 'Group Active', type: 'line', smooth: true, data: groupActive },
       { name: 'Host Active', type: 'line', smooth: true, data: hostActive },
-      { name: 'Item Active', type: 'line', smooth: true, data: itemActive },
     ],
   }, { notMerge: true })
 }
@@ -256,8 +240,6 @@ const loadHistory = async () => {
         group_total: last.group_total ?? last.GroupTotal ?? summary.value.group_total,
         host_total: last.host_total ?? last.HostTotal ?? summary.value.host_total,
         host_active: last.host_active ?? last.HostActive ?? summary.value.host_active,
-        host_error: last.host_error ?? last.HostError ?? summary.value.host_error,
-        item_total: last.item_total ?? last.ItemTotal ?? summary.value.item_total,
       }
     }
   } finally {

@@ -104,12 +104,13 @@ type Item struct {
 // ItemHistory tracks item metric values over time.
 type ItemHistory struct {
 	gorm.Model
-	ItemID    uint      `gorm:"index:idx_item_sampled,priority:1;type:bigint unsigned" json:"item_id"`
-	Item      Item      `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Value     string    `gorm:"type:varchar(2048)" json:"value"`
-	Units     string    `gorm:"type:varchar(100)" json:"units"`
-	Status    int       `gorm:"type:tinyint" json:"status"`
-	SampledAt time.Time `gorm:"index:idx_item_sampled,priority:2" json:"sampled_at"`
+	ItemID      uint      `gorm:"index:idx_item_sampled,priority:1;type:bigint unsigned" json:"item_id"`
+	Item        Item      `gorm:"foreignKey:ItemID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Value       string    `gorm:"type:varchar(2048)" json:"value"`
+	Units       string    `gorm:"type:varchar(100)" json:"units"`
+	Status      int       `gorm:"type:tinyint" json:"status"`
+	HealthScore int       `json:"health_score"`
+	SampledAt   time.Time `gorm:"index:idx_item_sampled,priority:2" json:"sampled_at"`
 }
 
 // HostHistory tracks host status over time.
@@ -122,6 +123,7 @@ type HostHistory struct {
 	ItemTotal         int       `json:"item_total"`
 	ItemActive        int       `json:"item_active"`
 	IPAddr            string    `gorm:"type:varchar(39)" json:"ip_addr"`
+	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `gorm:"index:idx_host_sampled,priority:2" json:"sampled_at"`
 }
 
@@ -134,10 +136,6 @@ type GroupHistory struct {
 	StatusDescription string    `gorm:"type:varchar(512)" json:"status_description"`
 	HostTotal         int       `json:"host_total"`
 	HostActive        int       `json:"host_active"`
-	HostError         int       `json:"host_error"`
-	HostSyncing       int       `json:"host_syncing"`
-	ItemTotal         int       `json:"item_total"`
-	ItemActive        int       `json:"item_active"`
 	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `gorm:"index:idx_group_sampled,priority:2" json:"sampled_at"`
 }
@@ -151,14 +149,6 @@ type MonitorHistory struct {
 	StatusDescription string    `gorm:"type:varchar(512)" json:"status_description"`
 	GroupTotal        int       `json:"group_total"`
 	GroupActive       int       `json:"group_active"`
-	GroupError        int       `json:"group_error"`
-	GroupSyncing      int       `json:"group_syncing"`
-	HostTotal         int       `json:"host_total"`
-	HostActive        int       `json:"host_active"`
-	HostError         int       `json:"host_error"`
-	HostSyncing       int       `json:"host_syncing"`
-	ItemTotal         int       `json:"item_total"`
-	ItemActive        int       `json:"item_active"`
 	HealthScore       int       `json:"health_score"`
 	SampledAt         time.Time `gorm:"index:idx_monitor_sampled,priority:2" json:"sampled_at"`
 }
