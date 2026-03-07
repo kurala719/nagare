@@ -120,9 +120,10 @@
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column :label="$t('actions.actions')" width="200" fixed="right" align="center">
+      <el-table-column :label="$t('actions.actions')" width="230" fixed="right" align="center">
         <template #default="{ row }">
           <el-button-group>
+            <el-button size="small" type="primary" :icon="ChatDotRound" @click="onTest(row)" :loading="row.testing">{{ $t('actions.test') || 'Test' }}</el-button>
             <el-button size="small" :icon="Setting" @click="openProperties(row)">{{ $t('actions.properties') }}</el-button>
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)">{{ $t('actions.delete') }}</el-button>
           </el-button-group>
@@ -307,8 +308,8 @@
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
-import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
-import { fetchActionData, addAction, updateAction, deleteAction } from '@/api/actions';
+import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting, ChatDotRound } from '@element-plus/icons-vue';
+import { fetchActionData, addAction, updateAction, deleteAction, testAction } from '@/api/actions';
 import { fetchMediaData } from '@/api/media';
 import { getUsers } from '@/api/users';
 import { fetchHostData } from '@/api/hosts';
@@ -324,7 +325,8 @@ export default {
     Edit,
     Delete,
     ArrowDown,
-    Setting
+    Setting,
+    ChatDotRound
   },
   data() {
     return {
@@ -391,7 +393,8 @@ export default {
       Delete: markRaw(Delete),
       ArrowDown: markRaw(ArrowDown),
       Setting: markRaw(Setting),
-      Loading: markRaw(Loading)
+      Loading: markRaw(Loading),
+      ChatDotRound: markRaw(ChatDotRound)
     };
   },
   computed: {
@@ -666,6 +669,19 @@ export default {
         ElMessage.success(this.$t('actions.updated'));
       } catch (err) {
         ElMessage.error(this.$t('actions.updateFailed') + ': ' + (err.message || ''));
+      }
+    },
+    async onTest(action) {
+      if (action.testing) return;
+      
+      action.testing = true;
+      try {
+        await testAction(action.id);
+        ElMessage.success(this.$t('actions.testSuccess') || 'Test action requested successfully');
+      } catch (err) {
+        ElMessage.error((this.$t('actions.testFailed') || 'Test action failed') + ': ' + (err.message || ''));
+      } finally {
+        action.testing = false;
       }
     },
     onDelete(action) {

@@ -21,7 +21,6 @@ type Config struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
-	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
@@ -41,14 +40,6 @@ type SMTPConfig struct {
 	Username string `yaml:"username" json:"username" mapstructure:"username"`
 	Password string `yaml:"password" json:"password" mapstructure:"password"`
 	From     string `yaml:"from" json:"from" mapstructure:"from"`
-}
-
-// QQConfig holds OneBot/NapCat WebSocket settings
-type QQConfig struct {
-	Enabled     bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
-	Mode        string `yaml:"mode" json:"mode" mapstructure:"mode"` // "reverse" or "positive"
-	PositiveURL string `yaml:"positive_url" json:"positive_url" mapstructure:"positive_url"`
-	AccessToken string `yaml:"access_token" json:"access_token" mapstructure:"access_token"`
 }
 
 // GmailConfig holds Gmail API settings
@@ -142,7 +133,6 @@ type ConfigRequest struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
-	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
@@ -158,7 +148,6 @@ type ConfigResponse struct {
 	AI             AIConfig             `yaml:"ai" json:"ai" mapstructure:"ai"`
 	Gmail          GmailConfig          `yaml:"gmail" json:"gmail" mapstructure:"gmail"`
 	SMTP           SMTPConfig           `yaml:"smtp" json:"smtp" mapstructure:"smtp"`
-	QQ             QQConfig             `yaml:"qq" json:"qq" mapstructure:"qq"`
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
@@ -301,11 +290,6 @@ func ResetConfig() error {
 	viper.Set("smtp.username", "")
 	viper.Set("smtp.password", "")
 	viper.Set("smtp.from", "")
-
-	viper.Set("qq.enabled", false)
-	viper.Set("qq.mode", "reverse")
-	viper.Set("qq.positive_url", "ws://localhost:3001")
-	viper.Set("qq.access_token", "")
 
 	viper.Set("site_message.min_alert_severity", 0)
 	viper.Set("site_message.min_log_severity", 4)

@@ -67,7 +67,6 @@ func InitDBTables() error {
 		&model.Provider{},
 		&model.RegisterApplication{},
 		&model.PasswordResetApplication{},
-		&model.QQWhitelist{},
 		&model.Report{},
 		&model.ReportConfig{},
 		&model.KnowledgeBase{},

@@ -41,3 +41,10 @@ export function getActionById(id) {
     method: 'get'
   })
 }
+
+export function testAction(id) {
+  return request({
+    url: `/delivery/actions/${id}/test`,
+    method: 'post'
+  })
+}

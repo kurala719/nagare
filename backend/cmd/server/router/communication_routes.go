@@ -1,8 +1,9 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"nagare/internal/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupIMRoutes(rg *gin.RouterGroup) {
@@ -47,15 +48,5 @@ func setupReportRoutes(rg *gin.RouterGroup) {
 		reports.POST("/generate/custom", api.GenerateCustomReportCtrl)
 		reports.DELETE("/:id", api.DeleteReportCtrl)
 		reports.GET("/:id/download", api.DownloadReportCtrl)
-	}
-}
-
-func setupQQWhitelistRoutes(rg *gin.RouterGroup) {
-	whitelist := rg.Group("/qq-whitelist", api.PrivilegesMiddleware(2))
-	{
-		whitelist.GET("", api.GetQQWhitelistCtrl)
-		whitelist.POST("", api.AddQQWhitelistCtrl)
-		whitelist.PUT("/:id", api.UpdateQQWhitelistCtrl)
-		whitelist.DELETE("/:id", api.DeleteQQWhitelistCtrl)
 	}
 }

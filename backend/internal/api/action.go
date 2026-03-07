@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllActionsCtrl handles GET /action
@@ -121,4 +122,18 @@ func DeleteActionByIDCtrl(c *gin.Context) {
 		return
 	}
 	respondSuccessMessage(c, http.StatusOK, "action deleted")
+}
+
+// TestActionCtrl handles POST /action/:id/test
+func TestActionCtrl(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondBadRequest(c, "invalid action ID")
+		return
+	}
+	if err := service.TestActionServ(uint(id)); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccessMessage(c, http.StatusOK, "test action executed")
 }

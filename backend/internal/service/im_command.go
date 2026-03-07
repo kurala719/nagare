@@ -13,20 +13,10 @@ import (
 
 func init() {
 	mediaSvc.GlobalQQWSManager.CommandHandler = func(message string, qqID string, isGroup bool) (string, error) {
-		// Whitelist check
+		// Authorization check
 		if strings.HasPrefix(strings.TrimSpace(message), "/") {
-			if !CheckQQWhitelistForCommand(qqID, isGroup) {
-				// Fallback check for registered users if not a group
-				allowed := false
-				if !isGroup {
-					if u, err := repository.GetUserByQQDAO(qqID); err == nil && u.ID > 0 {
-						allowed = true
-					}
-				}
-
-				if !allowed {
-					return "You are not authorized to execute commands.", nil
-				}
+			if !CheckQQAuthorization(qqID, isGroup) {
+				return "You are not authorized to execute commands.", nil
 			}
 		}
 
@@ -58,119 +48,13 @@ type imCommand struct {
 	Handler     func(args []string, rawArgs string) (IMCommandResult, error)
 }
 
-// CheckQQWhitelistForCommand checks if a QQ user/group is allowed to execute commands
-func CheckQQWhitelistForCommand(qqID string, isGroup bool) bool {
-	result := checkQQWhitelist(qqID, isGroup, true)
-	logLevel := "info"
-	if result {
-		logLevel = "debug"
-	}
-	LogService(logLevel, "QQ command whitelist decision", map[string]interface{}{
-		"qq_id":    qqID,
-		"is_group": isGroup,
-		"allowed":  result,
-	}, nil, "")
-	return result
-}
-
-// CheckQQWhitelistForAlert checks if a QQ user/group is allowed to receive alerts
-func CheckQQWhitelistForAlert(qqID string, isGroup bool) bool {
-	return checkQQWhitelist(qqID, isGroup, false)
-}
-
-func checkQQWhitelist(qqID string, isGroup bool, isCommand bool) bool {
-	if strings.TrimSpace(qqID) == "" {
-		LogService("warn", "whitelist check: empty qqID", nil, nil, "")
+// CheckQQAuthorization checks if a QQ user is allowed to execute commands
+func CheckQQAuthorization(qqID string, isGroup bool) bool {
+	if isGroup {
 		return false
 	}
-
-	// Determine whitelist type based on message source
-	whitelistType := 0 // user
-	if isGroup {
-		whitelistType = 1 // group
-	}
-
-	LogService("info", "whitelist check started", map[string]interface{}{
-		"qqID":          qqID,
-		"isGroup":       isGroup,
-		"whitelistType": whitelistType,
-		"isCommand":     isCommand,
-	}, nil, "")
-
-	// Check the appropriate whitelist entry
-	whitelist, err := getQQWhitelist(qqID, whitelistType)
-	if err != nil {
-		LogService("info", "whitelist lookup info", map[string]interface{}{
-			"qqID":  qqID,
-			"type":  whitelistType,
-			"error": err.Error(),
-		}, nil, "")
-		// Don't return false yet, proceed to fallback logic below
-	} else if whitelist != nil {
-		LogService("info", "whitelist entry found", map[string]interface{}{
-			"qqID":        qqID,
-			"type":        whitelistType,
-			"enabled":     whitelist.Enabled,
-			"can_command": whitelist.CanCommand,
-			"can_receive": whitelist.CanReceive,
-			"nickname":    whitelist.Nickname,
-		}, nil, "")
-
-		// Check if whitelist entry is enabled
-		if whitelist.Enabled == 0 {
-			LogService("info", "whitelist entry disabled", map[string]interface{}{
-				"qqID": qqID,
-				"type": whitelistType,
-			}, nil, "")
-			return false
-		}
-
-		// Check appropriate permission flag
-		if isCommand {
-			allowed := whitelist.CanCommand == 1
-			LogService("info", "whitelist command check", map[string]interface{}{
-				"qqID":        qqID,
-				"type":        whitelistType,
-				"can_command": whitelist.CanCommand,
-				"allowed":     allowed,
-			}, nil, "")
-			if allowed {
-				return true
-			}
-		} else {
-			allowed := whitelist.CanReceive == 1
-			LogService("info", "whitelist alert check", map[string]interface{}{
-				"qqID":        qqID,
-				"type":        whitelistType,
-				"can_receive": whitelist.CanReceive,
-				"allowed":     allowed,
-			}, nil, "")
-			if allowed {
-				return true
-			}
-		}
-	}
-
-	// Fallback: Check if the QQ belongs to a registered user (only for non-group)
-	if !isGroup {
-		if u, err := repository.GetUserByQQDAO(qqID); err == nil && u.ID > 0 {
-			LogService("info", "QQ ID found in users table, allowing", map[string]interface{}{
-				"qqID":   qqID,
-				"userID": u.ID,
-			}, nil, "")
-			return true
-		}
-	}
-
-	return false
-}
-
-func getQQWhitelist(qqID string, whitelistType int) (*model.QQWhitelist, error) {
-	whitelist, err := repository.GetQQWhitelistDAO(qqID, whitelistType)
-	if err != nil {
-		return nil, err
-	}
-	return &whitelist, nil
+	u, err := repository.GetUserByQQDAO(qqID)
+	return err == nil && u.ID > 0
 }
 
 // HandleIMCommand processes incoming IM commands

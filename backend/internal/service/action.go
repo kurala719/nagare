@@ -118,6 +118,7 @@ func UpdateActionServ(id uint, req ActionReq) error {
 		SeverityMin: req.SeverityMin,
 		AlertStatus: req.AlertStatus,
 	}
+	updated.ID = id
 
 	for _, uid := range req.UserIDs {
 		user, err := repository.GetUserByIDDAO(int(uid))
@@ -398,24 +399,7 @@ func sendMediaMessage(media model.Media, msg string) error {
 		return err
 	}
 
-	// Check QQ whitelist for alert delivery
 	lowerType := strings.ToLower(resolvedType)
-	if lowerType == "qq" || lowerType == "qrobot" {
-		qqID, isGroup := parseQQTarget(media.Target)
-		if !CheckQQWhitelistForAlert(qqID, isGroup) {
-			err := fmt.Errorf("QQ ID %s (group=%v) is not in whitelist or authorized", qqID, isGroup)
-			LogService("info", "send message skipped (QQ alert whitelist)", map[string]interface{}{
-				"media":        media.Type,
-				"media_id":     media.ID,
-				"target":       media.Target,
-				"qq_id":        qqID,
-				"is_group":     isGroup,
-				"skip_trigger": true,
-				"error":        err.Error(),
-			}, nil, "")
-			return err
-		}
-	}
 
 	if ok, wait := allowMediaSend(media); !ok {
 		LogService("info", "send message skipped (rate limit)", map[string]interface{}{
@@ -433,6 +417,63 @@ func sendMediaMessage(media model.Media, msg string) error {
 	}
 	LogService("info", "send message", map[string]interface{}{"media": media.Type, "target": media.Target, "message": msg, "skip_trigger": true}, nil, "")
 	return nil
+}
+
+// TestActionServ manually triggers an action execution for testing purposes
+func TestActionServ(id uint) error {
+	action, err := repository.GetActionByIDDAO(id)
+	if err != nil {
+		return err
+	}
+
+	if action.MediaID == 0 {
+		return fmt.Errorf("action has no delivery media defined")
+	}
+
+	media, err := repository.GetMediaByIDDAO(action.MediaID)
+	if err != nil {
+		return err
+	}
+
+	testMsg := "Nagare Test Action Message from Action: " + action.Name
+	var lastErr error
+	var sentCount int
+
+	// Send to specifically associated users
+	for _, user := range action.Users {
+		lowerType := strings.ToLower(media.Type)
+		userTarget := ""
+		if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
+			userTarget = "user:" + user.QQ
+		} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
+			userTarget = user.Email
+		}
+
+		if userTarget != "" {
+			userMedia := media
+			userMedia.Target = userTarget
+			if err := sendMediaMessage(userMedia, testMsg); err != nil {
+				lastErr = err
+			} else {
+				sentCount++
+			}
+		}
+	}
+
+	// Send to default target if configured
+	if media.Target != "" {
+		if err := sendMediaMessage(media, testMsg); err != nil {
+			lastErr = err
+		} else {
+			sentCount++
+		}
+	}
+
+	if sentCount == 0 && lastErr == nil {
+		return fmt.Errorf("no valid delivery targets found for this action")
+	}
+
+	return lastErr
 }
 
 // parseQQTarget extracts QQ ID and determines if it's a group

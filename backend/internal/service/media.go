@@ -1,10 +1,16 @@
 ﻿package service
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net/url"
+	"strings"
+	"time"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
+	"nagare/internal/repository/media"
 )
 
 // MediaReq represents a media request
@@ -133,6 +139,7 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 		Status:      existing.Status,
 		Description: req.Description,
 	}
+	updated.ID = id
 	// Preserve status unless enabled state, type or target changed
 	if req.Enabled != existing.Enabled || req.Type != existing.Type || req.Target != existing.Target {
 		updated.Status = determineMediaStatus(model.Media{Enabled: req.Enabled, Type: req.Type, Target: req.Target})
@@ -141,11 +148,19 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 		return err
 	}
 	_, _ = recomputeMediaStatus(id)
+	if updated.Type == "qq" || existing.Type == "qq" {
+		RestartQQWSServ()
+	}
 	return nil
 }
 
 func DeleteMediaByIDServ(id uint) error {
-	return repository.DeleteMediaByIDDAO(id)
+	existing, _ := repository.GetMediaByIDDAO(id)
+	err := repository.DeleteMediaByIDDAO(id)
+	if existing.Type == "qq" {
+		RestartQQWSServ()
+	}
+	return err
 }
 
 func mediaToResp(media model.Media) MediaResp {
@@ -163,4 +178,91 @@ func mediaToResp(media model.Media) MediaResp {
 // BackfillMediaParamsAndTargetsServ is now a no-op as MediaType is removed
 func BackfillMediaParamsAndTargetsServ() (int, int, error) {
 	return 0, 0, nil
+}
+
+var (
+	qqWSCancel context.CancelFunc
+)
+
+// InitQQWSServ initializes the QQ WebSocket connection based on Media configuration
+func InitQQWSServ() {
+	// Find the enabled QQ media
+	t := "qq"
+	s := 1
+	mediaList, err := repository.SearchMediaDAO(model.MediaFilter{Type: &t, Status: &s, Limit: 1})
+	if err != nil || len(mediaList) == 0 {
+		StopQQWSServ()
+		return
+	}
+
+	qqMedia := mediaList[0]
+	target := qqMedia.Target
+
+	// Target could be ws://url?access_token=token
+	var positiveURL, accessToken string
+	if strings.HasPrefix(target, "ws://") || strings.HasPrefix(target, "wss://") {
+		u, err := url.Parse(target)
+		if err == nil {
+			accessToken = u.Query().Get("access_token")
+			// Remove access token from URL for connection if intended (NapCat usually takes it in header or query)
+			positiveURL = target
+		} else {
+			positiveURL = target
+		}
+	} else {
+		// Default to reverse mode or invalid Positive URL
+		StopQQWSServ()
+		return
+	}
+
+	// Update manager's internal config
+	media.GlobalQQWSManager.UpdateConfig(accessToken)
+
+	// Small delay if we just stopped it
+	if qqWSCancel != nil {
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	qqWSCancel = cancel
+
+	go func() {
+		log.Printf("[QQ-WS] Starting positive reconnection loop for Media ID %d", qqMedia.ID)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[QQ-WS] Positive reconnection loop stopped")
+				return
+			default:
+				if !media.GlobalQQWSManager.IsConnected() {
+					log.Printf("[QQ-WS] Attempting positive connection to %s", positiveURL)
+					err := media.GlobalQQWSManager.ConnectPositiveWS(positiveURL, accessToken)
+					if err != nil {
+						log.Printf("[QQ-WS] Positive connection failed: %v, retrying in 10s...", err)
+					}
+				}
+				time.Sleep(10 * time.Second)
+			}
+		}
+	}()
+}
+
+// StopQQWSServ stops the Positive WebSocket reconnection loop
+func StopQQWSServ() {
+	if qqWSCancel != nil {
+		qqWSCancel()
+		qqWSCancel = nil
+	}
+	if media.GlobalQQWSManager.IsConnected() {
+		// Close the underlying connection to trigger a fast disconnect
+		// Not strictly required since cancel takes care of the loop, but good for cleanup.
+		// A dedicated close method is better, but this will do if missing.
+	}
+}
+
+// RestartQQWSServ stops and restarts the QQ WebSocket service
+func RestartQQWSServ() {
+	StopQQWSServ()
+	time.Sleep(200 * time.Millisecond) // Wait a bit for goroutine to exit
+	InitQQWSServ()
 }

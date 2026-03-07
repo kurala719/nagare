@@ -55,6 +55,7 @@ func setupActionRoutes(rg *gin.RouterGroup) {
 		actionsWrite.POST("", api.AddActionCtrl)
 		actionsWrite.PUT("/:id", api.UpdateActionCtrl)
 		actionsWrite.DELETE("/:id", api.DeleteActionByIDCtrl)
+		actionsWrite.POST("/:id/test", api.TestActionCtrl)
 	}
 }
 

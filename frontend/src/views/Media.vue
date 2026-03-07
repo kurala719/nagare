@@ -143,14 +143,7 @@
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="newMedia.enabled" :active-value="1" :inactive-value="0" />
       </el-form-item>
-      <el-form-item :label="$t('media.status')">
-        <el-select v-model="newMedia.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
+
       <el-form-item :label="$t('media.description')">
         <el-input v-model="newMedia.description" type="textarea" :placeholder="$t('media.description')" />
       </el-form-item>
@@ -182,14 +175,7 @@
       <el-form-item :label="$t('common.enabled')">
         <el-switch v-model="selectedMedia.enabled" :active-value="1" :inactive-value="0" />
       </el-form-item>
-      <el-form-item :label="$t('media.status')">
-        <el-select v-model="selectedMedia.status" style="width: 100%;">
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
+
       <el-form-item :label="$t('media.description')">
         <el-input type="textarea" v-model="selectedMedia.description" />
       </el-form-item>
@@ -210,15 +196,7 @@
           <el-option :label="$t('common.disabled')" value="disable" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('media.status')">
-        <el-select v-model="bulkForm.status" style="width: 100%;">
-          <el-option :label="$t('common.bulkUpdateNoChange')" value="nochange" />
-          <el-option :label="$t('common.statusInactive')" :value="0" />
-          <el-option :label="$t('common.statusActive')" :value="1" />
-          <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
-        </el-select>
-      </el-form-item>
+
     </el-form>
     <template #footer>
       <el-button @click="bulkDialogVisible = false">{{ $t('media.cancel') }}</el-button>
@@ -278,7 +256,6 @@ export default {
       selectedMedia: { id: 0, name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' },
       bulkForm: {
         enabled: 'nochange',
-        status: 'nochange',
       },
       Plus: markRaw(Plus),
       Search: markRaw(Search),
@@ -370,13 +347,12 @@ export default {
       }
       this.bulkForm = {
         enabled: 'nochange',
-        status: 'nochange',
       };
       this.bulkDialogVisible = true;
     },
     async applyBulkUpdate() {
       if (this.selectedCount === 0) return;
-      if (this.bulkForm.enabled === 'nochange' && this.bulkForm.status === 'nochange') {
+      if (this.bulkForm.enabled === 'nochange') {
         ElMessage.warning(this.$t('common.bulkUpdateNoChanges'));
         return;
       }
@@ -384,14 +360,13 @@ export default {
       this.bulkUpdating = true;
       try {
         const enabledOverride = this.bulkForm.enabled;
-        const statusOverride = this.bulkForm.status;
         await Promise.all(this.selectedMediaRows.map((media) => {
           const payload = {
             name: media.name,
             type: media.type,
             target: media.target,
             enabled: enabledOverride === 'nochange' ? media.enabled : (enabledOverride === 'enable' ? 1 : 0),
-            status: statusOverride === 'nochange' ? media.status : statusOverride,
+            status: media.status,
             description: media.description,
           };
           return updateMedia(media.id, payload);

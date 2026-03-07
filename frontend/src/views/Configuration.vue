@@ -194,25 +194,6 @@
               </el-form-item>
             </el-form>
 
-            <div class="section-divider">{{ $t('configuration.onebotSettings') }}</div>
-            <el-form :model="editableConfig.qq" label-width="180px" label-position="left">
-              <el-form-item :label="$t('configuration.onebotEnabled')">
-                <el-switch v-model="editableConfig.qq.enabled" :disabled="!editing" />
-              </el-form-item>
-              <el-form-item :label="$t('configuration.onebotMode')">
-                <el-radio-group v-model="editableConfig.qq.mode" :disabled="!editing">
-                  <el-radio label="reverse">{{ $t('configuration.onebotModeReverse') }}</el-radio>
-                  <el-radio label="positive">{{ $t('configuration.onebotModePositive') }}</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item v-if="editableConfig.qq.mode === 'positive'" :label="$t('configuration.onebotUrl')">
-                <el-input v-model="editableConfig.qq.positive_url" :disabled="!editing" placeholder="ws://localhost:3001" />
-              </el-form-item>
-              <el-form-item :label="$t('configuration.onebotToken')">
-                <el-input v-model="editableConfig.qq.access_token" :disabled="!editing" type="password" show-password />
-              </el-form-item>
-            </el-form>
-
             <div class="section-divider">{{ $t('configuration.gmailSettings') }}</div>
             <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
               <el-form-item :label="$t('configuration.gmailEnabled')">
@@ -428,12 +409,6 @@ export default {
         password: '',
         from: '',
       },
-      qq: {
-        enabled: false,
-        mode: 'reverse',
-        positive_url: '',
-        access_token: '',
-      },
       media_rate_limit: {
         global_interval_seconds: 30,
         protocol_interval_seconds: 30,
@@ -583,14 +558,6 @@ export default {
         username: ['username', 'Username'],
         password: ['password', 'Password'],
         from: ['from', 'From']
-      });
-
-      const qqSource = data.qq || data.QQ || {};
-      mapData(qqSource, editableConfig.qq, {
-        enabled: ['enabled', 'Enabled'],
-        mode: ['mode', 'Mode'],
-        positive_url: ['positive_url', 'PositiveURL'],
-        access_token: ['access_token', 'AccessToken']
       });
 
       const mediaSource = data.media_rate_limit || data.MediaRateLimit || {};

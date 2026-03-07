@@ -234,10 +234,10 @@ func HandleQQMessageCtrl(c *gin.Context) {
 		isGroup = false
 	}
 
-	// Check whitelist for command execution
+	// Check authorization for command execution
 	if strings.HasPrefix(strings.TrimSpace(message), "/") {
-		if !service.CheckQQWhitelistForCommand(qqID, isGroup) {
-			service.LogSystem("warn", "QQ command rejected: not in whitelist", map[string]interface{}{
+		if !service.CheckQQAuthorization(qqID, isGroup) {
+			service.LogSystem("warn", "QQ command rejected: unauthorized", map[string]interface{}{
 				"qq_id":    qqID,
 				"is_group": isGroup,
 				"message":  message,

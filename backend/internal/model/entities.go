@@ -329,18 +329,6 @@ type PasswordResetApplication struct {
 	Approver    *User  `gorm:"foreignKey:ApprovedBy;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 }
 
-// QQWhitelist represents an allowed QQ user or group for commands and alerts
-type QQWhitelist struct {
-	gorm.Model
-	QQIdentifier string `gorm:"index;uniqueIndex:idx_qq_type" json:"qq_identifier"` // QQ user ID or group ID
-	Type         int    `gorm:"uniqueIndex:idx_qq_type" json:"type"`                // 0 = user, 1 = group
-	Nickname     string `json:"nickname"`                                           // Nickname or group name
-	CanCommand   int    `gorm:"default:1" json:"can_command"`                       // 0 = no, 1 = yes
-	CanReceive   int    `gorm:"default:1" json:"can_receive"`                       // 0 = no, 1 = yes (receive alerts)
-	Enabled      int    `gorm:"default:1" json:"enabled"`                           // 0 = disabled, 1 = enabled
-	Comment      string `json:"comment"`
-}
-
 // KnowledgeBase represents a local knowledge entry for RAG
 type KnowledgeBase struct {
 	gorm.Model

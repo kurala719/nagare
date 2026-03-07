@@ -135,7 +135,6 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupActionRoutes(deliveryGroup)
 	setupMediaRoutes(deliveryGroup)
 	setupSiteMessageRoutes(deliveryGroup)
-	setupQQWhitelistRoutes(deliveryGroup)
 
 	// --- 6. ANALYSIS GROUP ---
 	analysisGroup := rg.Group("/analysis")

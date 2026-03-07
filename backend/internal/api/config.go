@@ -79,11 +79,6 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 	repository.SetConfigValue("smtp.password", req.SMTP.Password)
 	repository.SetConfigValue("smtp.from", req.SMTP.From)
 
-	repository.SetConfigValue("qq.enabled", req.QQ.Enabled)
-	repository.SetConfigValue("qq.mode", req.QQ.Mode)
-	repository.SetConfigValue("qq.positive_url", req.QQ.PositiveURL)
-	repository.SetConfigValue("qq.access_token", req.QQ.AccessToken)
-
 	repository.SetConfigValue("site_message.min_alert_severity", req.SiteMessage.MinAlertSeverity)
 	repository.SetConfigValue("site_message.min_log_severity", req.SiteMessage.MinLogSeverity)
 
