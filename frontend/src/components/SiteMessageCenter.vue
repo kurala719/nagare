@@ -36,7 +36,7 @@
             >
               <div class="message-icon">
                 <el-icon :class="getSeverityClass(msg.severity)">
-                  <component :is="getTypeIcon(msg.type)" />
+                  <component :is="getSeverityIcon(msg.severity)" />
                 </el-icon>
               </div>
               <div class="message-content">
@@ -142,18 +142,24 @@ const goToHistory = () => {
 
 const getSeverityClass = (severity) => {
   switch (severity) {
-    case 3: return 'color-danger'
+    case 5:
+    case 4: return 'color-danger'
+    case 3:
     case 2: return 'color-warning'
-    case 1: return 'color-success'
+    case 1:
+    case 0: return 'color-info'
     default: return 'color-info'
   }
 }
 
-const getTypeIcon = (type) => {
-  switch (type) {
-    case 'alert': return Warning
-    case 'sync': return Operation
-    case 'report': return Management
+const getSeverityIcon = (severity) => {
+  switch (severity) {
+    case 5:
+    case 4: return CircleCloseFilled
+    case 3:
+    case 2: return Warning
+    case 1:
+    case 0: return InfoFilled
     default: return InfoFilled
   }
 }
@@ -205,9 +211,12 @@ const connectWebSocket = () => {
 
 const getSeverityType = (severity) => {
   switch (severity) {
-    case 3: return 'error'
+    case 5:
+    case 4: return 'error'
+    case 3:
     case 2: return 'warning'
-    case 1: return 'success'
+    case 1:
+    case 0: return 'info'
     default: return 'info'
   }
 }

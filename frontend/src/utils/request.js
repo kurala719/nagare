@@ -8,13 +8,13 @@ import i18n from '../i18n'
 
 // Determine API base URL based on environment
 const getApiBaseURL = () => {
-  // In development, use the proxy (empty baseURL)
-  // In production or preview, use the full backend URL
-  if (import.meta.env.DEV) {
-    return ''
-  }
-  // For preview or production, communicate directly with backend
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    // In development, use the proxy (empty baseURL)
+    // In production or preview, use the full backend URL
+    if (import.meta.env.DEV) {
+        return ''
+    }
+    // For preview or production, communicate directly with backend
+    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 }
 
 const request = axios.create({
@@ -31,7 +31,7 @@ request.interceptors.request.use((config) => {
     if (config.url && !config.url.startsWith('/api/v1')) {
         config.url = `/api/v1${config.url.startsWith('/') ? '' : '/'}${config.url}`
     }
-    
+
     const token = getToken()
     if (token) {
         config.headers = config.headers || {}
@@ -47,7 +47,7 @@ let isAuthAlertOpen = false
 // Map backend error messages to i18n keys
 const mapErrorToI18nKey = (errorMessage) => {
     if (!errorMessage) return null
-    
+
     const errorMap = {
         'invalid email format': 'common.invalidEmail',
         'password must be at least 8 characters and include 3 of: lowercase, uppercase, digits, special characters': 'common.weakPassword',
@@ -56,9 +56,10 @@ const mapErrorToI18nKey = (errorMessage) => {
         'resource not found': 'common.operationFailed',
         'unauthorized': 'common.unauthorizedTitle',
         'forbidden': 'common.accessDeniedTitle',
-        'resource already exists': 'common.operationFailed'
+        'resource already exists': 'common.operationFailed',
+        'authentication failed': 'auth.loginFailed'
     }
-    
+
     const lowerMsg = errorMessage.toLowerCase()
     return errorMap[lowerMsg] || null
 }
@@ -69,12 +70,14 @@ request.interceptors.response.use(
         const status = error?.response?.status
         if (status === 401 || status === 403) {
             const isForbidden = status === 403
+            const isLoginRequest = error.config && error.config.url && error.config.url.includes('/login')
+
             if (!isForbidden) {
                 clearToken()
             }
             const redirect = router.currentRoute.value.fullPath
             const t = i18n?.global?.t || ((key) => key)
-            if (!isAuthAlertOpen) {
+            if (!isAuthAlertOpen && !isLoginRequest) {
                 isAuthAlertOpen = true
                 await ElMessageBox.alert(
                     isForbidden
@@ -88,11 +91,11 @@ request.interceptors.response.use(
                 )
                 isAuthAlertOpen = false
             }
-            if (!isForbidden) {
+            if (!isForbidden && !isLoginRequest) {
                 router.replace({ path: '/login', query: { redirect } })
             }
         }
-        
+
         // Translate backend error messages to i18n keys
         if (error?.response?.data?.error) {
             const i18nKey = mapErrorToI18nKey(error.response.data.error)
@@ -101,7 +104,7 @@ request.interceptors.response.use(
                 error.response.data.translatedError = t(i18nKey)
             }
         }
-        
+
         return Promise.reject(error)
     }
 )

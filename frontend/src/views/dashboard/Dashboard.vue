@@ -62,25 +62,27 @@
         <TopologyChart ref="topologyChart" />
       </div>
 
-      <!-- Experimental Features Row -->
+      <!-- Grid Layout Row 1: Matrix Log Stream and Recent Alerts -->
       <el-row :gutter="20" class="section-container animate-slide-up delay-3">
-        <el-col :xs="24" :md="12">
-          <MetricsTable ref="metricsTable" />
-        </el-col>
         <el-col :xs="24" :md="12">
           <MatrixStream />
         </el-col>
-      </el-row>
-
-      <!-- Recent Data Section -->
-      <el-row :gutter="20" class="section-container animate-slide-up delay-4">
         <el-col :xs="24" :lg="12">
           <RecentAlerts :alerts="recentAlerts" :loading="loading" />
         </el-col>
+      </el-row>
+
+      <!-- Grid Layout Row 2: Recent Hosts and Recent Groups -->
+      <el-row :gutter="20" class="section-container animate-slide-up delay-4">
         <el-col :xs="24" :lg="12">
           <RecentHosts :hosts="recentHosts" :loading="loading" />
         </el-col>
+        <el-col :xs="24" :lg="12">
+          <RecentGroups :groups="recentGroups" :loading="loading" />
+        </el-col>
       </el-row>
+
+      <!-- Grid Layout Row 3: Recent Monitors and Recent Providers -->
       <el-row :gutter="20" class="section-container animate-slide-up" style="animation-delay: 0.5s">
         <el-col :xs="24" :lg="12">
           <RecentMonitors :monitors="recentMonitors" :loading="loading" />
@@ -101,17 +103,18 @@ import { fetchHostData } from '@/api/hosts'
 import { fetchProviderData } from '@/api/providers'
 import { fetchMonitorData } from '@/api/monitors'
 import { fetchHealthScore } from '@/api/system'
+import { fetchGroupData } from '@/api/groups'
 import { useI18n } from 'vue-i18n'
 import { getToken } from '@/utils/auth'
 
 import HealthStats from './components/HealthStats.vue'
 import HealthTrendChart from './components/HealthTrendChart.vue'
-import MetricsTable from './components/MetricsTable.vue'
 import TopologyChart from './components/TopologyChart.vue'
 import VoiceControl from './components/VoiceControl.vue'
 import MatrixStream from './components/MatrixStream.vue'
 import RecentAlerts from './components/RecentAlerts.vue'
 import RecentHosts from './components/RecentHosts.vue'
+import RecentGroups from './components/RecentGroups.vue'
 import RecentProviders from './components/RecentProviders.vue'
 import RecentMonitors from './components/RecentMonitors.vue'
 
@@ -121,12 +124,12 @@ export default defineComponent({
     Loading,
     HealthStats,
     HealthTrendChart,
-    MetricsTable,
     TopologyChart,
     VoiceControl,
     MatrixStream,
     RecentAlerts,
     RecentHosts,
+    RecentGroups,
     RecentProviders,
     RecentMonitors
   },
@@ -147,6 +150,7 @@ export default defineComponent({
     
     const recentAlerts = ref([])
     const recentHosts = ref([])
+    const recentGroups = ref([])
     const recentMonitors = ref([])
     const recentProviders = ref([])
     
@@ -155,7 +159,6 @@ export default defineComponent({
 
     // Child refs for manual refresh
     const trendChart = ref(null)
-    const metricsTable = ref(null)
     const topologyChart = ref(null)
 
     const loadDashboardData = async () => {
@@ -165,6 +168,7 @@ export default defineComponent({
         await Promise.all([
           loadAlerts(),
           loadHosts(),
+          loadGroups(),
           loadMonitors(),
           loadProviders(),
           loadHealthScore()
@@ -193,6 +197,16 @@ export default defineComponent({
       summary.value.hosts.total = data.length
       summary.value.hosts.online = data.filter(h => h.status === 1).length
       recentHosts.value = data.slice(0, 5)
+    }
+
+    const loadGroups = async () => {
+      try {
+        const res = await fetchGroupData()
+        const data = Array.isArray(res?.data || res) ? (res?.data || res) : []
+        recentGroups.value = data.slice(0, 5)
+      } catch (e) {
+        console.error('Failed to load groups', e)
+      }
     }
 
     const loadMonitors = async () => {
@@ -228,7 +242,6 @@ export default defineComponent({
     const refreshAll = () => {
       loadDashboardData()
       if (trendChart.value?.handleRefresh) trendChart.value.handleRefresh()
-      if (metricsTable.value?.loadMetrics) metricsTable.value.loadMetrics()
       if (topologyChart.value?.handleRefresh) topologyChart.value.handleRefresh()
     }
 
@@ -275,13 +288,13 @@ export default defineComponent({
       summary,
       recentAlerts,
       recentHosts,
+      recentGroups,
       recentMonitors,
       recentProviders,
       healthLoading,
       healthScore,
       refreshAll,
       trendChart,
-      metricsTable,
       topologyChart,
       Refresh
     }
@@ -339,7 +352,5 @@ export default defineComponent({
   min-height: 360px;
 }
 
-:deep(.el-card) {
-  height: 100%;
-}
+
 </style>

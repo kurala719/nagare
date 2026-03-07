@@ -45,7 +45,7 @@
     />
 
     <template v-else>
-      <el-table :data="metrics" style="width: 100%" height="260">
+      <el-table :data="metrics" style="width: 100%" max-height="250" :empty-text="$t('dashboard.noMetrics')">
         <el-table-column prop="host_name" :label="$t('dashboard.host')" min-width="140" show-overflow-tooltip sortable />
         <el-table-column prop="item_name" :label="$t('dashboard.metric')" min-width="160" show-overflow-tooltip sortable />
         <el-table-column prop="value" :label="$t('dashboard.value')" width="100" sortable />
@@ -62,8 +62,8 @@
             {{ formatTimestamp(row.updated_at) }}
           </template>
         </el-table-column>
+
       </el-table>
-      <el-empty v-if="metrics.length === 0" :description="$t('dashboard.noMetrics')" />
     </template>
   </el-card>
 </template>

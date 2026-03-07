@@ -429,6 +429,9 @@ func resizeToMax(img image.Image, maxDim int) image.Image {
 func LoginUserServ(username, password string) (string, error) {
 	user, err := repository.GetUserByUsernameDAO(username)
 	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return "", model.ErrAuthenticationFailed
+		}
 		return "", err
 	}
 	if user.Password != password {

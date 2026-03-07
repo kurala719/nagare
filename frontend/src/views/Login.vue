@@ -168,7 +168,7 @@ const onLogin = async () => {
     
   } catch (err) {
     console.error('Login error:', err)
-    const errorMsg = err?.response?.data?.error || err.message || t('auth.loginFailed')
+    const errorMsg = err?.response?.data?.translatedError || err?.response?.data?.error || err.message || t('auth.loginFailed')
     ElMessage.error(errorMsg)
   } finally {
     loading.value = false

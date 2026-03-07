@@ -2,18 +2,12 @@
   <el-card class="detail-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <span>{{ $t('dashboard.hostStatus') }}</span>
-        <el-button type="primary" text @click="$router.push('/host')">{{ $t('dashboard.viewAll') }}</el-button>
+        <span>{{ $t('dashboard.groups') }}</span>
+        <el-button link type="primary" @click="$router.push('/group')">{{ $t('dashboard.viewAll') }}</el-button>
       </div>
     </template>
-    <el-table :data="hosts" style="width: 100%" max-height="250" v-loading="loading" :empty-text="$t('dashboard.noHosts')">
-      <el-table-column prop="id" :label="$t('dashboard.id')" width="60" sortable />
+    <el-table :data="groups" style="width: 100%" v-loading="loading" size="small" :empty-text="$t('dashboard.noGroups', '暂无分组')">
       <el-table-column prop="name" :label="$t('dashboard.name')" show-overflow-tooltip sortable />
-      <el-table-column :label="$t('dashboard.ip')" width="140" sortable>
-        <template #default="{ row }">
-          {{ row.ip_addr || row.ip || row.IPAddr || '-' }}
-        </template>
-      </el-table-column>
       <el-table-column prop="status" :label="$t('dashboard.status')" width="100" sortable>
         <template #default="{ row }">
           <el-tooltip :content="getStatusInfo(row.status).reason" placement="top">
@@ -35,7 +29,6 @@
           />
         </template>
       </el-table-column>
-
     </el-table>
   </el-card>
 </template>
@@ -45,9 +38,9 @@ import { defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 export default defineComponent({
-  name: 'RecentHosts',
+  name: 'RecentGroups',
   props: {
-    hosts: {
+    groups: {
       type: Array,
       default: () => []
     },
@@ -58,15 +51,20 @@ export default defineComponent({
   },
   setup() {
     const { t } = useI18n()
-
+    
     const getStatusInfo = (status) => {
-      const map = {
-        0: { label: t('common.statusInactive'), reason: t('common.reasonInactive'), type: 'info' },
-        1: { label: t('common.statusActive'), reason: t('common.reasonActive'), type: 'success' },
-        2: { label: t('common.statusError'), reason: t('common.reasonError'), type: 'danger' },
-        3: { label: t('common.statusSyncing'), reason: t('common.reasonSyncing'), type: 'warning' },
+      switch (status) {
+        case 1:
+          return { label: t('common.statusActive'), type: 'success', reason: t('common.reasonActive') }
+        case 0:
+          return { label: t('common.statusInactive'), type: 'info', reason: t('common.reasonInactive') }
+        case 2:
+          return { label: t('common.statusError'), type: 'danger', reason: t('common.reasonError') }
+        case 3:
+          return { label: t('common.statusSyncing'), type: 'warning', reason: t('common.reasonSyncing') }
+        default:
+          return { label: t('common.unknown', 'Unknown'), type: 'info', reason: '' }
       }
-      return map[status] || map[0]
     }
 
     const getHealthStatus = (score) => {
@@ -75,13 +73,15 @@ export default defineComponent({
       return 'exception'
     }
 
-    return { getStatusInfo, getHealthStatus }
+    return {
+      getStatusInfo,
+      getHealthStatus
+    }
   }
 })
 </script>
 
 <style scoped>
-
 .card-header {
   display: flex;
   justify-content: space-between;

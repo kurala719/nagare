@@ -94,7 +94,7 @@ export default defineComponent({
   padding: 18px;
 }
 .matrix-stream {
-  height: 240px;
+  max-height: 240px;
   overflow-y: auto;
   padding: 12px;
   border-radius: 12px;

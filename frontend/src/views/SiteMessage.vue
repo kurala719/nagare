@@ -37,7 +37,7 @@
         <el-table-column width="50">
           <template #default="{ row }">
             <el-icon :class="getSeverityClass(row.severity)">
-              <component :is="getTypeIcon(row.type)" />
+              <component :is="getSeverityIcon(row.severity)" />
             </el-icon>
           </template>
         </el-table-column>
@@ -77,7 +77,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Refresh, Delete, Warning, Operation, Management, InfoFilled } from '@element-plus/icons-vue'
+import { Refresh, Delete, Warning, Operation, Management, InfoFilled, CircleCloseFilled, SuccessFilled } from '@element-plus/icons-vue'
 import { fetchSiteMessages, markAsRead, markAllAsRead, deleteSiteMessage } from '@/api/siteMessage'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -173,27 +173,36 @@ const handleDelete = (row) => {
 
 const getSeverityClass = (severity) => {
   switch (severity) {
-    case 3: return 'color-danger'
+    case 5:
+    case 4: return 'color-danger'
+    case 3:
     case 2: return 'color-warning'
-    case 1: return 'color-success'
+    case 1:
+    case 0: return 'color-info'
     default: return 'color-info'
   }
 }
 
 const getSeverityType = (severity) => {
   switch (severity) {
-    case 3: return 'error'
+    case 5:
+    case 4: return 'error'
+    case 3:
     case 2: return 'warning'
-    case 1: return 'success'
+    case 1:
+    case 0: return 'info'
     default: return 'info'
   }
 }
 
-const getTypeIcon = (type) => {
-  switch (type) {
-    case 'alert': return Warning
-    case 'sync': return Operation
-    case 'report': return Management
+const getSeverityIcon = (severity) => {
+  switch (severity) {
+    case 5:
+    case 4: return CircleCloseFilled
+    case 3:
+    case 2: return Warning
+    case 1:
+    case 0: return InfoFilled
     default: return InfoFilled
   }
 }
