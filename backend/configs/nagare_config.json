@@ -67,12 +67,6 @@
     },
     {
       "type": "media",
-      "key": "gmail",
-      "name": "Gmail",
-      "id": 1
-    },
-    {
-      "type": "media",
       "key": "qq",
       "name": "QQ",
       "id": 2
@@ -84,12 +78,6 @@
       "id": 3
     }
   ],
-  "gmail": {
-    "credentials_file": "configs/gmail_credentials.json",
-    "enabled": false,
-    "from": "kurala719@gmail.com",
-    "token_file": "configs/gmail_token.json"
-  },
   "jwt": {
     "jwt_ttl": 7200,
     "secret_key": "knt;e@KLDsjhBjq!T@dvjpSpRa+%r?(7YM^hZ*Q(te[!b9Cg~7LD7,@J!^u8QF`F"

@@ -1,29 +1,15 @@
 package service
 
 import (
-	"context"
 	"fmt"
-	"nagare/internal/repository/media"
-
-	"github.com/spf13/viper"
 )
 
-// SendEmailServ sends an email using the Gmail API
+// SendEmailServ is a placeholder for email sending
 func SendEmailServ(to, subject, body string) error {
-	enabled := viper.GetBool("gmail.enabled")
-	if !enabled {
-		return fmt.Errorf("gmail is disabled")
-	}
-
-	return media.SendGmailServ(context.Background(), to, subject, body)
+	return fmt.Errorf("email service not configured")
 }
 
-// SendEmailHTMLServ sends an HTML email using the Gmail API
+// SendEmailHTMLServ is a placeholder for HTML email sending
 func SendEmailHTMLServ(to, subject, htmlBody string) error {
-	enabled := viper.GetBool("gmail.enabled")
-	if !enabled {
-		return fmt.Errorf("gmail is disabled")
-	}
-
-	return media.SendGmailHTMLServ(context.Background(), to, subject, htmlBody)
+	return fmt.Errorf("email service not configured")
 }

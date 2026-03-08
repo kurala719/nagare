@@ -1103,7 +1103,7 @@ const messages = {
       integrations: 'Integrations',
       aiAnalysis: 'AI Analysis',
       onebotSettings: 'OneBot (NapCat) Configuration',
-      gmailSettings: 'Gmail API Configuration',
+
       mcpSettings: 'MCP Settings',
       advanced: 'Advanced',
       siteMessageSettings: 'Site Message Settings',
@@ -1119,10 +1119,7 @@ const messages = {
       onebotModePositive: 'Positive (Server as Client)',
       onebotUrl: 'WebSocket URL',
       onebotToken: 'Access Token',
-      gmailEnabled: 'Gmail Enabled',
-      gmailCredentials: 'Credentials File',
-      gmailToken: 'Token File',
-      gmailFrom: 'From Address',
+
       external: 'External',
       externalInfrastructure: 'External Infrastructure',
       addItem: 'Add Definition',
@@ -2445,7 +2442,7 @@ const messages = {
       integrations: '集成',
       aiAnalysis: 'AI 分析',
       onebotSettings: 'OneBot (NapCat) 配置',
-      gmailSettings: 'Gmail API 配置',
+
       mcpSettings: 'MCP 设置',
       advanced: '高级设置',
       siteMessageSettings: '站内消息设置',
@@ -2461,10 +2458,7 @@ const messages = {
       onebotModePositive: '正向 (服务器作为客户端)',
       onebotUrl: 'WebSocket 地址',
       onebotToken: '访问令牌',
-      gmailEnabled: '启用 Gmail',
-      gmailCredentials: '凭据文件',
-      gmailToken: '令牌文件',
-      gmailFrom: '发送者地址',
+
       external: '外部设施',
       externalInfrastructure: '外部基础设施定义',
       addItem: '添加定义',

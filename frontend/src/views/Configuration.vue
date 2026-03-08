@@ -194,21 +194,7 @@
               </el-form-item>
             </el-form>
 
-            <div class="section-divider">{{ $t('configuration.gmailSettings') }}</div>
-            <el-form :model="editableConfig.gmail" label-width="180px" label-position="left">
-              <el-form-item :label="$t('configuration.gmailEnabled')">
-                <el-switch v-model="editableConfig.gmail.enabled" :disabled="!editing" />
-              </el-form-item>
-              <el-form-item :label="$t('configuration.gmailCredentials')">
-                <el-input v-model="editableConfig.gmail.credentials_file" :disabled="!editing" placeholder="configs/gmail_credentials.json" />
-              </el-form-item>
-              <el-form-item :label="$t('configuration.gmailToken')">
-                <el-input v-model="editableConfig.gmail.token_file" :disabled="!editing" placeholder="configs/gmail_token.json" />
-              </el-form-item>
-              <el-form-item :label="$t('configuration.gmailFrom')">
-                <el-input v-model="editableConfig.gmail.from" :disabled="!editing" placeholder="your-email@gmail.com" />
-              </el-form-item>
-            </el-form>
+
 
             <div class="section-divider">{{ $t('configuration.mcpSettings') }}</div>
             <el-form :model="editableConfig.mcp" label-width="180px" label-position="left">
@@ -395,12 +381,6 @@ export default {
         analysis_min_severity: 2,
         language: 'en'
       },
-      gmail: {
-        enabled: false,
-        credentials_file: '',
-        token_file: '',
-        from: '',
-      },
       smtp: {
         enabled: false,
         host: '',
@@ -540,14 +520,6 @@ export default {
         model: ['model', 'Model'],
         analysis_timeout_seconds: ['analysis_timeout_seconds', 'AnalysisTimeoutSeconds'],
         analysis_min_severity: ['analysis_min_severity', 'AnalysisMinSeverity']
-      });
-
-      const gmailSource = data.gmail || data.Gmail || {};
-      mapData(gmailSource, editableConfig.gmail, {
-        enabled: ['enabled', 'Enabled'],
-        credentials_file: ['credentials_file', 'CredentialsFile'],
-        token_file: ['token_file', 'TokenFile'],
-        from: ['from', 'From']
       });
 
       const smtpSource = data.smtp || data.SMTP || {};

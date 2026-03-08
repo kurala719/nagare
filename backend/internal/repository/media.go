@@ -89,10 +89,14 @@ func AddMediaDAO(media model.Media) error {
 
 // UpdateMediaDAO updates media by ID
 func UpdateMediaDAO(id uint, media model.Media) error {
-	if err := database.DB.Model(&media).Where("id = ?", id).Save(&media).Error; err != nil {
-		return err
-	}
-	return nil
+	return database.DB.Model(&model.Media{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":        media.Name,
+		"type":        media.Type,
+		"target":      media.Target,
+		"enabled":     media.Enabled,
+		"status":      media.Status,
+		"description": media.Description,
+	}).Error
 }
 
 // DeleteMediaByIDDAO deletes media by ID

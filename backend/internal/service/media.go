@@ -132,6 +132,7 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 		return err
 	}
 	updated := model.Media{
+		Model:       existing.Model,
 		Name:        req.Name,
 		Type:        req.Type,
 		Target:      req.Target,
@@ -139,7 +140,6 @@ func UpdateMediaServ(id uint, req MediaReq) error {
 		Status:      existing.Status,
 		Description: req.Description,
 	}
-	updated.ID = id
 	// Preserve status unless enabled state, type or target changed
 	if req.Enabled != existing.Enabled || req.Type != existing.Type || req.Target != existing.Target {
 		updated.Status = determineMediaStatus(model.Media{Enabled: req.Enabled, Type: req.Type, Target: req.Target})

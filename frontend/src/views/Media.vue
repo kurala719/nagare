@@ -129,7 +129,7 @@
       </el-form-item>
       <el-form-item :label="$t('media.type')">
         <el-select v-model="newMedia.type" style="width: 100%;">
-          <el-option label="Gmail" value="gmail" />
+
           <el-option label="Other" value="other" />
           <el-option label="QQ" value="qq" />
         </el-select>
@@ -161,7 +161,7 @@
       </el-form-item>
       <el-form-item :label="$t('media.type')">
         <el-select v-model="selectedMedia.type" style="width: 100%;">
-          <el-option label="Gmail" value="gmail" />
+
           <el-option label="Other" value="other" />
           <el-option label="QQ" value="qq" />
         </el-select>
@@ -252,8 +252,8 @@ export default {
       bulkUpdating: false,
       bulkDeleting: false,
       selectedMediaRows: [],
-      newMedia: { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' },
-      selectedMedia: { id: 0, name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' },
+      newMedia: { name: '', type: 'smtp', target: '', params: {}, enabled: 1, status: 1, description: '' },
+      selectedMedia: { id: 0, name: '', type: 'smtp', target: '', params: {}, enabled: 1, status: 1, description: '' },
       bulkForm: {
         enabled: 'nochange',
       },
@@ -410,7 +410,7 @@ export default {
         const mapped = data.map((m) => ({
           id: m.ID || m.id || 0,
           name: m.Name || m.name || '',
-          type: m.Type || m.type || 'gmail',
+          type: m.Type || m.type || 'smtp',
           target: m.Target || m.target || '',
           enabled: m.Enabled ?? m.enabled ?? 1,
           status: m.Status ?? m.status ?? 0,
@@ -429,11 +429,11 @@ export default {
     },
     openCreate() {
       this.createDialogVisible = true;
-      this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'other', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     cancelCreate() {
       this.createDialogVisible = false;
-      this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
+      this.newMedia = { name: '', type: 'smtp', target: '', params: {}, enabled: 1, status: 1, description: '' };
     },
     async onCreate() {
       if (!this.newMedia.name) {
@@ -452,7 +452,7 @@ export default {
         });
         await this.loadMedia(true);
         this.createDialogVisible = false;
-        this.newMedia = { name: '', type: 'gmail', target: '', params: {}, enabled: 1, status: 1, description: '' };
+        this.newMedia = { name: '', type: 'smtp', target: '', params: {}, enabled: 1, status: 1, description: '' };
         ElMessage.success(this.$t('media.created'));
       } catch (err) {
         ElMessage.error(this.$t('media.createFailed') + ': ' + (err.message || ''));

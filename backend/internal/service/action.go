@@ -263,7 +263,7 @@ func ExecuteActionsForAlert(alert model.Alert) {
 				userTarget := ""
 				if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
 					userTarget = "user:" + user.QQ
-				} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
+				} else if (lowerType == "smtp" || lowerType == "email") && user.Email != "" {
 					userTarget = user.Email
 				}
 
@@ -445,7 +445,7 @@ func TestActionServ(id uint) error {
 		userTarget := ""
 		if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
 			userTarget = "user:" + user.QQ
-		} else if (lowerType == "gmail" || lowerType == "smtp" || lowerType == "email") && user.Email != "" {
+		} else if (lowerType == "smtp" || lowerType == "email") && user.Email != "" {
 			userTarget = user.Email
 		}
 

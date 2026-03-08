@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // GetReportConfigDAO retrieves the report configuration
@@ -21,7 +22,7 @@ func UpdateReportConfigDAO(config model.ReportConfig) error {
 	if config.ID == 0 {
 		return database.DB.Create(&config).Error
 	}
-	return database.DB.Save(&config).Error
+	return database.DB.Model(&model.ReportConfig{}).Where("id = ?", config.ID).Updates(config).Error
 }
 
 // AddReportDAO adds a new report record
