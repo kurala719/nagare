@@ -60,9 +60,7 @@ func determineHostStatus(h model.Host, _ int, groupStatus int) int {
 	if h.Status == 2 {
 		return 2
 	}
-	if h.Status == 0 && h.StatusDescription != "" {
-		return 2
-	}
+
 	if h.Status == 0 {
 		return 0
 	}

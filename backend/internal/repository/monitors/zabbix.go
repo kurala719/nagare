@@ -60,15 +60,16 @@ type zabbixHost struct {
 	JmxAvailable  interface{} `json:"jmx_available"`
 	JmxError      string      `json:"jmx_error"`
 	Interfaces    []struct {
-		InterfaceID interface{} `json:"interfaceid"`
-		IP          string      `json:"ip"`
-		DNS         string      `json:"dns"`
-		Port        interface{} `json:"port"`
-		Type        interface{} `json:"type"`
-		Main        interface{} `json:"main"`
-		UseIP       interface{} `json:"useip"`
-		Available   interface{} `json:"available"`
-		Error       string      `json:"error"`
+		InterfaceID interface{}            `json:"interfaceid"`
+		IP          string                 `json:"ip"`
+		DNS         string                 `json:"dns"`
+		Port        interface{}            `json:"port"`
+		Type        interface{}            `json:"type"`
+		Main        interface{}            `json:"main"`
+		UseIP       interface{}            `json:"useip"`
+		Details     map[string]interface{} `json:"details"`
+		Available   interface{}            `json:"available"`
+		Error       string                 `json:"error"`
 	} `json:"interfaces"`
 }
 
@@ -427,32 +428,26 @@ func determineZabbixAvailability(zh zabbixHostWithGroups) (string, string, strin
 		return "unknown", "0", "" // Mapping to Inactive (0)
 	}
 
-	// Priority 1: Check for any explicit error messages at host level
-	if zh.Error != "" {
+	// Priority 1: Explicit "Not Available" (2) numeric status
+	if available == "2" {
 		return "down", "2", zh.Error
 	}
-	if zh.SnmpError != "" {
+	if snmpAvailable == "2" {
 		return "down", "2", zh.SnmpError
 	}
-	if zh.IpmiError != "" {
+	if ipmiAvailable == "2" {
 		return "down", "2", zh.IpmiError
 	}
-	if zh.JmxError != "" {
+	if jmxAvailable == "2" {
 		return "down", "2", zh.JmxError
 	}
 
 	// Priority 2: Deep check - Check interface-level availability and errors
-	// Zabbix 6.0+ often keeps the error details here
 	for _, iface := range zh.Interfaces {
 		ifaceAvailable := toString(iface.Available)
-		if ifaceAvailable == "2" || iface.Error != "" {
+		if ifaceAvailable == "2" {
 			return "down", "2", iface.Error
 		}
-	}
-
-	// Priority 3: Check for explicit "Not Available" (2) numeric status at host level
-	if available == "2" || snmpAvailable == "2" || ipmiAvailable == "2" || jmxAvailable == "2" {
-		return "down", "2", ""
 	}
 
 	// Priority 4: Check for any explicit "Available" (1) status (Host or Interface)
@@ -580,6 +575,67 @@ func zabbixPrimaryInterfaceInfo(host zabbixHost) (string, string, string) {
 	return selected.IP, interfaceTypeID, zabbixInterfaceTypeLabel(interfaceTypeID)
 }
 
+func normalizeZabbixSNMPVersion(raw string) string {
+	raw = strings.TrimSpace(strings.ToLower(raw))
+	switch raw {
+	case "1", "v1", "snmpv1":
+		return "v1"
+	case "3", "v3", "snmpv3":
+		return "v3"
+	case "2", "2c", "v2", "v2c", "snmpv2", "snmpv2c":
+		return "v2c"
+	default:
+		if raw == "" {
+			return ""
+		}
+		return "v2c"
+	}
+}
+
+func zabbixPrimarySNMPConfig(host zabbixHost) (string, string, string) {
+	if len(host.Interfaces) == 0 {
+		return "", "", ""
+	}
+
+	selectedIdx := -1
+	for i, iface := range host.Interfaces {
+		if toString(iface.Type) == "2" && toString(iface.Main) == "1" {
+			selectedIdx = i
+			break
+		}
+	}
+	if selectedIdx == -1 {
+		for i, iface := range host.Interfaces {
+			if toString(iface.Type) == "2" {
+				selectedIdx = i
+				break
+			}
+		}
+	}
+	if selectedIdx == -1 {
+		return "", "", ""
+	}
+
+	iface := host.Interfaces[selectedIdx]
+	community := ""
+	version := ""
+	if iface.Details != nil {
+		if v, ok := iface.Details["community"]; ok {
+			community = strings.TrimSpace(toString(v))
+		}
+		if v, ok := iface.Details["version"]; ok {
+			version = normalizeZabbixSNMPVersion(toString(v))
+		}
+	}
+
+	port := strings.TrimSpace(toString(iface.Port))
+	if port == "" || port == "0" {
+		port = "161"
+	}
+
+	return community, version, port
+}
+
 // parseZabbixHosts parses Zabbix host.get result into common Host slice
 func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error) {
 	var zabbixHosts []zabbixHostWithGroups
@@ -590,6 +646,7 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 	hosts := make([]Host, 0, len(zabbixHosts))
 	for _, zh := range zabbixHosts {
 		ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
+		snmpCommunity, snmpVersion, snmpPort := zabbixPrimarySNMPConfig(zh.zabbixHost)
 
 		status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -601,6 +658,15 @@ func (p *ZabbixProvider) parseZabbixHosts(result json.RawMessage) ([]Host, error
 		if interfaceTypeID != "" {
 			metadata["interface_type_id"] = interfaceTypeID
 			metadata["interface_type"] = interfaceTypeLabel
+		}
+		if snmpCommunity != "" {
+			metadata["snmp_community"] = snmpCommunity
+		}
+		if snmpVersion != "" {
+			metadata["snmp_version"] = snmpVersion
+		}
+		if snmpPort != "" {
+			metadata["snmp_port"] = snmpPort
 		}
 		selectedGroups := zh.HostGroups
 		if len(selectedGroups) == 0 {
@@ -668,6 +734,7 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 
 	zh := zabbixHosts[0]
 	ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
+	snmpCommunity, snmpVersion, snmpPort := zabbixPrimarySNMPConfig(zh.zabbixHost)
 
 	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -679,6 +746,15 @@ func (p *ZabbixProvider) GetHostByName(ctx context.Context, name string) (*Host,
 	if interfaceTypeID != "" {
 		metadata["interface_type_id"] = interfaceTypeID
 		metadata["interface_type"] = interfaceTypeLabel
+	}
+	if snmpCommunity != "" {
+		metadata["snmp_community"] = snmpCommunity
+	}
+	if snmpVersion != "" {
+		metadata["snmp_version"] = snmpVersion
+	}
+	if snmpPort != "" {
+		metadata["snmp_port"] = snmpPort
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {
@@ -740,6 +816,7 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 
 	zh := zabbixHosts[0]
 	ip, interfaceTypeID, interfaceTypeLabel := zabbixPrimaryInterfaceInfo(zh.zabbixHost)
+	snmpCommunity, snmpVersion, snmpPort := zabbixPrimarySNMPConfig(zh.zabbixHost)
 
 	status, activeAvailable, statusDesc := determineZabbixAvailability(zh)
 
@@ -751,6 +828,15 @@ func (p *ZabbixProvider) GetHostByID(ctx context.Context, hostID string) (*Host,
 	if interfaceTypeID != "" {
 		metadata["interface_type_id"] = interfaceTypeID
 		metadata["interface_type"] = interfaceTypeLabel
+	}
+	if snmpCommunity != "" {
+		metadata["snmp_community"] = snmpCommunity
+	}
+	if snmpVersion != "" {
+		metadata["snmp_version"] = snmpVersion
+	}
+	if snmpPort != "" {
+		metadata["snmp_port"] = snmpPort
 	}
 	selectedGroups := zh.HostGroups
 	if len(selectedGroups) == 0 {

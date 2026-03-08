@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -422,6 +423,63 @@ func mapMonitorHostStatus(status string, activeAvailable string) int {
 	return 0
 }
 
+func isExplicitUnknownMonitorStatus(status string, activeAvailable string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "unknown") || strings.TrimSpace(activeAvailable) == "0"
+}
+
+func normalizeSNMPVersion(raw string) string {
+	raw = strings.TrimSpace(strings.ToLower(raw))
+	switch raw {
+	case "1", "v1", "snmpv1":
+		return "v1"
+	case "3", "v3", "snmpv3":
+		return "v3"
+	case "2", "2c", "v2", "v2c", "snmpv2", "snmpv2c":
+		return "v2c"
+	default:
+		if raw == "" {
+			return ""
+		}
+		return "v2c"
+	}
+}
+
+func resolveHostSNMPConfigFromMetadata(metadata map[string]string, fallback model.Host) (string, string, int) {
+	community := strings.TrimSpace(fallback.SNMPCommunity)
+	version := normalizeSNMPVersion(fallback.SNMPVersion)
+	port := fallback.SNMPPort
+
+	if metadata != nil {
+		if value, ok := metadata["snmp_community"]; ok {
+			if trimmed := strings.TrimSpace(value); trimmed != "" {
+				community = trimmed
+			}
+		}
+		if value, ok := metadata["snmp_version"]; ok {
+			if normalized := normalizeSNMPVersion(value); normalized != "" {
+				version = normalized
+			}
+		}
+		if value, ok := metadata["snmp_port"]; ok {
+			if parsed, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && parsed > 0 {
+				port = parsed
+			}
+		}
+	}
+
+	if community == "" {
+		community = "public"
+	}
+	if version == "" {
+		version = "v2c"
+	}
+	if port <= 0 {
+		port = 161
+	}
+
+	return community, version, port
+}
+
 // createMonitorClient creates a monitor client from a MonitorResp
 func createMonitorClient(monitor MonitorResp) (*monitors.Client, error) {
 	monitorType := monitors.ParseMonitorType(monitor.Type)
@@ -810,9 +868,6 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				statusDesc = value
 			}
 		}
-		if status == 0 && statusDesc != "" {
-			status = 2
-		}
 
 		var existingHost model.Host
 		hasExistingHost := false
@@ -848,7 +903,10 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 		}
 
 		if status == 0 && hasExistingHost {
-			if statusDesc != "" {
+			if isExplicitUnknownMonitorStatus(h.Status, activeAvailable) {
+				// Keep explicit unknown from monitor as unknown; do not inherit stale error state.
+				statusDesc = ""
+			} else if statusDesc != "" {
 				status = 2
 			} else {
 				if existingHost.Status == 1 || existingHost.Status == 2 {
@@ -867,6 +925,12 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 			groupID = existingHost.GroupID
 		}
 		groupID = resolveHostGroupIDFromMetadata(mid, h.Metadata, groupID)
+
+		snmpFallback := model.Host{}
+		if hasExistingHost {
+			snmpFallback = existingHost
+		}
+		snmpCommunity, snmpVersion, snmpPort := resolveHostSNMPConfigFromMetadata(h.Metadata, snmpFallback)
 
 		if err == nil {
 			// Host exists, update it
@@ -887,6 +951,9 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				SSHUser:           existingHost.SSHUser,
 				SSHPassword:       "", // UpdateHostDAO won't update if empty
 				SSHPort:           existingHost.SSHPort,
+				SNMPCommunity:     snmpCommunity,
+				SNMPVersion:       snmpVersion,
+				SNMPPort:          snmpPort,
 				LastSyncAt:        &now,
 			}); err != nil {
 				setHostStatusErrorWithReason(existingHost.ID, err.Error())
@@ -906,6 +973,9 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 				Status:            status,
 				StatusDescription: statusDesc,
 				IPAddr:            h.IPAddress,
+				SNMPCommunity:     snmpCommunity,
+				SNMPVersion:       snmpVersion,
+				SNMPPort:          snmpPort,
 				LastSyncAt:        &now,
 			}
 			if err := repository.AddHostDAO(&hNew); err != nil {
@@ -1035,6 +1105,12 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 	groupID = resolveHostGroupIDFromMetadata(mid, h.Metadata, groupID)
 
+	snmpFallback := host
+	if err == nil {
+		snmpFallback = existingHost
+	}
+	snmpCommunity, snmpVersion, snmpPort := resolveHostSNMPConfigFromMetadata(h.Metadata, snmpFallback)
+
 	activeAvailable := ""
 	statusDesc := ""
 	if h.Metadata != nil {
@@ -1047,7 +1123,10 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 	}
 	status := mapMonitorHostStatus(h.Status, activeAvailable)
 	if status == 0 {
-		if statusDesc != "" {
+		if isExplicitUnknownMonitorStatus(h.Status, activeAvailable) {
+			// Keep explicit unknown from monitor as unknown; do not inherit stale error state.
+			statusDesc = ""
+		} else if statusDesc != "" {
 			status = 2
 		} else {
 			if err == nil {
@@ -1092,6 +1171,9 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			SSHUser:           existingHost.SSHUser,
 			SSHPassword:       "", // UpdateHostDAO won't update if empty
 			SSHPort:           existingHost.SSHPort,
+			SNMPCommunity:     snmpCommunity,
+			SNMPVersion:       snmpVersion,
+			SNMPPort:          snmpPort,
 			LastSyncAt:        &now,
 		}); err != nil {
 			setHostStatusErrorWithReason(existingHost.ID, err.Error())
@@ -1112,6 +1194,9 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			Status:            status,
 			StatusDescription: statusDesc,
 			IPAddr:            h.IPAddress,
+			SNMPCommunity:     snmpCommunity,
+			SNMPVersion:       snmpVersion,
+			SNMPPort:          snmpPort,
 		}
 
 		if err := repository.AddHostDAO(&newHost); err != nil {
