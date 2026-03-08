@@ -58,9 +58,6 @@ func InitRouter() {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})
 
-	// Direct SNMP poll route (moved inside setupAllRoutes)
-	// r.POST("/api/v1/snmp-poll-direct/:id", api.TestSNMPCtrl)
-
 	// Setup all routes
 	apiGroup := r.Group("/api/v1")
 	apiGroup.Use(api.AuditLogMiddleware())
@@ -114,7 +111,6 @@ func setupAllRoutes(rg *gin.RouterGroup) {
 	setupGroupRoutes(monitoringGroup)
 	setupHostRoutes(monitoringGroup)
 	setupItemRoutes(monitoringGroup)
-	monitoringGroup.POST("/snmp-poll-direct/:id", api.TestSNMPCtrl)
 
 	// --- 3. MAINTENANCE GROUP ---
 	maintenanceGroup := rg.Group("/maintenance")

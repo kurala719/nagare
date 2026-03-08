@@ -85,14 +85,3 @@ export function pushHostsToMonitor(monitorId) {
     method: 'post'
   })
 }
-
-
-
-export function probeSnmpOid(id, oid) {
-  const encodedOid = encodeURIComponent(oid || '')
-  return request({
-    url: `/monitoring/hosts/${id}/snmp/probe${encodedOid ? `?oid=${encodedOid}` : ''}`,
-    method: 'post',
-    timeout: 120000
-  })
-}

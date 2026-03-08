@@ -25,6 +25,12 @@ func setupMonitorRoutes(rg *gin.RouterGroup) {
 		monitors.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateMonitorEventTokenCtrl)
 		monitors.POST("/check", api.PrivilegesMiddleware(2), api.CheckAllMonitorsStatusCtrl)
 		monitors.POST("/:id/check", api.PrivilegesMiddleware(2), api.CheckMonitorStatusCtrl)
+
+		// Host Sync operations
+		monitors.POST("/:id/hosts/pull", api.PrivilegesMiddleware(2), api.PullHostsFromMonitorCtrl)
+		monitors.POST("/:id/hosts/:hid/pull", api.PrivilegesMiddleware(2), api.PullHostFromMonitorCtrl)
+		monitors.POST("/:id/hosts/push", api.PrivilegesMiddleware(2), api.PushHostsFromMonitorCtrl)
+		monitors.POST("/:id/hosts/:hid/push", api.PrivilegesMiddleware(2), api.PushHostToMonitorCtrl)
 	}
 }
 

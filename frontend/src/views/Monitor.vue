@@ -132,7 +132,7 @@
             </div>
             <div class="monitor-title-area">
               <h3 class="monitor-name">{{ monitor.name }}</h3>
-              <span class="monitor-type-tag">{{ monitor.type === 1 ? 'SNMP' : monitor.type === 2 ? 'Zabbix' : 'Other' }}</span>
+              <span class="monitor-type-tag">{{ monitor.type === 2 ? 'Zabbix' : 'Other' }}</span>
             </div>
             <el-checkbox :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" class="monitor-select" />
           </div>

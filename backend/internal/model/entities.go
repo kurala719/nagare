@@ -26,6 +26,8 @@ type Host struct {
 	SSHPassword       string `gorm:"column:ssh_password;type:varchar(255)" json:"-"`
 	SSHPort           int    `gorm:"column:ssh_port;default:22" json:"ssh_port"`
 	// SNMP Configuration
+
+	// SNMP Configuration
 	SNMPCommunity string     `gorm:"column:snmp_community;type:varchar(100)" json:"snmp_community"`
 	SNMPVersion   string     `gorm:"column:snmp_version;type:varchar(20)" json:"snmp_version"` // "v1", "v2c"
 	SNMPPort      int        `gorm:"column:snmp_port;default:161" json:"snmp_port"`

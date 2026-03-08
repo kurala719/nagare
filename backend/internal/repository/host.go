@@ -204,6 +204,9 @@ func UpdateHostDAO(id uint, h model.Host) error {
 		Update("comment", h.Comment).
 		Update("ssh_user", h.SSHUser).
 		Update("ssh_port", h.SSHPort).
+		Update("snmp_community", h.SNMPCommunity).
+		Update("snmp_version", h.SNMPVersion).
+		Update("snmp_port", h.SNMPPort).
 		Update("last_sync_at", h.LastSyncAt).
 		Update("health_score", h.HealthScore)
 

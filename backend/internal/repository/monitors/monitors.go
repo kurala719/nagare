@@ -11,7 +11,6 @@ import (
 type MonitorType int
 
 const (
-	MonitorSNMP   MonitorType = 1 // 1 = snmp
 	MonitorZabbix MonitorType = 2 // 2 = zabbix
 	MonitorOther  MonitorType = 3 // 3 = other
 )
@@ -19,8 +18,7 @@ const (
 // String returns the string representation of the monitor type
 func (m MonitorType) String() string {
 	switch m {
-	case MonitorSNMP:
-		return "snmp"
+
 	case MonitorZabbix:
 		return "zabbix"
 	case MonitorOther:
@@ -33,8 +31,7 @@ func (m MonitorType) String() string {
 // ParseMonitorType parses an integer to MonitorType
 func ParseMonitorType(s int) MonitorType {
 	switch s {
-	case 1:
-		return MonitorSNMP
+
 	case 2:
 		return MonitorZabbix
 	case 3:
@@ -174,8 +171,7 @@ func NewClient(cfg Config) (*Client, error) {
 	switch cfg.Type {
 	case MonitorZabbix:
 		provider, err = NewZabbixProvider(cfg)
-	case MonitorSNMP:
-		provider, err = NewSnmpProvider(cfg)
+
 	case MonitorOther:
 		provider, err = NewGenericProvider(cfg)
 	default:
@@ -201,18 +197,28 @@ func NewGenericProvider(cfg Config) (Provider, error) {
 	return &GenericProvider{config: cfg}, nil
 }
 
-func (p *GenericProvider) Authenticate(ctx context.Context) error                             { return nil }
-func (p *GenericProvider) GetAuthToken() string                                               { return "" }
-func (p *GenericProvider) SetAuthToken(token string)                                          {}
-func (p *GenericProvider) GetHosts(ctx context.Context) ([]Host, error)                       { return []Host{}, nil }
-func (p *GenericProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) { return []Host{}, nil }
-func (p *GenericProvider) GetHostByName(ctx context.Context, name string) (*Host, error)       { return nil, nil }
-func (p *GenericProvider) GetHostByID(ctx context.Context, hostID string) (*Host, error)       { return nil, nil }
-func (p *GenericProvider) CreateHost(ctx context.Context, host Host) (Host, error)             { return host, nil }
-func (p *GenericProvider) UpdateHost(ctx context.Context, host Host) (Host, error)             { return host, nil }
-func (p *GenericProvider) DeleteHost(ctx context.Context, hostID string) error                 { return nil }
-func (p *GenericProvider) GetItems(ctx context.Context, hostID string) ([]Item, error)         { return []Item{}, nil }
-func (p *GenericProvider) GetItemByID(ctx context.Context, itemID string) (*Item, error)       { return nil, nil }
+func (p *GenericProvider) Authenticate(ctx context.Context) error       { return nil }
+func (p *GenericProvider) GetAuthToken() string                         { return "" }
+func (p *GenericProvider) SetAuthToken(token string)                    {}
+func (p *GenericProvider) GetHosts(ctx context.Context) ([]Host, error) { return []Host{}, nil }
+func (p *GenericProvider) GetHostsByGroupID(ctx context.Context, groupID string) ([]Host, error) {
+	return []Host{}, nil
+}
+func (p *GenericProvider) GetHostByName(ctx context.Context, name string) (*Host, error) {
+	return nil, nil
+}
+func (p *GenericProvider) GetHostByID(ctx context.Context, hostID string) (*Host, error) {
+	return nil, nil
+}
+func (p *GenericProvider) CreateHost(ctx context.Context, host Host) (Host, error) { return host, nil }
+func (p *GenericProvider) UpdateHost(ctx context.Context, host Host) (Host, error) { return host, nil }
+func (p *GenericProvider) DeleteHost(ctx context.Context, hostID string) error     { return nil }
+func (p *GenericProvider) GetItems(ctx context.Context, hostID string) ([]Item, error) {
+	return []Item{}, nil
+}
+func (p *GenericProvider) GetItemByID(ctx context.Context, itemID string) (*Item, error) {
+	return nil, nil
+}
 func (p *GenericProvider) GetItemHistory(ctx context.Context, itemID string, from, to int64) ([]Item, error) {
 	return []Item{}, nil
 }
@@ -223,14 +229,18 @@ func (p *GenericProvider) GetAlerts(ctx context.Context) ([]Alert, error)       
 func (p *GenericProvider) GetAlertsByHost(ctx context.Context, hostID string) ([]Alert, error) {
 	return []Alert{}, nil
 }
-func (p *GenericProvider) GetTriggers(ctx context.Context) ([]Trigger, error) { return []Trigger{}, nil }
+func (p *GenericProvider) GetTriggers(ctx context.Context) ([]Trigger, error) {
+	return []Trigger{}, nil
+}
 func (p *GenericProvider) GetTriggersByHost(ctx context.Context, hostID string) ([]Trigger, error) {
 	return []Trigger{}, nil
 }
 func (p *GenericProvider) GetTemplateidByName(ctx context.Context, name string) ([]string, error) {
 	return []string{}, nil
 }
-func (p *GenericProvider) GetHostGroups(ctx context.Context) ([]string, error) { return []string{}, nil }
+func (p *GenericProvider) GetHostGroups(ctx context.Context) ([]string, error) {
+	return []string{}, nil
+}
 func (p *GenericProvider) GetHostGroupsDetails(ctx context.Context) ([]struct{ ID, Name string }, error) {
 	return nil, nil
 }

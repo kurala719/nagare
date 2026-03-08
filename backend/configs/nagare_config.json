@@ -19,12 +19,6 @@
   "external": [
     {
       "type": "monitor",
-      "key": "snmp",
-      "name": "SNMP",
-      "id": 1
-    },
-    {
-      "type": "monitor",
       "key": "zabbix",
       "name": "Zabbix",
       "id": 2

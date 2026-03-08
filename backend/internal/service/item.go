@@ -650,36 +650,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	mType := monitors.ParseMonitorType(monitor.Type)
 	fmt.Printf("[DEBUG] pullItemsFromHostServ: monitor_type=%s (%d), host=%s, target=%s\n", mType.String(), monitor.Type, host.Name, targetID)
 
-	if mType == monitors.MonitorSNMP {
-		LogService("debug", "preparing SNMP poll", map[string]interface{}{"host": host.Name, "ip": host.IPAddr, "version": host.SNMPVersion}, nil, "")
-		fmt.Printf("[DEBUG] SNMP Config: IP=%s, Version=%s, Community=%s\n", host.IPAddr, host.SNMPVersion, host.SNMPCommunity)
-
-		snmpCfg := monitors.SnmpConfig{
-			Community: host.SNMPCommunity,
-			Version:   host.SNMPVersion,
-			Port:      host.SNMPPort,
-		}
-		// Use IP address as target for SNMP
-		targetID = host.IPAddr
-		if targetID == "" {
-			targetID = host.ExternalID
-		}
-		fmt.Printf("[DEBUG] SNMP Final Target: %s\n", targetID)
-
-		// Load existing items to pick up custom OIDs
-		items, err := repository.GetItemsByHIDDAO(host.ID)
-		if err == nil && len(items) > 0 {
-			snmpCfg.CustomOIDs = make(map[string]string)
-			for _, it := range items {
-				// If ItemID looks like an OID, add it to poller
-				if strings.HasPrefix(it.ExternalID, "1.3.6") || strings.HasPrefix(it.ExternalID, ".") {
-					snmpCfg.CustomOIDs[it.ExternalID] = it.Name
-				}
-			}
-		}
-		ctx = context.WithValue(ctx, "snmp_config", snmpCfg)
-	}
-
 	fmt.Printf("[DEBUG] Calling client.GetItems for %s\n", targetID)
 	monitorItems, err := client.GetItems(ctx, targetID)
 	if err != nil {
@@ -789,7 +759,7 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 	}
 
 	localItems, err := repository.GetItemsByHIDDAO(hid)
-	if err == nil && monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
+	if err == nil {
 		for _, localItem := range localItems {
 			// Normalize local ItemID for comparison with monitorItemIDs (which are already normalized)
 			normalizedLocalID := localItem.ExternalID
@@ -806,36 +776,6 @@ func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error
 			}
 			reason := "item not found on monitor"
 			_ = repository.UpdateItemStatusAndDescriptionDAO(localItem.ID, 2, reason)
-		}
-	}
-
-	// Deduplication and Cleanup for SNMP
-	if monitors.ParseMonitorType(monitor.Type) == monitors.MonitorSNMP {
-		allLocal, err := repository.GetItemsByHIDDAO(hid)
-		if err == nil {
-			nameToItems := make(map[string][]model.Item)
-			for _, it := range allLocal {
-				nameToItems[it.Name] = append(nameToItems[it.Name], it)
-			}
-			for _, its := range nameToItems {
-				if len(its) > 1 {
-					hasWorking := false
-					for _, it := range its {
-						// Item is working if it has a real value and status is Normal
-						if it.LastValue != "N/A" && it.LastValue != "" && it.Status == 1 {
-							hasWorking = true
-							break
-						}
-					}
-					if hasWorking {
-						for _, it := range its {
-							if it.LastValue == "N/A" || it.LastValue == "" || it.Status != 1 {
-								_ = repository.DeleteItemByIDDAO(it.ID)
-							}
-						}
-					}
-				}
-			}
 		}
 	}
 

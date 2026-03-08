@@ -59,7 +59,6 @@ export default defineComponent({
     
     const getTypeLabel = (type) => {
       const map = {
-        1: 'SNMP',
         2: 'Zabbix',
         3: 'Other'
       }

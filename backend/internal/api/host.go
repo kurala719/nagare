@@ -260,18 +260,3 @@ func PushHostsFromMonitorCtrl(c *gin.Context) {
 	}
 	respondSuccess(c, http.StatusOK, results)
 }
-
-func TestSNMPCtrl(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		respondBadRequest(c, "invalid host ID")
-		return
-	}
-
-	result, err := service.TestSNMPServ(uint(id))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondSuccess(c, http.StatusOK, result)
-}

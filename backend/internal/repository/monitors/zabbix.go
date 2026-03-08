@@ -1951,7 +1951,7 @@ func (p *ZabbixProvider) CreateHost(ctx context.Context, host Host) (Host, error
 		if gid, ok := host.Metadata["groupid"]; ok && gid != "" {
 			groupID = gid
 		}
-		if mType, ok := host.Metadata["monitor_type"]; ok && mType == "2" {
+		if port, ok := host.Metadata["snmp_port"]; ok && port != "" && port != "0" {
 			isSNMP = true
 		}
 		if ver, ok := host.Metadata["snmp_version"]; ok {
@@ -2102,7 +2102,11 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 			}
 
 			// Update SNMP details if provided in metadata
-			if host.Metadata != nil && host.Metadata["monitor_type"] == "2" {
+			isSNMPUpdate := false
+			if port, ok := host.Metadata["snmp_port"]; ok && port != "" && port != "0" {
+				isSNMPUpdate = true
+			}
+			if host.Metadata != nil && isSNMPUpdate {
 				snmpVersion := 2
 				if ver, ok := host.Metadata["snmp_version"]; ok {
 					if strings.Contains(ver, "1") {
@@ -2114,6 +2118,10 @@ func (p *ZabbixProvider) UpdateHost(ctx context.Context, host Host) (Host, error
 				comm := host.Metadata["snmp_community"]
 				if comm == "" {
 					comm = "public"
+				}
+				port := host.Metadata["snmp_port"]
+				if port != "" && port != "0" {
+					ifaceParams["port"] = port
 				}
 
 				ifaceParams["details"] = map[string]interface{}{

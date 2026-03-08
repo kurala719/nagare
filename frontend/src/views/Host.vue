@@ -1092,6 +1092,7 @@ export default {
         await Promise.all(this.selectedHosts.map((host) => {
           const payload = {
             name: host.name,
+            monitor_id: host.mid,
             ip_addr: host.ip_addr,
             hostid: host.hostid,
             group_id: host.group_id,
@@ -1137,7 +1138,7 @@ export default {
       try {
         const updateData = {
           name: this.selectedHost.name,
-          m_id: this.selectedHost.mid,
+          monitor_id: this.selectedHost.mid,
           ip_addr: this.selectedHost.ip_addr,
           hostid: this.selectedHost.hostid,
           group_id: this.selectedHost.group_id,
@@ -1224,7 +1225,7 @@ export default {
       try {
         const hostData = {
           name: this.newHost.name,
-          m_id: this.newHost.mid,
+          monitor_id: this.newHost.mid,
           ip_addr: this.newHost.ip_addr,
           hostid: this.newHost.hostid,
           group_id: this.newHost.group_id,

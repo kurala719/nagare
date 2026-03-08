@@ -178,6 +178,7 @@ func AddHostServ(h HostReq) (HostResp, error) {
 		return HostResp{}, fmt.Errorf("failed to add host: %w", err)
 	}
 
+	fmt.Printf("[DEBUG] AddHostServ: MID=%d, PushToMonitor=%v\n", h.MID, h.PushToMonitor)
 	// Auto-push to monitor asynchronously if MID is set AND PushToMonitor is true
 	if h.MID > 0 && h.PushToMonitor {
 		LogService("info", "triggering async auto-push for new host", map[string]interface{}{"host_id": newHost.ID, "monitor_id": h.MID}, nil, "")
@@ -194,17 +195,22 @@ func AddHostServ(h HostReq) (HostResp, error) {
 	}
 
 	return HostResp{
-		ID:          int(newHost.ID),
-		Name:        newHost.Name,
-		MID:         h.MID,
-		GroupID:     newHost.GroupID,
-		ExternalID:  newHost.ExternalID,
-		Description: newHost.Description,
-		Enabled:     newHost.Enabled,
-		Status:      newHost.Status,
-		StatusDesc:  newHost.StatusDescription,
-		IPAddr:      newHost.IPAddr,
-		Comment:     newHost.Comment,
+		ID:            int(newHost.ID),
+		Name:          newHost.Name,
+		MID:           h.MID,
+		GroupID:       newHost.GroupID,
+		ExternalID:    newHost.ExternalID,
+		Description:   newHost.Description,
+		Enabled:       newHost.Enabled,
+		Status:        newHost.Status,
+		StatusDesc:    newHost.StatusDescription,
+		IPAddr:        newHost.IPAddr,
+		Comment:       newHost.Comment,
+		SSHUser:       newHost.SSHUser,
+		SSHPort:       newHost.SSHPort,
+		SNMPCommunity: newHost.SNMPCommunity,
+		SNMPVersion:   newHost.SNMPVersion,
+		SNMPPort:      newHost.SNMPPort,
 	}, nil
 }
 
@@ -241,6 +247,15 @@ func UpdateHostServ(id uint, h HostReq) error {
 	}
 	if h.SSHPort == 0 {
 		updated.SSHPort = 22
+	}
+	if h.SNMPPort == 0 {
+		updated.SNMPPort = 161
+	}
+	if h.SNMPVersion == "" {
+		updated.SNMPVersion = "v2c"
+	}
+	if h.SNMPCommunity == "" {
+		updated.SNMPCommunity = "public"
 	}
 	if h.SSHPassword != "" {
 		encrypted, err := utils.Encrypt(h.SSHPassword)
@@ -412,15 +427,6 @@ func createMonitorClient(monitor MonitorResp) (*monitors.Client, error) {
 	monitorType := monitors.ParseMonitorType(monitor.Type)
 	monitorURL := strings.TrimSpace(monitor.URL)
 	urlLower := strings.ToLower(monitorURL)
-
-	if monitorType == monitors.MonitorSNMP && monitor.ID != 1 {
-		LogService("warn", "monitor type is SNMP but not internal; forcing zabbix provider", map[string]interface{}{
-			"monitor_id":   monitor.ID,
-			"monitor_name": monitor.Name,
-			"monitor_type": monitor.Type,
-		}, nil, "")
-		monitorType = monitors.MonitorZabbix
-	}
 
 	if monitorType == monitors.MonitorOther {
 		if monitorURL != "" && (strings.Contains(urlLower, "zabbix") || monitor.Username != "" || monitor.Password != "" || monitor.AuthToken != "") {
@@ -933,8 +939,7 @@ func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) 
 
 	localHosts, err := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
 	if err == nil {
-		// Skip 'not found' check for SNMP monitors as they don't provide a master host list
-		if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
+		if true {
 			for _, localHost := range localHosts {
 				if _, ok := monitorHostIDs[localHost.ExternalID]; ok {
 					continue
@@ -1088,6 +1093,7 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 			StatusDescription: finalStatusDesc,
 			IPAddr:            h.IPAddress,
 			SSHUser:           existingHost.SSHUser,
+			SSHPassword:       "", // UpdateHostDAO won't update if empty
 			SSHPort:           existingHost.SSHPort,
 			LastSyncAt:        &now,
 		}); err != nil {
@@ -1285,36 +1291,6 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 }
 
 // PushHostsFromMonitorServ pushes all hosts from local database to remote monitor
-// TestSNMPServ tests SNMP connectivity for a host
-func TestSNMPServ(hid uint) (SyncResult, error) {
-	host, err := repository.GetHostByIDDAO(hid)
-	if err != nil {
-		return SyncResult{}, err
-	}
-
-	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
-	if gErr != nil || hostGroup.MonitorID == 0 {
-		return SyncResult{}, fmt.Errorf("host has no monitor assigned via its group")
-	}
-
-	monitor, err := repository.GetMonitorByIDDAO(hostGroup.MonitorID)
-	if err != nil {
-		// Fallback: If no monitor assigned, try to find "Nagare Internal"
-		internalMonitors, sErr := repository.SearchMonitorsDAO(model.MonitorFilter{Query: "Nagare Internal"})
-		if sErr == nil && len(internalMonitors) > 0 {
-			monitor = internalMonitors[0]
-		} else {
-			return SyncResult{}, err
-		}
-	}
-
-	if monitors.ParseMonitorType(monitor.Type) != monitors.MonitorSNMP {
-		return SyncResult{}, fmt.Errorf("host is not monitored via SNMP (monitor type: %d)", monitor.Type)
-	}
-
-	// Re-use pullItemsFromHostServ but with recordHistory=false
-	return pullItemsFromHostServ(monitor.ID, host.ID, false)
-}
 
 func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
