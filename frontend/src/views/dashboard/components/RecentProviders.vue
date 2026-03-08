@@ -52,7 +52,7 @@ export default defineComponent({
         0: { label: t('common.statusInactive'), reason: t('common.reasonInactive'), type: 'info' },
         1: { label: t('common.statusActive'), reason: t('common.reasonActive'), type: 'success' },
         2: { label: t('common.statusError'), reason: t('common.reasonError'), type: 'danger' },
-        3: { label: t('common.statusSyncing'), reason: t('common.reasonSyncing'), type: 'warning' },
+
       }
       return map[status] || map[0]
     }

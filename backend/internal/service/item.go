@@ -462,7 +462,6 @@ func PullItemsFromMonitorServ(mid uint) (SyncResult, error) {
 func pullItemsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
 	LogService("info", "item sync started", map[string]interface{}{"monitor_id": mid}, nil, "")
 	result := SyncResult{}
-	setMonitorStatusSyncing(mid)
 	if mid != 1 {
 		_, _ = TestMonitorStatusServ(mid)
 	}
@@ -541,7 +540,6 @@ func PullItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 func pullItemsFromHostServ(mid, hid uint, recordHistory bool) (SyncResult, error) {
 	fmt.Printf("[DEBUG] pullItemsFromHostServ: Starting sync for MID=%d, HID=%d\n", mid, hid)
 	result := SyncResult{}
-	setMonitorStatusSyncing(mid)
 
 	host, err := repository.GetHostByIDDAO(hid)
 	if err != nil {
@@ -808,8 +806,6 @@ func PullItemOfHostFromMonitorServ(mid, hid, id uint) (SyncResult, error) {
 		LogService("error", "pull item failed to load item", map[string]interface{}{"item_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get item: %w", err)
 	}
-	setMonitorStatusSyncing(mid)
-	setItemStatusSyncing(id)
 
 	host, err := repository.GetHostByIDDAO(hid)
 	if err != nil {
@@ -904,7 +900,6 @@ func PushItemToMonitorServ(mid, hid, id uint) error {
 		LogService("error", "push item failed to load item", map[string]interface{}{"item_id": id, "error": err.Error()}, nil, "")
 		return fmt.Errorf("failed to get item: %w", err)
 	}
-	setItemStatusSyncing(id)
 
 	host, err := repository.GetHostByIDDAO(hid)
 	if err != nil {
@@ -1093,7 +1088,6 @@ func PushItemsFromHostServ(mid, hid uint) (SyncResult, error) {
 // PushItemsFromMonitorServ pushes all items from all hosts for a monitor from local database to remote monitor
 func PushItemsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
-	setMonitorStatusSyncing(mid)
 	if mid != 1 {
 		_, _ = TestMonitorStatusServ(mid)
 	}

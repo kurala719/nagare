@@ -57,9 +57,6 @@ func determineHostStatus(h model.Host, _ int, groupStatus int) int {
 	if groupStatus == 2 {
 		return 2
 	}
-	if h.Status == 3 {
-		return 1
-	}
 	if h.Status == 2 {
 		return 2
 	}
@@ -69,7 +66,7 @@ func determineHostStatus(h model.Host, _ int, groupStatus int) int {
 	if h.Status == 0 {
 		return 0
 	}
-	if h.Status == 1 && (groupStatus == 1 || groupStatus == 3) {
+	if h.Status == 1 && groupStatus == 1 {
 		return 1
 	}
 	return 0
@@ -82,7 +79,7 @@ func determineItemStatus(i model.Item, hostStatus int) int {
 	if hostStatus == 2 {
 		return 2
 	}
-	if hostStatus == 1 || hostStatus == 3 {
+	if hostStatus == 1 {
 		return 1
 	}
 	return 0
@@ -126,14 +123,10 @@ func determineGroupStatus(group model.Group, monitorStatus int) int {
 	if monitorStatus == 2 {
 		return 2
 	}
-	if monitorStatus == 1 || monitorStatus == 3 {
+	if monitorStatus == 1 {
 		return 1
 	}
 	return 0
-}
-
-func setMonitorStatusSyncing(mid uint) {
-	_ = repository.UpdateMonitorStatusDAO(mid, 3)
 }
 
 func setMonitorStatusError(mid uint) {
@@ -178,23 +171,6 @@ func setMonitorRelatedError(mid uint, reason string) {
 	}
 }
 
-func setHostStatusSyncing(hid uint) {
-	_ = repository.UpdateHostStatusDAO(hid, 3)
-	host, err := repository.GetHostByIDDAO(hid)
-	if err != nil {
-		return
-	}
-	if host.GroupID == 0 {
-		return
-	}
-	if group, err := repository.GetGroupByIDDAO(host.GroupID); err == nil {
-		_, _ = recomputeGroupStatus(group.ID)
-		if group.MonitorID > 0 {
-			_, _ = recomputeMonitorStatus(group.MonitorID)
-		}
-	}
-}
-
 func setHostStatusError(hid uint) {
 	_ = repository.UpdateHostStatusDAO(hid, 2)
 }
@@ -205,15 +181,6 @@ func setHostStatusErrorWithReason(hid uint, reason string) {
 		return
 	}
 	_ = repository.UpdateHostStatusAndDescriptionDAO(hid, 2, reason)
-}
-
-func setItemStatusSyncing(id uint) {
-	_ = repository.UpdateItemStatusDAO(id, 3)
-	item, err := repository.GetItemByIDDAO(id)
-	if err != nil || item.HostID == 0 {
-		return
-	}
-	setHostStatusSyncing(item.HostID)
 }
 
 func setItemStatusError(id uint) {
@@ -236,25 +203,12 @@ func setGroupStatusError(gid uint) {
 	_ = repository.UpdateGroupStatusDAO(gid, 2)
 }
 
-func setGroupStatusSyncing(gid uint) {
-	_ = repository.UpdateGroupStatusDAO(gid, 3)
-}
-
 func recomputeMonitorStatus(mid uint) (int, error) {
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
 		return 0, err
 	}
 	status := determineMonitorStatus(monitor)
-	groupsForStatus, groupsErr := repository.SearchGroupsDAO(model.GroupFilter{MonitorID: &mid})
-	if groupsErr == nil && status == 1 {
-		for _, g := range groupsForStatus {
-			if g.Enabled != 0 && g.Status == 3 {
-				status = 3
-				break
-			}
-		}
-	}
 	if status == 2 {
 		_ = repository.UpdateMonitorStatusDAO(mid, status)
 	} else {
@@ -264,34 +218,18 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 	score := 100
 	if monitor.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
-	} else if status == 3 && monitor.HealthScore == 0 {
-		score = 0
 	} else {
-		baseScore := 100
-
-		groups := groupsForStatus
-		if groupsErr == nil && len(groups) > 0 {
-			weightedSum := 0
-			totalWeight := 0
-			for _, g := range groups {
-				if g.Enabled != 0 {
-					hosts, _ := repository.SearchHostsDAO(model.HostFilter{GroupID: &g.ID})
-					weight := len(hosts)
-					if weight == 0 {
-						weight = 1
-					}
-					weightedSum += g.HealthScore * weight
-					totalWeight += weight
+		hosts, hostsErr := repository.SearchHostsDAO(model.HostFilter{MID: &mid})
+		if hostsErr == nil && len(hosts) > 0 {
+			activeCount := 0
+			for _, h := range hosts {
+				if h.Enabled != 0 && h.Status == 1 {
+					activeCount++
 				}
 			}
-			if totalWeight > 0 {
-				groupsScore := weightedSum / totalWeight
-				score = (baseScore + groupsScore) / 2
-			} else {
-				score = baseScore
-			}
+			score = int((float64(activeCount) / float64(len(hosts))) * 100.0)
 		} else {
-			score = baseScore
+			score = 100
 		}
 	}
 	_ = repository.UpdateMonitorHealthScoreDAO(mid, score)
@@ -326,14 +264,6 @@ func recomputeGroupStatus(gid uint) (int, error) {
 
 	status := determineGroupStatus(group, monitorStatus)
 	hostsInGroup, hostsErr := repository.SearchHostsDAO(model.HostFilter{GroupID: &gid})
-	if hostsErr == nil && status == 1 {
-		for _, h := range hostsInGroup {
-			if h.Enabled != 0 && h.Status == 3 {
-				status = 3
-				break
-			}
-		}
-	}
 	statusDesc := group.StatusDescription
 	if status != 2 {
 		statusDesc = ""
@@ -343,34 +273,17 @@ func recomputeGroupStatus(gid uint) (int, error) {
 	score := 100
 	if group.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
-	} else if status == 3 && group.HealthScore == 0 {
-		score = 0
 	} else {
-		baseScore := 100
-
-		hosts := hostsInGroup
-		if hostsErr == nil && len(hosts) > 0 {
-			weightedSum := 0
-			totalWeight := 0
-			for _, h := range hosts {
-				if h.Enabled != 0 {
-					items, _ := repository.GetItemsByHIDDAO(h.ID)
-					weight := len(items)
-					if weight == 0 {
-						weight = 1
-					}
-					weightedSum += h.HealthScore * weight
-					totalWeight += weight
+		if hostsErr == nil && len(hostsInGroup) > 0 {
+			activeCount := 0
+			for _, h := range hostsInGroup {
+				if h.Enabled != 0 && h.Status == 1 {
+					activeCount++
 				}
 			}
-			if totalWeight > 0 {
-				hostsScore := weightedSum / totalWeight
-				score = (baseScore + hostsScore) / 2
-			} else {
-				score = baseScore
-			}
+			score = int((float64(activeCount) / float64(len(hostsInGroup))) * 100.0)
 		} else {
-			score = baseScore
+			score = 100
 		}
 	}
 	_ = repository.UpdateGroupHealthScoreDAO(gid, score)
@@ -408,31 +321,8 @@ func recomputeHostStatus(hid uint) (int, error) {
 	score := 100
 	if host.Enabled == 0 || status == 0 || status == 2 {
 		score = 0
-	} else if status == 3 && host.HealthScore == 0 {
-		score = 0
 	} else {
-		baseScore := 100
-
-		items, err := repository.GetItemsByHIDDAO(hid)
-		if err == nil && len(items) > 0 {
-			itemScoreSum := 0
-			activeItemCount := 0
-			for _, item := range items {
-				if item.Enabled == 0 {
-					continue
-				}
-				activeItemCount++
-				itemScoreSum += item.HealthScore
-			}
-			if activeItemCount > 0 {
-				itemsScore := itemScoreSum / activeItemCount
-				score = (baseScore + itemsScore) / 2
-			} else {
-				score = baseScore
-			}
-		} else {
-			score = baseScore
-		}
+		score = 100
 	}
 	_ = repository.UpdateHostHealthScoreDAO(hid, score)
 
@@ -462,8 +352,6 @@ func recomputeItemStatus(id uint) (int, error) {
 
 	score := 100
 	if item.Enabled == 0 || status == 0 || status == 2 {
-		score = 0
-	} else if status == 3 && item.HealthScore == 0 {
 		score = 0
 	} else {
 		score = 100

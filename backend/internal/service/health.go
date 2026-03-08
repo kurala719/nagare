@@ -63,21 +63,26 @@ func GetHealthScoreServ() (HealthScore, error) {
 		return HealthScore{}, fmt.Errorf("failed to load items: %w", errI)
 	}
 
-	monitorScore, monitorActive, monitorTotal := statusScore(len(monitors), func(i int) (enabled bool, status int) {
+	_, monitorActive, monitorTotal := statusScore(len(monitors), func(i int) (enabled bool, status int) {
 		return monitors[i].Enabled != 0, monitors[i].Status
 	})
-	groupScore, groupActive, groupTotal := statusScore(len(groups), func(i int) (enabled bool, status int) {
+	_, groupActive, groupTotal := statusScore(len(groups), func(i int) (enabled bool, status int) {
 		return groups[i].Enabled != 0, groups[i].Status
 	})
-	hostScore, hostActive, hostTotal := statusScore(len(hosts), func(i int) (enabled bool, status int) {
+	_, hostActive, hostTotal := statusScore(len(hosts), func(i int) (enabled bool, status int) {
 		return hosts[i].Enabled != 0, hosts[i].Status
 	})
-	itemScore, itemActive, itemTotal := statusScore(len(items), func(i int) (enabled bool, status int) {
+	_, itemActive, itemTotal := statusScore(len(items), func(i int) (enabled bool, status int) {
 		return items[i].Enabled != 0, items[i].Status
 	})
 	groupImpacted := countImpactedGroups(groups, hosts)
 
-	weighted := int(0.3*float64(monitorScore) + 0.2*float64(groupScore) + 0.3*float64(hostScore) + 0.2*float64(itemScore))
+	// Base overall score on active vs total hosts across the entire system.
+	weighted := 100
+	if hostTotal > 0 {
+		weighted = int((float64(hostActive) / float64(hostTotal)) * 100.0)
+	}
+
 	return HealthScore{
 		Score:         weighted,
 		MonitorTotal:  monitorTotal,
@@ -129,8 +134,6 @@ func statusScore(total int, statusFn func(index int) (enabled bool, status int))
 		case 1:
 			weighted += 1.0
 			active++
-		case 3:
-			weighted += 0.5
 		default:
 			weighted += 0.0
 		}

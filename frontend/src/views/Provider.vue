@@ -16,7 +16,7 @@
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
-          <el-option :label="$t('common.statusSyncing')" :value="3" />
+
         </el-select>
 
         <el-select v-model="typeFilter" :placeholder="$t('providers.filterType')" style="width: 160px">
@@ -757,7 +757,7 @@ export default {
                 0: { label: this.$t('common.statusInactive'), reason: this.$t('common.reasonInactive'), type: 'info' },
                 1: { label: this.$t('common.statusActive'), reason: this.$t('common.reasonActive'), type: 'success' },
                 2: { label: this.$t('common.statusError'), reason: this.$t('common.reasonError'), type: 'danger' },
-                3: { label: this.$t('common.statusSyncing'), reason: this.$t('common.reasonSyncing'), type: 'warning' },
+
             };
             return map[status] || map[0];
         },

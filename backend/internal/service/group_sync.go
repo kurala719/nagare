@@ -241,7 +241,6 @@ func PushGroupToMonitorServ(mid uint, groupID uint) error {
 		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get group: %w", err)
 	}
-	setGroupStatusSyncing(groupID)
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {
@@ -330,7 +329,6 @@ func PullGroupFromMonitorServ(mid uint, groupID uint) error {
 		setGroupStatusError(groupID)
 		return fmt.Errorf("failed to get group: %w", err)
 	}
-	setGroupStatusSyncing(groupID)
 
 	monitor, err := repository.GetMonitorByIDDAO(mid)
 	if err != nil {

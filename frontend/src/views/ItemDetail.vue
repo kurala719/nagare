@@ -230,8 +230,7 @@ const statusLabel = (status) => {
       return t('common.statusActive')
     case 2:
       return t('common.statusError')
-    case 3:
-      return t('common.statusSyncing')
+
     default:
       return t('common.statusInactive')
   }

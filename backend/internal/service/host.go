@@ -696,7 +696,6 @@ func PullHostsFromMonitorServ(mid uint) (SyncResult, error) {
 func pullHostsFromMonitorServ(mid uint, recordHistory bool) (SyncResult, error) {
 	LogService("info", "host sync started", map[string]interface{}{"monitor_id": mid}, nil, "")
 	result := SyncResult{}
-	setMonitorStatusSyncing(mid)
 
 	// Nagare Internal (ID 1) is always healthy
 	if mid != 1 {
@@ -970,7 +969,6 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		LogService("error", "pull host failed to load host", map[string]interface{}{"host_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get host: %w", err)
 	}
-	setHostStatusSyncing(id)
 
 	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
 	if gErr != nil || hostGroup.MonitorID != mid {
@@ -986,7 +984,6 @@ func PullHostFromMonitorServ(mid, id uint) (SyncResult, error) {
 		LogService("error", "pull host failed to load monitor", map[string]interface{}{"monitor_id": mid, "host_id": id, "error": err.Error()}, nil, "")
 		return SyncResult{}, fmt.Errorf("failed to get monitor: %w", err)
 	}
-	setMonitorStatusSyncing(mid)
 
 	client, err := createMonitorClient(monitor)
 	if err != nil {
@@ -1147,7 +1144,6 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 		LogService("error", "push host failed to load host", map[string]interface{}{"host_id": id, "error": err.Error()}, nil, "")
 		return result, fmt.Errorf("failed to get host: %w", err)
 	}
-	setHostStatusSyncing(id)
 
 	hostGroup, gErr := repository.GetGroupByIDDAO(host.GroupID)
 
@@ -1294,7 +1290,6 @@ func PushHostToMonitorServ(mid uint, id uint) (SyncResult, error) {
 
 func PushHostsFromMonitorServ(mid uint) (SyncResult, error) {
 	result := SyncResult{}
-	setMonitorStatusSyncing(mid)
 	if mid != 1 {
 		_, _ = TestMonitorStatusServ(mid)
 	}

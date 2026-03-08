@@ -64,7 +64,7 @@ export default defineComponent({
         0: { label: t('common.statusInactive'), type: 'info' },
         1: { label: t('common.statusActive'), type: 'success' },
         2: { label: t('common.statusError'), type: 'danger' },
-        3: { label: t('common.statusSyncing'), type: 'warning' },
+
       }
       return map[status] || map[0]
     }

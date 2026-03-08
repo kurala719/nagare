@@ -147,7 +147,7 @@ import { fetchGroupDetail, fetchGroupHistory } from '@/api/groups'
 const route = useRoute()
 const { t } = useI18n()
 const group = ref({})
-const summary = ref({ total_hosts: 0, active_hosts: 0, error_hosts: 0, syncing_hosts: 0, total_items: 0 })
+const summary = ref({ total_hosts: 0, active_hosts: 0, error_hosts: 0, total_items: 0 })
 const hosts = ref([])
 const statusChartRef = ref(null)
 const historyChartRef = ref(null)
@@ -278,8 +278,6 @@ const buildStatusChart = () => {
   }
   const data = [
     { name: t('common.statusActive'), value: summary.value.active_hosts || 0 },
-    { name: t('common.statusError'), value: summary.value.error_hosts || 0 },
-    { name: t('common.statusSyncing'), value: summary.value.syncing_hosts || 0 },
   ]
   statusChart.setOption({
     tooltip: { trigger: 'item' },

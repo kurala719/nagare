@@ -324,7 +324,6 @@ func PullGroupFromMonitorsServ(id uint) (SyncResult, error) {
 	}
 
 	result := SyncResult{Total: 1}
-	setGroupStatusSyncing(id)
 
 	// Pull group metadata first if monitor is set
 	if group.MonitorID > 0 {
@@ -352,7 +351,6 @@ func PushGroupToMonitorsServ(id uint) (SyncResult, error) {
 	}
 
 	result := SyncResult{Total: 1}
-	setGroupStatusSyncing(id)
 
 	// Push group metadata if monitor is set
 	if group.MonitorID > 0 {

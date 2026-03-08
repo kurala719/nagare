@@ -60,8 +60,7 @@ export default defineComponent({
           return { label: t('common.statusInactive'), type: 'info', reason: t('common.reasonInactive') }
         case 2:
           return { label: t('common.statusError'), type: 'danger', reason: t('common.reasonError') }
-        case 3:
-          return { label: t('common.statusSyncing'), type: 'warning', reason: t('common.reasonSyncing') }
+
         default:
           return { label: t('common.unknown', 'Unknown'), type: 'info', reason: '' }
       }

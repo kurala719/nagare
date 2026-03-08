@@ -391,7 +391,7 @@ const saveVisibleColumns = () => {
 watch(visibleColumns, saveVisibleColumns, { deep: true })
 
 const stats = computed(() => {
-  const totals = { totalItems: items.value.length, active: 0, error: 0, syncing: 0, inactive: 0 }
+  const totals = { totalItems: items.value.length, active: 0, error: 0, inactive: 0 }
   items.value.forEach((item) => {
     switch (item.status) {
       case 1:
@@ -399,9 +399,6 @@ const stats = computed(() => {
         break
       case 2:
         totals.error += 1
-        break
-      case 3:
-        totals.syncing += 1
         break
       default:
         totals.inactive += 1
