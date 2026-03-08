@@ -516,6 +516,14 @@ func ConsultAlertServ(providerID uint, model string, alertID int) (ChatRes, erro
 	}
 
 	_ = repository.UpdateProviderStatusDAO(providerID, 1)
+
+	// Store the comment and update status to confirmed (1) if it's currently active (0)
+	if alert.Status == 0 {
+		alert.Status = 1
+	}
+	alert.Comment = resp.Content
+	_ = repository.UpdateAlertDAO(alertID, alert)
+
 	return ChatRes{Content: resp.Content, ProviderID: providerID, Role: "assistant", Model: resolvedModel}, nil
 }
 

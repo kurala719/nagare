@@ -80,7 +80,7 @@ func GetProviderByIDServ(id uint) (ProviderRes, error) {
 
 // AddProviderServ creates a new provider
 func AddProviderServ(req ProviderReq) error {
-	return repository.AddProviderDAO(model.Provider{
+	p := model.Provider{
 		Name:         req.Name,
 		URL:          req.URL,
 		APIKey:       req.APIKey,
@@ -89,8 +89,9 @@ func AddProviderServ(req ProviderReq) error {
 		Type:         req.Type,
 		Description:  req.Description,
 		Enabled:      req.Enabled,
-		Status:       0, // Default to inactive on creation
-	})
+	}
+	p.Status = determineProviderStatus(p)
+	return repository.AddProviderDAO(p)
 }
 
 // DeleteProviderByIDServ deletes a provider by ID
@@ -100,7 +101,7 @@ func DeleteProviderByIDServ(id uint) error {
 
 // UpdateProviderServ updates an existing provider
 func UpdateProviderServ(id uint, req ProviderReq) error {
-	existing, err := repository.GetProviderByIDDAO(id)
+	_, err := repository.GetProviderByIDDAO(id)
 	if err != nil {
 		return err
 	}
@@ -113,8 +114,8 @@ func UpdateProviderServ(id uint, req ProviderReq) error {
 		Type:         req.Type,
 		Description:  req.Description,
 		Enabled:      req.Enabled,
-		Status:       existing.Status,
 	}
+	updated.Status = determineProviderStatus(updated)
 	if err := repository.UpdateProviderDAO(id, updated); err != nil {
 		return err
 	}

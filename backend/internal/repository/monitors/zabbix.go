@@ -60,16 +60,16 @@ type zabbixHost struct {
 	JmxAvailable  interface{} `json:"jmx_available"`
 	JmxError      string      `json:"jmx_error"`
 	Interfaces    []struct {
-		InterfaceID interface{}            `json:"interfaceid"`
-		IP          string                 `json:"ip"`
-		DNS         string                 `json:"dns"`
-		Port        interface{}            `json:"port"`
-		Type        interface{}            `json:"type"`
-		Main        interface{}            `json:"main"`
-		UseIP       interface{}            `json:"useip"`
-		Details     map[string]interface{} `json:"details"`
-		Available   interface{}            `json:"available"`
-		Error       string                 `json:"error"`
+		InterfaceID interface{} `json:"interfaceid"`
+		IP          string      `json:"ip"`
+		DNS         string      `json:"dns"`
+		Port        interface{} `json:"port"`
+		Type        interface{} `json:"type"`
+		Main        interface{} `json:"main"`
+		UseIP       interface{} `json:"useip"`
+		Details     interface{} `json:"details"`
+		Available   interface{} `json:"available"`
+		Error       string      `json:"error"`
 	} `json:"interfaces"`
 }
 
@@ -619,11 +619,12 @@ func zabbixPrimarySNMPConfig(host zabbixHost) (string, string, string) {
 	iface := host.Interfaces[selectedIdx]
 	community := ""
 	version := ""
-	if iface.Details != nil {
-		if v, ok := iface.Details["community"]; ok {
+	details := normalizeInterfaceDetails(iface.Details)
+	if details != nil {
+		if v, ok := details["community"]; ok {
 			community = strings.TrimSpace(toString(v))
 		}
-		if v, ok := iface.Details["version"]; ok {
+		if v, ok := details["version"]; ok {
 			version = normalizeZabbixSNMPVersion(toString(v))
 		}
 	}
@@ -634,6 +635,22 @@ func zabbixPrimarySNMPConfig(host zabbixHost) (string, string, string) {
 	}
 
 	return community, version, port
+}
+
+func normalizeInterfaceDetails(raw interface{}) map[string]interface{} {
+	switch v := raw.(type) {
+	case nil:
+		return nil
+	case map[string]interface{}:
+		return v
+	case []interface{}:
+		for _, item := range v {
+			if m := normalizeInterfaceDetails(item); m != nil {
+				return m
+			}
+		}
+	}
+	return nil
 }
 
 // parseZabbixHosts parses Zabbix host.get result into common Host slice
@@ -1543,14 +1560,17 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 	script := "var req = new HttpRequest();\n" +
 		"req.addHeader('Content-Type: application/json');\n" +
 		"var params = JSON.parse(value);\n" +
+		"var finalMessage = params.Subject;\n" +
+		"if (params.Message && params.Message !== '') { finalMessage = finalMessage + ' | ' + params.Message; }\n" +
 		"var payload = {\n" +
-		"  message: params.Subject,\n" +
-		"  details: params.Message,\n" +
+		"  message: finalMessage,\n" +
 		"  severity: params.Severity,\n" +
 		"  host_id: params.HostID,\n" +
 		"  item_id: params.ItemID,\n" +
 		"  host_name: params.HostName,\n" +
 		"  item_name: params.ItemName,\n" +
+		"  value: params.ItemValue,\n" +
+		"  event_time: params.EventTime,\n" +
 		"  event_id: params.EventID,\n" +
 		"  status: params.EventValue == '1' ? 'open' : 'resolved',\n" +
 		"  token: params.EventToken\n" +
@@ -1562,12 +1582,14 @@ func (p *ZabbixProvider) ensureWebhookMediaType(ctx context.Context, cfg ZabbixW
 		{"name": "URL", "value": cfg.WebhookURL},
 		{"name": "EventToken", "value": cfg.EventToken},
 		{"name": "Subject", "value": "{EVENT.NAME}"},
-		{"name": "Message", "value": "Host: {HOST.NAME} ({HOST.IP}), Item: {ITEM.NAME}, Value: {ITEM.VALUE}, Severity: {EVENT.SEVERITY}, Time: {EVENT.DATE} {EVENT.TIME}"},
+		{"name": "Message", "value": "Host: {HOST.NAME} ({HOST.IP}), Item: {ITEM.NAME}, Value: {ITEM.VALUE}, Severity: {EVENT.SEVERITY}, Time: {EVENT.DATE} {EVENT.TIME}, EventID: {EVENT.ID}"},
 		{"name": "Severity", "value": "{EVENT.NSEVERITY}"},
 		{"name": "HostID", "value": "{HOST.ID}"},
 		{"name": "HostName", "value": "{HOST.NAME}"},
 		{"name": "ItemID", "value": "{ITEM.ID}"},
 		{"name": "ItemName", "value": "{ITEM.NAME}"},
+		{"name": "ItemValue", "value": "{ITEM.VALUE}"},
+		{"name": "EventTime", "value": "{EVENT.DATE} {EVENT.TIME}"},
 		{"name": "EventID", "value": "{EVENT.ID}"},
 		{"name": "EventValue", "value": "{EVENT.VALUE}"},
 	}

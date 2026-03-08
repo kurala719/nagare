@@ -2,8 +2,8 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+var severityInTextPattern = regexp.MustCompile(`(?i)\bseverity\s*:\s*([^,\n\r]+)`)
 
 // GetAllAlertsCtrl handles GET /alerts
 func GetAllAlertsCtrl(c *gin.Context) {
@@ -174,7 +176,10 @@ func parseWebhookPayload(payload map[string]interface{}, alarmID uint) (service.
 	}
 	hostName := payloadString(payload, "host", "hostname", "host_name")
 	itemName := payloadString(payload, "item", "itemname", "item_name")
-	comment := payloadString(payload, "comment", "detail", "details")
+	comment := payloadString(payload, "diagnosis", "analysis", "ai_diagnosis", "ai_analysis", "operator_note")
+	if hintedSeverity, ok := parseSeverityHints(payload, comment); ok {
+		severity = hintedSeverity
+	}
 	if alarmID == 0 {
 		alarmID = payloadUint(payload, "alarm_id", "alarmid")
 	}
@@ -204,10 +209,7 @@ func parseWebhookPayload(payload map[string]interface{}, alarmID uint) (service.
 	if severity == 0 {
 		severity = payloadSeverity(payload, "severity", "level", "priority", "event_severity", "trigger_severity")
 	}
-	if strings.TrimSpace(comment) == "" {
-		comment = buildAlertContext(payload)
-	}
-	comment = appendEventIDToComment(comment, eventID)
+	message = enrichAlertMessage(message, payload, eventID, severity)
 
 	statusStr := payloadString(payload, "status", "state", "event_value")
 	status := 0 // Default to open
@@ -332,7 +334,9 @@ func payloadSeverity(payload map[string]interface{}, keys ...string) int {
 		if value, ok := payload[key]; ok {
 			switch v := value.(type) {
 			case string:
-				return parseSeverityLabel(v)
+				if sev, matched := parseSeverityLabel(v); matched {
+					return sev
+				}
 			case float64:
 				return int(v)
 			}
@@ -341,49 +345,142 @@ func payloadSeverity(payload map[string]interface{}, keys ...string) int {
 	return 0
 }
 
-func parseSeverityLabel(value string) int {
+func parseSeverityHints(payload map[string]interface{}, comment string) (int, bool) {
+	// Prefer explicit string labels if provided by webhook body.
+	if sevText := payloadString(payload,
+		"severity_text", "severity_name", "event_severity", "trigger_severity", "priority_text", "priority_name"); sevText != "" {
+		if sev, ok := parseSeverityLabel(sevText); ok {
+			return sev, true
+		}
+	}
+
+	if sev, ok := parseSeverityFromText(comment); ok {
+		return sev, true
+	}
+
+	if sev, ok := parseSeverityFromText(payloadString(payload, "comment", "detail", "details")); ok {
+		return sev, true
+	}
+
+	return 0, false
+}
+
+func parseSeverityFromText(text string) (int, bool) {
+	matches := severityInTextPattern.FindStringSubmatch(text)
+	if len(matches) < 2 {
+		return 0, false
+	}
+	return parseSeverityLabel(matches[1])
+}
+
+func parseSeverityLabel(value string) (int, bool) {
 	lower := strings.ToLower(strings.TrimSpace(value))
 	switch lower {
 	case "disaster", "critical":
-		return 4
+		return 5, true
 	case "high":
-		return 3
-	case "average", "warning", "warn", "medium":
-		return 2
+		return 4, true
+	case "average", "avg", "medium":
+		return 3, true
+	case "warning", "warn":
+		return 2, true
 	case "low":
-		return 1
+		return 1, true
 	case "information", "info", "normal":
-		return 0
+		return 1, true
+	case "not classified", "not_classified", "not-classified", "n/a", "none":
+		return 0, true
 	default:
-		return 0
+		return 0, false
 	}
 }
 
-func buildAlertContext(payload map[string]interface{}) string {
-	trigger := payloadString(payload, "trigger", "trigger_name", "name")
-	host := payloadString(payload, "host", "hostname")
-	eventID := payloadString(payload, "event_id", "eventid")
-	eventTime := payloadString(payload, "event_time", "clock", "time")
-	if trigger == "" && host == "" && eventID == "" && eventTime == "" {
-		return ""
-	}
-	return fmt.Sprintf("trigger=%s host=%s event_id=%s event_time=%s", trigger, host, eventID, eventTime)
-}
+func enrichAlertMessage(base string, payload map[string]interface{}, eventID string, severity int) string {
+	base = strings.TrimSpace(base)
+	detail := strings.TrimSpace(payloadString(payload, "detail", "details"))
 
-func appendEventIDToComment(comment string, eventID string) string {
+	if detail != "" && !strings.Contains(base, detail) {
+		if base == "" {
+			base = detail
+		} else {
+			base += " | " + detail
+		}
+	}
+
+	fragments := make([]string, 0, 6)
+	host := firstNonEmpty(
+		payloadString(payload, "host", "hostname", "host_name"),
+		payloadString(payload, "hostid"),
+	)
+	item := firstNonEmpty(
+		payloadString(payload, "item", "itemname", "item_name"),
+		payloadString(payload, "itemid"),
+	)
+	value := payloadString(payload, "value", "item_value", "last_value")
+	eventTime := strings.TrimSpace(payloadString(payload, "event_time", "clock", "time", "timestamp"))
+	if eventTime == "" {
+		eventTime = strings.TrimSpace(strings.Join([]string{
+			payloadString(payload, "event_date", "date"),
+			payloadString(payload, "event_clock", "event_time_text"),
+		}, " "))
+	}
+
+	if host != "" {
+		fragments = append(fragments, "Host: "+host)
+	}
+	if item != "" {
+		fragments = append(fragments, "Item: "+item)
+	}
+	if value != "" {
+		fragments = append(fragments, "Value: "+value)
+	}
+	if severity >= 0 {
+		fragments = append(fragments, "Severity: "+severityLabelFromCode(severity))
+	}
+	if eventTime != "" {
+		fragments = append(fragments, "Time: "+eventTime)
+	}
 	eventID = strings.TrimSpace(eventID)
-	if eventID == "" {
-		return strings.TrimSpace(comment)
+	if eventID != "" {
+		fragments = append(fragments, "EventID: "+eventID)
 	}
-	base := strings.TrimSpace(comment)
-	marker := "event_id=" + eventID
-	if strings.Contains(base, marker) {
-		return base
+
+	if len(fragments) > 0 {
+		extra := strings.Join(fragments, ", ")
+		if base == "" {
+			base = extra
+		} else if !strings.Contains(base, extra) {
+			base += " | " + extra
+		}
 	}
-	if base == "" {
-		return marker
+
+	return strings.TrimSpace(base)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
 	}
-	return base + " " + marker
+	return ""
+}
+
+func severityLabelFromCode(severity int) string {
+	switch severity {
+	case 5:
+		return "Disaster"
+	case 4:
+		return "High"
+	case 3:
+		return "Average"
+	case 2:
+		return "Warning"
+	case 1:
+		return "Information"
+	default:
+		return "Not classified"
+	}
 }
 
 // SearchAlertsCtrl handles GET /alert/search
