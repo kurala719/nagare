@@ -62,9 +62,9 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 	var results []result
 	ninetyDaysAgo := time.Now().AddDate(0, 0, -90)
 	database.DB.Model(&model.Alert{}).
-		Select("DATE(created_at) as date, count(*) as count").
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') as date, count(*) as count").
 		Where("created_at >= ?", ninetyDaysAgo).
-		Group("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Order("date").
 		Scan(&results)
 
@@ -92,10 +92,11 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 	}
 	var hostResults []hostResult
 	database.DB.Table("alerts").
-		Select("host_id, count(*) as count, hosts.name").
-		Joins("left join hosts on hosts.id = alerts.host_id").
-		Where("alerts.host_id > 0").
-		Group("host_id").
+		Select("items.host_id, count(alerts.id) as count, hosts.name").
+		Joins("left join items on items.id = alerts.item_id").
+		Joins("left join hosts on hosts.id = items.host_id").
+		Where("items.host_id > 0").
+		Group("items.host_id, hosts.name").
 		Order("count desc").
 		Limit(10).
 		Scan(&hostResults)
@@ -104,9 +105,9 @@ func GetAlertAnalyticsCtrl(c *gin.Context) {
 	var trendResults []result
 	fourteenDaysAgo := time.Now().AddDate(0, 0, -14)
 	database.DB.Model(&model.Alert{}).
-		Select("DATE(created_at) as date, count(*) as count").
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') as date, count(*) as count").
 		Where("created_at >= ?", fourteenDaysAgo).
-		Group("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Order("date").
 		Scan(&trendResults)
 

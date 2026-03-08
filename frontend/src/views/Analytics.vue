@@ -197,7 +197,13 @@ const updateCharts = (data) => {
     })
   }
 
-  if (data.heatmap) {
+  if (data.heatmap && data.heatmap.length > 0) {
+    const maxCount = Math.max(20, ...data.heatmap.map(item => item[1]))
+    heatmapChartInstance.setOption({
+      visualMap: { max: maxCount },
+      series: [{ data: data.heatmap }]
+    })
+  } else if (data.heatmap) {
     heatmapChartInstance.setOption({
       series: [{ data: data.heatmap }]
     })
