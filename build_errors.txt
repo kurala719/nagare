@@ -1,3 +1,0 @@
-go: cannot find main module, but found .git/config in D:\Nagare_Project\nagare
-	to create a module there, run:
-	go mod init

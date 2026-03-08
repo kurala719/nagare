@@ -200,7 +200,7 @@
     :closable="false"
   >
     <template #default>
-      <el-button size="small" @click="loadHosts">{{ $t('hosts.retry') }}</el-button>
+      <el-button size="small" @click="loadHosts(true)">{{ $t('hosts.retry') }}</el-button>
     </template>
   </el-alert>
 
@@ -799,6 +799,7 @@ export default {
       return group ? group.name : this.$t('hosts.unknown');
     },
     async loadHosts(reset = false) {
+      if (typeof reset !== 'boolean') reset = true;
       if (reset) {
         this.hosts = [];
       }

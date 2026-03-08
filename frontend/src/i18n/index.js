@@ -100,7 +100,8 @@ const messages = {
       rawContext: 'Raw Context',
       formattedContext: 'Formatted Context',
       retry: 'Retry',
-      applyAndSave: 'Apply and Save'
+      applyAndSave: 'Apply and Save',
+      unknown: 'Unknown'
     },
     auth: {
       login: 'Login',
@@ -214,6 +215,7 @@ const messages = {
       model: 'Model',
       noAlerts: 'No alerts',
       noHosts: 'No hosts',
+      noGroups: 'No groups',
       noProviders: 'No providers',
       onlineLabel: 'Online',
       offlineLabel: 'Offline',
@@ -1319,7 +1321,10 @@ const messages = {
         network_history: 'Network Health History',
         chat: 'AI Chat History',
         reports: 'Generated Reports',
-        site_messages: 'Site Messages'
+        site_messages: 'Site Messages',
+        ansible_jobs: 'Ansible Jobs',
+        group_history: 'Group History',
+        monitor_history: 'Monitor History'
       },
       typeDescriptions: {
         logs: 'System and service runtime logs.',
@@ -1330,7 +1335,10 @@ const messages = {
         network_history: 'History of global network health scores.',
         chat: 'Conversation history with the AI assistant.',
         reports: 'Archive of generated PDF operational reports.',
-        site_messages: 'Internal notifications and messages for users.'
+        site_messages: 'Internal notifications and messages for users.',
+        ansible_jobs: 'History of executed Ansible playbooks and jobs.',
+        group_history: 'Historical status and availability of host groups.',
+        monitor_history: 'Historical status and availability of monitoring systems.'
       }
     },
     about: {
@@ -1439,7 +1447,8 @@ const messages = {
       rawContext: '原始上下文',
       formattedContext: '格式化上下文',
       retry: '重试',
-      applyAndSave: '应用并保存'
+      applyAndSave: '应用并保存',
+      unknown: '未知'
     },
     auth: {
       login: '登录',
@@ -1553,6 +1562,7 @@ const messages = {
       model: '模型',
       noAlerts: '暂无告警',
       noHosts: '暂无主机',
+      noGroups: '暂无分组',
       noProviders: '暂无供应商',
       onlineLabel: '在线',
       offlineLabel: '离线',
@@ -2659,7 +2669,10 @@ const messages = {
         network_history: '网络健康历史',
         chat: 'AI 聊天历史',
         reports: '生成的报表',
-        site_messages: '站内消息'
+        site_messages: '站内消息',
+        ansible_jobs: 'Ansible 任务',
+        group_history: '分组历史',
+        monitor_history: '监控系统历史'
       },
       typeDescriptions: {
         logs: '系统与服务的运行日志。',
@@ -2670,7 +2683,10 @@ const messages = {
         network_history: '全局网络健康评分的历史趋势。',
         chat: '用户与 AI 助手的对话聊天记录。',
         reports: '系统自动或手动生成的 PDF 运维报表。',
-        site_messages: '发送给用户的内部通知与站内消息。'
+        site_messages: '发送给用户的内部通知与站内消息。',
+        ansible_jobs: '已执行的 Ansible Playbook 与任务的历史记录。',
+        group_history: '主机分组的状态变化与可用性历史。',
+        monitor_history: '监控系统的状态变化与可用性历史。'
       }
     },
     about: {

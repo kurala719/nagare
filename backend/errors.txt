@@ -1,9 +1,0 @@
-# nagare/internal/service
-internal\service\item.go:740:6: unknown field ItemID in struct literal of type "nagare/internal/model".Item
-internal\service\item.go:920:68: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\item.go:929:72: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\item.go:1048:19: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\item.go:1056:10: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\item.go:1065:9: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\item.go:1076:108: item.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
-internal\service\status.go:116:7: i.ItemID undefined (type "nagare/internal/model".Item has no field or method ItemID)
