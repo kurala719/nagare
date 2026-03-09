@@ -45,8 +45,17 @@ func (p *QQProvider) SendMessage(ctx context.Context, target, message string) er
 	if err != nil {
 		return err
 	}
+	preferWS := targetUsesWebSocketEndpoint(target)
 
-	// Try WebSocket first if connected and no specific baseURL is provided in target
+	// If target explicitly uses ws/wss endpoint, use websocket delivery path.
+	if preferWS {
+		if !GlobalQQWSManager.IsConnected() {
+			return fmt.Errorf("qq websocket is not connected")
+		}
+		return GlobalQQWSManager.SendMessage(ctx, messageType, userID, groupID, message)
+	}
+
+	// Try WebSocket first if connected and no specific baseURL is provided in target.
 	if strings.TrimSpace(baseURL) == "" && GlobalQQWSManager.IsConnected() {
 		return GlobalQQWSManager.SendMessage(ctx, messageType, userID, groupID, message)
 	}
@@ -192,4 +201,14 @@ func normalizeQQBaseURL(value string) string {
 		return trimmed
 	}
 	return "http://" + trimmed
+}
+
+func targetUsesWebSocketEndpoint(target string) bool {
+	value := strings.TrimSpace(target)
+	if value == "" {
+		return false
+	}
+	first := strings.Fields(value)[0]
+	lower := strings.ToLower(strings.TrimSpace(first))
+	return strings.HasPrefix(lower, "ws://") || strings.HasPrefix(lower, "wss://")
 }

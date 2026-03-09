@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"nagare/internal/repository"
 	mediaSvc "nagare/internal/repository/media"
 )
+
+var ErrMediaSendSkipped = errors.New("media send skipped")
 
 // ActionReq represents an action request
 type ActionReq struct {
@@ -234,15 +237,33 @@ func ExecuteActionsForAlert(alert model.Alert) {
 				continue
 			}
 
+			lowerType := strings.ToLower(media.Type)
+			endpointOnlyQQTarget := (lowerType == "qq" || lowerType == "qrobot") && isQQEndpointOnlyTargetForAction(media.Target)
+
 			// Execute default target
 			if media.Target != "" {
-				if err := ExecuteAction(action, media, replacements); err != nil {
-					LogService("error", "action execution failed", map[string]interface{}{
+				if endpointOnlyQQTarget {
+					LogService("info", "action default qq target skipped (endpoint-only target requires user-bound recipients)", map[string]interface{}{
 						"action_id": action.ID,
 						"media_id":  media.ID,
 						"target":    media.Target,
-						"error":     err.Error(),
 					}, nil, "")
+				} else if err := ExecuteAction(action, media, replacements); err != nil {
+					if errors.Is(err, ErrMediaSendSkipped) {
+						LogService("info", "action execution skipped", map[string]interface{}{
+							"action_id": action.ID,
+							"media_id":  media.ID,
+							"target":    media.Target,
+							"reason":    err.Error(),
+						}, nil, "")
+					} else {
+						LogService("error", "action execution failed", map[string]interface{}{
+							"action_id": action.ID,
+							"media_id":  media.ID,
+							"target":    media.Target,
+							"error":     err.Error(),
+						}, nil, "")
+					}
 				} else {
 					LogService("info", "action execution succeeded", map[string]interface{}{
 						"action_id": action.ID,
@@ -259,10 +280,13 @@ func ExecuteActionsForAlert(alert model.Alert) {
 
 			// Also send to specifically associated users
 			for _, user := range action.Users {
-				lowerType := strings.ToLower(media.Type)
 				userTarget := ""
 				if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
-					userTarget = "user:" + user.QQ
+					if endpointOnlyQQTarget {
+						userTarget = strings.TrimSpace(media.Target) + " user:" + user.QQ
+					} else {
+						userTarget = "user:" + user.QQ
+					}
 				} else if (lowerType == "smtp" || lowerType == "email") && user.Email != "" {
 					userTarget = user.Email
 				}
@@ -276,12 +300,21 @@ func ExecuteActionsForAlert(alert model.Alert) {
 						"target":    userTarget,
 					}, nil, "")
 					if err := ExecuteAction(action, userMedia, replacements); err != nil {
-						LogService("error", "user action execution failed", map[string]interface{}{
-							"action_id": action.ID,
-							"user_id":   user.ID,
-							"target":    userTarget,
-							"error":     err.Error(),
-						}, nil, "")
+						if errors.Is(err, ErrMediaSendSkipped) {
+							LogService("info", "user action execution skipped", map[string]interface{}{
+								"action_id": action.ID,
+								"user_id":   user.ID,
+								"target":    userTarget,
+								"reason":    err.Error(),
+							}, nil, "")
+						} else {
+							LogService("error", "user action execution failed", map[string]interface{}{
+								"action_id": action.ID,
+								"user_id":   user.ID,
+								"target":    userTarget,
+								"error":     err.Error(),
+							}, nil, "")
+						}
 					}
 				}
 			}
@@ -409,7 +442,7 @@ func sendMediaMessage(media model.Media, msg string) error {
 			"wait_seconds": int(wait.Seconds()),
 			"skip_trigger": true,
 		}, nil, "")
-		return nil
+		return fmt.Errorf("%w: rate limit, retry in %ds", ErrMediaSendSkipped, int(wait.Seconds()))
 	}
 	if err := mediaSvc.GetService().SendMessage(context.Background(), lowerType, media.Target, msg); err != nil {
 		LogService("error", "send message failed", map[string]interface{}{"media": media.Type, "target": media.Target, "error": err.Error(), "skip_trigger": true}, nil, "")
@@ -438,13 +471,19 @@ func TestActionServ(id uint) error {
 	testMsg := "Nagare Test Action Message from Action: " + action.Name
 	var lastErr error
 	var sentCount int
+	var skippedCount int
+	lowerType := strings.ToLower(media.Type)
+	endpointOnlyQQTarget := (lowerType == "qq" || lowerType == "qrobot") && isQQEndpointOnlyTargetForAction(media.Target)
 
 	// Send to specifically associated users
 	for _, user := range action.Users {
-		lowerType := strings.ToLower(media.Type)
 		userTarget := ""
 		if (lowerType == "qq" || lowerType == "qrobot") && user.QQ != "" {
-			userTarget = "user:" + user.QQ
+			if endpointOnlyQQTarget {
+				userTarget = strings.TrimSpace(media.Target) + " user:" + user.QQ
+			} else {
+				userTarget = "user:" + user.QQ
+			}
 		} else if (lowerType == "smtp" || lowerType == "email") && user.Email != "" {
 			userTarget = user.Email
 		}
@@ -453,7 +492,11 @@ func TestActionServ(id uint) error {
 			userMedia := media
 			userMedia.Target = userTarget
 			if err := sendMediaMessage(userMedia, testMsg); err != nil {
-				lastErr = err
+				if errors.Is(err, ErrMediaSendSkipped) {
+					skippedCount++
+				} else {
+					lastErr = err
+				}
 			} else {
 				sentCount++
 			}
@@ -462,11 +505,27 @@ func TestActionServ(id uint) error {
 
 	// Send to default target if configured
 	if media.Target != "" {
-		if err := sendMediaMessage(media, testMsg); err != nil {
-			lastErr = err
+		if endpointOnlyQQTarget {
+			LogService("info", "test action default qq target skipped (endpoint-only target requires user-bound recipients)", map[string]interface{}{
+				"action_id": action.ID,
+				"media_id":  media.ID,
+				"target":    media.Target,
+			}, nil, "")
 		} else {
-			sentCount++
+			if err := sendMediaMessage(media, testMsg); err != nil {
+				if errors.Is(err, ErrMediaSendSkipped) {
+					skippedCount++
+				} else {
+					lastErr = err
+				}
+			} else {
+				sentCount++
+			}
 		}
+	}
+
+	if sentCount == 0 && skippedCount > 0 && lastErr == nil {
+		return fmt.Errorf("message sending skipped due to rate limit")
 	}
 
 	if sentCount == 0 && lastErr == nil {
@@ -508,6 +567,14 @@ func parseQQTarget(target string) (string, bool) {
 
 func resolveMediaTypeKeyForSend(media model.Media) string {
 	return strings.TrimSpace(media.Type)
+}
+
+func isQQEndpointOnlyTargetForAction(target string) bool {
+	trimmed := strings.TrimSpace(target)
+	if trimmed == "" {
+		return false
+	}
+	return len(strings.Fields(trimmed)) == 1
 }
 
 func severityLabel(severity int) string {
