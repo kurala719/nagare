@@ -95,10 +95,18 @@ func GetTriggerByIDServ(id uint) (TriggerResp, error) {
 }
 
 func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
+	if req.ItemID == nil || *req.ItemID == 0 {
+		return TriggerResp{}, fmt.Errorf("%w: item_id is required for trigger creation", model.ErrInvalidInput)
+	}
+	if _, err := repository.GetItemByIDDAO(*req.ItemID); err != nil {
+		return TriggerResp{}, fmt.Errorf("%w: invalid item_id", model.ErrInvalidInput)
+	}
+
 	trigger := model.Trigger{
 		Name:                  req.Name,
 		Severity:              req.Severity,
 		AlertID:               req.AlertID,
+		ItemID:                req.ItemID,
 		ItemStatus:            req.ItemStatus,
 		ItemValueThreshold:    req.ItemValueThreshold,
 		ItemValueThresholdMax: req.ItemValueThresholdMax,
@@ -117,6 +125,13 @@ func AddTriggerServ(req TriggerReq) (TriggerResp, error) {
 }
 
 func UpdateTriggerServ(id uint, req TriggerReq) error {
+	if req.ItemID == nil || *req.ItemID == 0 {
+		return fmt.Errorf("%w: item_id is required for trigger update", model.ErrInvalidInput)
+	}
+	if _, err := repository.GetItemByIDDAO(*req.ItemID); err != nil {
+		return fmt.Errorf("%w: invalid item_id", model.ErrInvalidInput)
+	}
+
 	existing, err := repository.GetTriggerByIDDAO(id)
 	if err != nil {
 		return err
@@ -277,6 +292,11 @@ func describeItemTriggerCondition(trigger model.Trigger) string {
 func matchItemTrigger(trigger model.Trigger, item model.Item) bool {
 	entity := normalizeTriggerEntity("")
 	if entity != "item" {
+		return false
+	}
+
+	// Safety guard: item triggers must be bound to a concrete item.
+	if trigger.ItemID == nil || *trigger.ItemID == 0 || *trigger.ItemID != item.ID {
 		return false
 	}
 

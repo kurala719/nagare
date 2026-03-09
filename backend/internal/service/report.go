@@ -97,7 +97,7 @@ var translations = map[string]map[string]string{
 		"infra_report_platform": "基础设施智能报告 | Nagare 平台",
 		"executive_summary":     "执行摘要",
 		"total_alerts":          "告警总数",
-		"avg_health":            "平均健康度",
+		"avg_health":            "平均健康度分数",
 		"critical_assets":       "异常资产",
 		"status_distribution":   "状态分布",
 		"alert_trend":           "期间告警趋势",
@@ -341,7 +341,9 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 
 type AdvancedReportData struct {
 	TotalAlerts          int
-	AvgUptime            float64
+	AvgHealthScore       float64
+	AvgUptime            float64 // Deprecated: kept for compatibility with existing preview payloads.
+	CriticalIssues       int
 	TopCPUHosts          [][]string
 	LongestDowntimeHosts [][]string
 	AlertTrend           []float64
@@ -393,6 +395,7 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 			status = T(lang, "inactive")
 		case 2:
 			status = T(lang, "error")
+			data.CriticalIssues++
 		case 3:
 			status = T(lang, "syncing")
 		}
@@ -482,9 +485,10 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		data.LongestDowntimeHosts[0] = []string{h.Name, h.IPAddr, T(lang, "detected_issues"), fmt.Sprintf(T(lang, "alerts_count_suffix"), frequencies[0].Count)}
 	}
 
-	// 7. Calculate Avg Uptime (based on host health scores)
+	// 7. Calculate average health score from hosts.
 	var avgScore float64
-	database.DB.Model(&model.Host{}).Select("AVG(health_score)").Scan(&avgScore)
+	database.DB.Model(&model.Host{}).Select("COALESCE(AVG(health_score), 0)").Scan(&avgScore)
+	data.AvgHealthScore = avgScore
 	data.AvgUptime = avgScore
 
 	// 8. AI Summary
@@ -549,7 +553,7 @@ func buildExecutiveSummary(m core.Maroto, data AdvancedReportData, lang string) 
 
 	m.AddRow(20,
 		text.NewCol(4, fmt.Sprintf("%s: %d", T(lang, "total_alerts"), data.TotalAlerts), props.Text{Size: 11, Align: align.Center, Top: 5}),
-		text.NewCol(4, fmt.Sprintf("%s: %.2f%%", T(lang, "avg_health"), data.AvgUptime), props.Text{Size: 11, Align: align.Center, Top: 5}),
+		text.NewCol(4, fmt.Sprintf("%s: %.2f%%", T(lang, "avg_health"), data.AvgHealthScore), props.Text{Size: 11, Align: align.Center, Top: 5}),
 		text.NewCol(4, fmt.Sprintf("%s: %d", T(lang, "critical_assets"), int(data.StatusDistribution[T(lang, "error")])), props.Text{Size: 11, Align: align.Center, Top: 5}),
 	)
 

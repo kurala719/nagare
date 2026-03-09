@@ -15,14 +15,14 @@
         </el-col>
         <el-col :span="8">
           <div class="stat-card">
-            <div class="stat-label">Avg Uptime</div>
-            <div class="stat-value text-success">{{ data.AvgUptime }}%</div>
+            <div class="stat-label">Avg Health Score</div>
+            <div class="stat-value text-success">{{ avgHealthScoreDisplay }}%</div>
           </div>
         </el-col>
         <el-col :span="8">
           <div class="stat-card">
             <div class="stat-label">Critical Issues</div>
-            <div class="stat-value text-danger">{{ data.StatusDistribution?.Error || 0 }}</div>
+            <div class="stat-value text-danger">{{ criticalIssues }}</div>
           </div>
         </el-col>
       </el-row>
@@ -108,6 +108,46 @@ const mappedDowntimeHosts = computed(() => {
     downtime: row[2],
     frequency: row[3]
   }))
+})
+
+const getDistributionValue = (distribution, keys) => {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(distribution, key)) {
+      const n = Number(distribution[key])
+      if (Number.isFinite(n)) return n
+    }
+  }
+  return 0
+}
+
+const criticalIssues = computed(() => {
+  if (!props.data) return 0
+
+  const direct = Number(props.data.CriticalIssues)
+  if (Number.isFinite(direct) && direct >= 0) {
+    return Math.round(direct)
+  }
+
+  const distribution = props.data.StatusDistribution || {}
+  const errorCount = getDistributionValue(distribution, ['Error', 'error', '错误'])
+  return Math.round(errorCount)
+})
+
+const avgHealthScoreDisplay = computed(() => {
+  if (!props.data) return '0.00'
+
+  const raw = Number(props.data.AvgHealthScore)
+  if (Number.isFinite(raw) && raw >= 0) {
+    return raw.toFixed(2)
+  }
+
+  // Backward compatibility for previously generated report payloads.
+  const legacy = Number(props.data.AvgUptime)
+  if (Number.isFinite(legacy) && legacy >= 0) {
+    return legacy.toFixed(2)
+  }
+
+  return '0.00'
 })
 
 const initCharts = () => {

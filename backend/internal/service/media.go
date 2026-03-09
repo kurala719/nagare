@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"nagare/internal/model"
 	"nagare/internal/repository"
 	"nagare/internal/repository/media"
+
+	"github.com/gorilla/websocket"
 )
 
 // MediaReq represents a media request
@@ -83,6 +86,27 @@ func TestMediaServ(id uint) error {
 
 	testMessage := "Nagare Media Test Connection: Your notification system is working correctly."
 
+	if strings.EqualFold(strings.TrimSpace(media.Type), "qq") && isQQEndpointOnlyTarget(media.Target) {
+		if err := testQQWebSocketEndpoint(media.Target); err != nil {
+			LogService("error", "test media failed: qq websocket endpoint unreachable", map[string]interface{}{
+				"media_id":   id,
+				"media_type": media.Type,
+				"media_name": media.Name,
+				"target":     media.Target,
+				"error":      err.Error(),
+			}, nil, "")
+			return fmt.Errorf("failed to connect qq websocket endpoint: %w", err)
+		}
+
+		LogService("info", "test media succeeded (qq endpoint connectivity)", map[string]interface{}{
+			"media_id":   id,
+			"media_type": media.Type,
+			"media_name": media.Name,
+			"target":     media.Target,
+		}, nil, "")
+		return nil
+	}
+
 	LogService("info", "test media starting", map[string]interface{}{
 		"media_id":   id,
 		"media_type": media.Type,
@@ -108,6 +132,53 @@ func TestMediaServ(id uint) error {
 		"media_name": media.Name,
 		"target":     media.Target,
 	}, nil, "")
+	return nil
+}
+
+func isQQEndpointOnlyTarget(target string) bool {
+	trimmed := strings.TrimSpace(target)
+	if trimmed == "" {
+		return false
+	}
+	return len(strings.Fields(trimmed)) == 1
+}
+
+func normalizeQQWebSocketEndpoint(target string) string {
+	trimmed := strings.TrimSpace(target)
+	if trimmed == "" {
+		return ""
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "ws://") || strings.HasPrefix(lower, "wss://") {
+		return trimmed
+	}
+	if strings.HasPrefix(lower, "http://") {
+		return "ws://" + strings.TrimPrefix(trimmed, "http://")
+	}
+	if strings.HasPrefix(lower, "https://") {
+		return "wss://" + strings.TrimPrefix(trimmed, "https://")
+	}
+	return "ws://" + trimmed
+}
+
+func testQQWebSocketEndpoint(target string) error {
+	endpoint := normalizeQQWebSocketEndpoint(target)
+	if endpoint == "" {
+		return fmt.Errorf("empty websocket endpoint")
+	}
+
+	dialer := websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 5 * time.Second,
+	}
+
+	conn, _, err := dialer.Dial(endpoint, nil)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "test done"), time.Now().Add(1*time.Second))
 	return nil
 }
 
@@ -186,16 +257,28 @@ var (
 
 // InitQQWSServ initializes the QQ WebSocket connection based on Media configuration
 func InitQQWSServ() {
-	// Find the enabled QQ media
+	// Find the enabled QQ media (do not gate on status to avoid stale-status deadlock)
 	t := "qq"
-	s := 1
-	mediaList, err := repository.SearchMediaDAO(model.MediaFilter{Type: &t, Status: &s, Limit: 1})
+	mediaList, err := repository.SearchMediaDAO(model.MediaFilter{Type: &t, Limit: 50})
 	if err != nil || len(mediaList) == 0 {
 		StopQQWSServ()
 		return
 	}
 
-	qqMedia := mediaList[0]
+	var qqMedia model.Media
+	foundEnabled := false
+	for _, m := range mediaList {
+		if m.Enabled == 1 {
+			qqMedia = m
+			foundEnabled = true
+			break
+		}
+	}
+	if !foundEnabled {
+		StopQQWSServ()
+		return
+	}
+	_, _ = recomputeMediaStatus(qqMedia.ID)
 	target := qqMedia.Target
 
 	// Target could be ws://url?access_token=token
@@ -235,11 +318,17 @@ func InitQQWSServ() {
 				return
 			default:
 				if !media.GlobalQQWSManager.IsConnected() {
+					_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
 					log.Printf("[QQ-WS] Attempting positive connection to %s", positiveURL)
 					err := media.GlobalQQWSManager.ConnectPositiveWS(positiveURL, accessToken)
 					if err != nil {
 						log.Printf("[QQ-WS] Positive connection failed: %v, retrying in 10s...", err)
+						_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
+					} else {
+						_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 1)
 					}
+				} else {
+					_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 1)
 				}
 				time.Sleep(10 * time.Second)
 			}

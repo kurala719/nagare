@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -60,12 +61,12 @@ func StartPacketAnalysisServ(id uint) error {
 
 func analyzePacketAsync(pa model.PacketAnalysis) {
 	fmt.Printf(">>> Starting AI analysis for packet '%s' (ID: %d)\n", pa.Name, pa.ID)
-	
+
 	var pID uint = 0
 	if pa.ProviderID != nil {
 		pID = *pa.ProviderID
 	}
-	
+
 	client, resolvedModel, err := createLLMClient(pID, pa.AIModel)
 	if err != nil {
 		fmt.Printf(">>> Failed to create AI client: %v\n", err)
@@ -104,7 +105,7 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 	})
 
 	duration := time.Since(start)
-	
+
 	var logPID uint = 0
 	if pa.ProviderID != nil {
 		logPID = *pa.ProviderID
@@ -117,10 +118,40 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 		return
 	}
 
-	analysis := resp.Content
+	analysis := strings.TrimSpace(resp.Content)
 	if analysis == "" {
 		fmt.Printf(">>> AI returned empty response for packet ID %d\n", pa.ID)
-		analysis = "AI returned an empty analysis result. This may happen if the input was too cryptic or the model refused to analyze it."
+
+		// Retry once with tighter instructions and smaller payload to reduce provider-side refusals/timeouts.
+		retryContent := contentToAnalyze
+		if len(retryContent) > 1500 {
+			retryContent = retryContent[:1500]
+		}
+		retryPrompt := systemPrompt + "\n\nIMPORTANT: Always return a non-empty answer using the required structure. If uncertain, still provide a best-effort assessment and mark risk as NOTABLE."
+
+		retryStart := time.Now()
+		retryResp, retryErr := client.Chat(ctx, llm.ChatRequest{
+			Model:        resolvedModel,
+			SystemPrompt: retryPrompt,
+			MaxTokens:    1024,
+			Messages: []llm.Message{
+				{Role: "user", Content: retryContent},
+			},
+		})
+		retryDuration := time.Since(retryStart)
+		logLLMRequest("packet_analysis_retry", logPID, resolvedModel, retryDuration, retryErr)
+
+		if retryErr != nil {
+			fmt.Printf(">>> AI retry failed after %v: %v\n", retryDuration, retryErr)
+			updatePacketAnalysisStatus(pa.ID, 3, "AI analysis retry failed: "+retryErr.Error(), "error")
+			return
+		}
+
+		analysis = strings.TrimSpace(retryResp.Content)
+		if analysis == "" {
+			updatePacketAnalysisStatus(pa.ID, 3, "AI returned an empty analysis result after retry. This may happen if the model/provider is temporarily unavailable or refused the input.", "error")
+			return
+		}
 	}
 
 	riskLevel := parseRiskLevel(analysis)
@@ -146,7 +177,7 @@ func analyzePacketAsync(pa model.PacketAnalysis) {
 func extractPacketSummary(fileName string) string {
 	fullPath := filepath.Join("public/uploads/packets", fileName)
 	fmt.Printf(">>> Checking for file at: %s\n", fullPath)
-	
+
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return fmt.Sprintf("Error: File %s does not exist on server.", fileName)
 	}
@@ -230,23 +261,30 @@ func updatePacketAnalysisStatus(id uint, status int, analysis string, risk strin
 
 func parseRiskLevel(analysis string) string {
 	lower := strings.ToLower(analysis)
-	
-	// Check for explicit markers first to avoid false positives
-	if strings.Contains(lower, "risk: malicious") || strings.Contains(lower, "risk: [malicious]") {
-		return "malicious"
-	}
-	if strings.Contains(lower, "risk: notable") || strings.Contains(lower, "risk: [notable]") || strings.Contains(lower, "risk: suspicious") {
-		return "notable"
-	}
-	if strings.Contains(lower, "risk: clean") || strings.Contains(lower, "risk: [clean]") {
-		return "clean"
+
+	// Normalize common markdown wrappers so lines like "RISK: **CLEAN**" are parsed correctly.
+	normalized := strings.NewReplacer("*", "", "[", "", "]", "", "`", "").Replace(lower)
+
+	// Prefer explicit risk declaration from the model output.
+	re := regexp.MustCompile(`(?im)risk\s*:\s*[^a-z]{0,8}(clean|notable|suspicious|malicious)\b`)
+	if m := re.FindStringSubmatch(normalized); len(m) > 1 {
+		switch m[1] {
+		case "malicious":
+			return "malicious"
+		case "notable", "suspicious":
+			return "notable"
+		case "clean":
+			return "clean"
+		}
 	}
 
-	// Fallback to keyword search
-	if strings.Contains(lower, "malicious") || strings.Contains(lower, "attack") || strings.Contains(lower, "danger") || strings.Contains(lower, "exploit") {
+	// Keyword fallback for non-structured outputs.
+	hasMaliciousSignals := strings.Contains(normalized, "attack") || strings.Contains(normalized, "exploit") || strings.Contains(normalized, "malware") || strings.Contains(normalized, "command and control")
+	hasNegatedMalicious := strings.Contains(normalized, "not malicious") || strings.Contains(normalized, "no malicious") || strings.Contains(normalized, "does not constitute a malicious") || strings.Contains(normalized, "no indicators of compromise")
+	if hasMaliciousSignals || (strings.Contains(normalized, "malicious") && !hasNegatedMalicious) {
 		return "malicious"
 	}
-	if strings.Contains(lower, "notable") || strings.Contains(lower, "suspicious") || strings.Contains(lower, "warning") || strings.Contains(lower, "unusual") {
+	if strings.Contains(normalized, "notable") || strings.Contains(normalized, "suspicious") || strings.Contains(normalized, "warning") || strings.Contains(normalized, "unusual") {
 		return "notable"
 	}
 	return "clean"

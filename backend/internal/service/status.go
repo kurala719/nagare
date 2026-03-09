@@ -456,6 +456,13 @@ func recomputeTriggerStatus(id uint) (int, error) {
 
 // RecomputeAllStatuses refreshes stored status values for all entities.
 func RecomputeAllStatuses() error {
+	mediaList, err := repository.GetAllMediaDAO()
+	if err == nil {
+		for _, m := range mediaList {
+			_, _ = recomputeMediaStatus(m.ID)
+		}
+	}
+
 	monitorsList, err := repository.GetAllMonitorsDAO()
 	if err == nil {
 		for _, m := range monitorsList {

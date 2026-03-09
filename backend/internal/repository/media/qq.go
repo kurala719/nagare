@@ -103,6 +103,17 @@ func parseQQTarget(target string) (baseURL, messageType, userID, groupID string,
 	if value == "" {
 		return "", "", "", "", fmt.Errorf("qq target is empty")
 	}
+
+	// Endpoint-only target (e.g. ws://127.0.0.1:3001) is a valid transport config,
+	// but sending a message still requires a concrete recipient.
+	if !strings.Contains(value, " ") {
+		lowerValue := strings.ToLower(value)
+		if strings.HasPrefix(lowerValue, "ws://") || strings.HasPrefix(lowerValue, "wss://") ||
+			strings.HasPrefix(lowerValue, "http://") || strings.HasPrefix(lowerValue, "https://") {
+			return normalizeQQBaseURL(value), "", "", "", fmt.Errorf("qq recipient is missing in target; use '<endpoint> user:123456' or '<endpoint> group:123456'")
+		}
+	}
+
 	fields := strings.Fields(value)
 	if len(fields) > 1 {
 		candidate := strings.TrimSpace(fields[0])
@@ -170,7 +181,14 @@ func normalizeQQBaseURL(value string) string {
 	if trimmed == "" {
 		return ""
 	}
-	if strings.HasPrefix(strings.ToLower(trimmed), "http://") || strings.HasPrefix(strings.ToLower(trimmed), "https://") {
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "ws://") {
+		return "http://" + strings.TrimPrefix(trimmed, "ws://")
+	}
+	if strings.HasPrefix(lower, "wss://") {
+		return "https://" + strings.TrimPrefix(trimmed, "wss://")
+	}
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
 		return trimmed
 	}
 	return "http://" + trimmed

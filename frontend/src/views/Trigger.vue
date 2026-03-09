@@ -583,13 +583,15 @@ export default {
         const total = triggerResp?.data?.total ?? triggerResp?.total ?? triggerData.length;
         const mapped = triggerData.map((t) => {
           const itemValueThreshold = t.ItemValueThreshold ?? t.item_value_threshold ?? null;
+          const resolvedItemID = t.ItemID ?? t.item_id ?? t.AlertItemID ?? t.alert_item_id ?? null;
           return {
             id: t.ID || t.id || 0,
             name: t.Name || t.name || '',
             entity: t.Entity || t.entity || 'item',
             severity: t.Severity ?? t.severity ?? 0,
             alert_host_id: t.AlertHostID ?? t.alert_host_id ?? null,
-            alert_item_id: t.AlertItemID ?? t.alert_item_id ?? null,
+            alert_item_id: resolvedItemID,
+            item_id: resolvedItemID,
             monitor_field: itemValueThreshold !== null ? 'value' : 'status',
             item_status: t.ItemStatus ?? t.item_status ?? null,
             item_value_threshold: itemValueThreshold,
@@ -637,6 +639,10 @@ export default {
         ElMessage.warning(this.$t('triggers.validationName'));
         return;
       }
+      if (!this.newTrigger.alert_item_id) {
+        ElMessage.warning(`${this.$t('triggers.itemId')} is required`);
+        return;
+      }
       try {
         await addTrigger(this.buildTriggerPayload(this.newTrigger));
         await this.loadTriggers(true);
@@ -660,6 +666,10 @@ export default {
       this.propertiesDialogVisible = false;
     },
     async saveProperties() {
+      if (!this.selectedTrigger?.alert_item_id) {
+        ElMessage.warning(`${this.$t('triggers.itemId')} is required`);
+        return;
+      }
       try {
         await updateTrigger(this.selectedTrigger.id, this.buildTriggerPayload(this.selectedTrigger));
         await this.loadTriggers(true);
@@ -730,6 +740,7 @@ export default {
         status: trigger.status,
         alert_host_id: trigger.alert_host_id,
         alert_item_id: trigger.alert_item_id,
+        item_id: trigger.alert_item_id || trigger.item_id,
         item_status: trigger.item_status,
         item_value_threshold: trigger.item_value_threshold,
         item_value_threshold_max: trigger.item_value_threshold_max,
@@ -749,6 +760,7 @@ export default {
       const optionalKeys = [
         'alert_host_id',
         'alert_item_id',
+        'item_id',
       ];
       Object.keys(payload).forEach((key) => {
         if (payload[key] === null || payload[key] === undefined || payload[key] === '') {

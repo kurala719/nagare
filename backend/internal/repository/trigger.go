@@ -111,6 +111,7 @@ func UpdateTriggerDAO(id uint, trigger model.Trigger) error {
 		"name":                     trigger.Name,
 		"severity":                 trigger.Severity,
 		"alert_id":                 trigger.AlertID,
+		"item_id":                  trigger.ItemID,
 		"item_status":              trigger.ItemStatus,
 		"item_value_threshold":     trigger.ItemValueThreshold,
 		"item_value_threshold_max": trigger.ItemValueThresholdMax,
