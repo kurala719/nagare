@@ -281,6 +281,14 @@
   flex-wrap: wrap;
 }
 
+.filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: -4px; /* Move closer to the following select */
+  white-space: nowrap;
+}
+
 .action-group {
   display: flex;
   gap: 12px;

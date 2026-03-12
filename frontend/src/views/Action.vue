@@ -11,12 +11,12 @@
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
+        <span class="filter-label">{{ $t('alarms.status') + ':' }}</span>
         <el-select v-model="statusFilter" :placeholder="$t('actions.filterStatus')" style="width: 120px">
           <el-option :label="$t('actions.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
-
         </el-select>
       </div>
 

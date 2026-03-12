@@ -45,17 +45,18 @@
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
+        <span class="filter-label">{{ $t('items.filterHost') + ':' }}</span>
         <el-select v-model="hostFilter" :placeholder="$t('items.filterHost')" style="width: 160px" clearable>
           <el-option :label="$t('items.filterAll')" :value="0" />
           <el-option v-for="host in hostOptions" :key="host.id" :label="host.name" :value="host.id" />
         </el-select>
 
+        <span class="filter-label">{{ $t('items.status') + ':' }}</span>
         <el-select v-model="statusFilter" :placeholder="$t('items.filterStatus')" style="width: 120px">
           <el-option :label="$t('items.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
-
         </el-select>
       </div>
 

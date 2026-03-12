@@ -14,12 +14,12 @@
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
+        <span class="filter-label">{{ $t('monitors.status') + ':' }}</span>
         <el-select v-model="statusFilter" :placeholder="$t('monitors.filterStatus')" style="width: 140px">
           <el-option :label="$t('monitors.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
-
         </el-select>
 
         <el-select v-model="sortKey" :placeholder="$t('common.sort')" style="width: 160px">

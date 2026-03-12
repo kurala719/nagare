@@ -11,14 +11,15 @@
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
+        <span class="filter-label">{{ $t('alarms.status') + ':' }}</span>
         <el-select v-model="statusFilter" :placeholder="$t('alarms.filterStatus')" style="width: 140px">
           <el-option :label="$t('alarms.filterAll')" value="all" />
           <el-option :label="$t('common.statusInactive')" :value="0" />
           <el-option :label="$t('common.statusActive')" :value="1" />
           <el-option :label="$t('common.statusError')" :value="2" />
-
         </el-select>
 
+        <span class="filter-label">{{ $t('hosts.monitor') + ':' }}</span>
         <el-select v-model="monitorFilter" placeholder="Monitor" clearable style="width: 200px">
           <el-option :label="$t('alarms.filterAll')" value="all" />
           <el-option v-for="monitor in monitors" :key="monitor.id" :label="monitor.name" :value="monitor.id" />

@@ -519,7 +519,8 @@ export default {
         provider_id: ['provider_id', 'ProviderID'],
         model: ['model', 'Model'],
         analysis_timeout_seconds: ['analysis_timeout_seconds', 'AnalysisTimeoutSeconds'],
-        analysis_min_severity: ['analysis_min_severity', 'AnalysisMinSeverity']
+        analysis_min_severity: ['analysis_min_severity', 'AnalysisMinSeverity'],
+        language: ['language', 'Language']
       });
 
       const smtpSource = data.smtp || data.SMTP || {};

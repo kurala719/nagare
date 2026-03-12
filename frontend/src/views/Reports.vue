@@ -7,6 +7,7 @@
 
     <div class="standard-toolbar">
       <div class="filter-group">
+        <span class="filter-label">{{ $t('reports.type') + ':' }}</span>
         <el-select v-model="filterType" :placeholder="$t('reports.filterType')" clearable style="width: 150px">
           <el-option :label="$t('reports.typeDaily')" value="daily" />
           <el-option :label="$t('reports.typeWeekly')" value="weekly" />

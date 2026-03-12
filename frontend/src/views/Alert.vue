@@ -33,6 +33,7 @@
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
+        <span class="filter-label">{{ $t('alerts.severityLabel') + ':' }}</span>
         <el-select v-model="severityFilter" :placeholder="$t('alerts.filterSeverity')" style="width: 140px">
           <el-option :label="$t('alerts.filterAll')" value="all" />
           <el-option :label="$t('alerts.severityDisaster') || 'Disaster'" value="disaster" />
@@ -43,6 +44,7 @@
           <el-option :label="$t('alerts.severityInfo')" value="info" />
         </el-select>
 
+        <span class="filter-label">{{ $t('alerts.statusLabel') + ':' }}</span>
         <el-select v-model="statusFilter" :placeholder="$t('alerts.statusLabel')" style="width: 140px">
           <el-option :label="$t('alerts.filterAll')" value="all" />
           <el-option :label="$t('alerts.statusOpen')" value="open" />
@@ -51,6 +53,7 @@
           <el-option :label="$t('alerts.statusClosed')" value="closed" />
         </el-select>
 
+        <span class="filter-label">{{ $t('hosts.monitor') + ':' }}</span>
         <el-select v-model="hostFilter" :placeholder="$t('hosts.monitor')" clearable filterable style="width: 180px">
           <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
         </el-select>
