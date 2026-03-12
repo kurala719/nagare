@@ -34,6 +34,9 @@ type ChatRes struct {
 	Content    string `json:"content" binding:"required"`
 }
 
+const recentChatHistoryLimit = 10
+const maxToolChatCalls = 3
+
 // GetAllChatsServ retrieves chat history (limited to 10 items)
 func GetAllChatsServ() ([]model.Chat, error) {
 	return repository.GetAllChatsDAO()
@@ -75,20 +78,12 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, err
 	}
 
-	userMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "user",
-		Content:    req.Content,
-	}
-	if err := repository.AddChatDAO(&userMsg); err != nil {
+	if _, err := storeChatMessage(req.ProviderID, llmModel, "user", req.Content, nil); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
 	}
 
 	ctx := context.Background()
 	start := time.Now()
-	responseText := ""
 
 	// Prepare system prompt: Persona + Base Context
 	systemPrompt := baseChatPrompt(isChinese(req.Locale))
@@ -96,18 +91,11 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		systemPrompt = personaPrompt + "\n\n" + systemPrompt
 	}
 
-	// Add RAG context
-	kbContext := RetrieveContext(req.Content)
-	userContent := req.Content
-	if kbContext != "" {
-		userContent = fmt.Sprintf("%s\n\n[USER QUERY]: %s", kbContext, req.Content)
-	}
-
 	resp, err := client.Chat(ctx, llm.ChatRequest{
 		Model:        llmModel,
 		SystemPrompt: systemPrompt,
 		Messages: []llm.Message{
-			{Role: "user", Content: userContent},
+			{Role: "user", Content: buildChatUserContent(req.Content)},
 		},
 	})
 	logLLMRequest("chat", req.ProviderID, llmModel, time.Since(start), err)
@@ -115,21 +103,14 @@ func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
 		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
 		return ChatRes{}, fmt.Errorf("failed to generate content: %w", err)
 	}
-	responseText = resp.Content
 
-	assistantMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "assistant",
-		Content:    responseText,
-	}
-	if err := repository.AddChatDAO(&assistantMsg); err != nil {
+	assistantMsg, err := storeChatMessage(req.ProviderID, llmModel, "assistant", resp.Content, nil)
+	if err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
 	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
-	return ChatRes{ID: assistantMsg.ID, Content: responseText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
+	return ChatRes{ID: assistantMsg.ID, Content: resp.Content, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
@@ -139,33 +120,11 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		return ChatRes{}, err
 	}
 
-	userMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "user",
-		Content:    req.Content,
-	}
-	if err := repository.AddChatDAO(&userMsg); err != nil {
+	if _, err := storeChatMessage(req.ProviderID, llmModel, "user", req.Content, nil); err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
 	}
 
-	// Load recent history for context
-	history, _ := repository.GetChatsWithLimitDAO(10, 0)
-	messages := make([]llm.Message, 0, len(history))
-	// history is desc, so we reverse it
-	for i := len(history) - 1; i >= 0; i-- {
-		messages = append(messages, llm.Message{
-			Role:    history[i].Role,
-			Content: history[i].Content,
-		})
-	}
-
-	// Add RAG context to the last message if possible
-	kbContext := RetrieveContext(req.Content)
-	if kbContext != "" && len(messages) > 0 {
-		messages[len(messages)-1].Content = fmt.Sprintf("%s\n\n[USER QUERY]: %s", kbContext, messages[len(messages)-1].Content)
-	}
+	messages := loadToolChatMessages(req.Content)
 
 	tools := ListTools()
 	ctx := context.Background()
@@ -177,8 +136,8 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 	initialSystemPrompt = initialSystemPrompt + "\n\n" + baseContext
 
 	var finalText string
-	maxToolCalls := 3
-	for i := 0; i < maxToolCalls; i++ {
+	needsFinalAnswer := false
+	for i := 0; i < maxToolChatCalls; i++ {
 		systemPrompt := initialSystemPrompt
 		if i > 0 {
 			systemPrompt = toolAnswerPrompt(personaPrompt) + "\n\n" + baseContext
@@ -201,8 +160,10 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		finalText = resp.Content
 		toolCall, ok := parseToolCall(resp.Content)
 		if !ok {
+			needsFinalAnswer = false
 			break // Not a tool call, we are done
 		}
+		needsFinalAnswer = true
 
 		// Perform tool call
 		toolResult, err := CallTool(toolCall.Name, toolCall.Arguments)
@@ -217,19 +178,76 @@ func sendChatWithTools(req ChatReq, personaPrompt string) (ChatRes, error) {
 		messages = append(messages, llm.Message{Role: "user", Content: toolResultText})
 	}
 
-	assistantMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "assistant",
-		Content:    finalText,
+	if needsFinalAnswer {
+		resp, err := client.Chat(ctx, llm.ChatRequest{
+			Model:        llmModel,
+			SystemPrompt: toolAnswerPrompt(personaPrompt) + "\n\n" + baseContext,
+			Messages:     messages,
+		})
+		logLLMRequest("tool_chat", req.ProviderID, llmModel, time.Since(start), err)
+		if err != nil {
+			_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
+			return ChatRes{}, fmt.Errorf("failed to summarize tool results: %w", err)
+		}
+		finalText = resp.Content
 	}
-	if err := repository.AddChatDAO(&assistantMsg); err != nil {
+
+	if strings.TrimSpace(finalText) == "" {
+		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
+		return ChatRes{}, errors.New("empty response from LLM")
+	}
+
+	assistantMsg, err := storeChatMessage(req.ProviderID, llmModel, "assistant", finalText, nil)
+	if err != nil {
 		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
 	}
 
 	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
 	return ChatRes{ID: assistantMsg.ID, Content: finalText, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
+}
+
+func buildChatUserContent(content string) string {
+	kbContext := RetrieveContext(content)
+	if kbContext == "" {
+		return content
+	}
+	return fmt.Sprintf("%s\n\n[USER QUERY]: %s", kbContext, content)
+}
+
+func loadToolChatMessages(content string) []llm.Message {
+	history, err := repository.GetChatsWithLimitDAO(recentChatHistoryLimit, 0)
+	if err != nil || len(history) == 0 {
+		return []llm.Message{{Role: "user", Content: buildChatUserContent(content)}}
+	}
+
+	messages := make([]llm.Message, 0, len(history))
+	for i := len(history) - 1; i >= 0; i-- {
+		messages = append(messages, llm.Message{
+			Role:    history[i].Role,
+			Content: history[i].Content,
+		})
+	}
+	messages[len(messages)-1].Content = buildChatUserContent(content)
+	return messages
+}
+
+func storeChatMessage(providerID uint, llmModel string, role string, content string, userID *uint) (model.Chat, error) {
+	resolvedUserID := uint(1)
+	if userID != nil {
+		resolvedUserID = *userID
+	}
+
+	message := model.Chat{
+		UserID:     resolvedUserID,
+		ProviderID: providerID,
+		LLMModel:   llmModel,
+		Role:       role,
+		Content:    content,
+	}
+	if err := repository.AddChatDAO(&message); err != nil {
+		return model.Chat{}, err
+	}
+	return message, nil
 }
 
 type toolCall struct {
