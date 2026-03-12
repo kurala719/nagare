@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"encoding/json"
@@ -180,6 +180,11 @@ func ListTools() []ToolDefinition {
 			InputSchema: schemaObject(map[string]interface{}{
 				"q": schemaString("Search keywords or topics."),
 			}),
+		},
+		{
+			Name:        "get_health_score",
+			Description: "Get the overall system health score and statistics for monitors, groups, hosts, and items.",
+			InputSchema: schemaObject(map[string]interface{}{}),
 		},
 	}
 }
@@ -443,6 +448,8 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 			return GetAllKnowledgeBaseServ()
 		}
 		return SearchKnowledgeBaseServ(args.Query)
+	case "get_health_score":
+		return GetHealthScoreServ()
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}

@@ -55,11 +55,8 @@ func SearchChatsServ(filter model.ChatFilter) ([]model.Chat, error) {
 	return repository.SearchChatsDAO(filter)
 }
 
-// SendChatServ sends a normal chat message (no special context)
+// SendChatServ sends a chat message, optionally using tools for diagnostics.
 func SendChatServ(req ChatReq) (ChatRes, error) {
-	if isNetworkStatusQuery(req.Content) {
-		return analyzeNetworkStatus(req)
-	}
 	personaPrompt := resolveChatPersonaPrompt(req.Mode, req.Locale)
 	useTools := req.Privileges >= 2
 	if req.UseTools != nil {
@@ -69,84 +66,6 @@ func SendChatServ(req ChatReq) (ChatRes, error) {
 		return sendChatWithTools(req, personaPrompt)
 	}
 	return sendChatPlain(req, personaPrompt)
-}
-
-func analyzeNetworkStatus(req ChatReq) (ChatRes, error) {
-	client, llmModel, err := createLLMClient(req.ProviderID, req.Model)
-	if err != nil {
-		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-		return ChatRes{}, err
-	}
-
-	userMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "user",
-		Content:    req.Content,
-	}
-	if err := repository.AddChatDAO(&userMsg); err != nil {
-		return ChatRes{}, fmt.Errorf("failed to store user message: %w", err)
-	}
-
-	status := 0
-	limit := 50
-	alertFilter := model.AlertFilter{Status: &status, Limit: limit}
-	alerts, err := SearchAlertsServ(alertFilter)
-	if err != nil {
-		alerts = nil
-	}
-
-	metrics, err := GetNetworkMetricsServ("", 50)
-	if err != nil {
-		metrics = nil
-	}
-
-	health, err := GetHealthScoreServ()
-	if err != nil {
-		health = HealthScore{}
-	}
-
-	contextData := buildNetworkStatusContext(alerts, metrics, health)
-
-	ctx, cancel := aiAnalysisContext()
-	defer cancel()
-
-	// Build system prompt with persona (roast mode) if specified
-	isCn := isChinese(req.Locale)
-	systemPrompt := networkStatusPrompt(isCn)
-	personaPrompt := resolveChatPersonaPrompt(req.Mode, req.Locale)
-	if personaPrompt != "" {
-		systemPrompt = personaPrompt + "\n\n" + systemPrompt
-	}
-
-	start := time.Now()
-	resp, err := client.Chat(ctx, llm.ChatRequest{
-		Model:        llmModel,
-		SystemPrompt: systemPrompt,
-		Messages: []llm.Message{
-			{Role: "user", Content: contextData},
-		},
-	})
-	logLLMRequest("network_status", req.ProviderID, llmModel, time.Since(start), err)
-	if err != nil {
-		_ = repository.UpdateProviderStatusDAO(req.ProviderID, 2)
-		return ChatRes{}, fmt.Errorf("failed to analyze network status: %w", err)
-	}
-
-	assistantMsg := model.Chat{
-		UserID:     1,
-		ProviderID: req.ProviderID,
-		LLMModel:   llmModel,
-		Role:       "assistant",
-		Content:    resp.Content,
-	}
-	if err := repository.AddChatDAO(&assistantMsg); err != nil {
-		return ChatRes{}, fmt.Errorf("failed to store AI response: %w", err)
-	}
-
-	_ = repository.UpdateProviderStatusDAO(req.ProviderID, 1)
-	return ChatRes{ID: assistantMsg.ID, Content: resp.Content, ProviderID: req.ProviderID, Role: "assistant", Model: llmModel}, nil
 }
 
 func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
@@ -882,104 +801,6 @@ func monitoringAnalysisPrompt(chinese bool) string {
 		"- Immediate actions (if any), then short-term improvements.\n\n" +
 		"Assumptions:\n" +
 		"- List any assumptions or unknowns."
-}
-
-func networkStatusPrompt(chinese bool) string {
-	if chinese {
-		return "你是一位专业的网络运维分析师，专注于华为网络设备。\n" +
-			"使用提供的告警、健康评分和指标数据来评估当前网络状态。\n\n" +
-			systemContextPrompt() + "\n\n" +
-			"规则：\n" +
-			"- 仅使用提供的数据；不要编造告警或指标。\n" +
-			"- 如果没有告警，明确说明并依赖指标/健康评分。\n\n" +
-			"输出格式（使用标题）：\n" +
-			"网络状态摘要：\n" +
-			"- 1-3句概述。\n\n" +
-			"活跃告警：\n" +
-			"- 数量和主要项目（如有）。\n\n" +
-			"关键指标：\n" +
-			"- 突出显示值得注意的指标。\n\n" +
-			"建议：\n" +
-			"- 立即采取的步骤（例如通过 SSH 执行 VRP 命令）和后续行动。\n\n" +
-			"置信度：\n" +
-			"- 注明任何缺失数据或限制。"
-	}
-	return "You are an expert network operations analyst specializing in Huawei infrastructure.\n" +
-		"Use the provided alerts, health score, and metrics to assess current network status.\n\n" +
-		systemContextPrompt() + "\n\n" +
-		"Rules:\n" +
-		"- Use only the provided data; do not invent alerts or metrics.\n" +
-		"- If no alerts are present, explicitly say so and rely on metrics/health score.\n\n" +
-		"Output format (use headings):\n" +
-		"Network Status Summary:\n" +
-		"- 1-3 sentence overview.\n\n" +
-		"Active Alerts:\n" +
-		"- Count and top items (if any).\n\n" +
-		"Key Metrics:\n" +
-		"- Highlight notable metrics.\n\n" +
-		"Recommendations:\n" +
-		"- Immediate steps (e.g. VRP CLI commands via SSH) and follow-ups.\n\n" +
-		"Confidence:\n" +
-		"- Note any missing data or limits."
-}
-
-func buildNetworkStatusContext(alerts []AlertRes, metrics []MetricSnapshot, health HealthScore) string {
-	var builder strings.Builder
-	builder.WriteString("Health Score: ")
-	builder.WriteString(fmt.Sprintf("%d (monitors %d/%d, hosts %d/%d, items %d/%d)\n\n",
-		health.Score,
-		health.MonitorActive, health.MonitorTotal,
-		health.HostActive, health.HostTotal,
-		health.ItemActive, health.ItemTotal,
-	))
-
-	builder.WriteString("Active Alerts:\n")
-	if len(alerts) == 0 {
-		builder.WriteString("- None\n")
-	} else {
-		max := len(alerts)
-		if max > 10 {
-			max = 10
-		}
-		for i := 0; i < max; i++ {
-			alert := alerts[i]
-			builder.WriteString(fmt.Sprintf("- #%d severity=%d item_id=%d message=%s\n",
-				alert.ID,
-				alert.Severity,
-				alert.ItemID,
-				sanitizeSensitiveText(alert.Message),
-			))
-		}
-		if len(alerts) > max {
-			builder.WriteString(fmt.Sprintf("- ...and %d more\n", len(alerts)-max))
-		}
-	}
-
-	builder.WriteString("\nNetwork Metrics:\n")
-	if len(metrics) == 0 {
-		builder.WriteString("- None\n")
-	} else {
-		max := len(metrics)
-		if max > 20 {
-			max = 20
-		}
-		for i := 0; i < max; i++ {
-			metric := metrics[i]
-			builder.WriteString(fmt.Sprintf("- host=%s item=%s value=%s %s status=%d updated=%s\n",
-				fmt.Sprintf("%d", metric.HostID),
-				fmt.Sprintf("%d", metric.ItemID),
-				sanitizeSensitiveText(metric.Value),
-				sanitizeSensitiveText(metric.Units),
-				metric.Status,
-				metric.UpdatedAt.Format(time.RFC3339),
-			))
-		}
-		if len(metrics) > max {
-			builder.WriteString(fmt.Sprintf("- ...and %d more\n", len(metrics)-max))
-		}
-	}
-
-	return builder.String()
 }
 
 func isNetworkStatusQuery(content string) bool {
