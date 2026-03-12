@@ -6,6 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func setupUsersDomainRoutes(rg *gin.RouterGroup) {
+	setupUserRoutes(rg)
+	setupUserInformationRoutes(rg)
+	setupPublicRoutes(rg)
+}
+
 func setupUserRoutes(rg *gin.RouterGroup) {
 	// Public auth routes - no authentication required
 	auth := rg.Group("/auth")
@@ -60,7 +66,7 @@ func setupUserInformationRoutes(rg *gin.RouterGroup) {
 	{
 		authenticated.GET("/me", api.GetMyProfileCtrl)
 		authenticated.PUT("/me", api.UpdateMyProfileCtrl)
-		authenticated.POST("/me", api.UpdateMyProfileCtrl) // Map POST to update for compatibility
+		authenticated.POST("/me", api.UpdateMyProfileCtrl)
 		authenticated.POST("/me/avatar", api.UploadAvatarCtrl)
 	}
 
@@ -70,4 +76,9 @@ func setupUserInformationRoutes(rg *gin.RouterGroup) {
 		admin.GET("/users/:id", api.GetUserByIDCtrl)
 		admin.PUT("/users/:id", api.UpdateUserCtrl)
 	}
+}
+
+func setupPublicRoutes(rg *gin.RouterGroup) {
+	public := rg.Group("/public")
+	public.GET("/status", api.GetPublicStatusSummaryCtrl)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetReportConfigCtrl handles GET /reports/config
+// GetReportConfigCtrl handles GET /analysis/report-config
 func GetReportConfigCtrl(c *gin.Context) {
 	config, err := service.GetReportConfigServ()
 	if err != nil {
@@ -18,7 +18,7 @@ func GetReportConfigCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, config)
 }
 
-// UpdateReportConfigCtrl handles PUT /reports/config
+// UpdateReportConfigCtrl handles PUT /analysis/report-config
 func UpdateReportConfigCtrl(c *gin.Context) {
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {

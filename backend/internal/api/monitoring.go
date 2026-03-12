@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetNetworkMetricsCtrl handles GET /system/metrics
@@ -21,7 +22,7 @@ func GetNetworkMetricsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, metrics)
 }
 
-// GetNetworkStatusHistoryCtrl handles GET /system/health/history
+// GetNetworkStatusHistoryCtrl handles GET /analysis/history/system/health
 func GetNetworkStatusHistoryCtrl(c *gin.Context) {
 	from, err := parseOptionalUnixTime(c, "from")
 	if err != nil {

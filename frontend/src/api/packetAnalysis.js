@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchPacketAnalyses(params) {
   return request({
-    url: '/analysis/packets',
+    url: '/ai/packet-analysis',
     method: 'get',
     params
   })
@@ -10,7 +10,7 @@ export function fetchPacketAnalyses(params) {
 
 export function uploadPacket(formData) {
   return request({
-    url: '/analysis/packets/upload',
+    url: '/ai/packet-analysis/upload',
     method: 'post',
     data: formData,
     headers: {
@@ -21,14 +21,14 @@ export function uploadPacket(formData) {
 
 export function deletePacketAnalysis(id) {
   return request({
-    url: `/analysis/packets/${id}`,
+    url: `/ai/packet-analysis/${id}`,
     method: 'delete'
   })
 }
 
 export function startPacketAnalysis(id) {
   return request({
-    url: `/analysis/packets/${id}/analyze`,
+    url: `/ai/packet-analysis/${id}/analyze`,
     method: 'post'
   })
 }

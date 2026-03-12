@@ -51,7 +51,7 @@ export function deleteItem(id, push = false) {
 
 export function consultItemAI(id, params) {
   return request({
-    url: `/monitoring/items/${id}/consult`,
+    url: `/ai/consult/items/${id}`,
     method: 'post',
     params
   })
@@ -59,7 +59,7 @@ export function consultItemAI(id, params) {
 
 export function fetchItemHistory(id, params) {
   return request({
-    url: `/monitoring/items/${id}/history`,
+    url: `/analysis/history/items/${id}`,
     method: 'get',
     params
   })

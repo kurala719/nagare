@@ -6,6 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func setupMonitoringDomainRoutes(rg *gin.RouterGroup) {
+	setupMonitorRoutes(rg)
+	setupGroupRoutes(rg)
+	setupHostRoutes(rg)
+	setupItemRoutes(rg)
+}
+
 func setupMonitorRoutes(rg *gin.RouterGroup) {
 	monitors := rg.Group("/monitors")
 	{
@@ -15,7 +22,6 @@ func setupMonitorRoutes(rg *gin.RouterGroup) {
 		// Privilege level 1
 		monitors.GET("", api.PrivilegesMiddleware(1), api.SearchMonitorsCtrl)
 		monitors.GET("/:id", api.PrivilegesMiddleware(1), api.GetMonitorByIDCtrl)
-		monitors.GET("/:id/history", api.PrivilegesMiddleware(1), api.GetMonitorHistoryCtrl)
 
 		// Privilege level 2
 		monitors.POST("", api.PrivilegesMiddleware(2), api.AddMonitorCtrl)
@@ -34,23 +40,22 @@ func setupMonitorRoutes(rg *gin.RouterGroup) {
 	}
 }
 
-func setupAlarmRoutes(rg *gin.RouterGroup) {
-	alarms := rg.Group("/alarms")
+func setupGroupRoutes(rg *gin.RouterGroup) {
+	groups := rg.Group("/groups")
 	{
-		// Public event token refresh - no auth required, uses event token
-		alarms.POST("/:id/event-token/refresh", api.RefreshAlarmEventTokenCtrl)
+		// Routes with privilege level 1
+		groupsRead := groups.Group("", api.PrivilegesMiddleware(1))
+		groupsRead.GET("", api.SearchGroupsCtrl)
+		groupsRead.GET("/:id", api.GetGroupByIDCtrl)
+		groupsRead.GET("/:id/detail", api.GetGroupDetailCtrl)
 
-		// Privilege level 1
-		alarms.GET("", api.PrivilegesMiddleware(1), api.SearchAlarmsCtrl)
-		alarms.GET("/:id", api.PrivilegesMiddleware(1), api.GetAlarmByIDCtrl)
-
-		// Privilege level 2
-		alarms.POST("", api.PrivilegesMiddleware(2), api.AddAlarmCtrl)
-		alarms.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteAlarmByIDCtrl)
-		alarms.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateAlarmCtrl)
-		alarms.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
-		alarms.POST(":id/setup-media", api.PrivilegesMiddleware(2), api.SetupAlarmMediaCtrl)
-		alarms.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
+		// Routes with privilege level 2
+		groupsWrite := groups.Group("", api.PrivilegesMiddleware(2))
+		groupsWrite.POST("", api.AddGroupCtrl)
+		groupsWrite.PUT("/:id", api.UpdateGroupCtrl)
+		groupsWrite.DELETE("/:id", api.DeleteGroupByIDCtrl)
+		groupsWrite.POST("/check", api.CheckAllGroupsStatusCtrl)
+		groupsWrite.POST("/:id/check", api.CheckGroupStatusCtrl)
 	}
 }
 
@@ -60,19 +65,12 @@ func setupHostRoutes(rg *gin.RouterGroup) {
 		// Privilege level 1
 		hosts.GET("", api.PrivilegesMiddleware(1), api.SearchHostsCtrl)
 		hosts.GET("/:id", api.PrivilegesMiddleware(1), api.GetHostByIDCtrl)
-		hosts.GET("/:id/history", api.PrivilegesMiddleware(1), api.GetHostHistoryCtrl)
-		hosts.POST("/:id/consult", api.PrivilegesMiddleware(1), api.ConsultHostCtrl)
-		hosts.GET("/:id/ssh", api.PrivilegesMiddleware(1), api.HandleWebSSH)
 
 		// Privilege level 2
 		hosts.POST("", api.PrivilegesMiddleware(2), api.AddHostCtrl)
 		hosts.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateHostCtrl)
 		hosts.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteHostByIDCtrl)
 	}
-
-	// Generic terminal route
-	terminal := rg.Group("/terminal", api.PrivilegesMiddleware(1))
-	terminal.GET("/ssh", api.HandleWebSSH)
 }
 
 func setupItemRoutes(rg *gin.RouterGroup) {
@@ -80,8 +78,6 @@ func setupItemRoutes(rg *gin.RouterGroup) {
 	itemsRead := rg.Group("/items", api.PrivilegesMiddleware(1))
 	itemsRead.GET("", api.SearchItemsCtrl)
 	itemsRead.GET("/:id", api.GetItemByIDCtrl)
-	itemsRead.GET("/:id/history", api.GetItemHistoryCtrl)
-	itemsRead.POST("/:id/consult", api.ConsultItemCtrl)
 
 	// Routes with privilege level 2
 	itemsWrite := rg.Group("/items", api.PrivilegesMiddleware(2))

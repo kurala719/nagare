@@ -44,7 +44,7 @@ export function getHostById(id) {
 
 export function consultHostAI(id, params) {
   return request({
-    url: `/monitoring/hosts/${id}/consult`,
+    url: `/ai/consult/hosts/${id}`,
     method: 'post',
     params
   })
@@ -52,7 +52,7 @@ export function consultHostAI(id, params) {
 
 export function fetchHostHistory(id, params) {
   return request({
-    url: `/monitoring/hosts/${id}/history`,
+    url: `/analysis/history/hosts/${id}`,
     method: 'get',
     params
   })

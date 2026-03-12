@@ -104,55 +104,12 @@ func InitRouter() error {
 }
 
 func setupAllRoutes(rg *gin.RouterGroup) {
-	// --- 1. ALERT GROUP ---
-	alertGroup := rg.Group("/alert")
-	setupAlarmRoutes(alertGroup)
-	setupAlertRoutes(alertGroup)
-	setupTriggerRoutes(alertGroup)
-
-	// --- 2. MONITORING GROUP ---
-	monitoringGroup := rg.Group("/monitoring")
-	setupMonitorRoutes(monitoringGroup)
-	setupGroupRoutes(monitoringGroup)
-	setupHostRoutes(monitoringGroup)
-	setupItemRoutes(monitoringGroup)
-
-	// --- 3. MAINTENANCE GROUP ---
-	maintenanceGroup := rg.Group("/maintenance")
-	maintenanceGroup.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
-	setupIMRoutes(maintenanceGroup)
-
-	// --- 4. SYSTEM GROUP ---
-	systemGroup := rg.Group("/system")
-	setupLogRoutes(systemGroup)
-	setupAuditLogRoutes(systemGroup)
-	setupRetentionRoutes(systemGroup)
-	setupConfigurationRoutes(systemGroup)
-	setupSystemRoutes(systemGroup)
-	setupMcpRoutes(systemGroup)
-
-	// --- 5. DELIVERY GROUP ---
-	deliveryGroup := rg.Group("/delivery")
-	setupActionRoutes(deliveryGroup)
-	setupMediaRoutes(deliveryGroup)
-	setupSiteMessageRoutes(deliveryGroup)
-
-	// --- 6. ANALYSIS GROUP ---
-	analysisGroup := rg.Group("/analysis")
-	setupAnalyticsRoutes(analysisGroup)
-	setupReportRoutes(analysisGroup)
-	setupPacketAnalysisRoutes(analysisGroup)
-	setupChaosRoutes(analysisGroup)
-
-	// --- 7. USERS GROUP ---
-	usersGroup := rg.Group("/users")
-	setupUserRoutes(usersGroup)
-	setupUserInformationRoutes(usersGroup)
-	setupPublicRoutes(usersGroup)
-
-	// --- 8. AI SERVICE GROUP ---
-	aiServiceGroup := rg.Group("/ai")
-	setupProviderRoutes(aiServiceGroup)
-	setupKnowledgeBaseRoutes(aiServiceGroup)
-	setupChatRoutes(aiServiceGroup)
+	setupAlertDomainRoutes(rg.Group("/alert"))
+	setupMonitoringDomainRoutes(rg.Group("/monitoring"))
+	setupMaintenanceDomainRoutes(rg.Group("/maintenance"))
+	setupSystemDomainRoutes(rg.Group("/system"))
+	setupDeliveryDomainRoutes(rg.Group("/delivery"))
+	setupAnalysisDomainRoutes(rg.Group("/analysis"))
+	setupUsersDomainRoutes(rg.Group("/users"))
+	setupAIDomainRoutes(rg.Group("/ai"))
 }

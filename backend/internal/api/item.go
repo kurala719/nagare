@@ -46,13 +46,13 @@ func SearchItemsCtrl(c *gin.Context) {
 		SearchField: c.Query("search_field"),
 		HID:         hid,
 		ValueType:   parseOptionalString(c, "value_type"),
-		Status:    status,
-		HostID:    parseOptionalString(c, "hostid"),
-		ItemID:    parseOptionalString(c, "itemid"),
-		Limit:     limit,
-		Offset:    offset,
-		SortBy:    c.Query("sort"),
-		SortOrder: c.Query("order"),
+		Status:      status,
+		HostID:      parseOptionalString(c, "hostid"),
+		ItemID:      parseOptionalString(c, "itemid"),
+		Limit:       limit,
+		Offset:      offset,
+		SortBy:      c.Query("sort"),
+		SortOrder:   c.Query("order"),
 	}
 	items, err := service.SearchItemsServ(filter)
 	if err != nil {
@@ -87,7 +87,7 @@ func GetItemByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, item)
 }
 
-// GetItemHistoryCtrl handles GET /items/:id/history
+// GetItemHistoryCtrl handles GET /analysis/history/items/:id
 func GetItemHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

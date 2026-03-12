@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function fetchKnowledgeBase(params) {
   return request({
-    url: '/ai/knowledge-base',
+    url: '/ai/knowledge-base/entries',
     method: 'get',
     params
   })
@@ -10,14 +10,14 @@ export function fetchKnowledgeBase(params) {
 
 export function getKnowledgeBaseById(id) {
   return request({
-    url: `/ai/knowledge-base/${id}`,
+    url: `/ai/knowledge-base/entries/${id}`,
     method: 'get'
   })
 }
 
 export function addKnowledgeBase(data) {
   return request({
-    url: '/ai/knowledge-base',
+    url: '/ai/knowledge-base/entries',
     method: 'post',
     data
   })
@@ -25,7 +25,7 @@ export function addKnowledgeBase(data) {
 
 export function updateKnowledgeBase(id, data) {
   return request({
-    url: `/ai/knowledge-base/${id}`,
+    url: `/ai/knowledge-base/entries/${id}`,
     method: 'put',
     data
   })
@@ -33,7 +33,7 @@ export function updateKnowledgeBase(id, data) {
 
 export function deleteKnowledgeBase(id) {
   return request({
-    url: `/ai/knowledge-base/${id}`,
+    url: `/ai/knowledge-base/entries/${id}`,
     method: 'delete'
   })
 }

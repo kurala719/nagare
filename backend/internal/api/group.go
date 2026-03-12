@@ -89,7 +89,7 @@ func GetGroupByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, group)
 }
 
-// GetGroupHistoryCtrl handles GET /groups/:id/history
+// GetGroupHistoryCtrl handles GET /analysis/history/groups/:id
 func GetGroupHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

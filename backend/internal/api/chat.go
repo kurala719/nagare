@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SendChatCtrl handles POST /chats
@@ -76,7 +77,7 @@ func SearchChatsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chats)
 }
 
-// ConsultAlertCtrl handles POST /chat/alert/:id
+// ConsultAlertCtrl handles POST /ai/consult/alerts/:id
 func ConsultAlertCtrl(c *gin.Context) {
 	alertID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -95,7 +96,7 @@ func ConsultAlertCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chatRes)
 }
 
-// ConsultItemCtrl handles POST /chat/item/:id
+// ConsultItemCtrl handles POST /ai/consult/items/:id
 func ConsultItemCtrl(c *gin.Context) {
 	itemID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -114,7 +115,7 @@ func ConsultItemCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chatRes)
 }
 
-// ConsultHostCtrl handles POST /chat/host/:id
+// ConsultHostCtrl handles POST /ai/consult/hosts/:id
 func ConsultHostCtrl(c *gin.Context) {
 	hostID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

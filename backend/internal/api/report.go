@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ListReportsCtrl handles GET /reports
+// ListReportsCtrl handles GET /analysis/reports
 func ListReportsCtrl(c *gin.Context) {
 	reportType := parseOptionalString(c, "type")
 
@@ -47,7 +47,7 @@ func ListReportsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, reports)
 }
 
-// GetReportCtrl handles GET /reports/:id
+// GetReportCtrl handles GET /analysis/reports/:id
 func GetReportCtrl(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -64,7 +64,7 @@ func GetReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, report)
 }
 
-// GetReportContentCtrl handles GET /reports/:id/content
+// GetReportContentCtrl handles GET /analysis/reports/:id/content
 func GetReportContentCtrl(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -81,7 +81,7 @@ func GetReportContentCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, content)
 }
 
-// GenerateDailyReportCtrl handles POST /reports/generate/daily
+// GenerateDailyReportCtrl handles POST /analysis/report-generation/daily
 func GenerateDailyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateDailyReportServ()
 	if err != nil {
@@ -100,7 +100,7 @@ func GenerateDailyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateWeeklyReportCtrl handles POST /reports/generate/weekly
+// GenerateWeeklyReportCtrl handles POST /analysis/report-generation/weekly
 func GenerateWeeklyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateWeeklyReportServ()
 	if err != nil {
@@ -119,7 +119,7 @@ func GenerateWeeklyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateMonthlyReportCtrl handles POST /reports/generate/monthly
+// GenerateMonthlyReportCtrl handles POST /analysis/report-generation/monthly
 func GenerateMonthlyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateMonthlyReportServ()
 	if err != nil {
@@ -138,7 +138,7 @@ func GenerateMonthlyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateCustomReportCtrl handles POST /reports/generate/custom
+// GenerateCustomReportCtrl handles POST /analysis/report-generation/custom
 func GenerateCustomReportCtrl(c *gin.Context) {
 	var req struct {
 		Title     string `json:"title"`
@@ -180,7 +180,7 @@ func GenerateCustomReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// DeleteReportCtrl handles DELETE /reports/:id
+// DeleteReportCtrl handles DELETE /analysis/reports/:id
 func DeleteReportCtrl(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -196,7 +196,7 @@ func DeleteReportCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "report deleted")
 }
 
-// DownloadReportCtrl handles GET /reports/:id/download
+// DownloadReportCtrl handles GET /analysis/report-download/:id
 func DownloadReportCtrl(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

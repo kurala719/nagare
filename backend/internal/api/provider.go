@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAllProvidersCtrl handles GET /providers
@@ -19,7 +20,7 @@ func GetAllProvidersCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, providers)
 }
 
-// SearchProvidersCtrl handles GET /provider/search
+// SearchProvidersCtrl handles GET /ai/providers
 func SearchProvidersCtrl(c *gin.Context) {
 	status, err := parseOptionalInt(c, "status")
 	if err != nil {
@@ -66,7 +67,7 @@ func SearchProvidersCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, providers)
 }
 
-// GetProviderByIDCtrl handles GET /providers/:id
+// GetProviderByIDCtrl handles GET /ai/providers/:id
 func GetProviderByIDCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -82,7 +83,7 @@ func GetProviderByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, provider)
 }
 
-// AddProviderCtrl handles POST /providers
+// AddProviderCtrl handles POST /ai/providers
 func AddProviderCtrl(c *gin.Context) {
 	var req service.ProviderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -97,7 +98,7 @@ func AddProviderCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusCreated, "provider created")
 }
 
-// DeleteProviderByIDCtrl handles DELETE /providers/:id
+// DeleteProviderByIDCtrl handles DELETE /ai/providers/:id
 func DeleteProviderByIDCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -112,7 +113,7 @@ func DeleteProviderByIDCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "provider deleted")
 }
 
-// UpdateProviderCtrl handles PUT /providers/:id
+// UpdateProviderCtrl handles PUT /ai/providers/:id
 func UpdateProviderCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -133,7 +134,7 @@ func UpdateProviderCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "provider updated")
 }
 
-// CheckProviderStatusCtrl handles POST /providers/:id/check
+// CheckProviderStatusCtrl handles POST /ai/provider-checks/:id
 func CheckProviderStatusCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -149,13 +150,13 @@ func CheckProviderStatusCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// CheckAllProvidersStatusCtrl handles POST /providers/check
+// CheckAllProvidersStatusCtrl handles POST /ai/provider-checks
 func CheckAllProvidersStatusCtrl(c *gin.Context) {
 	results := service.CheckAllProvidersStatusServ()
 	respondSuccess(c, http.StatusOK, results)
 }
 
-// FetchProviderModelsCtrl handles POST /providers/:id/fetch-models
+// FetchProviderModelsCtrl handles POST /ai/provider-models/:id
 func FetchProviderModelsCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -171,7 +172,7 @@ func FetchProviderModelsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, models)
 }
 
-// FetchModelsDirectCtrl handles POST /providers/fetch-models-direct
+// FetchModelsDirectCtrl handles POST /ai/provider-models/direct
 func FetchModelsDirectCtrl(c *gin.Context) {
 	var req service.ProviderReq
 	if err := c.ShouldBindJSON(&req); err != nil {

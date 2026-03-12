@@ -44,7 +44,7 @@ export function deleteAlert(id) {
 
 export function consultAlertAI(id, params) {
   return request({
-    url: `/alert/alerts/${id}/consult`,
+    url: `/ai/consult/alerts/${id}`,
     method: 'post',
     params
   })

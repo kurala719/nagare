@@ -91,7 +91,7 @@ func GetHostByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, host)
 }
 
-// GetHostHistoryCtrl handles GET /hosts/:id/history
+// GetHostHistoryCtrl handles GET /analysis/history/hosts/:id
 func GetHostHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

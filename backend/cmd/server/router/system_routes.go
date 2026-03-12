@@ -2,14 +2,20 @@ package router
 
 import (
 	"nagare/internal/api"
-	"nagare/internal/mcp"
 
 	"github.com/gin-gonic/gin"
 )
 
+func setupSystemDomainRoutes(rg *gin.RouterGroup) {
+	setupLogRoutes(rg)
+	setupAuditLogRoutes(rg)
+	setupRetentionRoutes(rg)
+	setupConfigurationRoutes(rg)
+	setupSystemRoutes(rg)
+}
+
 func setupSystemRoutes(rg *gin.RouterGroup) {
 	rg.GET("/health", api.GetHealthScoreCtrl)
-	rg.GET("/health/history", api.GetNetworkStatusHistoryCtrl)
 	rg.GET("/metrics", api.GetNetworkMetricsCtrl)
 	rg.GET("/status", api.GetSystemStatusCtrl)
 }
@@ -38,19 +44,6 @@ func setupAuditLogRoutes(rg *gin.RouterGroup) {
 	// Routes with privilege level 2 (managers/admins)
 	auditLogs := rg.Group("/audit-logs", api.PrivilegesMiddleware(2))
 	auditLogs.GET("", api.SearchAuditLogsCtrl)
-}
-
-func setupAnalyticsRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	analytics := rg.Group("/analytics", api.PrivilegesMiddleware(1))
-	analytics.GET("/alerts", api.GetAlertAnalyticsCtrl)
-}
-
-func setupMcpRoutes(rg *gin.RouterGroup) {
-	// MCP routes - requires API key middleware
-	mcpGroup := rg.Group("/mcp", mcp.APIKeyMiddleware())
-	mcpGroup.GET("/sse", mcp.SSEHandler)
-	mcpGroup.POST("/message", mcp.MessageHandler)
 }
 
 func setupRetentionRoutes(rg *gin.RouterGroup) {

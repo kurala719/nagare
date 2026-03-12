@@ -79,7 +79,7 @@ func GetMonitorByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, monitor)
 }
 
-// GetMonitorHistoryCtrl handles GET /monitors/:id/history
+// GetMonitorHistoryCtrl handles GET /analysis/history/monitors/:id
 func GetMonitorHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
