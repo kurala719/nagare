@@ -130,7 +130,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Delete, Refresh, Timer, Edit, Check, Close
 } from '@element-plus/icons-vue'
-import api from '@/api'
+import { fetchRetentionPolicies, updateRetentionPolicy, performRetentionCleanup } from '@/api/retention'
 
 const { t } = useI18n()
 const policies = ref([])
@@ -153,7 +153,7 @@ const editForm = reactive({
 const loadPolicies = async () => {
   loading.value = true
   try {
-    const res = await api.retention.fetchRetentionPolicies()
+    const res = await fetchRetentionPolicies()
     if (res && res.success) {
       policies.value = (res.data || []).filter(p => p.data_type)
       
@@ -238,7 +238,7 @@ const cancelEdit = () => {
 const savePolicy = async () => {
   saving.value = true
   try {
-    const res = await api.retention.updateRetentionPolicy(editForm)
+    const res = await updateRetentionPolicy(editForm)
     if (res && res.success) {
       ElMessage.success(res.message || 'Policy updated')
       editingId.value = null
@@ -264,7 +264,7 @@ const handleManualCleanup = async () => {
     )
     
     cleaning.value = true
-    const res = await api.retention.performRetentionCleanup()
+    const res = await performRetentionCleanup()
     if (res && res.success) {
       const counts = res.data || {}
       let message = t('retention.cleanupSuccessMsg') + ' '

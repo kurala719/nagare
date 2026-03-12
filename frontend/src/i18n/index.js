@@ -956,7 +956,10 @@ const messages = {
       deleteFailed: 'Failed to delete action',
       deleteCanceled: 'Delete canceled',
       validationName: 'Please enter action name',
-      unknownMedia: 'Unknown media'
+      unknownMedia: 'Unknown media',
+      test: 'Test',
+      testSuccess: 'Test action requested successfully',
+      testFailed: 'Test action failed'
     },
     triggers: {
       title: 'Triggers',
@@ -2307,7 +2310,10 @@ const messages = {
       deleteFailed: '删除动作失败',
       deleteCanceled: '已取消删除',
       validationName: '请输入动作名称',
-      unknownMedia: '未知媒介'
+      unknownMedia: '未知媒介',
+      test: '测试',
+      testSuccess: '已成功请求测试动作',
+      testFailed: '测试动作失败'
     },
     triggers: {
       title: '触发策略',

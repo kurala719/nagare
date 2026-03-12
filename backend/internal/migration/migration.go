@@ -380,9 +380,10 @@ func migrateLogSeverityLevels() error {
 				// Only migrate if within old 0-2 bounds
 				if oldSev >= 0 && oldSev <= 2 {
 					newSev := 1 // default info
-					if oldSev == 1 {
+					switch oldSev {
+					case 1:
 						newSev = 2 // Warning
-					} else if oldSev == 2 {
+					case 2:
 						newSev = 4 // High/Error
 					}
 					repository.SetConfigValue("site_message.min_log_severity", newSev)

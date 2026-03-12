@@ -358,9 +358,10 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		startTime = *customStart
 	} else {
 		days := 7
-		if reportType == "monthly" {
+		switch reportType {
+		case "monthly":
 			days = 30
-		} else if reportType == "daily" {
+		case "daily":
 			days = 1
 		}
 		startTime = time.Now().AddDate(0, 0, -days)

@@ -14,7 +14,7 @@ import (
 // GetSystemLogsCtrl handles GET /log/system
 func GetSystemLogsCtrl(c *gin.Context) {
 	withTotal, _ := parseOptionalBool(c, "with_total")
-	logs, total, err := searchLogs(c, service.LogTypeSystem)
+	logs, total, err := searchLogs(c)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -29,7 +29,7 @@ func GetSystemLogsCtrl(c *gin.Context) {
 // GetServiceLogsCtrl handles GET /log/service
 func GetServiceLogsCtrl(c *gin.Context) {
 	withTotal, _ := parseOptionalBool(c, "with_total")
-	logs, total, err := searchLogs(c, service.LogTypeService)
+	logs, total, err := searchLogs(c)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -61,7 +61,7 @@ func ClearLogsCtrl(c *gin.Context) {
 	})
 }
 
-func searchLogs(c *gin.Context, logType string) ([]service.LogResp, int64, error) {
+func searchLogs(c *gin.Context) ([]service.LogResp, int64, error) {
 	severityPtr := parseLogSeverityParam(c.Query("severity"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "200"))
 	if limit <= 0 {

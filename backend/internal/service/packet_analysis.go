@@ -189,12 +189,13 @@ func extractPacketSummary(fileName string) string {
 		}
 		// Common Windows paths
 		var paths []string
-		if name == "tshark" {
+		switch name {
+		case "tshark":
 			paths = []string{
 				`C:\Program Files\Wireshark\tshark.exe`,
 				`C:\Program Files (x86)\Wireshark\tshark.exe`,
 			}
-		} else if name == "tcpdump" {
+		case "tcpdump":
 			paths = []string{
 				`C:\Program Files\tcpdump\tcpdump.exe`,
 				`C:\wpcap\tcpdump.exe`,
