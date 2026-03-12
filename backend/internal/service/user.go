@@ -1,7 +1,6 @@
 package service
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"image"
@@ -510,20 +509,6 @@ func SendRegistrationCodeServ(email string) error {
 	}
 
 	return errors.New("email verification is currently disabled")
-}
-
-func generateVerificationCode(length int) string {
-	table := [...]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
-	b := make([]byte, length)
-	n, err := io.ReadAtLeast(rand.Reader, b, length)
-	if n != length || err != nil {
-		// Fallback to simpler method if rand fails
-		return "123456"
-	}
-	for i := 0; i < len(b); i++ {
-		b[i] = table[int(b[i])%len(table)]
-	}
-	return string(b)
 }
 
 func ResetPasswordServ(req ResetPasswordRequest) error {

@@ -37,13 +37,3 @@ func broadcastSyncUpdate(entity string, mid, hid uint) {
 	}
 	BroadcastMessage(msg)
 }
-
-func syncSeverity(result SyncResult) int {
-	if result.Failed > 0 {
-		return 3
-	}
-	if result.Added > 0 || result.Updated > 0 {
-		return 1
-	}
-	return 0
-}

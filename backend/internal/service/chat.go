@@ -803,28 +803,6 @@ func monitoringAnalysisPrompt(chinese bool) string {
 		"- List any assumptions or unknowns."
 }
 
-func isNetworkStatusQuery(content string) bool {
-	lower := strings.ToLower(strings.TrimSpace(content))
-	if lower == "" {
-		return false
-	}
-	// Check English keywords (more specific)
-	keywords := []string{"network status", "overall health", "system status", "current alerts", "network health"}
-	for _, k := range keywords {
-		if strings.Contains(lower, k) {
-			return true
-		}
-	}
-	// Check Chinese keywords
-	cnKeywords := []string{"网络状态", "整体状况", "系统状态", "当前告警", "网络健康"}
-	for _, k := range cnKeywords {
-		if strings.Contains(content, k) {
-			return true
-		}
-	}
-	return false
-}
-
 func errorExplainPrompt(chinese bool) string {
 	if chinese {
 		return "你是一位得力的技术助手。\n" +

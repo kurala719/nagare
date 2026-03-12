@@ -534,37 +534,6 @@ func TestActionServ(id uint) error {
 
 	return lastErr
 }
-
-// parseQQTarget extracts QQ ID and determines if it's a group
-// Target formats supported:
-// - "group:123456" or "group_123456" (group)
-// - "user:123456" or "user_123456" (user)
-// - "123456" (legacy format, defaults to user)
-func parseQQTarget(target string) (string, bool) {
-	target = strings.TrimSpace(target)
-
-	// Try colon format first
-	colonParts := strings.SplitN(target, ":", 2)
-	if len(colonParts) == 2 {
-		prefix := strings.ToLower(colonParts[0])
-		qqID := colonParts[1]
-		isGroup := prefix == "group"
-		return qqID, isGroup
-	}
-
-	// Try underscore format
-	underscoreParts := strings.SplitN(target, "_", 2)
-	if len(underscoreParts) == 2 {
-		prefix := strings.ToLower(underscoreParts[0])
-		qqID := underscoreParts[1]
-		isGroup := prefix == "group"
-		return qqID, isGroup
-	}
-
-	// Fallback: assume it's a user ID
-	return target, false
-}
-
 func resolveMediaTypeKeyForSend(media model.Media) string {
 	return strings.TrimSpace(media.Type)
 }
@@ -574,7 +543,7 @@ func isQQEndpointOnlyTargetForAction(target string) bool {
 	if trimmed == "" {
 		return false
 	}
-	return len(strings.Fields(trimmed)) == 1
+	return !strings.ContainsAny(trimmed, " \t\r\n")
 }
 
 func severityLabel(severity int) string {

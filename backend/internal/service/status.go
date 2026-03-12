@@ -24,22 +24,6 @@ func determineMonitorStatus(m model.Monitor) int {
 	return 0
 }
 
-func determineAlarmStatus(a model.Alarm) int {
-	if a.Enabled == 0 {
-		return 0
-	}
-	if a.StatusDescription != "" {
-		return 2
-	}
-	if a.AuthToken != "" {
-		return 1
-	}
-	if a.Username == "" && a.Password == "" {
-		return 0
-	}
-	return 1
-}
-
 func determineProviderStatus(p model.Provider) int {
 	if p.Enabled == 0 {
 		return 0
@@ -232,18 +216,6 @@ func recomputeMonitorStatus(mid uint) (int, error) {
 	}
 	_ = repository.UpdateMonitorHealthScoreDAO(mid, score)
 
-	return status, nil
-}
-
-func recomputeProviderStatus(pid uint) (int, error) {
-	provider, err := repository.GetProviderByIDDAO(pid)
-	if err != nil {
-		return 0, err
-	}
-	status := determineProviderStatus(provider)
-	if err := repository.UpdateProviderStatusDAO(pid, status); err != nil {
-		return status, err
-	}
 	return status, nil
 }
 

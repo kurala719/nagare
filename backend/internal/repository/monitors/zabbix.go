@@ -2431,23 +2431,3 @@ func toString(value interface{}) string {
 		return fmt.Sprintf("%v", v)
 	}
 }
-
-func toInt(value interface{}, fallback int) int {
-	switch v := value.(type) {
-	case int:
-		return v
-	case int64:
-		return int(v)
-	case float64:
-		return int(v)
-	case json.Number:
-		if parsed, err := strconv.Atoi(v.String()); err == nil {
-			return parsed
-		}
-	case string:
-		if parsed, err := strconv.Atoi(v); err == nil {
-			return parsed
-		}
-	}
-	return fallback
-}
