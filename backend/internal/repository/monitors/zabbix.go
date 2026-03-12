@@ -217,7 +217,7 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 		if len(snippet) > 100 {
 			snippet = snippet[:100] + "..."
 		}
-		return nil, fmt.Errorf("Zabbix API request failed (status %d): %s", resp.StatusCode, snippet)
+		return nil, fmt.Errorf("zabbix API request failed (status %d): %s", resp.StatusCode, snippet)
 	}
 
 	var zabbixResp zabbixResponse
@@ -274,7 +274,7 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 				if len(snippet) > 100 {
 					snippet = snippet[:100] + "..."
 				}
-				return nil, fmt.Errorf("Zabbix API retry request failed (status %d): %s", resp2.StatusCode, snippet)
+				return nil, fmt.Errorf("zabbix API retry request failed (status %d): %s", resp2.StatusCode, snippet)
 			}
 
 			var zabbixResp2 zabbixResponse
@@ -287,13 +287,13 @@ func (p *ZabbixProvider) sendRequest(ctx context.Context, method string, params 
 			}
 
 			if zabbixResp2.Error != nil {
-				return nil, fmt.Errorf("Zabbix API error: %s - %s", zabbixResp2.Error.Message, zabbixResp2.Error.Data)
+				return nil, fmt.Errorf("zabbix API error: %s - %s", zabbixResp2.Error.Message, zabbixResp2.Error.Data)
 			}
 
 			return &zabbixResp2, nil
 		}
 
-		return nil, fmt.Errorf("Zabbix API error: %s - %s", zabbixResp.Error.Message, zabbixResp.Error.Data)
+		return nil, fmt.Errorf("zabbix API error: %s - %s", zabbixResp.Error.Message, zabbixResp.Error.Data)
 	}
 
 	return &zabbixResp, nil

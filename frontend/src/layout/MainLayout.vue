@@ -396,7 +396,6 @@ export default defineComponent({
       isSidebarCollapsed,
       isChatBarCollapsed,
       currentUserLabel,
-      currentUserName,
       currentUserAvatar,
       currentUserInitials,
       setLanguage,

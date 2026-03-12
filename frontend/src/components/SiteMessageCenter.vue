@@ -59,7 +59,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, InfoFilled, Warning, CircleCloseFilled, SuccessFilled, Management, Operation } from '@element-plus/icons-vue'
+import { Bell, InfoFilled, Warning, CircleCloseFilled } from '@element-plus/icons-vue'
 import { fetchSiteMessages, getUnreadCount, markAsRead, markAllAsRead } from '@/api/siteMessage'
 import { ElNotification, ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
@@ -69,7 +69,6 @@ const { t } = useI18n()
 const router = useRouter()
 const unreadCount = ref(0)
 const messages = ref([])
-const loading = ref(false)
 let ws = null
 
 const isAuthenticated = ref(!!getToken())
@@ -94,7 +93,6 @@ const loadUnreadCount = async () => {
 }
 
 const loadRecentMessages = async () => {
-  loading.value = true
   try {
     const res = await fetchSiteMessages({ limit: 5 })
     if (res && res.success) {
@@ -102,8 +100,6 @@ const loadRecentMessages = async () => {
     }
   } catch (e) {
     console.error(e)
-  } finally {
-    loading.value = false
   }
 }
 

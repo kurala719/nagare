@@ -178,10 +178,6 @@ npm run dev</code></pre>
   </div>
 </template>
 
-<script setup>
-// Modern Vue 3 script setup
-</script>
-
 <style scoped>
 .navbar {
   position: fixed;

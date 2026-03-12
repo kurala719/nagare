@@ -519,8 +519,6 @@ func GenerateTestAlerts(count int) error {
 		count = 5
 	}
 
-	rand.Seed(time.Now().UnixNano())
-
 	// Get random hosts and items
 	hosts, err := repository.GetAllHostsDAO()
 	if err != nil || len(hosts) == 0 {

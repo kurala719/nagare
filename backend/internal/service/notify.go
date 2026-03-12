@@ -9,7 +9,7 @@ import (
 func SyncEvent(entity string, monitorID uint, hostID uint, result SyncResult) {
 	go func() {
 		message := fmt.Sprintf("sync %s: total=%d added=%d updated=%d failed=%d", entity, result.Total, result.Added, result.Updated, result.Failed)
-		
+
 		// Log event - this will trigger a Site Message via central log Entry
 		logSeverity := "info"
 		if result.Failed > 0 {

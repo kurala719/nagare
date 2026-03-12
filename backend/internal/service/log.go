@@ -102,7 +102,7 @@ func logEntry(logType string, severity int, message string, context map[string]i
 	}
 
 	title := "System Log Notification"
-	if "" == LogTypeService {
+	if LogTypeService == "" {
 		title = "Service Log Notification"
 	}
 	_ = CreateSiteMessageServ(title, entry.Message, "system", entry.Severity, nil)

@@ -7,8 +7,7 @@
 </template>
 
 <script>
-import { defineComponent, computed, ref, onMounted, defineAsyncComponent } from 'vue'
-import { useRoute } from 'vue-router'
+import { defineComponent, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElConfigProvider } from 'element-plus'
 import en from 'element-plus/dist/locale/en.mjs'
@@ -22,7 +21,6 @@ export default defineComponent({
     ElConfigProvider
   },
   setup() {
-    const route = useRoute()
     const { locale } = useI18n()
     
     const elementLocale = computed(() => {
@@ -77,9 +75,6 @@ export default defineComponent({
   --text-strong: #1e293b;
   --border-1: #e2e8f0;
   --surface-3: #f1f5f9;
-}
-
-html.dark {
 }
 
 body {

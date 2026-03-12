@@ -384,6 +384,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css');
+
 .analytics-container {
   padding: 24px;
   background-color: #f6f8fb;
@@ -528,9 +530,6 @@ onBeforeUnmount(() => {
 .last-row {
   margin-bottom: 0;
 }
-
-/* Animations (assuming animate.css is available or added via CDN) */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css');
 
 @media (max-width: 992px) {
   .chart-card {
