@@ -17,8 +17,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// InitRouter initializes and starts the HTTP router
-func InitRouter() {
+// InitRouter initializes and starts the HTTP router.
+func InitRouter() error {
 	gin.SetMode(gin.DebugMode) // Enable debug mode to see route registration
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -63,9 +63,6 @@ func InitRouter() {
 	apiGroup.Use(api.AuditLogMiddleware())
 	setupAllRoutes(apiGroup)
 
-	// Start WebSocket Hub
-	go service.GlobalHub.Run()
-
 	port := viper.GetInt("system.port")
 	if port == 0 {
 		port = 8080
@@ -81,21 +78,29 @@ func InitRouter() {
 	}
 
 	service.LogSystem("info", "server starting", map[string]interface{}{"port": port}, nil, "")
+	errCh := make(chan error, 1)
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			service.LogSystem("error", "failed to start server", map[string]interface{}{"error": err.Error()}, nil, "")
+			errCh <- err
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	select {
+	case err := <-errCh:
+		service.LogSystem("error", "failed to start server", map[string]interface{}{"error": err.Error()}, nil, "")
+		return err
+	case <-quit:
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		service.LogSystem("error", "server shutdown error", map[string]interface{}{"error": err.Error()}, nil, "")
+		return err
 	}
+	return nil
 }
 
 func setupAllRoutes(rg *gin.RouterGroup) {

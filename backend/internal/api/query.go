@@ -8,9 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func parseOptionalInt(c *gin.Context, key string) (*int, error) {
+func optionalQueryValue(c *gin.Context, key string) (string, bool) {
 	value := strings.TrimSpace(c.Query(key))
 	if value == "" {
+		return "", false
+	}
+	return value, true
+}
+
+func parseOptionalInt(c *gin.Context, key string) (*int, error) {
+	value, ok := optionalQueryValue(c, key)
+	if !ok {
 		return nil, nil
 	}
 	parsed, err := strconv.Atoi(value)
@@ -21,8 +29,8 @@ func parseOptionalInt(c *gin.Context, key string) (*int, error) {
 }
 
 func parseOptionalUint(c *gin.Context, key string) (*uint, error) {
-	value := strings.TrimSpace(c.Query(key))
-	if value == "" {
+	value, ok := optionalQueryValue(c, key)
+	if !ok {
 		return nil, nil
 	}
 	parsed, err := strconv.ParseUint(value, 10, 64)
@@ -34,16 +42,16 @@ func parseOptionalUint(c *gin.Context, key string) (*uint, error) {
 }
 
 func parseOptionalString(c *gin.Context, key string) *string {
-	value := strings.TrimSpace(c.Query(key))
-	if value == "" {
+	value, ok := optionalQueryValue(c, key)
+	if !ok {
 		return nil
 	}
 	return &value
 }
 
 func parseOptionalBool(c *gin.Context, key string) (*bool, error) {
-	value := strings.TrimSpace(c.Query(key))
-	if value == "" {
+	value, ok := optionalQueryValue(c, key)
+	if !ok {
 		return nil, nil
 	}
 	parsed, err := strconv.ParseBool(value)
@@ -54,8 +62,8 @@ func parseOptionalBool(c *gin.Context, key string) (*bool, error) {
 }
 
 func parseOptionalUnixTime(c *gin.Context, key string) (*time.Time, error) {
-	value := strings.TrimSpace(c.Query(key))
-	if value == "" {
+	value, ok := optionalQueryValue(c, key)
+	if !ok {
 		return nil, nil
 	}
 	parsed, err := strconv.ParseInt(value, 10, 64)

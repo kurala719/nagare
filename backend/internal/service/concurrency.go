@@ -33,9 +33,7 @@ func runWithLimit(total, limit int, fn func(index int)) {
 		idx := i
 		go func() {
 			defer wg.Done()
-			defer func() {
-				<-sem
-			}()
+			defer func() { <-sem }()
 			fn(idx)
 		}()
 	}

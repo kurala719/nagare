@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"nagare/internal/repository"
@@ -15,12 +16,15 @@ const (
 )
 
 var (
+	syncMu     sync.Mutex
 	syncCancel context.CancelFunc
 )
 
 // StartAutoSync starts periodic pulling from all monitors.
 func StartAutoSync() {
+	syncMu.Lock()
 	if syncCancel != nil {
+		syncMu.Unlock()
 		return
 	}
 
@@ -30,6 +34,7 @@ func StartAutoSync() {
 		enabled = true
 	}
 	if !enabled {
+		syncMu.Unlock()
 		LogSystem("info", "auto sync disabled via configuration", nil, nil, "")
 		return
 	}
@@ -51,6 +56,7 @@ func StartAutoSync() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	syncCancel = cancel
+	syncMu.Unlock()
 
 	LogSystem("info", "starting auto sync background task", nil, nil, "")
 	go func() {
@@ -72,17 +78,18 @@ func StartAutoSync() {
 
 // StopAutoSync stops the auto sync service
 func StopAutoSync() {
-	if syncCancel != nil {
-		syncCancel()
-		syncCancel = nil
+	syncMu.Lock()
+	cancel := syncCancel
+	syncCancel = nil
+	syncMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
 // RestartAutoSync restarts the auto sync service
 func RestartAutoSync() {
 	StopAutoSync()
-	// Small delay to allow goroutine to exit
-	time.Sleep(100 * time.Millisecond)
 	StartAutoSync()
 }
 

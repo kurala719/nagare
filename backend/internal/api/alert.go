@@ -124,34 +124,34 @@ func resolveWebhookAlarmID(eventToken string) (uint, error) {
 	if alarm, err := service.GetAlarmByEventTokenServ(eventToken); err == nil {
 		service.LogService("debug", "webhook alarm identified", map[string]interface{}{"alarm_id": alarm.ID}, nil, "")
 		return alarm.ID, nil
-	} else if errors.Is(err, model.ErrNotFound) || errors.Is(err, model.ErrUnauthorized) {
-		// Try to find if it's a monitor token
-		if monitor, mErr := service.GetMonitorByEventTokenServ(eventToken); mErr == nil {
-			service.LogService("debug", "webhook monitor identified from token", map[string]interface{}{"monitor_id": monitor.ID}, nil, "")
-			// Try to find a matching alarm for this monitor by name
-			if alarms, aErr := service.SearchAlarmsServ(model.AlarmFilter{Query: monitor.Name}); aErr == nil && len(alarms) > 0 {
-				for _, a := range alarms {
-					if strings.EqualFold(a.Name, monitor.Name) {
-						return uint(a.ID), nil
-					}
-				}
-			}
-			// If still 0, use the monitor ID. The repository join supports COALESCE(alarms.name, monitors.name).
-			if monitor.ID != 0 {
-				return monitor.ID, nil
-			}
-			return 0, nil
-		} else {
-			if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
-				service.LogService("warn", "webhook token validation failed", map[string]interface{}{"error": err.Error()}, nil, "")
-				return 0, err
-			}
-			service.LogService("debug", "webhook monitor token validated", nil, nil, "")
-			return 0, nil
-		}
-	} else {
+	} else if !(errors.Is(err, model.ErrNotFound) || errors.Is(err, model.ErrUnauthorized)) {
 		return 0, err
 	}
+
+	// Try to find if it's a monitor token
+	if monitor, mErr := service.GetMonitorByEventTokenServ(eventToken); mErr == nil {
+		service.LogService("debug", "webhook monitor identified from token", map[string]interface{}{"monitor_id": monitor.ID}, nil, "")
+		// Try to find a matching alarm for this monitor by name
+		if alarms, aErr := service.SearchAlarmsServ(model.AlarmFilter{Query: monitor.Name}); aErr == nil && len(alarms) > 0 {
+			for _, a := range alarms {
+				if strings.EqualFold(a.Name, monitor.Name) {
+					return uint(a.ID), nil
+				}
+			}
+		}
+		// If still 0, use the monitor ID. The repository join supports COALESCE(alarms.name, monitors.name).
+		if monitor.ID != 0 {
+			return monitor.ID, nil
+		}
+		return 0, nil
+	}
+
+	if err := service.ValidateMonitorEventTokenServ(eventToken); err != nil {
+		service.LogService("warn", "webhook token validation failed", map[string]interface{}{"error": err.Error()}, nil, "")
+		return 0, err
+	}
+	service.LogService("debug", "webhook monitor token validated", nil, nil, "")
+	return 0, nil
 }
 
 func parseWebhookPayload(payload map[string]interface{}, alarmID uint) (service.AlertReq, uint, int, error) {

@@ -26,7 +26,21 @@ func run() error {
 	configPath := getConfigPath()
 	fmt.Printf(">>> Loading config from: %s\n", configPath)
 
-	// Use service wrapper to initialize config with logging and hot-reload observers
+	if err := initializeApplication(configPath); err != nil {
+		return err
+	}
+	defer database.CloseDB(database.DB)
+
+	recomputeStartupState()
+	startBackgroundServices()
+
+	fmt.Println(">>> Initializing Router and starting server...")
+	service.LogSystem("info", "initializing router", nil, nil, "")
+	return router.InitRouter()
+}
+
+func initializeApplication(configPath string) error {
+	// Use service wrapper to initialize config with logging and hot-reload observers.
 	if err := service.InitConfigServ(configPath); err != nil {
 		return err
 	}
@@ -35,7 +49,6 @@ func run() error {
 	if err := database.InitDBFromConfig(); err != nil {
 		return err
 	}
-	defer database.CloseDB(database.DB)
 
 	service.LogSystem("info", "starting application", nil, nil, "")
 	service.LogSystem("info", "database connection established", nil, nil, "")
@@ -45,43 +58,39 @@ func run() error {
 		return err
 	}
 
-	// Recompute internal states before starting background tasks
+	return nil
+}
+
+func recomputeStartupState() {
 	fmt.Println(">>> Synchronizing internal state (Actions/Triggers)...")
 	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
 		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
-	
+}
+
+func startBackgroundServices() {
 	fmt.Println(">>> Starting Background Services...")
-	go service.GlobalHub.Run()
+	service.GlobalHub.Start()
 	service.StartAutoSync()
 	service.StartStatusChecks()
 	service.InitQQWSServ()
-	
-	// Initialize cron scheduler for automated reports and cleanup
+
 	if err := service.InitCronScheduler(); err != nil {
 		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
-	
-	service.LogSystem("info", "all background services started", nil, nil, "")
 
-	fmt.Println(">>> Initializing Router and starting server...")
-	service.LogSystem("info", "initializing router", nil, nil, "")
-	router.InitRouter()
-	return nil
+	service.LogSystem("info", "all background services started", nil, nil, "")
 }
 
 func getConfigPath() string {
-	// First, check environment variable
-	if path := os.Getenv(envConfigPath); path != "" {
+	if path, ok := os.LookupEnv(envConfigPath); ok && path != "" {
 		return path
 	}
 
-	// Try current working directory (for development with go run)
 	if _, err := os.Stat(defaultConfigPath); err == nil {
 		return defaultConfigPath
 	}
 
-	// Try relative to executable (for production)
 	execPath, err := os.Executable()
 	if err != nil {
 		return defaultConfigPath

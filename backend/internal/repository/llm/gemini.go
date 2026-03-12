@@ -47,22 +47,27 @@ func NewGeminiProvider(cfg Config) (*GeminiProvider, error) {
 // Chat implements the Provider interface
 func (p *GeminiProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
 	// Build the prompt from messages
-	var prompt string
+	var builder strings.Builder
+	if req.SystemPrompt != "" {
+		builder.WriteString("System: ")
+		builder.WriteString(req.SystemPrompt)
+		builder.WriteString("\n\n")
+	}
 	for _, msg := range req.Messages {
 		switch msg.Role {
 		case "system":
-			prompt += fmt.Sprintf("System: %s\n\n", msg.Content)
+			builder.WriteString("System: ")
 		case "user":
-			prompt += fmt.Sprintf("User: %s\n\n", msg.Content)
+			builder.WriteString("User: ")
 		case "assistant":
-			prompt += fmt.Sprintf("Assistant: %s\n\n", msg.Content)
+			builder.WriteString("Assistant: ")
+		default:
+			continue
 		}
+		builder.WriteString(msg.Content)
+		builder.WriteString("\n\n")
 	}
-
-	// Add system prompt if provided
-	if req.SystemPrompt != "" {
-		prompt = fmt.Sprintf("System: %s\n\n%s", req.SystemPrompt, prompt)
-	}
+	prompt := builder.String()
 
 	result, err := p.client.Models.GenerateContent(ctx, req.Model, genai.Text(prompt), nil)
 	if err != nil {

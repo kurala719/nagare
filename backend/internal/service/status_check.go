@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"nagare/internal/model"
@@ -25,17 +26,21 @@ type StatusCheckResult struct {
 }
 
 var (
+	statusCheckMu     sync.Mutex
 	statusCheckCancel context.CancelFunc
 )
 
 // StartStatusChecks starts periodic status checks for key resources.
 func StartStatusChecks() {
+	statusCheckMu.Lock()
 	if statusCheckCancel != nil {
+		statusCheckMu.Unlock()
 		return
 	}
 
 	enabled := viper.GetBool("status_check.enabled")
 	if !enabled {
+		statusCheckMu.Unlock()
 		LogSystem("info", "status checks disabled via configuration", nil, nil, "")
 		return
 	}
@@ -49,6 +54,7 @@ func StartStatusChecks() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	statusCheckCancel = cancel
+	statusCheckMu.Unlock()
 
 	go func() {
 		ticker := time.NewTicker(time.Duration(intervalSeconds) * time.Second)
@@ -78,17 +84,18 @@ func StartStatusChecks() {
 
 // StopStatusChecks stops the status check service
 func StopStatusChecks() {
-	if statusCheckCancel != nil {
-		statusCheckCancel()
-		statusCheckCancel = nil
+	statusCheckMu.Lock()
+	cancel := statusCheckCancel
+	statusCheckCancel = nil
+	statusCheckMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
 // RestartStatusChecks restarts the status check service
 func RestartStatusChecks() {
 	StopStatusChecks()
-	// Small delay to allow goroutine to exit
-	time.Sleep(100 * time.Millisecond)
 	StartStatusChecks()
 }
 

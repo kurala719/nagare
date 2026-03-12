@@ -31,6 +31,7 @@ type Hub struct {
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
+	startOnce  sync.Once
 	mu         sync.Mutex
 }
 
@@ -39,6 +40,12 @@ var GlobalHub = &Hub{
 	register:   make(chan *Client),
 	unregister: make(chan *Client),
 	clients:    make(map[*Client]bool),
+}
+
+func (h *Hub) Start() {
+	h.startOnce.Do(func() {
+		go h.Run()
+	})
 }
 
 func (h *Hub) Run() {

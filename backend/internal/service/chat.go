@@ -545,17 +545,23 @@ func ConsultHostServ(providerID uint, model string, hostID uint) (ChatRes, error
 	systemPrompt := hostAnalysisPrompt(isCn)
 
 	// Build items data string
-	var itemsData string
+	var itemsBuilder strings.Builder
 	if len(items) == 0 {
-		itemsData = "No monitoring metrics available for this host.\n"
+		itemsBuilder.WriteString("No monitoring metrics available for this host.\n")
 	} else {
 		for _, item := range items {
-			itemsData += fmt.Sprintf("- %s: %s %s\n", sanitizeSensitiveText(item.Name), sanitizeSensitiveText(item.LastValue), sanitizeSensitiveText(item.Units))
+			itemsBuilder.WriteString("- ")
+			itemsBuilder.WriteString(sanitizeSensitiveText(item.Name))
+			itemsBuilder.WriteString(": ")
+			itemsBuilder.WriteString(sanitizeSensitiveText(item.LastValue))
+			itemsBuilder.WriteString(" ")
+			itemsBuilder.WriteString(sanitizeSensitiveText(item.Units))
+			itemsBuilder.WriteString("\n")
 		}
 	}
 
 	hostData := fmt.Sprintf("Host: %s\nIP Address: %s\nStatus: %d\nDescription: %s\n\nMonitoring Metrics:\n%s",
-		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(host.IPAddr), host.Status, sanitizeSensitiveText(host.Description), itemsData)
+		sanitizeSensitiveText(host.Name), sanitizeSensitiveText(host.IPAddr), host.Status, sanitizeSensitiveText(host.Description), itemsBuilder.String())
 
 	start := time.Now()
 	resp, err := client.Chat(ctx, llm.ChatRequest{

@@ -78,6 +78,15 @@ type CustomedClaims struct {
 	jwt.RegisteredClaims
 }
 
+var (
+	usernamePattern       = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	emailPattern          = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+	passwordLowerPattern  = regexp.MustCompile(`[a-z]`)
+	passwordUpperPattern  = regexp.MustCompile(`[A-Z]`)
+	passwordDigitPattern  = regexp.MustCompile(`[0-9]`)
+	passwordSymbolPattern = regexp.MustCompile(`[^A-Za-z0-9]`)
+)
+
 // ============= User Service Functions =============
 
 func GetAllUsersServ() ([]UserResponse, error) {
@@ -546,8 +555,7 @@ func isValidUsername(username string) bool {
 	if len(trimmed) < 3 || len(trimmed) > 32 {
 		return false
 	}
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
-	return pattern.MatchString(trimmed)
+	return usernamePattern.MatchString(trimmed)
 }
 
 func isValidEmail(email string) bool {
@@ -559,8 +567,7 @@ func isValidEmail(email string) bool {
 	if len(trimmed) > 254 {
 		return false
 	}
-	pattern := regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
-	return pattern.MatchString(trimmed)
+	return emailPattern.MatchString(trimmed)
 }
 
 func isStrongPassword(password string) bool {
@@ -572,16 +579,16 @@ func isStrongPassword(password string) bool {
 		return false
 	}
 	classes := 0
-	if regexp.MustCompile(`[a-z]`).MatchString(trimmed) {
+	if passwordLowerPattern.MatchString(trimmed) {
 		classes++
 	}
-	if regexp.MustCompile(`[A-Z]`).MatchString(trimmed) {
+	if passwordUpperPattern.MatchString(trimmed) {
 		classes++
 	}
-	if regexp.MustCompile(`[0-9]`).MatchString(trimmed) {
+	if passwordDigitPattern.MatchString(trimmed) {
 		classes++
 	}
-	if regexp.MustCompile(`[^A-Za-z0-9]`).MatchString(trimmed) {
+	if passwordSymbolPattern.MatchString(trimmed) {
 		classes++
 	}
 	return classes >= 3

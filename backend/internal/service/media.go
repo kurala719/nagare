@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"nagare/internal/model"
@@ -252,6 +253,7 @@ func BackfillMediaParamsAndTargetsServ() (int, int, error) {
 }
 
 var (
+	qqWSMu     sync.Mutex
 	qqWSCancel context.CancelFunc
 )
 
@@ -301,36 +303,43 @@ func InitQQWSServ() {
 	// Update manager's internal config
 	media.GlobalQQWSManager.UpdateConfig(accessToken)
 
-	// Small delay if we just stopped it
+	qqWSMu.Lock()
 	if qqWSCancel != nil {
+		qqWSMu.Unlock()
 		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	qqWSCancel = cancel
+	qqWSMu.Unlock()
 
 	go func() {
 		log.Printf("[QQ-WS] Starting positive reconnection loop for Media ID %d", qqMedia.ID)
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		attemptConnect := func() {
+			if !media.GlobalQQWSManager.IsConnected() {
+				_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
+				log.Printf("[QQ-WS] Attempting positive connection to %s", positiveURL)
+				err := media.GlobalQQWSManager.ConnectPositiveWS(positiveURL, accessToken)
+				if err != nil {
+					log.Printf("[QQ-WS] Positive connection failed: %v, retrying in 10s...", err)
+					_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
+					return
+				}
+			}
+			_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 1)
+		}
+
+		attemptConnect()
 		for {
 			select {
 			case <-ctx.Done():
 				log.Printf("[QQ-WS] Positive reconnection loop stopped")
 				return
-			default:
-				if !media.GlobalQQWSManager.IsConnected() {
-					_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
-					log.Printf("[QQ-WS] Attempting positive connection to %s", positiveURL)
-					err := media.GlobalQQWSManager.ConnectPositiveWS(positiveURL, accessToken)
-					if err != nil {
-						log.Printf("[QQ-WS] Positive connection failed: %v, retrying in 10s...", err)
-						_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 2)
-					} else {
-						_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 1)
-					}
-				} else {
-					_ = repository.UpdateMediaStatusDAO(qqMedia.ID, 1)
-				}
-				time.Sleep(10 * time.Second)
+			case <-ticker.C:
+				attemptConnect()
 			}
 		}
 	}()
@@ -338,9 +347,12 @@ func InitQQWSServ() {
 
 // StopQQWSServ stops the Positive WebSocket reconnection loop
 func StopQQWSServ() {
-	if qqWSCancel != nil {
-		qqWSCancel()
-		qqWSCancel = nil
+	qqWSMu.Lock()
+	cancel := qqWSCancel
+	qqWSCancel = nil
+	qqWSMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 	if media.GlobalQQWSManager.IsConnected() {
 		// Close the underlying connection to trigger a fast disconnect
@@ -352,6 +364,5 @@ func StopQQWSServ() {
 // RestartQQWSServ stops and restarts the QQ WebSocket service
 func RestartQQWSServ() {
 	StopQQWSServ()
-	time.Sleep(200 * time.Millisecond) // Wait a bit for goroutine to exit
 	InitQQWSServ()
 }

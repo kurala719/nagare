@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sync"
 
 	"nagare/internal/model"
 	"nagare/internal/repository"
@@ -9,11 +10,14 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-var cronScheduler *cron.Cron
+var (
+	cronScheduler   *cron.Cron
+	cronSchedulerMu sync.Mutex
+)
 
 // InitCronScheduler initializes the cron job scheduler
 func InitCronScheduler() error {
-	cronScheduler = cron.New()
+	scheduler := cron.New()
 
 	// Add report generation jobs based on configuration
 	cfgData, err := GetReportConfigServ()
@@ -27,11 +31,11 @@ func InitCronScheduler() error {
 		autoMonthly, _ := cfgData["auto_generate_monthly"].(int)
 		monthlyDate, _ := cfgData["monthly_generate_date"].(int)
 		monthlyTime, _ := cfgData["monthly_generate_time"].(string)
-		
+
 		if autoDaily == 1 && dailyTime != "" {
 			hour, minute := parseTime(dailyTime)
 			cronExpr := fmt.Sprintf("%d %d * * *", minute, hour)
-			if _, err := cronScheduler.AddFunc(cronExpr, func() {
+			if _, err := scheduler.AddFunc(cronExpr, func() {
 				if _, err := GenerateDailyReportServ(); err != nil {
 					LogService("error", "daily report generation failed", map[string]interface{}{
 						"error": err.Error(),
@@ -47,7 +51,7 @@ func InitCronScheduler() error {
 
 		if autoWeekly == 1 && weeklyDay != "" {
 			cronExpr := buildWeeklyCronExpression(weeklyDay, weeklyTime)
-			if _, err := cronScheduler.AddFunc(cronExpr, func() {
+			if _, err := scheduler.AddFunc(cronExpr, func() {
 				if _, err := GenerateWeeklyReportServ(); err != nil {
 					LogService("error", "weekly report generation failed", map[string]interface{}{
 						"error": err.Error(),
@@ -63,7 +67,7 @@ func InitCronScheduler() error {
 
 		if autoMonthly == 1 && monthlyDate > 0 {
 			cronExpr := buildMonthlyCronExpression(monthlyDate, monthlyTime)
-			if _, err := cronScheduler.AddFunc(cronExpr, func() {
+			if _, err := scheduler.AddFunc(cronExpr, func() {
 				if _, err := GenerateMonthlyReportServ(); err != nil {
 					LogService("error", "monthly report generation failed", map[string]interface{}{
 						"error": err.Error(),
@@ -79,7 +83,7 @@ func InitCronScheduler() error {
 	}
 
 	// Add daily data retention cleanup job (2:00 AM)
-	if _, err := cronScheduler.AddFunc("0 2 * * *", func() {
+	if _, err := scheduler.AddFunc("0 2 * * *", func() {
 		PerformDataRetentionCleanupServ()
 	}); err != nil {
 		LogService("warn", "failed to schedule data retention cleanup job", map[string]interface{}{
@@ -87,9 +91,18 @@ func InitCronScheduler() error {
 		}, nil, "")
 	}
 
-	cronScheduler.Start()
+	scheduler.Start()
+
+	cronSchedulerMu.Lock()
+	previous := cronScheduler
+	cronScheduler = scheduler
+	cronSchedulerMu.Unlock()
+	if previous != nil {
+		previous.Stop()
+	}
+
 	LogService("info", "cron scheduler started", map[string]interface{}{
-		"jobs": len(cronScheduler.Entries()),
+		"jobs": len(scheduler.Entries()),
 	}, nil, "")
 
 	return nil
@@ -97,8 +110,12 @@ func InitCronScheduler() error {
 
 // StopCronScheduler stops the cron scheduler
 func StopCronScheduler() {
-	if cronScheduler != nil {
-		cronScheduler.Stop()
+	cronSchedulerMu.Lock()
+	scheduler := cronScheduler
+	cronScheduler = nil
+	cronSchedulerMu.Unlock()
+	if scheduler != nil {
+		scheduler.Stop()
 		LogService("info", "cron scheduler stopped", nil, nil, "")
 	}
 }
