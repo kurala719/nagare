@@ -10,21 +10,21 @@ export function fetchSiteMessages(params) {
 
 export function getUnreadCount() {
   return request({
-    url: '/delivery/site-messages/unread-count',
+    url: '/delivery/site-messages/unread/count',
     method: 'get'
   })
 }
 
 export function markAsRead(id) {
   return request({
-    url: `/delivery/site-messages/${id}/read`,
+    url: `/delivery/site-messages/${id}/read-status`,
     method: 'put'
   })
 }
 
 export function markAllAsRead() {
   return request({
-    url: '/delivery/site-messages/read-all',
+    url: '/delivery/site-messages/read-status',
     method: 'put'
   })
 }

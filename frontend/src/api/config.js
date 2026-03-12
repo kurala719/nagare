@@ -37,7 +37,7 @@ export function updateConfig(data) {
 export function saveConfig() {
     return request({
         method: 'POST',
-        url: '/system/config/save',
+        url: '/system/config-snapshots',
     });
 }
 
@@ -47,7 +47,7 @@ export function saveConfig() {
 export function reloadConfig() {
     return request({
         method: 'POST',
-        url: '/system/config/reload',
+        url: '/system/config-reloads',
     });
 }
 
@@ -56,7 +56,7 @@ export function reloadConfig() {
  */
 export function resetConfig() {
     return request({
-        method: 'POST',
-        url: '/system/config/reset',
+        method: 'DELETE',
+        url: '/system/config',
     });
 }

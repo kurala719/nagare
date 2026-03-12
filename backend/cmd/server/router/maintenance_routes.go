@@ -16,7 +16,7 @@ func setupMaintenanceDomainRoutes(rg *gin.RouterGroup) {
 }
 
 func setupSSHRoutes(rg *gin.RouterGroup) {
-	ssh := rg.Group("/ssh", api.PrivilegesMiddleware(1))
-	ssh.GET("/hosts/:id", api.HandleWebSSH)
-	ssh.GET("/terminal", api.HandleWebSSH)
+	sshSessions := rg.Group("/ssh-sessions", api.PrivilegesMiddleware(1))
+	sshSessions.GET("/hosts/:id", api.HandleWebSSH)
+	sshSessions.GET("/direct", api.HandleWebSSH)
 }

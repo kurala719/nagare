@@ -134,7 +134,7 @@ func UpdateProviderCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "provider updated")
 }
 
-// CheckProviderStatusCtrl handles POST /ai/provider-checks/:id
+// CheckProviderStatusCtrl handles POST /ai/providers/:id/checks
 func CheckProviderStatusCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -150,13 +150,13 @@ func CheckProviderStatusCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// CheckAllProvidersStatusCtrl handles POST /ai/provider-checks
+// CheckAllProvidersStatusCtrl handles POST /ai/providers/checks
 func CheckAllProvidersStatusCtrl(c *gin.Context) {
 	results := service.CheckAllProvidersStatusServ()
 	respondSuccess(c, http.StatusOK, results)
 }
 
-// FetchProviderModelsCtrl handles POST /ai/provider-models/:id
+// FetchProviderModelsCtrl handles POST /ai/providers/:id/models
 func FetchProviderModelsCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -172,7 +172,7 @@ func FetchProviderModelsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, models)
 }
 
-// FetchModelsDirectCtrl handles POST /ai/provider-models/direct
+// FetchModelsDirectCtrl handles POST /ai/providers/models
 func FetchModelsDirectCtrl(c *gin.Context) {
 	var req service.ProviderReq
 	if err := c.ShouldBindJSON(&req); err != nil {

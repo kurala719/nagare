@@ -44,7 +44,7 @@ export function deleteAlert(id) {
 
 export function consultAlertAI(id, params) {
   return request({
-    url: `/ai/consult/alerts/${id}`,
+    url: `/ai/alerts/${id}/consultations`,
     method: 'post',
     params
   })
@@ -52,14 +52,14 @@ export function consultAlertAI(id, params) {
 
 export function getAlertScore() {
   return request({
-    url: '/alert/alerts/score',
+    url: '/alert/alerts/scores',
     method: 'get'
   })
 }
 
 export function generateTestAlerts() {
   return request({
-    url: '/alert/alerts/generate-test',
+    url: '/alert/test-alerts',
     method: 'post'
   })
 }

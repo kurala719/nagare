@@ -9,8 +9,6 @@ import (
 
 func setupAIDomainRoutes(rg *gin.RouterGroup) {
 	setupProviderRoutes(rg)
-	setupProviderCheckRoutes(rg)
-	setupProviderModelRoutes(rg)
 	setupKnowledgeBaseRoutes(rg)
 	setupChatRoutes(rg)
 	setupConsultRoutes(rg)
@@ -27,12 +25,12 @@ func setupChatRoutes(rg *gin.RouterGroup) {
 
 func setupKnowledgeBaseRoutes(rg *gin.RouterGroup) {
 	// Routes with privilege level 1
-	kbRead := rg.Group("/knowledge-base/entries", api.PrivilegesMiddleware(1))
+	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(1))
 	kbRead.GET("", api.GetAllKnowledgeBaseCtrl)
 	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
 
 	// Routes with privilege level 2
-	kbWrite := rg.Group("/knowledge-base/entries", api.PrivilegesMiddleware(2))
+	kbWrite := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
 	kbWrite.POST("", api.AddKnowledgeBaseCtrl)
 	kbWrite.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
 	kbWrite.DELETE("/:id", api.DeleteKnowledgeBaseCtrl)
@@ -49,40 +47,36 @@ func setupProviderRoutes(rg *gin.RouterGroup) {
 	providersWrite.POST("", api.AddProviderCtrl)
 	providersWrite.DELETE("/:id", api.DeleteProviderByIDCtrl)
 	providersWrite.PUT("/:id", api.UpdateProviderCtrl)
-}
-
-func setupProviderCheckRoutes(rg *gin.RouterGroup) {
-	providerChecks := rg.Group("/provider-checks", api.PrivilegesMiddleware(2))
-	providerChecks.POST("", api.CheckAllProvidersStatusCtrl)
-	providerChecks.POST("/:id", api.CheckProviderStatusCtrl)
-}
-
-func setupProviderModelRoutes(rg *gin.RouterGroup) {
-	providerModels := rg.Group("/provider-models", api.PrivilegesMiddleware(2))
-	providerModels.POST("/:id", api.FetchProviderModelsCtrl)
-	providerModels.POST("/direct", api.FetchModelsDirectCtrl)
+	providersWrite.POST("/checks", api.CheckAllProvidersStatusCtrl)
+	providersWrite.POST("/:id/checks", api.CheckProviderStatusCtrl)
+	providersWrite.POST("/:id/models", api.FetchProviderModelsCtrl)
+	providersWrite.POST("/models", api.FetchModelsDirectCtrl)
 }
 
 func setupConsultRoutes(rg *gin.RouterGroup) {
-	consult := rg.Group("/consult", api.PrivilegesMiddleware(1))
-	consult.POST("/alerts/:id", api.ConsultAlertCtrl)
-	consult.POST("/hosts/:id", api.ConsultHostCtrl)
-	consult.POST("/items/:id", api.ConsultItemCtrl)
+	consultationAlerts := rg.Group("/alerts", api.PrivilegesMiddleware(1))
+	consultationAlerts.POST("/:id/consultations", api.ConsultAlertCtrl)
+
+	consultationHosts := rg.Group("/hosts", api.PrivilegesMiddleware(1))
+	consultationHosts.POST("/:id/consultations", api.ConsultHostCtrl)
+
+	consultationItems := rg.Group("/items", api.PrivilegesMiddleware(1))
+	consultationItems.POST("/:id/consultations", api.ConsultItemCtrl)
 }
 
 func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
-	packets := rg.Group("/packet-analysis", api.PrivilegesMiddleware(1))
+	packets := rg.Group("/packet-analyses", api.PrivilegesMiddleware(1))
 	{
 		packets.GET("", api.ListPacketAnalysesCtrl)
-		packets.POST("/upload", api.UploadPacketCtrl)
+		packets.POST("", api.UploadPacketCtrl)
 		packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
-		packets.POST("/:id/analyze", api.StartPacketAnalysisCtrl)
+		packets.POST("/:id/runs", api.StartPacketAnalysisCtrl)
 	}
 }
 
 func setupMcpRoutes(rg *gin.RouterGroup) {
 	// MCP routes - requires API key middleware
 	mcpGroup := rg.Group("/mcp", mcp.APIKeyMiddleware())
-	mcpGroup.GET("/sse", mcp.SSEHandler)
-	mcpGroup.POST("/message", mcp.MessageHandler)
+	mcpGroup.GET("/sessions", mcp.SSEHandler)
+	mcpGroup.POST("/messages", mcp.MessageHandler)
 }

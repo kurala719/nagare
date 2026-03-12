@@ -77,7 +77,7 @@ func SearchChatsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chats)
 }
 
-// ConsultAlertCtrl handles POST /ai/consult/alerts/:id
+// ConsultAlertCtrl handles POST /ai/alerts/:id/consultations
 func ConsultAlertCtrl(c *gin.Context) {
 	alertID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -96,7 +96,7 @@ func ConsultAlertCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chatRes)
 }
 
-// ConsultItemCtrl handles POST /ai/consult/items/:id
+// ConsultItemCtrl handles POST /ai/items/:id/consultations
 func ConsultItemCtrl(c *gin.Context) {
 	itemID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -115,7 +115,7 @@ func ConsultItemCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, chatRes)
 }
 
-// ConsultHostCtrl handles POST /ai/consult/hosts/:id
+// ConsultHostCtrl handles POST /ai/hosts/:id/consultations
 func ConsultHostCtrl(c *gin.Context) {
 	hostID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

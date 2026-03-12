@@ -234,7 +234,7 @@ func DeleteUserByIDCtrl(c *gin.Context) {
 
 // ============= Unified Profile Controllers =============
 
-// GetMyProfileCtrl handles GET /user-info/me (or /profile)
+// GetMyProfileCtrl handles GET /users/profile
 func GetMyProfileCtrl(c *gin.Context) {
 	username, ok := c.Get("username")
 	if !ok {
@@ -249,7 +249,7 @@ func GetMyProfileCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, user)
 }
 
-// UpdateMyProfileCtrl handles PUT /user-info/me (or /profile)
+// UpdateMyProfileCtrl handles PUT /users/profile
 func UpdateMyProfileCtrl(c *gin.Context) {
 	username, ok := c.Get("username")
 	if !ok {
@@ -268,7 +268,7 @@ func UpdateMyProfileCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "profile updated")
 }
 
-// UploadAvatarCtrl handles POST /user-info/me/avatar
+// UploadAvatarCtrl handles POST /users/profile/avatar
 func UploadAvatarCtrl(c *gin.Context) {
 	username, ok := c.Get("username")
 	if !ok {

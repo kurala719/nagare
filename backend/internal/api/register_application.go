@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
-// ListRegisterApplicationsCtrl handles GET /user/register-application/search
+// ListRegisterApplicationsCtrl handles GET /users/registration-applications
 func ListRegisterApplicationsCtrl(c *gin.Context) {
 	status, err := parseOptionalInt(c, "status")
 	if err != nil {
@@ -50,7 +51,7 @@ func ListRegisterApplicationsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, apps)
 }
 
-// ApproveRegisterApplicationCtrl handles PUT /user/register-application/:id/approve
+// ApproveRegisterApplicationCtrl handles POST /users/registration-applications/:id/approvals
 func ApproveRegisterApplicationCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -69,7 +70,7 @@ func ApproveRegisterApplicationCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "application approved")
 }
 
-// RejectRegisterApplicationCtrl handles PUT /user/register-application/:id/reject
+// RejectRegisterApplicationCtrl handles POST /users/registration-applications/:id/rejections
 func RejectRegisterApplicationCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

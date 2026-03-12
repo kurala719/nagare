@@ -21,7 +21,7 @@ export function getMonitorById(id) {
 
 export function fetchMonitorHistory(id, params) {
   return request({
-    url: `/analysis/history/monitors/${id}`,
+    url: `/analysis/monitors/${id}/history`,
     method: 'get',
     params
   })
@@ -52,7 +52,7 @@ export function deleteMonitor(id) {
 
 export function loginMonitor(id, data) {
   return request({
-    url: `/monitoring/monitors/${id}/login`,
+    url: `/monitoring/monitors/${id}/sessions`,
     method: 'post',
     data
   })
@@ -60,35 +60,35 @@ export function loginMonitor(id, data) {
 
 export function checkMonitorStatus(id) {
   return request({
-    url: `/monitoring/monitors/${id}/check`,
+    url: `/monitoring/monitors/${id}/checks`,
     method: 'post'
   })
 }
 
 export function checkAllMonitorsStatus() {
   return request({
-    url: '/monitoring/monitors/check',
+    url: '/monitoring/monitors/checks',
     method: 'post'
   })
 }
 
 export function regenerateMonitorEventToken(id) {
   return request({
-    url: `/monitoring/monitors/${id}/event-token`,
+    url: `/monitoring/monitors/${id}/event-tokens`,
     method: 'post'
   })
 }
 
 export function syncGroupsFromMonitor(monitorId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/groups/pull`,
+    url: `/monitoring/monitors/${monitorId}/group-imports`,
     method: 'post'
   })
 }
 
 export function refreshEventToken(id, token) {
   return request({
-    url: `/monitoring/monitors/${id}/event-token/refresh?token=${token}`,
+    url: `/monitoring/monitors/${id}/event-token-refreshes?token=${token}`,
     method: 'post'
   })
 }

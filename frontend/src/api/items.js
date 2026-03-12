@@ -51,7 +51,7 @@ export function deleteItem(id, push = false) {
 
 export function consultItemAI(id, params) {
   return request({
-    url: `/ai/consult/items/${id}`,
+    url: `/ai/items/${id}/consultations`,
     method: 'post',
     params
   })
@@ -59,7 +59,7 @@ export function consultItemAI(id, params) {
 
 export function fetchItemHistory(id, params) {
   return request({
-    url: `/analysis/history/items/${id}`,
+    url: `/analysis/items/${id}/history`,
     method: 'get',
     params
   })
@@ -67,35 +67,35 @@ export function fetchItemHistory(id, params) {
 
 export function pullItemsFromHost(monitorId, hostId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/items/pull`,
+    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/item-imports`,
     method: 'post'
   })
 }
 
 export function pushItemsToHost(monitorId, hostId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/items/push`,
+    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/item-exports`,
     method: 'post'
   })
 }
 
 export function addItemsByHostIDFromMonitor(hostId) {
   return request({
-    url: `/monitoring/items/hosts/${hostId}/import`,
+    url: `/monitoring/items/hosts/${hostId}/imports`,
     method: 'post'
   })
 }
 
 export function pullItemsFromMonitor(monitorId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/items/pull`,
+    url: `/monitoring/monitors/${monitorId}/item-imports`,
     method: 'post'
   })
 }
 
 export function pushItemsFromMonitor(monitorId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/items/push`,
+    url: `/monitoring/monitors/${monitorId}/item-exports`,
     method: 'post'
   })
 }

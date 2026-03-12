@@ -16,7 +16,7 @@ func setupAlarmRoutes(rg *gin.RouterGroup) {
 	alarms := rg.Group("/alarms")
 	{
 		// Public event token refresh - no auth required, uses event token
-		alarms.POST("/:id/event-token/refresh", api.RefreshAlarmEventTokenCtrl)
+		alarms.POST("/:id/event-token-refreshes", api.RefreshAlarmEventTokenCtrl)
 
 		// Privilege level 1
 		alarms.GET("", api.PrivilegesMiddleware(1), api.SearchAlarmsCtrl)
@@ -26,9 +26,9 @@ func setupAlarmRoutes(rg *gin.RouterGroup) {
 		alarms.POST("", api.PrivilegesMiddleware(2), api.AddAlarmCtrl)
 		alarms.DELETE("/:id", api.PrivilegesMiddleware(2), api.DeleteAlarmByIDCtrl)
 		alarms.PUT("/:id", api.PrivilegesMiddleware(2), api.UpdateAlarmCtrl)
-		alarms.POST("/:id/login", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
-		alarms.POST(":id/setup-media", api.PrivilegesMiddleware(2), api.SetupAlarmMediaCtrl)
-		alarms.POST("/:id/event-token", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
+		alarms.POST("/:id/sessions", api.PrivilegesMiddleware(2), api.LoginAlarmCtrl)
+		alarms.POST("/:id/media-bindings", api.PrivilegesMiddleware(2), api.SetupAlarmMediaCtrl)
+		alarms.POST("/:id/event-tokens", api.PrivilegesMiddleware(2), api.RegenerateAlarmEventTokenCtrl)
 	}
 }
 
@@ -50,20 +50,22 @@ func setupTriggerRoutes(rg *gin.RouterGroup) {
 
 func setupAlertRoutes(rg *gin.RouterGroup) {
 	// Webhook endpoints - public, no auth required
-	alerts := rg.Group("/alerts")
-	alerts.POST("/webhook", api.AlertWebhookCtrl)
-	alerts.GET("/webhook/health", api.WebhookHealthCtrl)
+	webhooks := rg.Group("/webhooks")
+	webhooks.POST("", api.AlertWebhookCtrl)
+	webhooks.GET("/health", api.WebhookHealthCtrl)
 
 	// Routes with privilege level 1
 	alertsRead := rg.Group("/alerts", api.PrivilegesMiddleware(1))
 	alertsRead.GET("", api.SearchAlertsCtrl)
 	alertsRead.GET("/:id", api.GetAlertByIDCtrl)
-	alertsRead.GET("/score", api.GetAlertScoreCtrl)
+	alertsRead.GET("/scores", api.GetAlertScoreCtrl)
 
 	// Routes with privilege level 2
 	alertsWrite := rg.Group("/alerts", api.PrivilegesMiddleware(2))
 	alertsWrite.POST("", api.AddAlertCtrl)
 	alertsWrite.DELETE("/:id", api.DeleteAlertByIDCtrl)
 	alertsWrite.PUT("/:id", api.UpdateAlertCtrl)
-	alertsWrite.POST("/generate-test", api.GenerateTestAlertsCtrl)
+
+	testAlerts := rg.Group("/test-alerts", api.PrivilegesMiddleware(2))
+	testAlerts.POST("", api.GenerateTestAlertsCtrl)
 }

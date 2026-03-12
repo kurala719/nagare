@@ -44,7 +44,7 @@ export function getHostById(id) {
 
 export function consultHostAI(id, params) {
   return request({
-    url: `/ai/consult/hosts/${id}`,
+    url: `/ai/hosts/${id}/consultations`,
     method: 'post',
     params
   })
@@ -52,7 +52,7 @@ export function consultHostAI(id, params) {
 
 export function fetchHostHistory(id, params) {
   return request({
-    url: `/analysis/history/hosts/${id}`,
+    url: `/analysis/hosts/${id}/history`,
     method: 'get',
     params
   })
@@ -60,28 +60,28 @@ export function fetchHostHistory(id, params) {
 
 export function pullHostFromMonitor(monitorId, hostId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/pull`,
+    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/imports`,
     method: 'post'
   })
 }
 
 export function pushHostToMonitor(monitorId, hostId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/push`,
+    url: `/monitoring/monitors/${monitorId}/hosts/${hostId}/exports`,
     method: 'post'
   })
 }
 
 export function syncHostsFromMonitor(monitorId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/pull`,
+    url: `/monitoring/monitors/${monitorId}/host-imports`,
     method: 'post'
   })
 }
 
 export function pushHostsToMonitor(monitorId) {
   return request({
-    url: `/monitoring/monitors/${monitorId}/hosts/push`,
+    url: `/monitoring/monitors/${monitorId}/host-exports`,
     method: 'post'
   })
 }

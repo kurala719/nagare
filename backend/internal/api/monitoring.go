@@ -22,7 +22,7 @@ func GetNetworkMetricsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, metrics)
 }
 
-// GetNetworkStatusHistoryCtrl handles GET /analysis/history/system/health
+// GetNetworkStatusHistoryCtrl handles GET /analysis/system/health/history
 func GetNetworkStatusHistoryCtrl(c *gin.Context) {
 	from, err := parseOptionalUnixTime(c, "from")
 	if err != nil {

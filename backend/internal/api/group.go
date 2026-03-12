@@ -89,7 +89,7 @@ func GetGroupByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, group)
 }
 
-// GetGroupHistoryCtrl handles GET /analysis/history/groups/:id
+// GetGroupHistoryCtrl handles GET /analysis/groups/:id/history
 func GetGroupHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -118,7 +118,7 @@ func GetGroupHistoryCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, items)
 }
 
-// GetGroupDetailCtrl handles GET /groups/:id/detail
+// GetGroupDetailCtrl handles GET /monitoring/groups/:id/details
 func GetGroupDetailCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -182,7 +182,7 @@ func DeleteGroupByIDCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "group deleted")
 }
 
-// PullGroupFromMonitorsCtrl handles POST /groups/:id/pull
+// PullGroupFromMonitorsCtrl handles POST /monitoring/groups/:id/imports
 func PullGroupFromMonitorsCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -197,7 +197,7 @@ func PullGroupFromMonitorsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// PushGroupToMonitorsCtrl handles POST /groups/:id/push
+// PushGroupToMonitorsCtrl handles POST /monitoring/groups/:id/exports
 func PushGroupToMonitorsCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -212,7 +212,7 @@ func PushGroupToMonitorsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// CheckGroupStatusCtrl handles POST /groups/:id/check
+// CheckGroupStatusCtrl handles POST /monitoring/groups/:id/checks
 func CheckGroupStatusCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -228,7 +228,7 @@ func CheckGroupStatusCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// CheckAllGroupsStatusCtrl handles POST /groups/check
+// CheckAllGroupsStatusCtrl handles POST /monitoring/groups/checks
 func CheckAllGroupsStatusCtrl(c *gin.Context) {
 	results := service.CheckAllGroupsStatusServ()
 	respondSuccess(c, http.StatusOK, results)

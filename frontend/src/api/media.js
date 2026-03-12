@@ -37,7 +37,7 @@ export function deleteMedia(id) {
 
 export function testMedia(id) {
   return request({
-    url: `/delivery/media/${id}/test`,
+    url: `/delivery/media/${id}/test-runs`,
     method: 'post'
   })
 }

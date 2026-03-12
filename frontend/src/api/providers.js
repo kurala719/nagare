@@ -37,28 +37,28 @@ export function deleteProvider(id) {
 
 export function checkProviderStatus(id) {
   return request({
-    url: `/ai/provider-checks/${id}`,
+    url: `/ai/providers/${id}/checks`,
     method: 'post'
   })
 }
 
 export function checkAllProvidersStatus() {
   return request({
-    url: '/ai/provider-checks',
+    url: '/ai/providers/checks',
     method: 'post'
   })
 }
 
 export function fetchProviderModels(id) {
   return request({
-    url: `/ai/provider-models/${id}`,
+    url: `/ai/providers/${id}/models`,
     method: 'post'
   })
 }
 
 export function fetchModelsDirect(data) {
   return request({
-    url: '/ai/provider-models/direct',
+    url: '/ai/providers/models',
     method: 'post',
     data
   })

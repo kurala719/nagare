@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetSiteMessagesCtrl handles GET /site-messages
@@ -14,7 +15,7 @@ func GetSiteMessagesCtrl(c *gin.Context) {
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	unreadOnlyQuery := c.DefaultQuery("unread_only", "0")
 	unreadOnly := unreadOnlyQuery == "1" || unreadOnlyQuery == "true"
-	
+
 	// Get user ID from context if authenticated
 	var userID *uint
 	if val, ok := c.Get("uid"); ok {
@@ -57,7 +58,7 @@ func MarkSiteMessageAsReadCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "message marked as read")
 }
 
-// MarkAllSiteMessagesAsReadCtrl handles PUT /site-messages/read-all
+// MarkAllSiteMessagesAsReadCtrl handles PUT /delivery/site-messages/read-status
 func MarkAllSiteMessagesAsReadCtrl(c *gin.Context) {
 	var userID *uint
 	if val, ok := c.Get("uid"); ok {
@@ -73,7 +74,7 @@ func MarkAllSiteMessagesAsReadCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "all messages marked as read")
 }
 
-// GetUnreadSiteMessagesCountCtrl handles GET /site-messages/unread-count
+// GetUnreadSiteMessagesCountCtrl handles GET /delivery/site-messages/unread/count
 func GetUnreadSiteMessagesCountCtrl(c *gin.Context) {
 	var userID *uint
 	if val, ok := c.Get("uid"); ok {

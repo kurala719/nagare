@@ -13,39 +13,27 @@ func setupUsersDomainRoutes(rg *gin.RouterGroup) {
 }
 
 func setupUserRoutes(rg *gin.RouterGroup) {
-	// Public auth routes - no authentication required
-	auth := rg.Group("/auth")
-	{
-		auth.POST("/login", api.LoginUserCtrl)
-		auth.POST("/register", api.RegisterUserCtrl)
-		auth.POST("/send-code", api.SendRegistrationCodeCtrl)
-		auth.POST("/reset-request", api.SubmitPasswordResetApplicationCtrl)
+	// Public account/session routes - no authentication required
+	rg.POST("/sessions", api.LoginUserCtrl)
+	rg.POST("/registrations", api.RegisterUserCtrl)
+	rg.POST("/registration-codes", api.SendRegistrationCodeCtrl)
+	rg.POST("/password-reset-applications", api.SubmitPasswordResetApplicationCtrl)
+	rg.POST("/password-resets", api.PrivilegesMiddleware(1), api.ResetPasswordCtrl)
 
-		// Reset password - requires privilege 1
-		authProtected := auth.Group("", api.PrivilegesMiddleware(1))
-		authProtected.POST("/reset", api.ResetPasswordCtrl)
-	}
-
-	// Register applications - requires privilege 3
-	registerApps := rg.Group("/register-applications", api.PrivilegesMiddleware(3))
+	// Registration applications - requires privilege 3
+	registerApps := rg.Group("/registration-applications", api.PrivilegesMiddleware(3))
 	registerApps.GET("", api.ListRegisterApplicationsCtrl)
-	registerApps.PUT("/:id/approve", api.ApproveRegisterApplicationCtrl)
-	registerApps.PUT("/:id/reject", api.RejectRegisterApplicationCtrl)
+	registerApps.POST("/:id/approvals", api.ApproveRegisterApplicationCtrl)
+	registerApps.POST("/:id/rejections", api.RejectRegisterApplicationCtrl)
 
 	// Password reset applications - requires privilege 3
-	resetApps := rg.Group("/reset-applications", api.PrivilegesMiddleware(3))
+	resetApps := rg.Group("/password-reset-applications", api.PrivilegesMiddleware(3))
 	resetApps.GET("", api.ListPasswordResetApplicationsCtrl)
-	resetApps.PUT("/:id/approve", api.ApprovePasswordResetApplicationCtrl)
-	resetApps.PUT("/:id/reject", api.RejectPasswordResetApplicationCtrl)
-
-	// Legacy register applications - requires privilege 3
-	registerAppsLegacy := rg.Group("/register-application", api.PrivilegesMiddleware(3))
-	registerAppsLegacy.GET("", api.ListRegisterApplicationsCtrl)
-	registerAppsLegacy.PUT("/:id/approve", api.ApproveRegisterApplicationCtrl)
-	registerAppsLegacy.PUT("/:id/reject", api.RejectRegisterApplicationCtrl)
+	resetApps.POST("/:id/approvals", api.ApprovePasswordResetApplicationCtrl)
+	resetApps.POST("/:id/rejections", api.RejectPasswordResetApplicationCtrl)
 
 	// Users routes
-	users := rg.Group("/users")
+	users := rg.Group("")
 	{
 		// requires privilege 2 for read
 		usersRead := users.Group("", api.PrivilegesMiddleware(2))
@@ -62,23 +50,21 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 
 func setupUserInformationRoutes(rg *gin.RouterGroup) {
 	// Authenticated user routes - manage their own profile (privilege 1)
-	authenticated := rg.Group("/user-info", api.PrivilegesMiddleware(1))
+	authenticated := rg.Group("/profile", api.PrivilegesMiddleware(1))
 	{
-		authenticated.GET("/me", api.GetMyProfileCtrl)
-		authenticated.PUT("/me", api.UpdateMyProfileCtrl)
-		authenticated.POST("/me", api.UpdateMyProfileCtrl)
-		authenticated.POST("/me/avatar", api.UploadAvatarCtrl)
+		authenticated.GET("", api.GetMyProfileCtrl)
+		authenticated.PUT("", api.UpdateMyProfileCtrl)
+		authenticated.POST("/avatar", api.UploadAvatarCtrl)
 	}
 
 	// Admin routes - manage other users' information (privilege 3)
-	admin := rg.Group("/user-info", api.PrivilegesMiddleware(3))
+	admin := rg.Group("/profiles", api.PrivilegesMiddleware(3))
 	{
-		admin.GET("/users/:id", api.GetUserByIDCtrl)
-		admin.PUT("/users/:id", api.UpdateUserCtrl)
+		admin.GET("/:id", api.GetUserByIDCtrl)
+		admin.PUT("/:id", api.UpdateUserCtrl)
 	}
 }
 
 func setupPublicRoutes(rg *gin.RouterGroup) {
-	public := rg.Group("/public")
-	public.GET("/status", api.GetPublicStatusSummaryCtrl)
+	rg.GET("/status", api.GetPublicStatusSummaryCtrl)
 }

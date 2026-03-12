@@ -10,25 +10,21 @@ func setupAnalysisDomainRoutes(rg *gin.RouterGroup) {
 	setupAnalyticsRoutes(rg)
 	setupHistoryRoutes(rg)
 	setupReportRoutes(rg)
-	setupReportConfigRoutes(rg)
-	setupReportGenerationRoutes(rg)
-	setupReportDownloadRoutes(rg)
 	setupChaosRoutes(rg)
 }
 
 func setupAnalyticsRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	analytics := rg.Group("/analytics", api.PrivilegesMiddleware(1))
-	analytics.GET("/alerts", api.GetAlertAnalyticsCtrl)
+	alerts := rg.Group("/alerts", api.PrivilegesMiddleware(1))
+	alerts.GET("/analytics", api.GetAlertAnalyticsCtrl)
 }
 
 func setupHistoryRoutes(rg *gin.RouterGroup) {
-	history := rg.Group("/history", api.PrivilegesMiddleware(1))
-	history.GET("/monitors/:id", api.GetMonitorHistoryCtrl)
-	history.GET("/groups/:id", api.GetGroupHistoryCtrl)
-	history.GET("/hosts/:id", api.GetHostHistoryCtrl)
-	history.GET("/items/:id", api.GetItemHistoryCtrl)
-	history.GET("/system/health", api.GetNetworkStatusHistoryCtrl)
+	history := rg.Group("", api.PrivilegesMiddleware(1))
+	history.GET("/monitors/:id/history", api.GetMonitorHistoryCtrl)
+	history.GET("/groups/:id/history", api.GetGroupHistoryCtrl)
+	history.GET("/hosts/:id/history", api.GetHostHistoryCtrl)
+	history.GET("/items/:id/history", api.GetItemHistoryCtrl)
+	history.GET("/system/health/history", api.GetNetworkStatusHistoryCtrl)
 }
 
 func setupReportRoutes(rg *gin.RouterGroup) {
@@ -37,31 +33,19 @@ func setupReportRoutes(rg *gin.RouterGroup) {
 		reports.GET("", api.ListReportsCtrl)
 		reports.GET("/:id", api.GetReportCtrl)
 		reports.GET("/:id/content", api.GetReportContentCtrl)
+		reports.GET("/:id/file", api.DownloadReportCtrl)
+		reports.GET("/configuration", api.GetReportConfigCtrl)
+		reports.PUT("/configuration", api.UpdateReportConfigCtrl)
+		reports.POST("/generations/daily", api.GenerateDailyReportCtrl)
+		reports.POST("/generations/weekly", api.GenerateWeeklyReportCtrl)
+		reports.POST("/generations/monthly", api.GenerateMonthlyReportCtrl)
+		reports.POST("/generations/custom", api.GenerateCustomReportCtrl)
 		reports.DELETE("/:id", api.DeleteReportCtrl)
 	}
 }
 
-func setupReportConfigRoutes(rg *gin.RouterGroup) {
-	reportConfig := rg.Group("/report-config", api.PrivilegesMiddleware(2))
-	reportConfig.GET("", api.GetReportConfigCtrl)
-	reportConfig.PUT("", api.UpdateReportConfigCtrl)
-}
-
-func setupReportGenerationRoutes(rg *gin.RouterGroup) {
-	reportGeneration := rg.Group("/report-generation", api.PrivilegesMiddleware(2))
-	reportGeneration.POST("/daily", api.GenerateDailyReportCtrl)
-	reportGeneration.POST("/weekly", api.GenerateWeeklyReportCtrl)
-	reportGeneration.POST("/monthly", api.GenerateMonthlyReportCtrl)
-	reportGeneration.POST("/custom", api.GenerateCustomReportCtrl)
-}
-
-func setupReportDownloadRoutes(rg *gin.RouterGroup) {
-	reportDownload := rg.Group("/report-download", api.PrivilegesMiddleware(2))
-	reportDownload.GET("/:id", api.DownloadReportCtrl)
-}
-
 func setupChaosRoutes(rg *gin.RouterGroup) {
 	// Routes with privilege level 2 (managers/admins)
-	chaos := rg.Group("/chaos", api.PrivilegesMiddleware(2))
-	chaos.POST("/alert-storm", api.TriggerAlertStormCtrl)
+	alertStorms := rg.Group("/alert-storms", api.PrivilegesMiddleware(2))
+	alertStorms.POST("", api.TriggerAlertStormCtrl)
 }

@@ -44,7 +44,7 @@ export function deleteAlarm(id) {
 
 export function loginAlarm(id, data) {
   return request({
-    url: `/alert/alarms/${id}/login`,
+    url: `/alert/alarms/${id}/sessions`,
     method: 'post',
     data
   })
@@ -52,21 +52,21 @@ export function loginAlarm(id, data) {
 
 export function regenerateAlarmEventToken(id) {
   return request({
-    url: `/alert/alarms/${id}/event-token`,
+    url: `/alert/alarms/${id}/event-tokens`,
     method: 'post'
   })
 }
 
 export function refreshAlarmEventToken(id, token) {
   return request({
-    url: `/alert/alarms/${id}/event-token/refresh?token=${token}`,
+    url: `/alert/alarms/${id}/event-token-refreshes?token=${token}`,
     method: 'post'
   })
 }
 
 export function setupAlarmMedia(id, data) {
   return request({
-    url: `/alert/alarms/${id}/setup-media`,
+    url: `/alert/alarms/${id}/media-bindings`,
     method: 'post',
     data
   })

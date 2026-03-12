@@ -16,7 +16,7 @@ export function fetchHealthScore() {
 
 export function fetchNetworkStatusHistory(params) {
   return request({
-    url: '/analysis/history/system/health',
+    url: '/analysis/system/health/history',
     method: 'get',
     params
   })

@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAllKnowledgeBaseCtrl handles GET /ai/knowledge-base/entries
+// GetAllKnowledgeBaseCtrl handles GET /ai/knowledge-base
 func GetAllKnowledgeBaseCtrl(c *gin.Context) {
 	q := c.Query("q")
 	if q != "" {
@@ -30,7 +30,7 @@ func GetAllKnowledgeBaseCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, kbs)
 }
 
-// GetKnowledgeBaseByIDCtrl handles GET /ai/knowledge-base/entries/:id
+// GetKnowledgeBaseByIDCtrl handles GET /ai/knowledge-base/:id
 func GetKnowledgeBaseByIDCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -46,7 +46,7 @@ func GetKnowledgeBaseByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, kb)
 }
 
-// AddKnowledgeBaseCtrl handles POST /ai/knowledge-base/entries
+// AddKnowledgeBaseCtrl handles POST /ai/knowledge-base
 func AddKnowledgeBaseCtrl(c *gin.Context) {
 	var req service.KnowledgeBaseReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,7 +61,7 @@ func AddKnowledgeBaseCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusCreated, "knowledge base entry added")
 }
 
-// UpdateKnowledgeBaseCtrl handles PUT /ai/knowledge-base/entries/:id
+// UpdateKnowledgeBaseCtrl handles PUT /ai/knowledge-base/:id
 func UpdateKnowledgeBaseCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -82,7 +82,7 @@ func UpdateKnowledgeBaseCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "knowledge base entry updated")
 }
 
-// DeleteKnowledgeBaseCtrl handles DELETE /ai/knowledge-base/entries/:id
+// DeleteKnowledgeBaseCtrl handles DELETE /ai/knowledge-base/:id
 func DeleteKnowledgeBaseCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

@@ -5,7 +5,7 @@ import request from '../utils/request';
 export function loginUser(data) {
     return request({
         method: 'POST',
-        url: '/users/auth/login',
+        url: '/users/sessions',
         data,
     })
 }
@@ -13,7 +13,7 @@ export function loginUser(data) {
 export function registerUser(data) {
     return request({
         method: 'POST',
-        url: '/users/auth/register',
+        url: '/users/registrations',
         data,
     })
 }
@@ -21,7 +21,7 @@ export function registerUser(data) {
 export function sendVerificationCode(data) {
     return request({
         method: 'POST',
-        url: '/users/auth/send-code',
+        url: '/users/registration-codes',
         data,
     })
 }
@@ -29,7 +29,7 @@ export function sendVerificationCode(data) {
 export function resetPassword(data) {
     return request({
         method: 'POST',
-        url: '/users/auth/reset',
+        url: '/users/password-resets',
         data,
     })
 }
@@ -39,14 +39,14 @@ export function resetPassword(data) {
 export function getUsers() {
     return request({
         method: 'GET',
-        url: '/users/users',
+        url: '/users',
     })
 }
 
 export function searchUsers(params) {
     return request({
         method: 'GET',
-        url: '/users/users',
+        url: '/users',
         params,
     })
 }
@@ -54,14 +54,14 @@ export function searchUsers(params) {
 export function getUserByID(id) {
     return request({
         method: 'GET',
-        url: `/users/users/${id}`,
+        url: `/users/${id}`,
     })
 }
 
 export function updateUser(id, data) {
     return request({
         method: 'PUT',
-        url: `/users/users/${id}`,
+        url: `/users/${id}`,
         data,
     })
 }
@@ -69,7 +69,7 @@ export function updateUser(id, data) {
 export function addUser(data) {
     return request({
         method: 'POST',
-        url: '/users/users',
+        url: '/users',
         data,
     })
 }
@@ -77,7 +77,7 @@ export function addUser(data) {
 export function deleteUser(id) {
     return request({
         method: 'DELETE',
-        url: `/users/users/${id}`,
+        url: `/users/${id}`,
     })
 }
 
@@ -86,22 +86,22 @@ export function deleteUser(id) {
 export function searchRegisterApplications(params) {
     return request({
         method: 'GET',
-        url: '/users/register-applications',
+        url: '/users/registration-applications',
         params,
     })
 }
 
 export function approveRegisterApplication(id) {
     return request({
-        method: 'PUT',
-        url: `/users/register-applications/${id}/approve`,
+        method: 'POST',
+        url: `/users/registration-applications/${id}/approvals`,
     })
 }
 
 export function rejectRegisterApplication(id, data) {
     return request({
-        method: 'PUT',
-        url: `/users/register-applications/${id}/reject`,
+        method: 'POST',
+        url: `/users/registration-applications/${id}/rejections`,
         data,
     })
 }
@@ -111,22 +111,22 @@ export function rejectRegisterApplication(id, data) {
 export function searchResetApplications(params) {
     return request({
         method: 'GET',
-        url: '/users/reset-applications',
+        url: '/users/password-reset-applications',
         params,
     })
 }
 
 export function approveResetApplication(id) {
     return request({
-        method: 'PUT',
-        url: `/users/reset-applications/${id}/approve`,
+        method: 'POST',
+        url: `/users/password-reset-applications/${id}/approvals`,
     })
 }
 
 export function rejectResetApplication(id, data) {
     return request({
-        method: 'PUT',
-        url: `/users/reset-applications/${id}/reject`,
+        method: 'POST',
+        url: `/users/password-reset-applications/${id}/rejections`,
         data,
     })
 }
@@ -136,14 +136,14 @@ export function rejectResetApplication(id, data) {
 export function getUserProfile() {
     return request({
         method: 'GET',
-        url: '/users/user-info/me',
+        url: '/users/profile',
     })
 }
 
 export function updateUserProfile(data) {
     return request({
         method: 'PUT',
-        url: '/users/user-info/me',
+        url: '/users/profile',
         data,
     })
 }
@@ -151,7 +151,7 @@ export function updateUserProfile(data) {
 export function uploadAvatar(formData, onUploadProgress) {
     return request({
         method: 'POST',
-        url: '/users/user-info/me/avatar',
+        url: '/users/profile/avatar',
         data: formData,
         headers: {
             'Content-Type': 'multipart/form-data'
@@ -179,14 +179,14 @@ export function createUserInformation(data) {
 export function getUserInformationByUserID(id) {
     return request({
         method: 'GET',
-        url: `/users/user-info/users/${id}`,
+        url: `/users/profiles/${id}`,
     })
 }
 
 export function updateUserInformationByUserID(id, data) {
     return request({
         method: 'PUT',
-        url: `/users/user-info/users/${id}`,
+        url: `/users/profiles/${id}`,
         data,
     })
 }
@@ -194,6 +194,6 @@ export function updateUserInformationByUserID(id, data) {
 export function getPublicStatus() {
     return request({
         method: 'GET',
-        url: '/users/public/status',
+        url: '/users/status',
     })
 }

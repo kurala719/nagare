@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"nagare/internal/service"
 	"nagare/internal/model"
+	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
-// SubmitPasswordResetApplicationCtrl handles POST /public/password-reset
+// SubmitPasswordResetApplicationCtrl handles POST /users/password-reset-applications
 func SubmitPasswordResetApplicationCtrl(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -28,7 +29,7 @@ func SubmitPasswordResetApplicationCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "request submitted for audit")
 }
 
-// ListPasswordResetApplicationsCtrl handles GET /user/reset-application/search
+// ListPasswordResetApplicationsCtrl handles GET /users/password-reset-applications
 func ListPasswordResetApplicationsCtrl(c *gin.Context) {
 	status, err := parseOptionalInt(c, "status")
 	if err != nil {
@@ -69,7 +70,7 @@ func ListPasswordResetApplicationsCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, apps)
 }
 
-// ApprovePasswordResetApplicationCtrl handles PUT /user/reset-application/:id/approve
+// ApprovePasswordResetApplicationCtrl handles POST /users/password-reset-applications/:id/approvals
 func ApprovePasswordResetApplicationCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -88,7 +89,7 @@ func ApprovePasswordResetApplicationCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "application approved")
 }
 
-// RejectPasswordResetApplicationCtrl handles PUT /user/reset-application/:id/reject
+// RejectPasswordResetApplicationCtrl handles POST /users/password-reset-applications/:id/rejections
 func RejectPasswordResetApplicationCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

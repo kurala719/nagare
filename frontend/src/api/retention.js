@@ -10,14 +10,14 @@ export function fetchRetentionPolicies() {
 export function updateRetentionPolicy(data) {
   return request({
     url: '/system/retention/policies',
-    method: 'post',
+    method: 'put',
     data
   })
 }
 
 export function performRetentionCleanup() {
   return request({
-    url: '/system/retention/cleanup',
+    url: '/system/retention/jobs',
     method: 'post'
   })
 }

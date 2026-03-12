@@ -206,9 +206,9 @@ const connectWebSocket = () => {
   let url = ''
   if (currentHostId.value === 'direct') {
     const { ip, port, user, password } = directConfig.value
-    url = `${protocol}//${host}/api/v1/maintenance/ssh/terminal?token=${token}&ip=${ip}&port=${port}&user=${user}&password=${encodeURIComponent(password)}&cols=${term.cols}&rows=${term.rows}`
+    url = `${protocol}//${host}/api/v1/maintenance/ssh-sessions/direct?token=${token}&ip=${ip}&port=${port}&user=${user}&password=${encodeURIComponent(password)}&cols=${term.cols}&rows=${term.rows}`
   } else {
-    url = `${protocol}//${host}/api/v1/maintenance/ssh/hosts/${currentHostId.value}?token=${token}&cols=${term.cols}&rows=${term.rows}`
+    url = `${protocol}//${host}/api/v1/maintenance/ssh-sessions/hosts/${currentHostId.value}?token=${token}&cols=${term.cols}&rows=${term.rows}`
   }
 
   socket = new WebSocket(url)

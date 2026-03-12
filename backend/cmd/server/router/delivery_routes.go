@@ -25,15 +25,15 @@ func setupActionRoutes(rg *gin.RouterGroup) {
 		actionsWrite.POST("", api.AddActionCtrl)
 		actionsWrite.PUT("/:id", api.UpdateActionCtrl)
 		actionsWrite.DELETE("/:id", api.DeleteActionByIDCtrl)
-		actionsWrite.POST("/:id/test", api.TestActionCtrl)
+		actionsWrite.POST("/:id/test-runs", api.TestActionCtrl)
 	}
 }
 
 func setupMediaRoutes(rg *gin.RouterGroup) {
 	// Webhook endpoint MUST be first, before any authenticated routes
 	media := rg.Group("/media")
-	media.POST("/qq/message", api.HandleQQMessageCtrl)
-	media.GET("/qq/ws", api.HandleQQWebSocket)
+	media.POST("/qq/messages", api.HandleQQMessageCtrl)
+	media.GET("/qq/socket-sessions", api.HandleQQWebSocket)
 
 	// Routes with privilege level 1
 	mediaRead := rg.Group("/media", api.PrivilegesMiddleware(1))
@@ -45,21 +45,21 @@ func setupMediaRoutes(rg *gin.RouterGroup) {
 	mediaWrite.POST("", api.AddMediaCtrl)
 	mediaWrite.PUT("/:id", api.UpdateMediaCtrl)
 	mediaWrite.DELETE("/:id", api.DeleteMediaByIDCtrl)
-	mediaWrite.POST("/:id/test", api.TestMediaCtrl)
+	mediaWrite.POST("/:id/test-runs", api.TestMediaCtrl)
 }
 
 func setupSiteMessageRoutes(rg *gin.RouterGroup) {
 	messages := rg.Group("/site-messages")
 	{
 		// Public WebSocket endpoint (auth via token in query handled by middleware)
-		messages.GET("/ws", api.PrivilegesMiddleware(1), api.HandleSiteMessageWS)
+		messages.GET("/socket-sessions", api.PrivilegesMiddleware(1), api.HandleSiteMessageWS)
 
 		// Protected routes
 		msgProtected := messages.Group("", api.PrivilegesMiddleware(1))
 		msgProtected.GET("", api.GetSiteMessagesCtrl)
-		msgProtected.GET("/unread-count", api.GetUnreadSiteMessagesCountCtrl)
-		msgProtected.PUT("/:id/read", api.MarkSiteMessageAsReadCtrl)
-		msgProtected.PUT("/read-all", api.MarkAllSiteMessagesAsReadCtrl)
+		msgProtected.GET("/unread/count", api.GetUnreadSiteMessagesCountCtrl)
+		msgProtected.PUT("/:id/read-status", api.MarkSiteMessageAsReadCtrl)
+		msgProtected.PUT("/read-status", api.MarkAllSiteMessagesAsReadCtrl)
 		msgProtected.DELETE("/:id", api.DeleteSiteMessageCtrl)
 	}
 }

@@ -87,7 +87,7 @@ func GetItemByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, item)
 }
 
-// GetItemHistoryCtrl handles GET /analysis/history/items/:id
+// GetItemHistoryCtrl handles GET /analysis/items/:id/history
 func GetItemHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

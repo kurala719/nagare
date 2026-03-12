@@ -24,28 +24,28 @@ export function fetchReportContent(id) {
 
 export function generateDailyReport() {
   return request({
-    url: '/analysis/report-generation/daily',
+    url: '/analysis/reports/generations/daily',
     method: 'post'
   })
 }
 
 export function generateWeeklyReport() {
   return request({
-    url: '/analysis/report-generation/weekly',
+    url: '/analysis/reports/generations/weekly',
     method: 'post'
   })
 }
 
 export function generateMonthlyReport() {
   return request({
-    url: '/analysis/report-generation/monthly',
+    url: '/analysis/reports/generations/monthly',
     method: 'post'
   })
 }
 
 export function generateCustomReport(data) {
   return request({
-    url: '/analysis/report-generation/custom',
+    url: '/analysis/reports/generations/custom',
     method: 'post',
     data
   })
@@ -64,7 +64,7 @@ export function bulkDeleteReports(ids) {
 
 export function downloadReport(id) {
   return request({
-    url: `/analysis/report-download/${id}`,
+    url: `/analysis/reports/${id}/file`,
     method: 'get',
     responseType: 'blob'
   })
@@ -72,14 +72,14 @@ export function downloadReport(id) {
 
 export function getReportConfig() {
   return request({
-    url: '/analysis/report-config',
+    url: '/analysis/reports/configuration',
     method: 'get'
   })
 }
 
 export function updateReportConfig(data) {
   return request({
-    url: '/analysis/report-config',
+    url: '/analysis/reports/configuration',
     method: 'put',
     data
   })

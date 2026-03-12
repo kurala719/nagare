@@ -79,7 +79,7 @@ func GetMonitorByIDCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, monitor)
 }
 
-// GetMonitorHistoryCtrl handles GET /analysis/history/monitors/:id
+// GetMonitorHistoryCtrl handles GET /analysis/monitors/:id/history
 func GetMonitorHistoryCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -171,7 +171,7 @@ func UpdateMonitorCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "monitor updated")
 }
 
-// LoginMonitorCtrl handles POST /monitors/:id/login
+// LoginMonitorCtrl handles POST /monitoring/monitors/:id/sessions
 func LoginMonitorCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -187,7 +187,7 @@ func LoginMonitorCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, monitor)
 }
 
-// RefreshMonitorEventTokenCtrl handles POST /monitors/:id/event-token/refresh (public)
+// RefreshMonitorEventTokenCtrl handles POST /monitoring/monitors/:id/event-token-refreshes (public)
 // Allows the monitor script to refresh its own event token using the current token
 func RefreshMonitorEventTokenCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -231,7 +231,7 @@ func RefreshMonitorEventTokenCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, monitor)
 }
 
-// RegenerateMonitorEventTokenCtrl handles POST /monitors/:id/event-token
+// RegenerateMonitorEventTokenCtrl handles POST /monitoring/monitors/:id/event-tokens
 func RegenerateMonitorEventTokenCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -247,7 +247,7 @@ func RegenerateMonitorEventTokenCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, monitor)
 }
 
-// CheckMonitorStatusCtrl handles POST /monitors/:id/check
+// CheckMonitorStatusCtrl handles POST /monitoring/monitors/:id/checks
 func CheckMonitorStatusCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -263,7 +263,7 @@ func CheckMonitorStatusCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// CheckAllMonitorsStatusCtrl handles POST /monitors/check
+// CheckAllMonitorsStatusCtrl handles POST /monitoring/monitors/checks
 func CheckAllMonitorsStatusCtrl(c *gin.Context) {
 	results := service.CheckAllMonitorsStatusServ()
 	respondSuccess(c, http.StatusOK, results)

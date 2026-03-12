@@ -25,9 +25,13 @@ func setupConfigurationRoutes(rg *gin.RouterGroup) {
 	config := rg.Group("/config", api.PrivilegesMiddleware(3))
 	config.GET("", api.GetMainConfigCtrl)
 	config.PUT("", api.ModifyMainConfigCtrl)
-	config.POST("/save", api.SaveConfigCtrl)
-	config.POST("/reload", api.LoadConfigCtrl)
-	config.POST("/reset", api.ResetConfigCtrl)
+	config.DELETE("", api.ResetConfigCtrl)
+
+	configSnapshots := rg.Group("/config-snapshots", api.PrivilegesMiddleware(3))
+	configSnapshots.POST("", api.SaveConfigCtrl)
+
+	configReloads := rg.Group("/config-reloads", api.PrivilegesMiddleware(3))
+	configReloads.POST("", api.LoadConfigCtrl)
 }
 
 func setupLogRoutes(rg *gin.RouterGroup) {
@@ -50,6 +54,6 @@ func setupRetentionRoutes(rg *gin.RouterGroup) {
 	// Routes with privilege level 3 - admin only
 	retention := rg.Group("/retention", api.PrivilegesMiddleware(3))
 	retention.GET("/policies", api.GetRetentionPoliciesCtrl)
-	retention.POST("/policies", api.UpdateRetentionPolicyCtrl)
-	retention.POST("/cleanup", api.PerformCleanupCtrl)
+	retention.PUT("/policies", api.UpdateRetentionPolicyCtrl)
+	retention.POST("/jobs", api.PerformCleanupCtrl)
 }

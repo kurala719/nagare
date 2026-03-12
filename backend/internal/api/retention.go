@@ -3,9 +3,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"nagare/internal/model"
 	"nagare/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetRetentionPoliciesCtrl handles GET /retention/policies
@@ -34,7 +35,7 @@ func UpdateRetentionPolicyCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "Retention policy updated successfully")
 }
 
-// PerformCleanupCtrl handles POST /retention/cleanup
+// PerformCleanupCtrl handles POST /system/retention/jobs
 func PerformCleanupCtrl(c *gin.Context) {
 	results, err := service.PerformDataRetentionCleanupServ()
 	if err != nil {

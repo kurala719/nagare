@@ -8,8 +8,10 @@
     <div class="standard-toolbar">
       <div class="filter-group">
         <el-select v-model="filterType" :placeholder="$t('reports.filterType')" clearable style="width: 150px">
-          <el-option label="Weekly" value="weekly" />
-          <el-option label="Monthly" value="monthly" />
+          <el-option :label="$t('reports.typeDaily')" value="daily" />
+          <el-option :label="$t('reports.typeWeekly')" value="weekly" />
+          <el-option :label="$t('reports.typeMonthly')" value="monthly" />
+          <el-option :label="$t('reports.typeCustom')" value="custom" />
         </el-select>
       </div>
       <div class="action-group">
@@ -50,7 +52,9 @@
       <el-table-column prop="title" :label="$t('reports.reportTitle')" min-width="200" />
       <el-table-column prop="report_type" :label="$t('reports.type')" width="120">
         <template #default="{ row }">
-          <el-tag :type="row.report_type === 'custom' ? 'warning' : 'info'">{{ row.report_type }}</el-tag>
+          <el-tag :type="row.report_type === 'custom' ? 'warning' : 'info'">
+            {{ $t(`reports.type${row.report_type.charAt(0).toUpperCase() + row.report_type.slice(1)}`) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="generated_at" :label="$t('reports.generatedAt')" width="180">

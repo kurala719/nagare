@@ -81,7 +81,7 @@ func GetReportContentCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, content)
 }
 
-// GenerateDailyReportCtrl handles POST /analysis/report-generation/daily
+// GenerateDailyReportCtrl handles POST /analysis/reports/generations/daily
 func GenerateDailyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateDailyReportServ()
 	if err != nil {
@@ -100,7 +100,7 @@ func GenerateDailyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateWeeklyReportCtrl handles POST /analysis/report-generation/weekly
+// GenerateWeeklyReportCtrl handles POST /analysis/reports/generations/weekly
 func GenerateWeeklyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateWeeklyReportServ()
 	if err != nil {
@@ -119,7 +119,7 @@ func GenerateWeeklyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateMonthlyReportCtrl handles POST /analysis/report-generation/monthly
+// GenerateMonthlyReportCtrl handles POST /analysis/reports/generations/monthly
 func GenerateMonthlyReportCtrl(c *gin.Context) {
 	report, err := service.GenerateMonthlyReportServ()
 	if err != nil {
@@ -138,7 +138,7 @@ func GenerateMonthlyReportCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusCreated, resp)
 }
 
-// GenerateCustomReportCtrl handles POST /analysis/report-generation/custom
+// GenerateCustomReportCtrl handles POST /analysis/reports/generations/custom
 func GenerateCustomReportCtrl(c *gin.Context) {
 	var req struct {
 		Title     string `json:"title"`
@@ -196,7 +196,7 @@ func DeleteReportCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "report deleted")
 }
 
-// DownloadReportCtrl handles GET /analysis/report-download/:id
+// DownloadReportCtrl handles GET /analysis/reports/:id/file
 func DownloadReportCtrl(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

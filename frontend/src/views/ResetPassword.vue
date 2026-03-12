@@ -174,7 +174,7 @@ const onReset = async () => {
   loading.value = true
   try {
     await request({
-      url: '/auth/reset-request',
+      url: '/users/password-reset-applications',
       method: 'POST',
       data: {
         username: form.username,

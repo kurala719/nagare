@@ -147,7 +147,7 @@ func UpdateAlarmCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "alarm updated")
 }
 
-// LoginAlarmCtrl handles POST /alarms/:id/login
+// LoginAlarmCtrl handles POST /alert/alarms/:id/sessions
 func LoginAlarmCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -163,7 +163,7 @@ func LoginAlarmCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, alarm)
 }
 
-// SetupAlarmMediaCtrl handles POST /alarms/:id/setup-media
+// SetupAlarmMediaCtrl handles POST /alert/alarms/:id/media-bindings
 // One-click initialization for Zabbix alarm source (media type + user + action binding)
 func SetupAlarmMediaCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -180,7 +180,7 @@ func SetupAlarmMediaCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, result)
 }
 
-// RefreshAlarmEventTokenCtrl handles POST /alarms/:id/event-token/refresh (public)
+// RefreshAlarmEventTokenCtrl handles POST /alert/alarms/:id/event-token-refreshes (public)
 // Allows the alarm source to refresh its own event token using the current token
 func RefreshAlarmEventTokenCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -221,7 +221,7 @@ func RefreshAlarmEventTokenCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, alarm)
 }
 
-// RegenerateAlarmEventTokenCtrl handles POST /alarms/:id/event-token
+// RegenerateAlarmEventTokenCtrl handles POST /alert/alarms/:id/event-tokens
 func RegenerateAlarmEventTokenCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

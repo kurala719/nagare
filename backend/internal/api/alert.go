@@ -615,7 +615,7 @@ func UpdateAlertCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "alert updated")
 }
 
-// GenerateTestAlertsCtrl handles POST /api/v1/alerts/generate-test
+// GenerateTestAlertsCtrl handles POST /alert/test-alerts
 func GenerateTestAlertsCtrl(c *gin.Context) {
 	count := 5
 	if c, ok := c.GetQuery("count"); ok {
@@ -639,7 +639,7 @@ func GenerateTestAlertsCtrl(c *gin.Context) {
 	})
 }
 
-// GetAlertScoreCtrl handles GET /api/v1/alerts/score
+// GetAlertScoreCtrl handles GET /alert/alerts/scores
 func GetAlertScoreCtrl(c *gin.Context) {
 	score, err := service.CalculateAlertScore()
 	if err != nil {

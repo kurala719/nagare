@@ -21,14 +21,14 @@ export function getGroupById(id) {
 
 export function fetchGroupDetail(id) {
   return request({
-    url: `/monitoring/groups/${id}/detail`,
+    url: `/monitoring/groups/${id}/details`,
     method: 'get'
   })
 }
 
 export function fetchGroupHistory(id, params) {
   return request({
-    url: `/analysis/history/groups/${id}`,
+    url: `/analysis/groups/${id}/history`,
     method: 'get',
     params
   })
@@ -59,28 +59,28 @@ export function deleteGroup(id, push = false) {
 
 export function checkGroupStatus(id) {
   return request({
-    url: `/monitoring/groups/${id}/check`,
+    url: `/monitoring/groups/${id}/checks`,
     method: 'post'
   })
 }
 
 export function checkAllGroupsStatus() {
   return request({
-    url: '/monitoring/groups/check',
+    url: '/monitoring/groups/checks',
     method: 'post'
   })
 }
 
 export function pullGroup(id) {
   return request({
-    url: `/monitoring/groups/${id}/pull`,
+    url: `/monitoring/groups/${id}/imports`,
     method: 'post'
   })
 }
 
 export function pushGroup(id) {
   return request({
-    url: `/monitoring/groups/${id}/push`,
+    url: `/monitoring/groups/${id}/exports`,
     method: 'post'
   })
 }

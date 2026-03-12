@@ -128,7 +128,7 @@ func DeleteMediaByIDCtrl(c *gin.Context) {
 	respondSuccessMessage(c, http.StatusOK, "media deleted")
 }
 
-// TestMediaCtrl handles POST /media/:id/test
+// TestMediaCtrl handles POST /delivery/media/:id/test-runs
 func TestMediaCtrl(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
