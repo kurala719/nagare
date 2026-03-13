@@ -15,8 +15,8 @@ func setupDeliveryDomainRoutes(rg *gin.RouterGroup) {
 func setupActionRoutes(rg *gin.RouterGroup) {
 	actions := rg.Group("/actions")
 	{
-		// Routes with privilege level 1
-		actionsRead := actions.Group("", api.PrivilegesMiddleware(1))
+		// Routes with privilege level 2
+		actionsRead := actions.Group("", api.PrivilegesMiddleware(2))
 		actionsRead.GET("", api.SearchActionsCtrl)
 		actionsRead.GET("/:id", api.GetActionByIDCtrl)
 
@@ -35,8 +35,8 @@ func setupMediaRoutes(rg *gin.RouterGroup) {
 	media.POST("/qq/messages", api.HandleQQMessageCtrl)
 	media.GET("/qq/socket-sessions", api.HandleQQWebSocket)
 
-	// Routes with privilege level 1
-	mediaRead := rg.Group("/media", api.PrivilegesMiddleware(1))
+	// Routes with privilege level 2
+	mediaRead := rg.Group("/media", api.PrivilegesMiddleware(2))
 	mediaRead.GET("", api.SearchMediaCtrl)
 	mediaRead.GET("/:id", api.GetMediaByIDCtrl)
 

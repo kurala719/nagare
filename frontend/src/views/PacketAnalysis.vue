@@ -143,7 +143,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { Plus, Refresh, Search, VideoPlay, Delete, UploadFilled, Loading } from '@element-plus/icons-vue'
 import { fetchPacketAnalyses, uploadPacket, deletePacketAnalysis, startPacketAnalysis } from '@/api/packetAnalysis'
 import { fetchProviderData } from '@/api/providers'
-import { getMainConfig } from '@/api/config'
+import { getAIConfig } from '@/api/config'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
@@ -187,7 +187,7 @@ const loadData = async () => {
 
 const loadProviders = async () => {
   try {
-    const configRes = await getMainConfig()
+    const configRes = await getAIConfig()
     const config = configRes.data?.data || configRes.data || configRes
     const defProviderId = config.ai?.provider_id || 1
     const defModel = config.ai?.model || ''

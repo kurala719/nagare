@@ -63,14 +63,14 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+        <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
-        <el-button type="primary" :icon="Plus" @click="createDialogVisible = true">
+        <el-button v-if="canManage" type="primary" :icon="Plus" @click="createDialogVisible = true">
           {{ $t('groups.create') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+        <el-dropdown trigger="click" v-if="canManage && selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -126,7 +126,7 @@
     @sort-change="onSortChange"
     header-cell-class-name="table-header"
   >
-    <el-table-column type="selection" width="50" align="center" />
+    <el-table-column v-if="canManage" type="selection" width="50" align="center" />
     <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('groups.name')" min-width="160" show-overflow-tooltip sortable="custom" />
     <el-table-column v-if="isColumnVisible('monitor')" :label="$t('hosts.monitor')" min-width="150" show-overflow-tooltip prop="monitor_id" sortable="custom">
       <template #default="{ row }">
@@ -167,10 +167,10 @@
           <el-tooltip :content="$t('groups.details')" placement="top">
             <el-button size="small" :icon="Document" @click="openDetails(row)" />
           </el-tooltip>
-          <el-tooltip :content="$t('groups.properties')" placement="top">
+          <el-tooltip v-if="canManage" :content="$t('groups.properties')" placement="top">
             <el-button size="small" :icon="Setting" @click="openProperties(row)" />
           </el-tooltip>
-          <el-tooltip :content="$t('groups.delete')" placement="top">
+          <el-tooltip v-if="canManage" :content="$t('groups.delete')" placement="top">
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />
           </el-tooltip>
         </el-button-group>
@@ -326,6 +326,7 @@ import { markRaw } from 'vue';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
 import { fetchGroupData, addGroup, updateGroup, deleteGroup, pullGroup, pushGroup } from '@/api/groups';
 import { fetchMonitorData, syncGroupsFromMonitor } from '@/api/monitors';
+import { getUserPrivileges } from '@/utils/auth';
 
 export default {
   name: 'Group',
@@ -411,6 +412,9 @@ export default {
     },
     selectedCount() {
       return this.selectedGroupRows.length;
+    },
+    canManage() {
+      return getUserPrivileges() >= 2;
     },
   },
   watch: {

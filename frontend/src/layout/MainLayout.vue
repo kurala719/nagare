@@ -242,7 +242,6 @@ export default defineComponent({
       { key: 'analysis_group', label: 'menu.insights', minPrivilege: 1, icon: 'PieChart', children: [
         { key: 'analytics', path: '/analytics', label: 'menu.analytics', minPrivilege: 1 },
         { key: 'reports', path: '/reports', label: 'menu.reports', minPrivilege: 2 },
-        { key: 'packetAnalysis', path: '/packet-analysis', label: 'packets.title', minPrivilege: 1 },
         { key: 'systemStatus', path: '/system-status', label: 'menu.systemStatus', minPrivilege: 1 },
       ]},
 
@@ -268,20 +267,21 @@ export default defineComponent({
         { key: 'media', path: '/media', label: 'menu.media', minPrivilege: 2 },
       ]},
 
-      { key: 'ai_service_group', label: 'menu.provider', minPrivilege: 1, icon: 'Cpu', children: [
+      { key: 'ai_service_group', label: 'menu.provider', minPrivilege: 2, icon: 'Cpu', children: [
         { key: 'provider', path: '/provider', label: 'menu.providers', minPrivilege: 2 },
-        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 1 },
+        { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 2 },
+        { key: 'packetAnalysis', path: '/packet-analysis', label: 'packets.title', minPrivilege: 2 },
       ]},
 
       { key: 'users_group', label: 'menu.users', minPrivilege: 1, icon: 'User', children: [
-        { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 2 },
+        { key: 'user', path: '/user', label: 'menu.user', minPrivilege: 3 },
         { key: 'profile', path: '/profile', label: 'menu.profile', minPrivilege: 1 },
         { key: 'registerApplication', path: '/register-application', label: 'menu.registerApplication', minPrivilege: 3 },
       ]},
 
-      { key: 'system_group', label: 'menu.system', minPrivilege: 2, icon: 'Setting', children: [
-        { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 2 },
-        { key: 'auditLog', path: '/audit-log', label: 'menu.auditLog', minPrivilege: 2 },
+      { key: 'system_group', label: 'menu.system', minPrivilege: 3, icon: 'Setting', children: [
+        { key: 'log', path: '/log', label: 'menu.log', minPrivilege: 3 },
+        { key: 'auditLog', path: '/audit-log', label: 'menu.auditLog', minPrivilege: 3 },
         { key: 'retention', path: '/retention', label: 'retention.title', minPrivilege: 3 },
         { key: 'configuration', path: '/config-settings', label: 'menu.configuration', minPrivilege: 3 },
       ]},

@@ -328,3 +328,12 @@ func GetMainConfig() (ConfigResponse, error) {
 	}
 	return config, nil
 }
+
+// GetAIConfig returns the AI-related configuration only.
+func GetAIConfig() (AIConfig, error) {
+	var config AIConfig
+	if err := viper.UnmarshalKey("ai", &config); err != nil {
+		return AIConfig{}, err
+	}
+	return config, nil
+}

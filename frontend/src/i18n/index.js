@@ -2201,7 +2201,7 @@ const messages = {
       inventory: '资产盘点',
       group: '主机分组',
       host: '终端资产',
-      observability: '可观测性',
+      observability: '数据监控',
       item: '指标库',
       alerting: '告警响应',
       alert: '实时告警',

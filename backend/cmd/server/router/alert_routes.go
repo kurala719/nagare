@@ -35,8 +35,8 @@ func setupAlarmRoutes(rg *gin.RouterGroup) {
 func setupTriggerRoutes(rg *gin.RouterGroup) {
 	triggers := rg.Group("/triggers")
 	{
-		// Routes with privilege level 1
-		triggersRead := triggers.Group("", api.PrivilegesMiddleware(1))
+		// Routes with privilege level 2
+		triggersRead := triggers.Group("", api.PrivilegesMiddleware(2))
 		triggersRead.GET("", api.SearchTriggersCtrl)
 		triggersRead.GET("/:id", api.GetTriggerByIDCtrl)
 

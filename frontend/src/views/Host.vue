@@ -64,14 +64,14 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+        <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog">
+        <el-button v-if="canManage" type="primary" :icon="Plus" @click="openCreateDialog">
           {{ $t('hosts.create') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+        <el-dropdown trigger="click" v-if="canManage && selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -287,10 +287,10 @@
           <el-tooltip :content="$t('hosts.items')" placement="top">
             <el-button size="small" type="info" :icon="Setting" @click="viewItems(row)" />
           </el-tooltip>
-          <el-tooltip :content="$t('hosts.properties')" placement="top">
+          <el-tooltip v-if="canManage" :content="$t('hosts.properties')" placement="top">
             <el-button size="small" :icon="Edit" @click="openProperties(row)" />
           </el-tooltip>
-          <el-tooltip :content="$t('hosts.delete')" placement="top">
+          <el-tooltip v-if="canManage" :content="$t('hosts.delete')" placement="top">
             <el-button size="small" type="danger" :icon="Delete" @click="onDelete(row)" />
           </el-tooltip>
         </el-button-group>
@@ -491,8 +491,9 @@ import { fetchHostData, addHost, updateHost, deleteHost, consultHostAI, syncHost
 import { fetchGroupData } from '@/api/groups';
 import { fetchMonitorData } from '@/api/monitors';
 import { fetchProviderData } from '@/api/providers';
-import { getMainConfig } from '@/api/config';
+import { getAIConfig } from '@/api/config';
 import { pullItemsFromHost, pushItemsToHost } from '@/api/items';
+import { getUserPrivileges } from '@/utils/auth';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown, Monitor } from '@element-plus/icons-vue';
 
 export default {
@@ -645,6 +646,9 @@ export default {
     },
     selectedCount() {
       return this.selectedHosts.length;
+    },
+    canManage() {
+      return getUserPrivileges() >= 2;
     },
   },
   watch: {
@@ -1317,7 +1321,7 @@ export default {
     },
     async loadAIProviders() {
       try {
-        const configRes = await getMainConfig();
+        const configRes = await getAIConfig();
         const config = configRes.data?.data || configRes.data || configRes;
         if (config.ai?.provider_id) {
           this.selectedProviderId = config.ai.provider_id;

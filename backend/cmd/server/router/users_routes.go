@@ -35,8 +35,8 @@ func setupUserRoutes(rg *gin.RouterGroup) {
 	// Users routes
 	users := rg.Group("")
 	{
-		// requires privilege 2 for read
-		usersRead := users.Group("", api.PrivilegesMiddleware(2))
+		// requires privilege 3 for read
+		usersRead := users.Group("", api.PrivilegesMiddleware(3))
 		usersRead.GET("", api.SearchUsersCtrl)
 		usersRead.GET("/:id", api.GetUserByIDCtrl)
 

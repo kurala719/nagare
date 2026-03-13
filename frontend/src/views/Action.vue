@@ -152,7 +152,7 @@
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('users.title') || 'Users'">
+        <el-form-item v-if="canManageUsers" :label="$t('users.title') || 'Users'">
         <el-select v-model="newAction.user_ids" multiple placeholder="Select users to notify" style="width: 100%;">
           <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
         </el-select>
@@ -215,7 +215,7 @@
           <el-option v-for="media in mediaOptions" :key="media.id" :label="media.name" :value="media.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="$t('users.title') || 'Users'">
+      <el-form-item v-if="canManageUsers" :label="$t('users.title') || 'Users'">
         <el-select v-model="selectedAction.user_ids" multiple placeholder="Select users to notify" style="width: 100%;">
           <el-option v-for="user in userOptions" :key="user.id" :label="user.nickname || user.username" :value="user.id" />
         </el-select>
@@ -315,6 +315,7 @@ import { getUsers } from '@/api/users';
 import { fetchHostData } from '@/api/hosts';
 import { fetchGroupData } from '@/api/groups';
 import { fetchTriggerData } from '@/api/triggers';
+import { getUserPrivileges } from '@/utils/auth';
 
 export default {
   name: 'Action',
@@ -403,6 +404,12 @@ export default {
     },
     selectedCount() {
       return this.selectedActions.length;
+    },
+    canManage() {
+      return getUserPrivileges() >= 2;
+    },
+    canManageUsers() {
+      return getUserPrivileges() >= 3;
     },
   },
   created() {
@@ -541,7 +548,7 @@ export default {
             with_total: 1,
           }),
           this.mediaOptions.length === 0 ? fetchMediaData({ limit: 100, offset: 0 }) : Promise.resolve(null),
-          this.userOptions.length === 0 ? getUsers() : Promise.resolve(null),
+          this.canManageUsers && this.userOptions.length === 0 ? getUsers() : Promise.resolve(null),
           this.hostOptions.length === 0 ? fetchHostData({ limit: 1000 }) : Promise.resolve(null),
           this.groupOptions.length === 0 ? fetchGroupData({ limit: 1000 }) : Promise.resolve(null),
           this.triggerOptions.length === 0 ? fetchTriggerData({ limit: 1000 }) : Promise.resolve(null),

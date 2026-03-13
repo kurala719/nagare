@@ -25,6 +25,16 @@ func GetMainConfigCtrl(c *gin.Context) {
 	respondSuccess(c, http.StatusOK, config)
 }
 
+// GetAIConfigCtrl returns AI-related configuration safe for read-only clients.
+func GetAIConfigCtrl(c *gin.Context) {
+	config, err := repository.GetAIConfig()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondSuccess(c, http.StatusOK, config)
+}
+
 // ModifyMainConfigCtrl modifies the main configuration
 func ModifyMainConfigCtrl(c *gin.Context) {
 	var req repository.ConfigRequest

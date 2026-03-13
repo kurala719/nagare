@@ -8,12 +8,18 @@ import (
 )
 
 func setupAIDomainRoutes(rg *gin.RouterGroup) {
+	setupAISettingsRoutes(rg)
 	setupProviderRoutes(rg)
 	setupKnowledgeBaseRoutes(rg)
 	setupChatRoutes(rg)
 	setupConsultRoutes(rg)
 	setupPacketAnalysisRoutes(rg)
 	setupMcpRoutes(rg)
+}
+
+func setupAISettingsRoutes(rg *gin.RouterGroup) {
+	settings := rg.Group("/settings", api.PrivilegesMiddleware(1))
+	settings.GET("", api.GetAIConfigCtrl)
 }
 
 func setupChatRoutes(rg *gin.RouterGroup) {
@@ -24,8 +30,8 @@ func setupChatRoutes(rg *gin.RouterGroup) {
 }
 
 func setupKnowledgeBaseRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
-	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(1))
+	// Routes with privilege level 2
+	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
 	kbRead.GET("", api.GetAllKnowledgeBaseCtrl)
 	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
 
@@ -65,7 +71,7 @@ func setupConsultRoutes(rg *gin.RouterGroup) {
 }
 
 func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
-	packets := rg.Group("/packet-analyses", api.PrivilegesMiddleware(1))
+	packets := rg.Group("/packet-analyses", api.PrivilegesMiddleware(2))
 	{
 		packets.GET("", api.ListPacketAnalysesCtrl)
 		packets.POST("", api.UploadPacketCtrl)

@@ -33,15 +33,15 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+        <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
         <el-button @click="loadMonitors" :loading="loading" :icon="Refresh" circle />
-        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+        <el-button v-if="canManage" type="primary" :icon="Plus" @click="createDialogVisible=true">
           {{ $t('monitors.create') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0">
+        <el-dropdown trigger="click" v-if="canManage && selectedCount > 0">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -134,7 +134,7 @@
               <h3 class="monitor-name">{{ monitor.name }}</h3>
               <span class="monitor-type-tag">{{ monitor.type === 2 ? 'Zabbix' : 'Other' }}</span>
             </div>
-            <el-checkbox :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" class="monitor-select" />
+            <el-checkbox v-if="canManage" :model-value="isSelected(monitor.id)" @change="toggleSelection(monitor.id, $event)" class="monitor-select" />
           </div>
           
           <div class="monitor-card-body">
@@ -160,11 +160,11 @@
               <el-tooltip :content="$t('groups.details')" placement="bottom">
                 <el-button size="small" :icon="Document" @click="$router.push(`/monitor/${monitor.id}/detail`)" />
               </el-tooltip>
-                <el-button size="small" :icon="Edit" @click="openProperties(monitor)" />
-              <el-tooltip v-if="monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
+                <el-button v-if="canManage" size="small" :icon="Edit" @click="openProperties(monitor)" />
+              <el-tooltip v-if="canManage && monitor.type !== 4" :content="monitor.auth_token ? $t('monitors.reLogin') : $t('monitors.login')" placement="bottom">
                 <el-button size="small" :type="monitor.auth_token ? 'success' : 'warning'" plain :icon="monitor.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(monitor)" :loading="monitor.logging_in" />
               </el-tooltip>
-              <el-tooltip :content="$t('monitors.delete')" placement="bottom">
+              <el-tooltip v-if="canManage" :content="$t('monitors.delete')" placement="bottom">
                 <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(monitor)" />
               </el-tooltip>
             </el-button-group>
@@ -285,6 +285,7 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import { markRaw } from 'vue'
 import { fetchMonitorData, addMonitor, deleteMonitor, updateMonitor, loginMonitor, regenerateMonitorEventToken, syncGroupsFromMonitor } from '@/api/monitors'
+import { getUserPrivileges } from '@/utils/auth'
 
 export default {
     name: 'Monitor',
@@ -358,6 +359,9 @@ export default {
       },
       selectedCount() {
         return this.selectedMonitorIds.length;
+      },
+      canManage() {
+        return getUserPrivileges() >= 2
       },
     },
     watch: {

@@ -61,14 +61,14 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+                <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
-        <el-button type="primary" :icon="Plus" @click="openAddDialog">
+                <el-button v-if="canManage" type="primary" :icon="Plus" @click="openAddDialog">
           {{ $t('items.add') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+                <el-dropdown trigger="click" v-if="canManage && selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -129,7 +129,7 @@
         @sort-change="onSortChange"
         header-cell-class-name="table-header"
       >
-        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column v-if="canManage" type="selection" width="50" align="center" />
         <el-table-column v-if="isColumnVisible('id')" prop="id" :label="$t('items.id')" width="80" sortable="custom" />
         <el-table-column v-if="isColumnVisible('name')" prop="name" :label="$t('items.name')" min-width="150" show-overflow-tooltip sortable="custom" />
         <el-table-column v-if="isColumnVisible('value')" prop="value" :label="$t('items.value')" min-width="150" show-overflow-tooltip sortable="custom" />
@@ -166,10 +166,10 @@
                 <el-tooltip :content="$t('items.details')" placement="top">
                   <el-button size="small" type="primary" :icon="Document" @click="openDetails(row)" />
                 </el-tooltip>
-                <el-tooltip :content="$t('items.edit')" placement="top">
+                                <el-tooltip v-if="canManage" :content="$t('items.edit')" placement="top">
                   <el-button size="small" type="primary" :icon="Edit" @click="openEditDialog(row)" />
                 </el-tooltip>
-                <el-tooltip :content="$t('items.delete')" placement="top">
+                                <el-tooltip v-if="canManage" :content="$t('items.delete')" placement="top">
                   <el-button size="small" type="danger" :icon="Delete" @click="confirmDelete(row)" />
                 </el-tooltip>
               </el-button-group>
@@ -301,9 +301,10 @@
 import { fetchItemData, addItem, updateItem, deleteItem, consultItemAI, pullItemsFromHost, pushItemsToHost } from '@/api/items';
 import { fetchHostData } from '@/api/hosts';
 import { fetchProviderData } from '@/api/providers';
-import { getMainConfig } from '@/api/config';
+import { getAIConfig } from '@/api/config';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
+import { getUserPrivileges } from '@/utils/auth';
 import { Loading, Plus, Delete, Edit, Download, Upload, Search, Refresh, Document, Setting, ArrowDown } from '@element-plus/icons-vue';
 
 export default {
@@ -418,6 +419,9 @@ export default {
         },
         selectedCount() {
             return this.selectedItems.length;
+        },
+        canManage() {
+            return getUserPrivileges() >= 2;
         },
     },
     created() {
@@ -805,7 +809,7 @@ export default {
         },
         async loadAIProviders() {
             try {
-                const configRes = await getMainConfig();
+                const configRes = await getAIConfig();
                 const config = configRes.data?.data || configRes.data || configRes;
                 if (config.ai?.provider_id) {
                     this.selectedProviderId = config.ai.provider_id;

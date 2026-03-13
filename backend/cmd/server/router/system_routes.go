@@ -35,8 +35,8 @@ func setupConfigurationRoutes(rg *gin.RouterGroup) {
 }
 
 func setupLogRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 2
-	logs := rg.Group("/logs", api.PrivilegesMiddleware(2))
+	// Routes with privilege level 3
+	logs := rg.Group("/logs", api.PrivilegesMiddleware(3))
 	logs.GET("/system", api.GetSystemLogsCtrl)
 
 	// Admin clear logs - privilege level 3
@@ -45,8 +45,8 @@ func setupLogRoutes(rg *gin.RouterGroup) {
 }
 
 func setupAuditLogRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 2 (managers/admins)
-	auditLogs := rg.Group("/audit-logs", api.PrivilegesMiddleware(2))
+	// Routes with privilege level 3
+	auditLogs := rg.Group("/audit-logs", api.PrivilegesMiddleware(3))
 	auditLogs.GET("", api.SearchAuditLogsCtrl)
 }
 

@@ -36,15 +36,15 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+        <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
         <el-button @click="loadAlarms" :loading="loading" :icon="Refresh" circle />
-        <el-button type="primary" :icon="Plus" @click="createDialogVisible=true">
+        <el-button v-if="canManage" type="primary" :icon="Plus" @click="createDialogVisible=true">
           {{ $t('alarms.create') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0">
+        <el-dropdown trigger="click" v-if="canManage && selectedCount > 0">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -140,7 +140,7 @@
               <h3 class="alarm-name">{{ alarm.name }}</h3>
               <span class="alarm-type-tag">{{ alarm.type === 1 ? 'Zabbix' : 'Other' }}</span>
             </div>
-            <el-checkbox :model-value="isSelected(alarm.id)" @change="toggleSelection(alarm.id, $event)" class="alarm-select" />
+            <el-checkbox v-if="canManage" :model-value="isSelected(alarm.id)" @change="toggleSelection(alarm.id, $event)" class="alarm-select" />
           </div>
           
           <div class="alarm-card-body">
@@ -160,17 +160,17 @@
 
           <div class="alarm-card-footer">
             <el-button-group>
-              <el-tooltip :content="$t('alarms.properties')" placement="bottom">
+              <el-tooltip v-if="canManage" :content="$t('alarms.properties')" placement="bottom">
                 <el-button size="small" :icon="Edit" @click="openProperties(alarm)" />
               </el-tooltip>
-              <el-tooltip :content="alarm.auth_token ? $t('alarms.reLogin') : $t('alarms.login')" placement="bottom">
+              <el-tooltip v-if="canManage" :content="alarm.auth_token ? $t('alarms.reLogin') : $t('alarms.login')" placement="bottom">
                 <el-button size="small" :type="alarm.auth_token ? 'success' : 'warning'" plain :icon="alarm.auth_token ? SuccessFilled : CircleCloseFilled" @click="onLogin(alarm)" :loading="alarm.logging_in" />
               </el-tooltip>
-              <el-tooltip :content="$t('alarms.initializeZabbixTooltip') || 'Initialize Zabbix Integration'" placement="bottom">
+              <el-tooltip v-if="canManage" :content="$t('alarms.initializeZabbixTooltip') || 'Initialize Zabbix Integration'" placement="bottom">
                 <el-button size="small" type="success" plain :icon="Message" @click="onSetupMedia(alarm)" :loading="alarm.setting_up_media" v-if="alarm.type === 1">
                 </el-button>
               </el-tooltip>
-              <el-tooltip :content="$t('alarms.delete')" placement="bottom">
+              <el-tooltip v-if="canManage" :content="$t('alarms.delete')" placement="bottom">
                 <el-button size="small" type="danger" plain :icon="Delete" @click="onDelete(alarm)" />
               </el-tooltip>
             </el-button-group>
@@ -280,6 +280,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { markRaw } from 'vue';
 import { fetchAlarmData, addAlarm, deleteAlarm, updateAlarm, loginAlarm, regenerateAlarmEventToken, setupAlarmMedia } from '@/api/alarms';
 import { fetchMonitorData } from '@/api/monitors';
+import { getUserPrivileges } from '@/utils/auth';
 
 export default {
   name: 'Alarm',
@@ -343,6 +344,9 @@ export default {
     },
     selectedCount() {
       return this.selectedAlarmIds.length;
+    },
+    canManage() {
+      return getUserPrivileges() >= 2;
     },
   },
   watch: {

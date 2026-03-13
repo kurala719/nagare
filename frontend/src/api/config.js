@@ -11,6 +11,16 @@ export function getMainConfig() {
 }
 
 /**
+ * Get AI configuration safe for read-only pages
+ */
+export function getAIConfig() {
+    return request({
+        method: 'GET',
+        url: '/ai/settings',
+    });
+}
+
+/**
  * Get all configuration settings
  */
 export function getAllConfig() {

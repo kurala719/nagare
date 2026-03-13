@@ -69,14 +69,14 @@
       </div>
 
       <div class="action-group">
-        <el-button-group style="margin-right: 8px">
+                <el-button-group v-if="canManage" style="margin-right: 8px">
           <el-button @click="selectAll">{{ $t('common.selectAll') || 'Select All' }}</el-button>
           <el-button @click="clearSelection">{{ $t('common.deselectAll') || 'Deselect All' }}</el-button>
         </el-button-group>
-        <el-button type="primary" :icon="Plus" @click="openAddDialog">
+                <el-button v-if="canManage" type="primary" :icon="Plus" @click="openAddDialog">
           {{ $t('alerts.add') }}
         </el-button>
-        <el-dropdown trigger="click" v-if="selectedCount > 0" style="margin-left: 8px">
+                <el-dropdown trigger="click" v-if="canManage && selectedCount > 0" style="margin-left: 8px">
           <el-button>
             {{ $t('common.selectedCount', { count: selectedCount }) }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
           </el-button>
@@ -131,7 +131,7 @@
           <el-card v-for="alert in alerts" :key="alert.id" class="alert-card" shadow="hover">
               <div class="alert-card-header">
                   <div class="header-left">
-                    <el-checkbox :model-value="isSelected(alert.id)" @change="toggleSelection(alert.id, $event)" />
+                    <el-checkbox v-if="canManage" :model-value="isSelected(alert.id)" @change="toggleSelection(alert.id, $event)" />
                     <span class="alert-card-title">{{ $t('alerts.alertLabel', { id: alert.id }) }}</span>
                   </div>
                   <div class="header-right">
@@ -198,8 +198,8 @@
                                 </div>
                                 <div class="alert-actions">
                                   <el-button type="primary" link :icon="ChatLineRound" @click="consultAI(alert)">{{ $t('alerts.consult') }}</el-button>
-                                  <el-button type="warning" link :icon="Edit" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
-                                  <el-button type="danger" link :icon="Delete" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
+                                  <el-button v-if="canManage" type="warning" link :icon="Edit" @click="openEditDialog(alert)">{{ $t('alerts.edit') }}</el-button>
+                                  <el-button v-if="canManage" type="danger" link :icon="Delete" @click="confirmDelete(alert)">{{ $t('alerts.remove') }}</el-button>
                                 </div>
                               </div>
                             </div>
@@ -385,9 +385,10 @@ import { fetchAlertData, addAlert, updateAlert, deleteAlert, consultAlertAI } fr
 import { fetchHostData } from '@/api/hosts';
 import { fetchItemData } from '@/api/items';
 import { fetchProviderData } from '@/api/providers';
-import { getMainConfig } from '@/api/config';
+import { getAIConfig } from '@/api/config';
 import { ElMessage } from 'element-plus';
 import { markRaw } from 'vue';
+import { getUserPrivileges } from '@/utils/auth';
 import { Loading, Plus, Search, Edit, Delete, ArrowDown, Document, Monitor, Bell, Clock, ChatLineRound, Refresh, Folder } from '@element-plus/icons-vue';
 
 export default {
@@ -480,6 +481,9 @@ export default {
         },
         selectedCount() {
             return this.selectedAlertIds.length;
+        },
+        canManage() {
+            return getUserPrivileges() >= 2;
         },
     },
     watch: {
@@ -850,7 +854,7 @@ export default {
         async loadAIProviders() {
             try {
                 // Get main config to find default provider
-                const configRes = await getMainConfig();
+                const configRes = await getAIConfig();
                 const config = configRes.data?.data || configRes.data || configRes;
                 if (config.ai?.provider_id) {
                     this.selectedProviderId = config.ai.provider_id;

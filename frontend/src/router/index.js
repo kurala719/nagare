@@ -103,7 +103,7 @@ const routes = [
         path: 'knowledge-base',
         name: 'KnowledgeBase',
         component: () => import('@/views/KnowledgeBase.vue'),
-        meta: { minPrivilege: 1 }
+        meta: { minPrivilege: 2 }
       },
       {
         path: 'alarm',
@@ -127,7 +127,7 @@ const routes = [
         path: 'packet-analysis',
         name: 'PacketAnalysis',
         component: () => import('@/views/PacketAnalysis.vue'),
-        meta: { minPrivilege: 1 }
+        meta: { minPrivilege: 2 }
       },
       {
         path: 'host/:hostId/items',
@@ -165,13 +165,13 @@ const routes = [
         path: 'log',
         name: 'Log',
         component: () => import('@/views/Log.vue'),
-        meta: { minPrivilege: 2 }
+        meta: { minPrivilege: 3 }
       },
       {
         path: 'audit-log',
         name: 'AuditLog',
         component: () => import('@/views/AuditLog.vue'),
-        meta: { minPrivilege: 2 }
+        meta: { minPrivilege: 3 }
       },
       {
         path: 'system-status',
@@ -189,7 +189,7 @@ const routes = [
         path: 'user',
         name: 'User',
         component: () => import('@/views/User.vue'),
-        meta: { minPrivilege: 2 }
+        meta: { minPrivilege: 3 }
       },
       {
         path: 'register-application',
