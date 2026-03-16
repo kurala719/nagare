@@ -1,29 +1,31 @@
-# Nagare Developer Guide: Code Standards & Architecture
+﻿# Nagare Developer Guide: Code Standards And Architecture
 
-This guide is for engineers who want to extend Nagare, add new APIs, or modify the frontend. 
+This guide is for engineers who extend Nagare, add APIs, or modify the frontend.
 
----
+## Backend (Go) Standards
 
-## 🏗️ Backend (Go) Standards
+Nagare follows a DDD-lite structure with clear layering.
 
-Nagare follows a **Domain-Driven Design (DDD)** lite approach, organized into four main layers:
+### Directory Structure
 
-### 1. The Directory Structure
-- `cmd/server/`: Entry point and HTTP routing.
-- `internal/api/`: **Handlers (Controllers)**. They parse input, call services, and return JSON.
-- `internal/service/`: **Business Logic**. This is where the core logic (e.g., AI scoring, PDF generation) lives.
-- `internal/repository/`: **Data Access (DAO)**. All database queries (GORM) happen here.
-- `internal/model/`: **Entities**. Shared data structures used across all layers.
+- `cmd/server/`: App entry and route registration.
+- `internal/api/`: HTTP handlers.
+- `internal/service/`: Business logic.
+- `internal/repository/`: Data access.
+- `internal/model/`: Shared entities and DTOs.
 
-### 2. Adding a New API Endpoint
-1. **Define Model**: Add a struct in `internal/model/entities.go`.
-2. **Create DAO**: Add a function in `internal/repository/` to handle DB operations.
-3. **Write Service**: Add business logic in `internal/service/`. Use the DAO.
-4. **Create Controller**: Add a handler in `internal/api/`. Call the service.
-5. **Register Route**: Add the endpoint to `cmd/server/router/router.go`.
+### Adding A New API Endpoint
 
-### 3. Error Handling
-Always return the standardized `APIResponse` from controllers:
+1. Define or update model structs in `internal/model/`.
+2. Add repository functions in `internal/repository/`.
+3. Add service logic in `internal/service/`.
+4. Expose a handler in `internal/api/`.
+5. Register route in `backend/cmd/server/router/`.
+
+### Error Handling
+
+Use unified API responses from handlers:
+
 ```go
 c.JSON(http.StatusOK, APIResponse{
     Success: true,
@@ -31,47 +33,41 @@ c.JSON(http.StatusOK, APIResponse{
 })
 ```
 
-### 4. Concurrency & Queues
-Use the `pkg/queue` for long-running tasks. Never block an HTTP request for more than 500ms. If a task takes longer (like syncing 1000 hosts), run it in a Goroutine and update the status in the DB.
+### Concurrency And Background Work
 
----
+Use `pkg/queue` for long tasks. Avoid blocking request handlers with heavy operations.
 
-## 🎨 Frontend (Vue 3) Standards
+## Frontend (Vue 3) Standards
 
-### 1. Composition API
-We use the `<script setup>` syntax for all new components. It is cleaner and more efficient.
+### Component Style
 
-### 2. State Management
-- For global UI state (like notifications or user profile), use a reactive store in `src/utils/store.js` (or Pinia if the project grows).
-- For local component state, use `ref()` and `reactive()`.
+Use `<script setup>` for new components where possible.
 
-### 3. API Communication
-Always use the centralized Axios client in `src/api/`. 
-Example:
-```javascript
-import request from '@/utils/request'
+### State
 
-export function getHosts(params) {
-  return request({
-    url: '/api/v1/hosts',
-    method: 'get',
-    params
-  })
-}
-```
+- Keep local state in `ref` and `reactive`.
+- Keep shared state in reusable utility or store modules under `src/utils`.
 
-### 4. Internationalization (i18n)
-Never hardcode text. Add the translation to `src/i18n/` and use `$t('key')` in templates.
+### API Access
 
----
+Use centralized request clients under `src/api` and `src/utils/request.js`.
 
-## 🧪 Testing
-- **Unit Tests**: Place `_test.go` files alongside the code.
-- **API Tests**: Use the scripts in the root `tests/` directory (PowerShell/Shell) to verify real API responses.
-- **Frontend Tests**: Use Vitest for unit testing Vue components.
+### I18n
 
----
+Do not hardcode user-facing text. Add keys under `src/i18n`.
 
-## 🛠️ Tooling
-- **Formatting**: Run `go fmt` and `npm run lint`.
-- **Docs**: Documentation is stored in Markdown in the `doc/` directory. If you change a feature, update the corresponding `.md` file.
+## Testing And Regression Policy
+
+- Backend regression tests live beside code, for example:
+  - `backend/cmd/server/router/routes_regression_test.go`
+- Run backend checks with `go test ./...` from `backend/`.
+- Frontend unit test assets were removed in current cleanup pass; frontend verification is currently build-based:
+  - `npm run build` from `frontend/`
+
+If frontend unit tests are reintroduced, restore both test files and related test dependencies together.
+
+## Tooling
+
+- Format Go with `gofmt`.
+- Validate frontend with `npm run build`.
+- Keep docs in `doc/` synchronized with implementation changes.

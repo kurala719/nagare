@@ -29,23 +29,20 @@ func setupHistoryRoutes(rg *gin.RouterGroup) {
 
 func setupReportRoutes(rg *gin.RouterGroup) {
 	reports := rg.Group("/reports", api.PrivilegesMiddleware(2))
-	{
-		reports.GET("", api.ListReportsCtrl)
-		reports.GET("/:id", api.GetReportCtrl)
-		reports.GET("/:id/content", api.GetReportContentCtrl)
-		reports.GET("/:id/file", api.DownloadReportCtrl)
-		reports.GET("/configuration", api.GetReportConfigCtrl)
-		reports.PUT("/configuration", api.UpdateReportConfigCtrl)
-		reports.POST("/generations/daily", api.GenerateDailyReportCtrl)
-		reports.POST("/generations/weekly", api.GenerateWeeklyReportCtrl)
-		reports.POST("/generations/monthly", api.GenerateMonthlyReportCtrl)
-		reports.POST("/generations/custom", api.GenerateCustomReportCtrl)
-		reports.DELETE("/:id", api.DeleteReportCtrl)
-	}
+	reports.GET("", api.ListReportsCtrl)
+	reports.GET("/:id", api.GetReportCtrl)
+	reports.GET("/:id/content", api.GetReportContentCtrl)
+	reports.GET("/:id/file", api.DownloadReportCtrl)
+	reports.GET("/configuration", api.GetReportConfigCtrl)
+	reports.PUT("/configuration", api.UpdateReportConfigCtrl)
+	reports.POST("/generations/daily", api.GenerateDailyReportCtrl)
+	reports.POST("/generations/weekly", api.GenerateWeeklyReportCtrl)
+	reports.POST("/generations/monthly", api.GenerateMonthlyReportCtrl)
+	reports.POST("/generations/custom", api.GenerateCustomReportCtrl)
+	reports.DELETE("/:id", api.DeleteReportCtrl)
 }
 
 func setupChaosRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 2 (managers/admins)
 	alertStorms := rg.Group("/alert-storms", api.PrivilegesMiddleware(2))
 	alertStorms.POST("", api.TriggerAlertStormCtrl)
 }

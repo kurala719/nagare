@@ -21,7 +21,6 @@ func setupSystemRoutes(rg *gin.RouterGroup) {
 }
 
 func setupConfigurationRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 3 - admin only
 	config := rg.Group("/config", api.PrivilegesMiddleware(3))
 	config.GET("", api.GetMainConfigCtrl)
 	config.PUT("", api.ModifyMainConfigCtrl)
@@ -35,23 +34,17 @@ func setupConfigurationRoutes(rg *gin.RouterGroup) {
 }
 
 func setupLogRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 3
 	logs := rg.Group("/logs", api.PrivilegesMiddleware(3))
 	logs.GET("/system", api.GetSystemLogsCtrl)
-
-	// Admin clear logs - privilege level 3
-	logsAdmin := rg.Group("/logs", api.PrivilegesMiddleware(3))
-	logsAdmin.DELETE("/:type", api.ClearLogsCtrl)
+	logs.DELETE("/:type", api.ClearLogsCtrl)
 }
 
 func setupAuditLogRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 3
 	auditLogs := rg.Group("/audit-logs", api.PrivilegesMiddleware(3))
 	auditLogs.GET("", api.SearchAuditLogsCtrl)
 }
 
 func setupRetentionRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 3 - admin only
 	retention := rg.Group("/retention", api.PrivilegesMiddleware(3))
 	retention.GET("/policies", api.GetRetentionPoliciesCtrl)
 	retention.PUT("/policies", api.UpdateRetentionPolicyCtrl)

@@ -60,8 +60,6 @@ Explore the specific details of each zone:
 - [**Tutorial Walkthrough**](./doc/TUTORIAL_WALKTHROUGH.md) - Step-by-step guides.
 - [**AI & RAG Engine**](./doc/AI_RAG_ENGINE.md) - How the AI thinks.
 - [**AI Configuration**](./doc/AI_CONFIGURATION.md) - Setting up Gemini/OpenAI.
-- [**Automation & Chaos**](./doc/AUTOMATION_CHAOS.md) - Fire Drills and Robot Assistants.
-- [**Playbook Authoring**](./doc/PLAYBOOK_AUTHORING.md) - Writing Ansible scripts.
 - [**WebSSH & Security**](./doc/WEBSSH_SECURITY.md) - Connecting to servers safely.
 - [**Security & RBAC**](./doc/RBAC_SECURITY_MODEL.md) - Permissions and Access Control.
 - [**Reporting & Analytics**](./doc/REPORTING_SYSTEM.md) - Making PDF reports.

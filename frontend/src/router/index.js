@@ -248,8 +248,6 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.meta?.requiresAuth
   const token = getToken()
 
-  console.log(`Routing to: ${to.path}, RequiresAuth: ${requiresAuth}, HasToken: ${!!token}`)
-
   if (!requiresAuth) {
     return next()
   }

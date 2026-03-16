@@ -17,12 +17,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-// InitRouter initializes and starts the HTTP router.
 func InitRouter() error {
-	gin.SetMode(gin.DebugMode) // Enable debug mode to see route registration
+	gin.SetMode(gin.DebugMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(api.CORSMiddleware()) // Add CORS support
+	r.Use(api.CORSMiddleware())
 
 	r.RedirectTrailingSlash = false
 	r.Use(api.RequestIDMiddleware())
@@ -58,7 +57,6 @@ func InitRouter() error {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})
 
-	// Setup all routes
 	apiGroup := r.Group("/api/v1")
 	apiGroup.Use(api.AuditLogMiddleware())
 	setupAllRoutes(apiGroup)
