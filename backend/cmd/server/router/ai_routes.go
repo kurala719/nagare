@@ -29,14 +29,12 @@ func setupChatRoutes(rg *gin.RouterGroup) {
 }
 
 func setupKnowledgeBaseRoutes(rg *gin.RouterGroup) {
-	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
-	kbRead.GET("", api.GetAllKnowledgeBaseCtrl)
-	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
-
-	kbWrite := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
-	kbWrite.POST("", api.AddKnowledgeBaseCtrl)
-	kbWrite.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
-	kbWrite.DELETE("/:id", api.DeleteKnowledgeBaseCtrl)
+	kb := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
+	kb.GET("", api.GetAllKnowledgeBaseCtrl)
+	kb.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
+	kb.POST("", api.AddKnowledgeBaseCtrl)
+	kb.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
+	kb.DELETE("/:id", api.DeleteKnowledgeBaseCtrl)
 }
 
 func setupProviderRoutes(rg *gin.RouterGroup) {
@@ -55,24 +53,27 @@ func setupProviderRoutes(rg *gin.RouterGroup) {
 }
 
 func setupConsultRoutes(rg *gin.RouterGroup) {
-	consultationAlerts := rg.Group("/alerts", api.PrivilegesMiddleware(1))
-	consultationAlerts.POST("/:id/consultations", api.ConsultAlertCtrl)
+	targets := []struct {
+		path    string
+		handler gin.HandlerFunc
+	}{
+		{path: "/alerts", handler: api.ConsultAlertCtrl},
+		{path: "/hosts", handler: api.ConsultHostCtrl},
+		{path: "/items", handler: api.ConsultItemCtrl},
+	}
 
-	consultationHosts := rg.Group("/hosts", api.PrivilegesMiddleware(1))
-	consultationHosts.POST("/:id/consultations", api.ConsultHostCtrl)
-
-	consultationItems := rg.Group("/items", api.PrivilegesMiddleware(1))
-	consultationItems.POST("/:id/consultations", api.ConsultItemCtrl)
+	for _, target := range targets {
+		group := rg.Group(target.path, api.PrivilegesMiddleware(1))
+		group.POST("/:id/consultations", target.handler)
+	}
 }
 
 func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
 	packets := rg.Group("/packet-analyses", api.PrivilegesMiddleware(2))
-	{
-		packets.GET("", api.ListPacketAnalysesCtrl)
-		packets.POST("", api.UploadPacketCtrl)
-		packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
-		packets.POST("/:id/runs", api.StartPacketAnalysisCtrl)
-	}
+	packets.GET("", api.ListPacketAnalysesCtrl)
+	packets.POST("", api.UploadPacketCtrl)
+	packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
+	packets.POST("/:id/runs", api.StartPacketAnalysisCtrl)
 }
 
 func setupMcpRoutes(rg *gin.RouterGroup) {
