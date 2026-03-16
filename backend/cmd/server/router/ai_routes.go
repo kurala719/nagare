@@ -23,19 +23,16 @@ func setupAISettingsRoutes(rg *gin.RouterGroup) {
 }
 
 func setupChatRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
 	chats := rg.Group("/chats", api.PrivilegesMiddleware(1))
 	chats.GET("", api.SearchChatsCtrl)
 	chats.POST("", api.SendChatCtrl)
 }
 
 func setupKnowledgeBaseRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 2
 	kbRead := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
 	kbRead.GET("", api.GetAllKnowledgeBaseCtrl)
 	kbRead.GET("/:id", api.GetKnowledgeBaseByIDCtrl)
 
-	// Routes with privilege level 2
 	kbWrite := rg.Group("/knowledge-base", api.PrivilegesMiddleware(2))
 	kbWrite.POST("", api.AddKnowledgeBaseCtrl)
 	kbWrite.PUT("/:id", api.UpdateKnowledgeBaseCtrl)
@@ -43,12 +40,10 @@ func setupKnowledgeBaseRoutes(rg *gin.RouterGroup) {
 }
 
 func setupProviderRoutes(rg *gin.RouterGroup) {
-	// Routes with privilege level 1
 	providersRead := rg.Group("/providers", api.PrivilegesMiddleware(1))
 	providersRead.GET("", api.SearchProvidersCtrl)
 	providersRead.GET("/:id", api.GetProviderByIDCtrl)
 
-	// Routes with privilege level 2
 	providersWrite := rg.Group("/providers", api.PrivilegesMiddleware(2))
 	providersWrite.POST("", api.AddProviderCtrl)
 	providersWrite.DELETE("/:id", api.DeleteProviderByIDCtrl)
@@ -81,7 +76,6 @@ func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
 }
 
 func setupMcpRoutes(rg *gin.RouterGroup) {
-	// MCP routes - requires API key middleware
 	mcpGroup := rg.Group("/mcp", mcp.APIKeyMiddleware())
 	mcpGroup.GET("/sessions", mcp.SSEHandler)
 	mcpGroup.POST("/messages", mcp.MessageHandler)
