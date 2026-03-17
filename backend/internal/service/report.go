@@ -421,9 +421,10 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 	}
 	var frequencies []freqRes
 	database.DB.Model(&model.Alert{}).
-		Select("host_id, count(*) as count").
-		Where("created_at >= ? AND created_at <= ? AND host_id > 0", startTime, endTime).
-		Group("host_id").
+		Select("items.host_id as host_id, count(*) as count").
+		Joins("LEFT JOIN items ON items.id = alerts.item_id").
+		Where("alerts.created_at >= ? AND alerts.created_at <= ? AND items.host_id > 0", startTime, endTime).
+		Group("items.host_id").
 		Order("count desc").
 		Limit(5).
 		Scan(&frequencies)
