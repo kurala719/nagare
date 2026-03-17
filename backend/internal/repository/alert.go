@@ -20,14 +20,61 @@ type AlertWithContext struct {
 	AlarmName   string `gorm:"column:alarm_name"`
 }
 
-func alertWithContextQuery() *gorm.DB {
-	return database.DB.Model(&model.Alert{}).
-		Select("alerts.*, hosts.id as host_id, hosts.name as host_name, `groups`.id as group_id, `groups`.name as group_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name, monitors.id as monitor_id, monitors.name as monitor_name").
+const alertWithContextSelect = "alerts.*, hosts.id as host_id, hosts.name as host_name, `groups`.id as group_id, `groups`.name as group_name, items.name as item_name, COALESCE(alarms.name, monitors.name, 'System') as alarm_name, monitors.id as monitor_id, monitors.name as monitor_name"
+
+func applyAlertCoreFilters(query *gorm.DB, filter model.AlertFilter) *gorm.DB {
+	if filter.Query != "" {
+		query = query.Where("alerts.message LIKE ?", "%"+filter.Query+"%")
+	}
+	if filter.Severity != nil {
+		query = query.Where("alerts.severity = ?", *filter.Severity)
+	}
+	if filter.Status != nil {
+		query = query.Where("alerts.status = ?", *filter.Status)
+	}
+	if filter.AlarmID != nil {
+		query = query.Where("alerts.alarm_id = ?", *filter.AlarmID)
+	}
+	if filter.ItemID != nil {
+		query = query.Where("alerts.item_id = ?", *filter.ItemID)
+	}
+	return query
+}
+
+func applyAlertSort(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
+	return applySort(query, sortBy, sortOrder, map[string]string{
+		"name":       "alerts.message",
+		"message":    "alerts.message",
+		"severity":   "alerts.severity",
+		"status":     "alerts.status",
+		"created_at": "alerts.created_at",
+		"updated_at": "alerts.updated_at",
+		"id":         "alerts.id",
+	}, "alerts.id desc")
+}
+
+func applyAlertPage(query *gorm.DB, limit, offset int) *gorm.DB {
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	return query
+}
+
+func alertWithContextJoins(query *gorm.DB) *gorm.DB {
+	return query.
+		Select(alertWithContextSelect).
 		Joins("LEFT JOIN items ON items.id = alerts.item_id OR (alerts.item_id > 0 AND items.external_id = alerts.item_id)").
 		Joins("LEFT JOIN hosts ON hosts.id = items.host_id").
 		Joins("LEFT JOIN `groups` ON `groups`.id = hosts.group_id").
 		Joins("LEFT JOIN alarms ON alarms.id = alerts.alarm_id").
 		Joins("LEFT JOIN monitors ON monitors.id = alerts.alarm_id AND alarms.id IS NULL")
+}
+
+func alertWithContextQuery() *gorm.DB {
+	return alertWithContextJoins(database.DB.Model(&model.Alert{}))
 }
 
 // GetAllAlertsDAO retrieves all alerts from the database
@@ -96,40 +143,22 @@ func SearchAlertsDAO(filter model.AlertFilter) ([]model.Alert, error) {
 }
 
 func SearchAlertsWithContextDAO(filter model.AlertFilter) ([]AlertWithContext, error) {
-	query := alertWithContextQuery()
+	var query *gorm.DB
 
-	if filter.Query != "" {
-		query = query.Where("alerts.message LIKE ?", "%"+filter.Query+"%")
-	}
-	if filter.Severity != nil {
-		query = query.Where("alerts.severity = ?", *filter.Severity)
-	}
-	if filter.Status != nil {
-		query = query.Where("alerts.status = ?", *filter.Status)
-	}
-	if filter.AlarmID != nil {
-		query = query.Where("alerts.alarm_id = ?", *filter.AlarmID)
-	}
-	if filter.HostID != nil {
+	if filter.HostID == nil {
+		base := database.DB.Model(&model.Alert{})
+		base = applyAlertCoreFilters(base, filter)
+		base = applyAlertSort(base, filter.SortBy, filter.SortOrder)
+		base = applyAlertPage(base, filter.Limit, filter.Offset)
+
+		query = alertWithContextJoins(database.DB.Table("(?) as alerts", base.Select("alerts.*")))
+		query = applyAlertSort(query, filter.SortBy, filter.SortOrder)
+	} else {
+		query = alertWithContextQuery()
+		query = applyAlertCoreFilters(query, filter)
 		query = query.Where("items.host_id = ?", *filter.HostID)
-	}
-	if filter.ItemID != nil {
-		query = query.Where("alerts.item_id = ?", *filter.ItemID)
-	}
-	query = applySort(query, filter.SortBy, filter.SortOrder, map[string]string{
-		"name":       "alerts.message",
-		"message":    "alerts.message",
-		"severity":   "alerts.severity",
-		"status":     "alerts.status",
-		"created_at": "alerts.created_at",
-		"updated_at": "alerts.updated_at",
-		"id":         "alerts.id",
-	}, "alerts.id desc")
-	if filter.Limit > 0 {
-		query = query.Limit(filter.Limit)
-	}
-	if filter.Offset > 0 {
-		query = query.Offset(filter.Offset)
+		query = applyAlertSort(query, filter.SortBy, filter.SortOrder)
+		query = applyAlertPage(query, filter.Limit, filter.Offset)
 	}
 
 	var alerts []AlertWithContext

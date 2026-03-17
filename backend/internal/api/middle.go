@@ -7,15 +7,18 @@ import (
 	"strings"
 	"time"
 
+	"nagare/internal/model"
+	"nagare/internal/service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
-	"nagare/internal/service"
-	"nagare/internal/model"
 )
 
 func isQueryTokenAllowed(path string) bool {
 	return strings.HasSuffix(path, "/ws") ||
+		strings.HasSuffix(path, "/socket-sessions") ||
+		strings.Contains(path, "/ssh-sessions/") ||
 		strings.HasSuffix(path, "/ssh") ||
 		strings.HasSuffix(path, "/download")
 }

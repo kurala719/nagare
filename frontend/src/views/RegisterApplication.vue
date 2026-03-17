@@ -8,8 +8,8 @@
     <div class="standard-toolbar">
       <div class="filter-group">
         <el-tabs v-model="activeTab" @tab-change="handleTabChange" style="margin-right: 20px">
-          <el-tab-pane label="Registration" name="register" />
-          <el-tab-pane label="Password Reset" name="reset" />
+          <el-tab-pane :label="$t('auth.register')" name="register" />
+          <el-tab-pane :label="$t('auth.reset')" name="reset" />
         </el-tabs>
         
         <el-input v-model="search" :placeholder="$t('registerApplications.search')" clearable style="width: 240px">

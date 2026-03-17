@@ -2,12 +2,24 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"nagare/internal/database"
 	"nagare/internal/model"
 
 	"gorm.io/gorm"
 )
+
+const itemStatusDescriptionMaxLen = 512
+
+func normalizeItemStatusDescription(statusDesc string) string {
+	trimmed := strings.TrimSpace(statusDesc)
+	runes := []rune(trimmed)
+	if len(runes) > itemStatusDescriptionMaxLen {
+		return string(runes[:itemStatusDescriptionMaxLen])
+	}
+	return trimmed
+}
 
 // GetAllItemsDAO retrieves all items from the database
 func GetAllItemsDAO() ([]model.Item, error) {
@@ -214,7 +226,10 @@ func UpdateItemDAO(id uint, item model.Item) error {
 
 // UpdateItemStatusDAO updates only the status for an item
 func UpdateItemStatusDAO(id uint, status int) error {
-	return database.DB.Model(&model.Item{}).Where("id = ?", id).Update("status", status).Error
+	return database.DB.Model(&model.Item{}).
+		Where("id = ?", id).
+		Where("status <> ?", status).
+		Update("status", status).Error
 }
 
 // UpdateItemStatusAndCommentDAO updates status and comment for an item
@@ -227,10 +242,14 @@ func UpdateItemStatusAndCommentDAO(id uint, status int, comment string) error {
 
 // UpdateItemStatusAndDescriptionDAO updates status and status_description for an item
 func UpdateItemStatusAndDescriptionDAO(id uint, status int, statusDesc string) error {
-	return database.DB.Model(&model.Item{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status":             status,
-		"status_description": statusDesc,
-	}).Error
+	normalizedDesc := normalizeItemStatusDescription(statusDesc)
+	return database.DB.Model(&model.Item{}).
+		Where("id = ?", id).
+		Where("status <> ? OR COALESCE(status_description, '') <> ?", status, normalizedDesc).
+		Updates(map[string]interface{}{
+			"status":             status,
+			"status_description": normalizedDesc,
+		}).Error
 }
 
 // UpdateItemHealthScoreDAO updates health score for an item

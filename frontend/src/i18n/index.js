@@ -1493,7 +1493,7 @@ const messages = {
       submitResetRequest: '提交重置申请'
     },
     registerApplications: {
-      title: '注册申请',
+      title: '用户申请',
       search: '搜索申请',
       filterStatus: '筛选状态',
       filterAll: '全部',
@@ -2220,7 +2220,7 @@ const messages = {
       providers: '服务商管理',
       system: '平台设置',
       user: '身份管理',
-      registerApplication: '入网申请',
+      registerApplication: '用户申请',
       log: '系统日志',
       auditLog: '审计日志',
       configuration: '系统配置',

@@ -63,6 +63,7 @@ import { Bell, InfoFilled, Warning, CircleCloseFilled } from '@element-plus/icon
 import { fetchSiteMessages, getUnreadCount, markAsRead, markAllAsRead } from '@/api/siteMessage'
 import { ElNotification, ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
+import { getWebSocketBaseURL } from '@/utils/network'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -70,6 +71,8 @@ const router = useRouter()
 const unreadCount = ref(0)
 const messages = ref([])
 let ws = null
+let reconnectTimer = null
+let destroyed = false
 
 const isAuthenticated = ref(!!getToken())
 
@@ -77,7 +80,14 @@ watch(() => isAuthenticated.value, (val) => {
   if (val) {
     connectWebSocket()
   } else {
-    if (ws) ws.close()
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    if (ws) {
+      ws.close(1000, 'auth changed')
+      ws = null
+    }
   }
 })
 
@@ -163,10 +173,15 @@ const getSeverityIcon = (severity) => {
 const connectWebSocket = () => {
   const token = getToken()
   if (!token) return
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return
 
-  // Use the same host as the frontend to let Vite proxy handle the WebSocket connection
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const url = `${protocol}//${window.location.host}/api/v1/delivery/site-messages/ws?token=${token}`
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+
+  const wsBase = getWebSocketBaseURL()
+  const url = `${wsBase}/api/v1/delivery/site-messages/socket-sessions?token=${encodeURIComponent(token)}`
 
   
   ws = new WebSocket(url)
@@ -200,8 +215,9 @@ const connectWebSocket = () => {
   }
 
   ws.onclose = () => {
-    // Reconnect after 5 seconds
-    setTimeout(connectWebSocket, 5000)
+    ws = null
+    if (destroyed || !getToken()) return
+    reconnectTimer = setTimeout(connectWebSocket, 5000)
   }
 }
 
@@ -222,6 +238,7 @@ const handleAuthChanged = () => {
 }
 
 onMounted(() => {
+  destroyed = false
   if (getToken()) {
     loadUnreadCount()
     connectWebSocket()
@@ -230,7 +247,15 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (ws) ws.close()
+  destroyed = true
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (ws) {
+    ws.close(1000, 'component unmounted')
+    ws = null
+  }
   window.removeEventListener('auth-changed', handleAuthChanged)
 })
 </script>

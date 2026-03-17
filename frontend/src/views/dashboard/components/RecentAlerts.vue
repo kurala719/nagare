@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent, getCurrentInstance } from 'vue'
 import { WarningFilled, Warning, InfoFilled, QuestionFilled } from '@element-plus/icons-vue'
 
 export default defineComponent({
@@ -45,40 +45,59 @@ export default defineComponent({
     }
   },
   setup() {
-    const getSeverityLabel = (severity) => {
-      if (typeof severity === 'number') {
-        const map = { 0: 'info', 1: 'low', 2: 'medium', 3: 'high', 4: 'critical' }
-        return map[severity] || String(severity)
+    const instance = getCurrentInstance()
+    const t = (key) => instance?.proxy?.$t?.(key) || key
+
+    const normalizeSeverity = (severity) => {
+      if (typeof severity === 'number') return severity
+      const parsed = Number.parseInt(String(severity ?? '').trim(), 10)
+      if (Number.isFinite(parsed)) return parsed
+      const label = String(severity || '').toLowerCase()
+      const map = {
+        disaster: 5,
+        critical: 5,
+        high: 4,
+        average: 3,
+        medium: 3,
+        warning: 2,
+        info: 1,
+        low: 1,
+        none: 0,
+        unknown: 0
       }
-      return String(severity || '')
+      return map[label] ?? 0
+    }
+
+    const getSeverityLabel = (severity) => {
+      const level = normalizeSeverity(severity)
+      const map = {
+        0: t('alerts.severityNotClassified'),
+        1: t('alerts.severityInfo'),
+        2: t('alerts.severityWarning'),
+        3: t('alerts.severityAverage'),
+        4: t('alerts.severityHigh'),
+        5: t('alerts.severityDisaster')
+      }
+      return map[level] || t('alerts.severityNotClassified')
     }
 
     const getSeverityType = (severity) => {
-      let s = ''
-      if (typeof severity === 'number') {
-        const map = { 0: 'info', 1: 'info', 2: 'warning', 3: 'danger', 4: 'danger' }
-        return map[severity] || 'info'
-      } else {
-        s = String(severity || '').toLowerCase()
-      }
-      if (s === 'critical' || s === 'high') return 'danger'
-      if (s === 'medium' || s === 'warning') return 'warning'
-      if (s === 'low' || s === 'info') return 'info'
-      return 'info'
+      const level = normalizeSeverity(severity)
+      const map = { 0: 'info', 1: 'info', 2: 'warning', 3: 'warning', 4: 'danger', 5: 'danger' }
+      return map[level] || 'info'
     }
 
     const getSeverityIcon = (severity) => {
-      let s = ''
-      if (typeof severity === 'number') {
-        const map = { 0: 'InfoFilled', 1: 'InfoFilled', 2: 'Warning', 3: 'WarningFilled', 4: 'WarningFilled' }
-        return map[severity] || 'QuestionFilled'
-      } else {
-        s = String(severity || '').toLowerCase()
+      const level = normalizeSeverity(severity)
+      const map = {
+        0: 'InfoFilled',
+        1: 'InfoFilled',
+        2: 'Warning',
+        3: 'Warning',
+        4: 'WarningFilled',
+        5: 'WarningFilled'
       }
-      if (s === 'critical' || s === 'high') return 'WarningFilled'
-      if (s === 'medium' || s === 'warning') return 'Warning'
-      if (s === 'low' || s === 'info') return 'InfoFilled'
-      return 'InfoFilled'
+      return map[level] || 'QuestionFilled'
     }
 
     return { getSeverityLabel, getSeverityType, getSeverityIcon }
