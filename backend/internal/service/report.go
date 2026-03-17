@@ -36,13 +36,9 @@ var translations = map[string]map[string]string{
 		"infra_health":          "Infrastructure Health & Trends",
 		"chart_skipped":         "[Chart Generation Skipped due to data issues]",
 		"critical_host":         "Critical Host Analytics",
-		"top_resource":          "Top Resource Consumers (CPU Usage)",
-		"stability_issues":      "Stability Issues (Frequency)",
+		"top_alert_hosts":       "Top Alert Hosts (Top 3)",
 		"asset_name":            "Asset Name",
 		"ip_address":            "IP Address",
-		"avg_usage":             "Avg Usage",
-		"units":                 "Units",
-		"status":                "Status",
 		"summary":               "Summary",
 		"alert_count":           "Alert Count",
 		"infra_report_platform": "Infrastructure Intelligence Report | Nagare Platform",
@@ -85,13 +81,9 @@ var translations = map[string]map[string]string{
 		"infra_health":          "基础设施健康状况与趋势",
 		"chart_skipped":         "[由于数据问题，跳过图表生成]",
 		"critical_host":         "关键主机分析",
-		"top_resource":          "资源消耗排行 (CPU 使用率)",
-		"stability_issues":      "稳定性问题 (频率)",
+		"top_alert_hosts":       "告警最多主机 (前三)",
 		"asset_name":            "资产名称",
 		"ip_address":            "IP 地址",
-		"avg_usage":             "平均使用率",
-		"units":                 "单位",
-		"status":                "状态",
 		"summary":               "摘要",
 		"alert_count":           "告警次数",
 		"infra_report_platform": "基础设施智能报告 | Nagare 平台",
@@ -308,8 +300,7 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 		m.AddRow(10, text.NewCol(12, T(lang, "top_5_failures"), props.Text{Align: align.Center, Size: 9}))
 	}
 
-	buildTopHostsTable(m, data.TopCPUHosts, lang)
-	buildDowntimeTable(m, data.LongestDowntimeHosts, lang)
+	buildTopAlertHostsTable(m, data.TopAlertHosts, lang)
 
 	fileName := fmt.Sprintf("report_%d.pdf", report.ID)
 	filePath := "public/reports/" + fileName
@@ -344,8 +335,8 @@ type AdvancedReportData struct {
 	AvgHealthScore       float64
 	AvgUptime            float64 // Deprecated: kept for compatibility with existing preview payloads.
 	CriticalIssues       int
-	TopCPUHosts          [][]string
-	LongestDowntimeHosts [][]string
+	TopAlertHosts        [][]string
+	LongestDowntimeHosts [][]string // Deprecated: use TopAlertHosts.
 	AlertTrend           []float64
 	StatusDistribution   map[string]float64
 	FailureFrequency     map[string]float64
@@ -436,64 +427,42 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		}
 	}
 
-	// 5. Top CPU Hosts
-	type cpuResult struct {
-		ID         uint   `gorm:"column:id"`
-		HostID     uint   `gorm:"column:host_id"`
-		Name       string `gorm:"column:name"`
-		LastValue  string `gorm:"column:last_value"`
-		Units      string `gorm:"column:units"`
-		HostName   string `gorm:"column:host_name"`
-		HostIP     string `gorm:"column:host_ip"`
-		HostStatus int    `gorm:"column:host_status"`
-	}
-	var cpuResults []cpuResult
-	database.DB.Table("items").
-		Select("items.id, items.host_id, items.name, items.last_value, items.units, hosts.name as host_name, hosts.ip_addr as host_ip, hosts.status as host_status").
-		Joins("left join hosts on hosts.id = items.host_id").
-		Where("(items.name LIKE ? OR items.name LIKE ? OR items.name LIKE ?) AND items.last_value != ''", "%CPU%", "%cpu%", "%处理器%").
-		Order("(items.last_value + 0) desc").
-		Limit(20).
-		Scan(&cpuResults)
-
-	seenAssets := make(map[string]bool)
-	for _, res := range cpuResults {
-		// Deduplicate by host name and IP to ensure we unique logical assets
-		assetKey := res.HostName + "|" + res.HostIP
-		if assetKey == "|" || seenAssets[assetKey] {
-			continue
-		}
-		seenAssets[assetKey] = true
-
-		status := T(lang, "active")
-		if res.HostStatus == 2 {
-			status = T(lang, "error")
-		}
-		data.TopCPUHosts = append(data.TopCPUHosts, []string{
-			res.HostName, res.HostIP, res.LastValue, res.Units, status,
-		})
-
-		if len(data.TopCPUHosts) >= 5 {
+	// 5. Top alert hosts (sorted by alert count, top 3)
+	topAlertHosts := make([][]string, 0, 3)
+	for i, f := range frequencies {
+		if i >= 3 {
 			break
 		}
+		h, err := repository.GetHostByIDDAO(f.HostID)
+		if err != nil {
+			continue
+		}
+		topAlertHosts = append(topAlertHosts, []string{
+			h.Name,
+			h.IPAddr,
+			T(lang, "detected_issues"),
+			fmt.Sprintf(T(lang, "alerts_count_suffix"), f.Count),
+		})
+	}
+	if len(topAlertHosts) == 0 {
+		topAlertHosts = [][]string{{
+			T(lang, "na"),
+			"-",
+			T(lang, "no_data"),
+			fmt.Sprintf(T(lang, "alerts_count_suffix"), 0),
+		}}
+	}
+	data.TopAlertHosts = topAlertHosts
+	data.LongestDowntimeHosts = topAlertHosts // Backward compatibility for old consumers.
+
+	// 6. Reuse the unified system health-score service to keep scoring consistent.
+	healthScore, err := GetHealthScoreServ()
+	if err == nil {
+		data.AvgHealthScore = float64(healthScore.Score)
+		data.AvgUptime = data.AvgHealthScore
 	}
 
-	// 6. Longest Downtime Hosts (Mocked for now as real calculation is complex)
-	data.LongestDowntimeHosts = [][]string{
-		{T(lang, "na"), "-", fmt.Sprintf(T(lang, "hours_suffix"), "0"), fmt.Sprintf(T(lang, "times_suffix"), "0")},
-	}
-	if len(frequencies) > 0 {
-		h, _ := repository.GetHostByIDDAO(frequencies[0].HostID)
-		data.LongestDowntimeHosts[0] = []string{h.Name, h.IPAddr, T(lang, "detected_issues"), fmt.Sprintf(T(lang, "alerts_count_suffix"), frequencies[0].Count)}
-	}
-
-	// 7. Calculate average health score from hosts.
-	var avgScore float64
-	database.DB.Model(&model.Host{}).Select("COALESCE(AVG(health_score), 0)").Scan(&avgScore)
-	data.AvgHealthScore = avgScore
-	data.AvgUptime = avgScore
-
-	// 8. AI Summary
+	// 7. AI Summary
 	data.Summary = generateAISummary(data, lang)
 
 	return data
@@ -562,32 +531,8 @@ func buildExecutiveSummary(m core.Maroto, data AdvancedReportData, lang string) 
 	m.AddAutoRow(text.NewCol(12, data.Summary, props.Text{Size: 10, Top: 5, Bottom: 10}))
 }
 
-func buildTopHostsTable(m core.Maroto, rows [][]string, lang string) {
-	m.AddAutoRow(text.NewCol(12, T(lang, "top_resource"), props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
-
-	header := []string{T(lang, "asset_name"), T(lang, "ip_address"), T(lang, "avg_usage"), T(lang, "units"), T(lang, "status")}
-
-	m.AddRow(10,
-		text.NewCol(3, header[0], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(3, header[1], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(2, header[2], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(2, header[3], props.Text{Style: fontstyle.Bold, Size: 10}),
-		text.NewCol(2, header[4], props.Text{Style: fontstyle.Bold, Size: 10}),
-	)
-
-	for _, row := range rows {
-		m.AddRow(8,
-			text.NewCol(3, row[0], props.Text{Size: 9}),
-			text.NewCol(3, row[1], props.Text{Size: 9}),
-			text.NewCol(2, row[2], props.Text{Size: 9}),
-			text.NewCol(2, row[3], props.Text{Size: 9}),
-			text.NewCol(2, row[4], props.Text{Size: 9}),
-		)
-	}
-}
-
-func buildDowntimeTable(m core.Maroto, rows [][]string, lang string) {
-	m.AddAutoRow(text.NewCol(12, T(lang, "stability_issues"), props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
+func buildTopAlertHostsTable(m core.Maroto, rows [][]string, lang string) {
+	m.AddAutoRow(text.NewCol(12, T(lang, "top_alert_hosts"), props.Text{Size: 12, Style: fontstyle.Bold, Top: 15}))
 
 	header := []string{T(lang, "asset_name"), T(lang, "ip_address"), T(lang, "summary"), T(lang, "alert_count")}
 

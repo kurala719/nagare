@@ -45,25 +45,12 @@
         </el-col>
       </el-row>
 
-      <div class="section-title">Top Resource Consumers (CPU)</div>
-      <el-table :data="mappedCPUHosts" border stripe size="small">
+      <div class="section-title">Top Alert Hosts (Top 3)</div>
+      <el-table :data="mappedTopAlertHosts" border stripe size="small">
         <el-table-column prop="name" label="Asset Name" />
         <el-table-column prop="ip" label="IP Address" />
-        <el-table-column prop="usage" label="Avg Usage" width="100" />
-        <el-table-column prop="units" label="Units" width="80" />
-        <el-table-column prop="status" label="Status" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTag(row.status)" size="small">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="section-title">Stability Issues (Downtime)</div>
-      <el-table :data="mappedDowntimeHosts" border stripe size="small">
-        <el-table-column prop="name" label="Asset Name" />
-        <el-table-column prop="ip" label="IP Address" />
-        <el-table-column prop="downtime" label="Total Downtime" />
-        <el-table-column prop="frequency" label="Frequency" width="150" />
+        <el-table-column prop="summary" label="Issue Summary" />
+        <el-table-column prop="alertCount" label="Alert Count" width="150" />
       </el-table>
     </div>
     <el-empty v-else-if="!loading" description="No report data available" />
@@ -89,24 +76,14 @@ const lineChartRef = ref(null)
 let pieChart = null
 let lineChart = null
 
-const mappedCPUHosts = computed(() => {
-  if (!props.data?.TopCPUHosts) return []
-  return props.data.TopCPUHosts.map(row => ({
+const mappedTopAlertHosts = computed(() => {
+  const source = props.data?.TopAlertHosts || props.data?.LongestDowntimeHosts
+  if (!source) return []
+  return source.map(row => ({
     name: row[0],
     ip: row[1],
-    usage: row[2],
-    units: row[3],
-    status: row[4]
-  }))
-})
-
-const mappedDowntimeHosts = computed(() => {
-  if (!props.data?.LongestDowntimeHosts) return []
-  return props.data.LongestDowntimeHosts.map(row => ({
-    name: row[0],
-    ip: row[1],
-    downtime: row[2],
-    frequency: row[3]
+    summary: row[2],
+    alertCount: row[3]
   }))
 })
 
@@ -191,13 +168,6 @@ const initCharts = () => {
       }]
     }, { notMerge: true })
   }
-}
-
-const getStatusTag = (status) => {
-  if (status === 'Active') return 'success'
-  if (status === 'Warning') return 'warning'
-  if (status === 'Error') return 'danger'
-  return 'info'
 }
 
 watch(() => props.data, () => {
