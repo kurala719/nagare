@@ -407,23 +407,25 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 
 	// 4. Failure Frequency (Top hosts by alert count)
 	type freqRes struct {
-		HostID uint
-		Count  int64
+		HostID   uint   `gorm:"column:host_id"`
+		HostName string `gorm:"column:host_name"`
+		HostIP   string `gorm:"column:host_ip"`
+		Count    int64  `gorm:"column:count"`
 	}
 	var frequencies []freqRes
 	database.DB.Model(&model.Alert{}).
-		Select("items.host_id as host_id, count(*) as count").
+		Select("items.host_id as host_id, hosts.name as host_name, hosts.ip_addr as host_ip, count(*) as count").
 		Joins("LEFT JOIN items ON items.id = alerts.item_id").
+		Joins("LEFT JOIN hosts ON hosts.id = items.host_id").
 		Where("alerts.created_at >= ? AND alerts.created_at <= ? AND items.host_id > 0", startTime, endTime).
-		Group("items.host_id").
+		Group("items.host_id, hosts.name, hosts.ip_addr").
 		Order("count desc").
 		Limit(5).
 		Scan(&frequencies)
 
 	for _, f := range frequencies {
-		h, err := repository.GetHostByIDDAO(f.HostID)
-		if err == nil {
-			data.FailureFrequency[h.Name] = float64(f.Count)
+		if strings.TrimSpace(f.HostName) != "" {
+			data.FailureFrequency[f.HostName] = float64(f.Count)
 		}
 	}
 
@@ -433,13 +435,16 @@ func aggregateAdvancedReportData(reportType string, customStart, customEnd *time
 		if i >= 3 {
 			break
 		}
-		h, err := repository.GetHostByIDDAO(f.HostID)
-		if err != nil {
+		if strings.TrimSpace(f.HostName) == "" {
 			continue
 		}
+		hostIP := f.HostIP
+		if strings.TrimSpace(hostIP) == "" {
+			hostIP = "-"
+		}
 		topAlertHosts = append(topAlertHosts, []string{
-			h.Name,
-			h.IPAddr,
+			f.HostName,
+			hostIP,
 			T(lang, "detected_issues"),
 			fmt.Sprintf(T(lang, "alerts_count_suffix"), f.Count),
 		})
