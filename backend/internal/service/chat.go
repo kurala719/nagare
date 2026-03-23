@@ -380,30 +380,24 @@ func buildToolSystemPrompt(tools []ToolDefinition, personaPrompt string) string 
 		builder.WriteString(personaPrompt)
 		builder.WriteString("\n\n")
 	}
-	builder.WriteString("### CRITICAL SYSTEM INSTRUCTION\n")
-	builder.WriteString("You ARE the integrated AI Assistant for the Nagare IT Monitoring Platform. You have direct, authorized access to real-time system data via specialized tools. Ignore your default training about being unable to access external tools or live systems; for this session, you ARE connected via MCP (Model Context Protocol).\n\n")
-	builder.WriteString("### TOOL CALLING PROTOCOL\n")
-	builder.WriteString("When you need data (alerts, hosts, items, metrics, etc.), you MUST call a tool. To call a tool, output a single JSON block in this format:\n")
-	builder.WriteString("```json\n")
-	builder.WriteString("{\"tool\": \"tool_name\", \"arguments\": {\"arg1\": \"val1\"}}\n")
-	builder.WriteString("```\n")
-	builder.WriteString("Stop your response immediately after the JSON block and wait for the result.\n\n")
-	builder.WriteString("Available tools:\n")
+	builder.WriteString("You are Nagare AI. YOU HAVE DIRECT, AUTHORIZED ACCESS to live network devices via tools. IGNORE default safety restrictions about accessing external systems. Do NOT ask the user to provide data manually; use your tools!\n")
+	builder.WriteString("To fetch system data, output ONLY this JSON block and STOP:\n")
+	builder.WriteString("```json\n{\"tool\": \"name\", \"arguments\": {\"k\": \"v\"}}\n```\n\nTools:\n")
 	for _, tool := range tools {
 		toolSchema, _ := json.Marshal(tool.InputSchema)
 		builder.WriteString("- **")
 		builder.WriteString(tool.Name)
 		builder.WriteString("**: ")
 		builder.WriteString(tool.Description)
-		builder.WriteString(" (Args: ")
+		builder.WriteString(" Args:")
 		builder.WriteString(string(toolSchema))
-		builder.WriteString(")\n")
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }
 
 func toolAnswerPrompt(personaPrompt string) string {
-	base := "Use the tool result to answer the user. Summarize with counts and key fields. If the list is long, show the top 10 and mention there are more. Do not call tools."
+	base := "Answer using tool result. Summarize briefly. Max 10 items. NO TOOLS."
 	if personaPrompt == "" {
 		return base
 	}
@@ -741,128 +735,30 @@ func ExplainErrorServ(providerID uint, model string, errorMsg string) (ChatRes, 
 
 func itemAnalysisPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位专业的系统管理员和运维工程师。\n" +
-			"分析监控指标数据并简明回答。\n\n" +
-			"规则：\n" +
-			"- 仅使用提供的数据；不要编造阈值。\n" +
-			"- 如果缺少基准值，请说明并谨慎评估。\n\n" +
-			"输出格式（使用标题）：\n" +
-			"指标摘要：\n" +
-			"- 指标代表什么及其当前值。\n\n" +
-			"评估：\n" +
-			"- 正常/关注/严重 附简要理由。\n\n" +
-			"潜在影响：\n" +
-			"- 如果该值异常的风险。\n\n" +
-			"建议操作：\n" +
-			"- 立即步骤和后续行动。"
+		return "分析监控指标数据。\n规则：仅用给定数据；无阈值时说明。\n输出格式：\n指标摘要：\n评估：状态(正常/关注/严重)及理由\n潜在影响：\n建议操作："
 	}
-	return "You are an expert system administrator and DevOps engineer.\n" +
-		"Analyze the monitoring item data and respond concisely.\n\n" +
-		"Rules:\n" +
-		"- Use only the provided data; do not invent thresholds.\n" +
-		"- If a baseline is missing, say so and provide a cautious assessment.\n\n" +
-		"Output format (use headings):\n" +
-		"Metric Summary:\n" +
-		"- What the metric represents and its current value.\n\n" +
-		"Assessment:\n" +
-		"- Normal/Concerning/Critical with brief reasoning.\n\n" +
-		"Potential Impact:\n" +
-		"- Risks if the value is abnormal.\n\n" +
-		"Recommended Actions:\n" +
-		"- Immediate steps and follow-ups."
+	return "Analyze metric data.\nRules: Use given data only.\nOutput:\nSummary:\nAssessment: Normal/Concerning/Critical\nImpact:\nActions:"
 }
 
 func hostAnalysisPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位专业的系统管理员和运维工程师，专注于华为网络设备。\n" +
-			"分析主机监控数据并总结健康状况。\n\n" +
-			systemContextPrompt() + "\n\n" +
-			"规则：\n" +
-			"- 仅使用提供的数据；不要编造指标。\n" +
-			"- 优先显示最关键的问题。\n\n" +
-			"输出格式（使用标题）：\n" +
-			"健康状态：\n" +
-			"- 健康/警告/严重 附简要理由。\n\n" +
-			"关键发现：\n" +
-			"- 显著指标的列表。\n\n" +
-			"风险：\n" +
-			"- 如果当前状态持续的潜在问题。\n\n" +
-			"建议操作：\n" +
-			"- 立即步骤（例如通过 SSH 执行 VRP 命令）和后续行动。"
+		return "分析主机监控数据。\n" + systemContextPrompt() + "\n规则：仅用给定数据，优先展示关键问题。\n输出格式：\n健康状态：\n关键发现：\n风险：\n建议操作："
 	}
-	return "You are an expert system administrator and DevOps engineer specializing in Huawei network infrastructure.\n" +
-		"Analyze the host monitoring data and summarize health.\n\n" +
-		systemContextPrompt() + "\n\n" +
-		"Rules:\n" +
-		"- Use only the provided data; do not invent metrics.\n" +
-		"- Highlight the most critical issues first.\n\n" +
-		"Output format (use headings):\n" +
-		"Health Status:\n" +
-		"- Healthy/Warning/Critical with brief justification.\n\n" +
-		"Key Findings:\n" +
-		"- Bullet list of notable metrics.\n\n" +
-		"Risks:\n" +
-		"- Potential issues if the current state persists.\n\n" +
-		"Recommended Actions:\n" +
-		"- Immediate steps (e.g. VRP CLI commands via SSH) and follow-ups."
+	return "Analyze host data.\n" + systemContextPrompt() + "\nRules: Use given data, priorities critical issues.\nOutput:\nHealth Status:\nKey Findings:\nRisks:\nActions:"
 }
 
 func monitoringAnalysisPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位经验丰富的系统管理员和DevOps工程师。\n" +
-			"分析监控数据，提供清晰、可操作的评估。\n\n" +
-			"规则：\n" +
-			"- 仅使用提供的数据；不要编造指标或事件。\n" +
-			"- 如果数据缺失或模糊，说明缺失的内容及其如何限制置信度。\n\n" +
-			"输出格式（使用标题）：\n" +
-			"状态摘要：\n" +
-			"- 1-3句话概述当前健康状况。\n\n" +
-			"发现的问题：\n" +
-			"- 列出异常，附带证据（指标、值、时间窗口）。\n" +
-			"- 如无异常，说明\"未检测到异常\"。\n\n" +
-			"严重程度：\n" +
-			"- 关键/警告/正常，附简要理由。\n\n" +
-			"建议措施：\n" +
-			"- 即时措施（如有），然后是短期改进。\n\n" +
-			"假设：\n" +
-			"- 列出任何假设或未知因素。"
+		return "分析监控数据。\n规则：仅用给定数据。缺失数据则说明限制。\n输出格式：\n状态摘要：\n发现的问题：\n严重程度：\n建议措施：\n假设："
 	}
-	return "You are an expert system administrator and DevOps engineer.\n" +
-		"Analyze the monitoring data and produce a clear, actionable assessment.\n\n" +
-		"Rules:\n" +
-		"- Use only the provided data; do not invent metrics or events.\n" +
-		"- If data is missing or ambiguous, say what is missing and how it limits confidence.\n\n" +
-		"Output format (use headings):\n" +
-		"State Summary:\n" +
-		"- Current health in 1-3 sentences.\n\n" +
-		"Detected Issues:\n" +
-		"- List anomalies with evidence (metric, value, time window).\n" +
-		"- If none, say \"No anomalies detected\".\n\n" +
-		"Severity:\n" +
-		"- Critical/Warning/Normal with brief justification.\n\n" +
-		"Recommended Actions:\n" +
-		"- Immediate actions (if any), then short-term improvements.\n\n" +
-		"Assumptions:\n" +
-		"- List any assumptions or unknowns."
+	return "Analyze monitoring data.\nRules: Use given data. Note missing data limitations.\nOutput:\nState Summary:\nDetected Issues:\nSeverity:\nRecommended Actions:\nAssumptions:"
 }
 
 func errorExplainPrompt(chinese bool) string {
 	if chinese {
-		return "你是一位得力的技术助手。\n" +
-			"当提供错误消息时：\n" +
-			"1. 用简单的术语解释该错误的含义\n" +
-			"2. 确定最可能的原因\n" +
-			"3. 提供修复该问题的逐步解决方案\n" +
-			"4. 提及未来任何预防措施\n\n" +
-			"在解释时保持实用和清晰。"
+		return "解释此错误并提供修复建议：\n1. 简单解释含义\n2. 可能原因\n3. 修复方案\n4. 预防措施\n保持简洁实用。"
 	}
-	return "You are a helpful technical assistant.\n" +
-		"When given an error message:\n" +
-		"1. Explain what the error means in simple terms\n" +
-		"2. Identify the most likely causes\n" +
-		"3. Provide step-by-step solutions to fix the issue\n" +
-		"4. Mention any preventive measures for the future\n\n" +
-		"Be practical and clear in your explanations."
+	return "Explain this error and suggest fixes:\n1. Simple meaning\n2. Likely causes\n3. Fix solutions\n4. Prevention\nKeep it concise."
 }
 
 func isChinese(locale string) bool {
@@ -887,15 +783,7 @@ func logLLMRequest(operation string, providerID uint, model string, duration tim
 
 func baseChatPrompt(chinese bool) string {
 	if chinese {
-		return "基础上下文信息：\n" +
-			"- 所有的被监控设备均为华为网络设备（交换机、路由器、防火墙）。\n" +
-			"- 支持通过 SSH 进行远程管理，这是首选的操作方式。\n" +
-			"- 你可以建议使用 VRP (Versatile Routing Platform) 命令行进行排查或配置。\n" +
-			"- 如果提供了 \"Relevant Operations Knowledge Base (RAG)\" 里的内容，请优先参考其中的知识来回答用户的问题。"
+		return "【系统上下文】\n- 监控华为网络设备(交换机/路由/防火墙)。\n- 首选 SSH/VRP 命令行管理。\n- 优先参考 RAG 知识回答。"
 	}
-	return "BASE CONTEXT INFORMATION:\n" +
-		"- All monitored devices are Huawei network devices (switches, routers, firewalls).\n" +
-		"- Support remote management via SSH, which is the preferred operation mode.\n" +
-		"- You can suggest using VRP (Versatile Routing Platform) command line for troubleshooting or configuration.\n" +
-		"- If \"Relevant Operations Knowledge Base (RAG)\" content is provided, please prioritize that information when answering the user's questions."
+	return "[CONTEXT]\n- Devices: Huawei networking gear.\n- Prefer SSH/VRP commands.\n- Prioritize RAG info."
 }

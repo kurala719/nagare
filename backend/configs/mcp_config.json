@@ -16,8 +16,8 @@
         "-y",
         "@amap/amap-maps-mcp-server"
       ],
-      "enabled": true,
-      "env": null
+      "enabled": false,
+      "env": {}
     },
     {
       "name": "tavily-mcp",
