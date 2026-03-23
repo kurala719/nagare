@@ -196,117 +196,6 @@
 
 
 
-            <div class="section-divider">{{ $t('configuration.mcpSettings') }}</div>
-            <el-form :model="editableConfig.mcp" label-width="180px" label-position="left">
-              <el-form-item :label="$t('system.mcpEnabled')">
-                <el-switch v-model="editableConfig.mcp.enabled" :disabled="!editing" />
-              </el-form-item>
-              <el-form-item :label="$t('system.mcpApiKey')">
-                <el-input v-model="editableConfig.mcp.api_key" :disabled="!editing" type="password" show-password />
-              </el-form-item>
-              <el-form-item :label="$t('system.mcpMaxConcurrency')">
-                <el-input-number v-model="editableConfig.mcp.max_concurrency" :disabled="!editing" :min="1" />
-              </el-form-item>
-            </el-form>
-
-            <div class="section-header">
-              <div class="section-divider">{{ $t('configuration.mcpServers') }}</div>
-              <el-button type="primary" size="small" @click="addMCPServer" :disabled="!editing">
-                <el-icon><Plus /></el-icon>
-                {{ $t('configuration.addMcpServer') }}
-              </el-button>
-            </div>
-
-            <el-table :data="editableConfig.mcp_servers" border stripe style="width: 100%; margin-top: 16px;">
-              <el-table-column :label="$t('configuration.mcpServerName')" width="140">
-                <template #default="{ row }">
-                  <el-input v-model="row.name" size="small" :disabled="!editing" placeholder="filesystem" />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerCommand')" width="160">
-                <template #default="{ row }">
-                  <el-input v-model="row.command" size="small" :disabled="!editing" placeholder="npx" />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerApiKey')" min-width="180">
-                <template #default="{ row }">
-                  <el-input
-                    v-model="row.api_key"
-                    type="password"
-                    show-password
-                    size="small"
-                    :disabled="!editing"
-                    :placeholder="$t('configuration.mcpServerApiKeyPlaceholder')"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerApiKeyEnv')" width="160">
-                <template #default="{ row }">
-                  <el-input
-                    v-model="row.api_key_env"
-                    size="small"
-                    :disabled="!editing"
-                    placeholder="MCP_API_KEY"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerArgs')" min-width="280">
-                <template #default="{ row }">
-                  <el-input
-                    v-model="row.args_text"
-                    type="textarea"
-                    :autosize="{ minRows: 1, maxRows: 4 }"
-                    size="small"
-                    :disabled="!editing"
-                    :placeholder="$t('configuration.mcpServerArgsPlaceholder')"
-                  />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerEnabled')" width="100" align="center">
-                <template #default="{ row }">
-                  <el-switch v-model="row.enabled" :disabled="!editing" />
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerTest')" width="120" align="center">
-                <template #default="{ row }">
-                  <el-button link type="primary" @click="testMCPServerRow(row)" :loading="mcpTesting">
-                    {{ $t('configuration.testConnection') }}
-                  </el-button>
-                </template>
-              </el-table-column>
-              <el-table-column v-if="editing" :label="$t('configuration.itemActions')" width="80" align="center">
-                <template #default="{ $index }">
-                  <el-button type="danger" :icon="Delete" circle size="small" @click="removeMCPServer($index)" :disabled="!editing" />
-                </template>
-              </el-table-column>
-            </el-table>
-            <p class="help-text">{{ $t('configuration.mcpServerHelpText') }}</p>
-
-            <div class="section-header mcp-status-header">
-              <div class="section-divider">{{ $t('configuration.mcpClientStatus') }}</div>
-              <el-button size="small" @click="loadMCPClientStatuses" :loading="mcpStatusLoading">
-                {{ $t('configuration.refreshMcpStatus') }}
-              </el-button>
-            </div>
-
-            <div class="mcp-status-summary">
-              <el-tag type="info">{{ $t('configuration.mcpStatusTotal') }}: {{ mcpStatusSummary.total }}</el-tag>
-              <el-tag type="success">{{ $t('configuration.mcpStatusConnected') }}: {{ mcpStatusSummary.connected }}</el-tag>
-            </div>
-
-            <el-table :data="mcpClientStatuses" border stripe style="width: 100%; margin-top: 12px;">
-              <el-table-column :label="$t('configuration.mcpServerName')" width="140" prop="name" />
-              <el-table-column :label="$t('configuration.mcpServerState')" width="120" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="row.connected ? 'success' : 'danger'">
-                    {{ row.connected ? $t('configuration.mcpStateConnected') : $t('configuration.mcpStateDisconnected') }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('configuration.mcpServerToolCount')" width="120" align="center" prop="tool_count" />
-              <el-table-column :label="$t('configuration.mcpServerUpdatedAt')" width="210" prop="updated_at" />
-              <el-table-column :label="$t('configuration.mcpServerLastError')" min-width="220" prop="last_error" />
-            </el-table>
           </div>
         </el-tab-pane>
 
@@ -414,7 +303,7 @@ import {
   Monitor, Bell, Warning, Compass, Connection, Operation,
   Share, Plus, Delete
 } from '@element-plus/icons-vue';
-import { getMainConfig, updateConfig, saveConfig, resetConfig, getMCPClientStatuses, testMCPClient } from '@/api/config';
+import { getMainConfig, updateConfig, saveConfig, resetConfig } from '@/api/config';
 import { fetchProviderData } from '@/api/providers';
 
 export default {
@@ -466,12 +355,6 @@ export default {
         interval_seconds: 60,
         concurrency: 4,
       },
-      mcp: {
-        enabled: true,
-        api_key: '',
-        max_concurrency: 4,
-      },
-      mcp_servers: [],
       ai: {
         analysis_enabled: true,
         notification_guard_enabled: false,
@@ -506,13 +389,6 @@ export default {
     const error = ref(null);
     const aiProviders = ref([]);
     const availableModels = ref([]);
-    const mcpStatusLoading = ref(false);
-    const mcpTesting = ref(false);
-    const mcpClientStatuses = ref([]);
-    const mcpStatusSummary = reactive({
-      total: 0,
-      connected: 0,
-    });
 
     const alertSeverityOptions = computed(() => [
       { label: t('alerts.severityDisaster'), value: 5 },
@@ -564,20 +440,6 @@ export default {
       }
     };
 
-    const argsArrayToText = (args) => {
-      if (!Array.isArray(args)) {
-        return '';
-      }
-      return args.join('\n');
-    };
-
-    const argsTextToArray = (text) => {
-      return String(text || '')
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-    };
-
     const mapData = (source, target, fieldMap) => {
       if (!source) return;
       Object.entries(fieldMap).forEach(([targetKey, sourceKeys]) => {
@@ -626,13 +488,6 @@ export default {
         concurrency: ['concurrency', 'Concurrency']
       });
 
-      const mcpSource = data.mcp || data.MCP || {};
-      mapData(mcpSource, editableConfig.mcp, {
-        enabled: ['enabled', 'Enabled'],
-        api_key: ['api_key', 'APIKey'],
-        max_concurrency: ['max_concurrency', 'MaxConcurrency']
-      });
-
       const aiSource = data.ai || data.AI || {};
       mapData(aiSource, editableConfig.ai, {
         analysis_enabled: ['analysis_enabled', 'AnalysisEnabled'],
@@ -673,16 +528,6 @@ export default {
         editableConfig.external = [];
       }
 
-      const mcpServers = data.mcp_servers || data.MCPServers || [];
-      editableConfig.mcp_servers = mcpServers.map((item) => ({
-        name: item.name || item.Name || '',
-        command: item.command || item.Command || '',
-        api_key: item.api_key || item.APIKey || '',
-        api_key_env: item.api_key_env || item.APIKeyEnv || '',
-        args: Array.isArray(item.args || item.Args) ? (item.args || item.Args) : [],
-        args_text: argsArrayToText(item.args || item.Args),
-        enabled: item.enabled ?? item.Enabled ?? true,
-      }));
     };
 
     const loadConfig = async () => {
@@ -695,7 +540,6 @@ export default {
         config.value = data;
         performMapping(data);
         await loadAIProviders();
-        await loadMCPClientStatuses();
       } catch (err) {
         error.value = err.message || 'Failed to load configuration';
         console.error('Error loading configuration:', err);
@@ -729,14 +573,6 @@ export default {
 
         saving.value = true;
         const payload = JSON.parse(JSON.stringify(editableConfig));
-        payload.mcp_servers = (payload.mcp_servers || []).map((item) => ({
-          name: String(item.name || '').trim(),
-          command: String(item.command || '').trim(),
-          api_key: String(item.api_key || '').trim(),
-          api_key_env: String(item.api_key_env || '').trim(),
-          args: argsTextToArray(item.args_text),
-          enabled: !!item.enabled,
-        }));
         await updateConfig(payload);
         await saveConfig();
         await loadConfig();
@@ -801,71 +637,6 @@ export default {
       editableConfig.external.splice(index, 1);
     };
 
-    const addMCPServer = () => {
-      editableConfig.mcp_servers.push({
-        name: '',
-        command: '',
-        api_key: '',
-        api_key_env: 'MCP_API_KEY',
-        args: [],
-        args_text: '',
-        enabled: true,
-      });
-    };
-
-    const removeMCPServer = (index) => {
-      editableConfig.mcp_servers.splice(index, 1);
-    };
-
-    const loadMCPClientStatuses = async () => {
-      mcpStatusLoading.value = true;
-      try {
-        const res = await getMCPClientStatuses();
-        const data = res?.data || res || {};
-        const items = data.items || [];
-        mcpClientStatuses.value = items;
-        mcpStatusSummary.total = data.total ?? items.length;
-        mcpStatusSummary.connected = data.connected_total ?? items.filter((item) => item.connected).length;
-      } catch (err) {
-        mcpClientStatuses.value = [];
-        mcpStatusSummary.total = 0;
-        mcpStatusSummary.connected = 0;
-        ElMessage.error(t('configuration.mcpStatusLoadFailed'));
-      } finally {
-        mcpStatusLoading.value = false;
-      }
-    };
-
-    const testMCPServerRow = async (row) => {
-      mcpTesting.value = true;
-      try {
-        const payload = {
-          name: String(row.name || '').trim(),
-          command: String(row.command || '').trim(),
-          api_key: String(row.api_key || '').trim(),
-          api_key_env: String(row.api_key_env || '').trim(),
-          args: argsTextToArray(row.args_text),
-          enabled: !!row.enabled,
-        };
-        const res = await testMCPClient(payload);
-        const data = res?.data || res || {};
-        const ok = !!data.ok;
-        const result = data.result || {};
-
-        if (ok) {
-          ElMessage.success(`${t('configuration.mcpTestSuccess')} (${result.tool_count || 0})`);
-          await loadMCPClientStatuses();
-          return;
-        }
-
-        ElMessage.error(`${t('configuration.mcpTestFailed')}: ${data.message || t('configuration.unknownError')}`);
-      } catch (err) {
-        ElMessage.error(`${t('configuration.mcpTestFailed')}: ${err.message || t('configuration.unknownError')}`);
-      } finally {
-        mcpTesting.value = false;
-      }
-    };
-
     onMounted(() => {
       loadConfig();
     });
@@ -890,14 +661,6 @@ export default {
       onProviderChange,
       addExternalItem,
       removeExternalItem,
-      addMCPServer,
-      removeMCPServer,
-      loadMCPClientStatuses,
-      testMCPServerRow,
-      mcpStatusLoading,
-      mcpTesting,
-      mcpClientStatuses,
-      mcpStatusSummary,
       Delete,
       Refresh,
       Edit,
@@ -971,16 +734,6 @@ export default {
   padding: 12px;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
-}
-
-.mcp-status-header {
-  margin-top: 12px;
-}
-
-.mcp-status-summary {
-  margin-top: 8px;
-  display: flex;
-  gap: 10px;
 }
 
 :deep(.el-tabs--border-card) {

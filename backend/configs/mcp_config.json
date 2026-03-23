@@ -7,8 +7,7 @@
         "mcp-server-fetch"
       ],
       "enabled": true,
-      "api_key": "",
-      "api_key_env": ""
+      "env": null
     },
     {
       "name": "amap-maps",
@@ -18,8 +17,19 @@
         "@amap/amap-maps-mcp-server"
       ],
       "enabled": true,
-      "api_key": "9655bb61be41ac31c5de89be1fb2c70f",
-      "api_key_env": ""
+      "env": null
+    },
+    {
+      "name": "tavily-mcp",
+      "command": "npx",
+      "args": [
+        "-y",
+        "tavily-mcp@0.1.4"
+      ],
+      "enabled": false,
+      "env": {
+        "TAVILY_API_KEY": "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"
+      }
     }
   ]
 }

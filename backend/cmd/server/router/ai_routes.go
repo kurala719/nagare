@@ -66,7 +66,6 @@ func setupConsultRoutes(rg *gin.RouterGroup) {
 	}
 }
 
-
 func setupMCPServersRoutes(rg *gin.RouterGroup) {
 	group := rg.Group("/mcp-servers", api.PrivilegesMiddleware(2))
 	group.GET("", api.ListMCPServersCtrl)

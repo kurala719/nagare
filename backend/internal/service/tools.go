@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"nagare/internal/model"
 )
@@ -462,7 +463,7 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 	case "get_health_score":
 		return GetHealthScoreServ()
 	default:
-		if ExternalToolCaller != nil {
+		if ExternalToolCaller != nil && strings.Contains(name, "_") {
 			return ExternalToolCaller(name, rawArgs)
 		}
 		return nil, fmt.Errorf("unknown tool: %s", name)

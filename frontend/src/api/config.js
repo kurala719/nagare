@@ -70,24 +70,3 @@ export function resetConfig() {
         url: '/system/config',
     });
 }
-
-/**
- * Get MCP client runtime statuses
- */
-export function getMCPClientStatuses() {
-    return request({
-        method: 'GET',
-        url: '/system/config/mcp/clients',
-    });
-}
-
-/**
- * Test a single MCP server definition without saving config
- */
-export function testMCPClient(data) {
-    return request({
-        method: 'POST',
-        url: '/system/config/mcp/test',
-        data,
-    });
-}

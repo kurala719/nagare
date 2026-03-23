@@ -66,9 +66,28 @@ func SendChatServ(req ChatReq) (ChatRes, error) {
 		useTools = *req.UseTools && req.Privileges >= 2
 	}
 	if useTools {
-		return sendChatWithTools(req, personaPrompt)
+		res, err := sendChatWithToolsSafe(req, personaPrompt)
+		if err == nil {
+			return res, nil
+		}
+
+		LogService("warn", "tool chat failed, fallback to plain chat", map[string]interface{}{
+			"provider_id": req.ProviderID,
+			"model":       req.Model,
+			"error":       err.Error(),
+		}, nil, "")
 	}
 	return sendChatPlain(req, personaPrompt)
+}
+
+func sendChatWithToolsSafe(req ChatReq, personaPrompt string) (res ChatRes, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("tool chat panic: %v", r)
+		}
+	}()
+
+	return sendChatWithTools(req, personaPrompt)
 }
 
 func sendChatPlain(req ChatReq, personaPrompt string) (ChatRes, error) {
