@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	clients   map[string]*Client
-	clientsMu sync.RWMutex
-	clientStatuses []ClientStatus
+	clients                    map[string]*Client
+	clientsMu                  sync.RWMutex
+	clientStatuses             []ClientStatus
 	registerConfigObserverOnce sync.Once
 )
 
