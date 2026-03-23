@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
@@ -27,11 +28,12 @@ type Client struct {
 }
 
 // NewClient creates a new MCP client using the official SDK
-func NewClient(name, command string, args []string) (*Client, error) {
+func NewClient(name, command string, args []string, customEnv map[string]string) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	envArray := buildMCPEnv(customEnv)
 
 	// Create stdio transport
-	stdioTransport := transport.NewStdio(command, nil, args...)
+	stdioTransport := transport.NewStdio(command, envArray, args...)
 
 	// Create the client
 	mcpClient := client.NewClient(stdioTransport)
@@ -48,6 +50,22 @@ func NewClient(name, command string, args []string) (*Client, error) {
 		ctx:       ctx,
 		cancel:    cancel,
 	}, nil
+}
+
+func buildMCPEnv(customEnv map[string]string) []string {
+	var envList []string
+
+	// Process custom env vars first
+	for k, v := range customEnv {
+		if strings.TrimSpace(k) != "" {
+			envList = append(envList, fmt.Sprintf("%s=%s", strings.TrimSpace(k), v))
+		}
+	}
+
+	if len(envList) == 0 {
+		return nil
+	}
+	return envList
 }
 
 // Close terminates the client

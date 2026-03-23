@@ -270,7 +270,7 @@ export default defineComponent({
       { key: 'ai_service_group', label: 'menu.provider', minPrivilege: 2, icon: 'Cpu', children: [
         { key: 'provider', path: '/provider', label: 'menu.providers', minPrivilege: 2 },
         { key: 'kb', path: '/knowledge-base', label: 'menu.kb', minPrivilege: 2 },
-        { key: 'packetAnalysis', path: '/packet-analysis', label: 'packets.title', minPrivilege: 2 },
+        { key: 'mcpServer', path: '/mcp-server', label: 'mcp.title', minPrivilege: 2 },
       ]},
 
       { key: 'users_group', label: 'menu.users', minPrivilege: 1, icon: 'User', children: [

@@ -12,7 +12,7 @@ func setupAIDomainRoutes(rg *gin.RouterGroup) {
 	setupKnowledgeBaseRoutes(rg)
 	setupChatRoutes(rg)
 	setupConsultRoutes(rg)
-	setupPacketAnalysisRoutes(rg)
+	setupMCPServersRoutes(rg)
 }
 
 func setupAISettingsRoutes(rg *gin.RouterGroup) {
@@ -66,10 +66,12 @@ func setupConsultRoutes(rg *gin.RouterGroup) {
 	}
 }
 
-func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
-	packets := rg.Group("/packet-analyses", api.PrivilegesMiddleware(2))
-	packets.GET("", api.ListPacketAnalysesCtrl)
-	packets.POST("", api.UploadPacketCtrl)
-	packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
-	packets.POST("/:id/runs", api.StartPacketAnalysisCtrl)
+
+func setupMCPServersRoutes(rg *gin.RouterGroup) {
+	group := rg.Group("/mcp-servers", api.PrivilegesMiddleware(2))
+	group.GET("", api.ListMCPServersCtrl)
+	group.POST("", api.SaveMCPServersCtrl)
+	group.POST("/reload", api.ReloadMCPServersCtrl)
+	group.GET("/status", api.GetMCPClientStatusCtrl)
+	group.POST("/test", api.TestMCPClientCtrl)
 }

@@ -123,12 +123,7 @@ const routes = [
         component: () => import('@/views/ItemDetail.vue'),
         meta: { minPrivilege: 1 }
       },
-      {
-        path: 'packet-analysis',
-        name: 'PacketAnalysis',
-        component: () => import('@/views/PacketAnalysis.vue'),
-        meta: { minPrivilege: 2 }
-      },
+
       {
         path: 'host/:hostId/items',
         name: 'HostItems',
@@ -136,6 +131,12 @@ const routes = [
           path: '/item',
           query: { hostId: to.params.hostId }
         })
+      },
+      {
+        path: 'mcp-server',
+        name: 'MCPServer',
+        component: () => import('@/views/MCPServer.vue'),
+        meta: { minPrivilege: 2 }
       },
       {
         path: 'provider',

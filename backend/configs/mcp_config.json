@@ -1,0 +1,25 @@
+{
+  "servers": [
+    {
+      "name": "fetch",
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "enabled": true,
+      "api_key": "",
+      "api_key_env": ""
+    },
+    {
+      "name": "amap-maps",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@amap/amap-maps-mcp-server"
+      ],
+      "enabled": true,
+      "api_key": "9655bb61be41ac31c5de89be1fb2c70f",
+      "api_key_env": ""
+    }
+  ]
+}

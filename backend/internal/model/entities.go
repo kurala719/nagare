@@ -1,4 +1,4 @@
-﻿// package model contains the core business entities and interfaces for the Nagare system.
+// package model contains the core business entities and interfaces for the Nagare system.
 // This package follows clean architecture principles, keeping business logic
 // independent of frameworks and external dependencies.
 package model
@@ -400,18 +400,4 @@ type RetentionPolicy struct {
 	Description   string         `gorm:"type:varchar(255)" json:"description"`
 }
 
-// PacketAnalysis represents a packet capture analysis request
-type PacketAnalysis struct {
-	gorm.Model
-	Name       string    `gorm:"type:varchar(255)" json:"name"`
-	FilePath   string    `gorm:"type:varchar(500)" json:"file_path"`
-	RawContent string    `gorm:"type:longtext" json:"raw_content"` // Hex or text snippet
-	ProviderID *uint     `json:"provider_id"`
-	Provider   *Provider `gorm:"foreignKey:ProviderID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	AIModel    string    `gorm:"column:model;type:varchar(100)" json:"model"`
-	Status     int       `gorm:"type:tinyint;default:0" json:"status"` // 0=pending, 1=analyzing, 2=completed, 3=failed
-	RiskLevel  string    `gorm:"type:varchar(50)" json:"risk_level"`   // "clean", "notable", "malicious"
-	Analysis   string    `gorm:"type:longtext" json:"analysis"`
-	UserID     *uint     `json:"user_id"`
-	User       *User     `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-}
+

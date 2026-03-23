@@ -51,7 +51,7 @@ func InitClients() {
 		})
 	})
 
-	config, err := repository.GetMainConfig()
+	config, err := repository.LoadMCPConfig()
 	if err != nil {
 		log.Printf("Failed to load generic config for MCP clients: %v", err)
 		return
@@ -65,9 +65,9 @@ func InitClients() {
 		c.Close()
 	}
 	clients = make(map[string]*Client)
-	clientStatuses = make([]ClientStatus, 0, len(config.MCPServers))
+	clientStatuses = make([]ClientStatus, 0, len(config))
 
-	for _, srv := range config.MCPServers {
+	for _, srv := range config {
 		status := ClientStatus{
 			Name:      srv.Name,
 			Enabled:   srv.Enabled,
@@ -90,7 +90,7 @@ func InitClients() {
 			continue
 		}
 
-		client, err := NewClient(srv.Name, srv.Command, srv.Args)
+		client, err := NewClient(srv.Name, srv.Command, srv.Args, srv.Env)
 		if err != nil {
 			log.Printf("Failed to start MCP server %s: %v", srv.Name, err)
 			status.LastError = err.Error()
@@ -161,7 +161,7 @@ func TestServerConfig(cfg repository.MCPServerConfig) ClientTestResult {
 		name = "test"
 	}
 
-	client, err := NewClient(name, cfg.Command, cfg.Args)
+	client, err := NewClient(name, cfg.Command, cfg.Args, cfg.Env)
 	if err != nil {
 		return ClientTestResult{Connected: false, Error: err.Error()}
 	}

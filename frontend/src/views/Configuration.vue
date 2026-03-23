@@ -228,6 +228,28 @@
                   <el-input v-model="row.command" size="small" :disabled="!editing" placeholder="npx" />
                 </template>
               </el-table-column>
+              <el-table-column :label="$t('configuration.mcpServerApiKey')" min-width="180">
+                <template #default="{ row }">
+                  <el-input
+                    v-model="row.api_key"
+                    type="password"
+                    show-password
+                    size="small"
+                    :disabled="!editing"
+                    :placeholder="$t('configuration.mcpServerApiKeyPlaceholder')"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column :label="$t('configuration.mcpServerApiKeyEnv')" width="160">
+                <template #default="{ row }">
+                  <el-input
+                    v-model="row.api_key_env"
+                    size="small"
+                    :disabled="!editing"
+                    placeholder="MCP_API_KEY"
+                  />
+                </template>
+              </el-table-column>
               <el-table-column :label="$t('configuration.mcpServerArgs')" min-width="280">
                 <template #default="{ row }">
                   <el-input
@@ -655,6 +677,8 @@ export default {
       editableConfig.mcp_servers = mcpServers.map((item) => ({
         name: item.name || item.Name || '',
         command: item.command || item.Command || '',
+        api_key: item.api_key || item.APIKey || '',
+        api_key_env: item.api_key_env || item.APIKeyEnv || '',
         args: Array.isArray(item.args || item.Args) ? (item.args || item.Args) : [],
         args_text: argsArrayToText(item.args || item.Args),
         enabled: item.enabled ?? item.Enabled ?? true,
@@ -708,6 +732,8 @@ export default {
         payload.mcp_servers = (payload.mcp_servers || []).map((item) => ({
           name: String(item.name || '').trim(),
           command: String(item.command || '').trim(),
+          api_key: String(item.api_key || '').trim(),
+          api_key_env: String(item.api_key_env || '').trim(),
           args: argsTextToArray(item.args_text),
           enabled: !!item.enabled,
         }));
@@ -779,6 +805,8 @@ export default {
       editableConfig.mcp_servers.push({
         name: '',
         command: '',
+        api_key: '',
+        api_key_env: 'MCP_API_KEY',
         args: [],
         args_text: '',
         enabled: true,
@@ -814,6 +842,8 @@ export default {
         const payload = {
           name: String(row.name || '').trim(),
           command: String(row.command || '').trim(),
+          api_key: String(row.api_key || '').trim(),
+          api_key_env: String(row.api_key_env || '').trim(),
           args: argsTextToArray(row.args_text),
           enabled: !!row.enabled,
         };

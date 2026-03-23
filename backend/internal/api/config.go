@@ -97,7 +97,6 @@ func ModifyMainConfigCtrl(c *gin.Context) {
 	repository.SetConfigValue("media_rate_limit.media_interval_seconds", req.MediaRateLimit.MediaIntervalSeconds)
 
 	repository.SetConfigValue("external", req.External)
-	repository.SetConfigValue("mcp_servers", req.MCPServers)
 
 	if err := repository.SaveConfig(); err != nil {
 		respondError(c, err)

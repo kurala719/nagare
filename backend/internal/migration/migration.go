@@ -73,7 +73,6 @@ func InitDBTables() error {
 		&model.SiteMessage{},
 
 		&model.RetentionPolicy{},
-		&model.PacketAnalysis{},
 	); err != nil {
 		return err
 	}
@@ -244,7 +243,6 @@ func fixForeignKeyColumnTypes() error {
 		"password_reset_applications": {"user_id", "approved_by"},
 		"ansible_jobs":                {"playbook_id", "triggered_by"},
 		"site_messages":               {"user_id"},
-		"packet_analyses":             {"provider_id", "user_id"},
 	}
 
 	for table, columns := range tablesToFix {
