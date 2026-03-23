@@ -15,9 +15,14 @@ type ToolDefinition struct {
 	InputSchema map[string]interface{} `json:"inputSchema"`
 }
 
+var (
+	ExternalToolsProvider func() []ToolDefinition
+	ExternalToolCaller    func(name string, args json.RawMessage) (interface{}, error)
+)
+
 // ListTools returns all available read-only tools.
 func ListTools() []ToolDefinition {
-	return []ToolDefinition{
+	tools := []ToolDefinition{
 		{
 			Name:        "get_alerts",
 			Description: "List alerts with optional filters.",
@@ -187,6 +192,12 @@ func ListTools() []ToolDefinition {
 			InputSchema: schemaObject(map[string]interface{}{}),
 		},
 	}
+
+	if ExternalToolsProvider != nil {
+		tools = append(tools, ExternalToolsProvider()...)
+	}
+
+	return tools
 }
 
 // CallTool executes a tool by name.
@@ -451,6 +462,9 @@ func CallTool(name string, rawArgs json.RawMessage) (interface{}, error) {
 	case "get_health_score":
 		return GetHealthScoreServ()
 	default:
+		if ExternalToolCaller != nil {
+			return ExternalToolCaller(name, rawArgs)
+		}
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 }

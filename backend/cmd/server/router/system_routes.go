@@ -25,6 +25,8 @@ func setupConfigurationRoutes(rg *gin.RouterGroup) {
 	config.GET("", api.GetMainConfigCtrl)
 	config.PUT("", api.ModifyMainConfigCtrl)
 	config.DELETE("", api.ResetConfigCtrl)
+	config.GET("/mcp/clients", api.GetMCPClientStatusCtrl)
+	config.POST("/mcp/test", api.TestMCPClientCtrl)
 
 	configSnapshots := rg.Group("/config-snapshots", api.PrivilegesMiddleware(3))
 	configSnapshots.POST("", api.SaveConfigCtrl)

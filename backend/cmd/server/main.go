@@ -7,6 +7,7 @@ import (
 
 	"nagare/cmd/server/router"
 	"nagare/internal/database"
+	"nagare/internal/mcp"
 	"nagare/internal/migration"
 	"nagare/internal/service"
 )
@@ -74,6 +75,7 @@ func startBackgroundServices() {
 	service.StartAutoSync()
 	service.StartStatusChecks()
 	service.InitQQWSServ()
+	mcp.InitClients()
 
 	if err := service.InitCronScheduler(); err != nil {
 		service.LogSystem("warn", "failed to initialize cron scheduler", map[string]interface{}{"error": err.Error()}, nil, "")

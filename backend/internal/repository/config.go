@@ -24,6 +24,15 @@ type Config struct {
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+	MCPServers     []MCPServerConfig    `yaml:"mcp_servers" json:"mcp_servers" mapstructure:"mcp_servers"`
+}
+
+// MCPServerConfig holds configuration for external MCP servers
+type MCPServerConfig struct {
+	Name    string   `yaml:"name" json:"name" mapstructure:"name"`
+	Command string   `yaml:"command" json:"command" mapstructure:"command"`
+	Args    []string `yaml:"args" json:"args" mapstructure:"args"`
+	Enabled bool     `yaml:"enabled" json:"enabled" mapstructure:"enabled"`
 }
 
 // SiteMessageConfig holds internal notification settings
@@ -136,6 +145,7 @@ type ConfigRequest struct {
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+	MCPServers     []MCPServerConfig    `yaml:"mcp_servers" json:"mcp_servers" mapstructure:"mcp_servers"`
 }
 
 // ConfigResponse represents the configuration response
@@ -151,6 +161,7 @@ type ConfigResponse struct {
 	SiteMessage    SiteMessageConfig    `yaml:"site_message" json:"site_message" mapstructure:"site_message"`
 	MediaRateLimit MediaRateLimitConfig `yaml:"media_rate_limit" json:"media_rate_limit" mapstructure:"media_rate_limit"`
 	External       []ExternalItemConfig `yaml:"external" json:"external" mapstructure:"external"`
+	MCPServers     []MCPServerConfig    `yaml:"mcp_servers" json:"mcp_servers" mapstructure:"mcp_servers"`
 }
 
 // InitConfig initializes the configuration from the given path
@@ -311,6 +322,7 @@ func ResetConfig() error {
 		{"type": "media", "key": "qq", "name": "QQ", "id": 2},
 		{"type": "media", "key": "other", "name": "Other", "id": 3},
 	})
+	viper.Set("mcp_servers", []map[string]interface{}{})
 
 	return SaveConfig()
 }

@@ -87,6 +87,37 @@
     "enabled": true,
     "max_concurrency": 4
   },
+  "mcp_servers": [
+    {
+      "name": "sqlite",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "--db",
+        "D:/test.db"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "filesystem",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "D:/Nagare_Project"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "fetch",
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "enabled": true
+    }
+  ],
   "media_rate_limit": {
     "global_interval_seconds": 30,
     "media_interval_seconds": 30,

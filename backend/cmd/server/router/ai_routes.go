@@ -2,7 +2,6 @@ package router
 
 import (
 	"nagare/internal/api"
-	"nagare/internal/mcp"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +13,6 @@ func setupAIDomainRoutes(rg *gin.RouterGroup) {
 	setupChatRoutes(rg)
 	setupConsultRoutes(rg)
 	setupPacketAnalysisRoutes(rg)
-	setupMcpRoutes(rg)
 }
 
 func setupAISettingsRoutes(rg *gin.RouterGroup) {
@@ -74,10 +72,4 @@ func setupPacketAnalysisRoutes(rg *gin.RouterGroup) {
 	packets.POST("", api.UploadPacketCtrl)
 	packets.DELETE("/:id", api.DeletePacketAnalysisCtrl)
 	packets.POST("/:id/runs", api.StartPacketAnalysisCtrl)
-}
-
-func setupMcpRoutes(rg *gin.RouterGroup) {
-	mcpGroup := rg.Group("/mcp", mcp.APIKeyMiddleware())
-	mcpGroup.GET("/sessions", mcp.SSEHandler)
-	mcpGroup.POST("/messages", mcp.MessageHandler)
 }
