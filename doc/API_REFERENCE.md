@@ -38,7 +38,8 @@ Below are the primary API endpoint groups defined in `router.go` and their under
 
 ### 2.2 Intelligence & AI (`/chats`, `/mcp`, `/providers`)
 - `POST /chats`: Send a message to the active AI (Gemini/OpenAI) for RAG or general queries.
-- `GET /mcp/sse`: Connect to the Model Context Protocol (MCP) server event stream.
+- `GET /mcp-servers`: List configured external MCP servers for the Nagare client.
+- `GET /mcp-servers/status`: Check connection status of external MCP servers.
 - `GET /providers`: List all registered AI providers.
 - `POST /providers`: Add a new AI model provider (e.g. Gemini, OpenAI API compatible).
 - `POST /alerts/:id/consult`: Request AI analysis for a specific alert incident.

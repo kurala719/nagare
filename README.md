@@ -40,7 +40,7 @@ If you are a developer or an engineer, explore our deep-dive manuals:
 ## ⚡ Engineering Benchmarks
 - **High Speed**: Optimized JSON processing (`jsoniter`) makes it 30% faster than standard tools.
 - **Remote Ready**: Works perfectly with Microsoft Dev Tunnels (no "Anti-Phishing" blocks).
-- **Future Proof**: Supports the **MCP Protocol**, allowing other AI agents to talk to Nagare.
+- **Future Proof**: Acts as an **MCP Client**, allowing Nagare's AI to dynamically load and seamlessly use external tools and scripts.
 
 ## 📄 License
 Apache License 2.0

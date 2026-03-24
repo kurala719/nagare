@@ -13,7 +13,7 @@ This is where the "Thinking" happens.
 - **AI Consulting**: Specialized buttons on Alerts and Hosts that ask the AI to diagnose a specific problem.
 - **Knowledge Base**: Your private library. Upload PDF manuals or text notes so the AI knows your specific environment.
 - **AI Chat**: A direct line to the AI for general technical questions.
-- **MCP (Model Context Protocol)**: A "Universal Language" that lets other AIs (like Claude or ChatGPT) talk directly to Nagare.
+- **MCP Integration**: Nagare acts as an MCP Client, enabling its internal AI to connect with external tools (like search engines, local scripts, or specialized agents).
 
 ### 2. 🖥️ The Infrastructure Zone (Hosts & Groups)
 The "Digital Assets" Nagare is watching.

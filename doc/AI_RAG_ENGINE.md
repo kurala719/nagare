@@ -18,5 +18,5 @@ Nagare doesn't give the AI *everything* (that would be too much information). It
 ## 3. Results
 By using this "Open-Book" method, Nagare reduces AI "hallucinations" (making things up) by over **45%**. You get real advice based on your own system's history.
 
-## 4. MCP: The Universal Tool Belt
-Nagare supports **Model Context Protocol**. This means other AIs (like Claude) can "log in" to Nagare and ask: *"Hey, can you show me the history of Host-A?"* Nagare will answer back in a language the AI understands.
+## 4. MCP: The Extensible Tool Belt
+Nagare implements the **Model Context Protocol** as a client. This means Nagare's internal AI can dynamically load and use external tools provided by any standard MCP server (like running Python scripts or querying external databases).

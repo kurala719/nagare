@@ -478,7 +478,4 @@ func RecomputeAllStatuses() error {
 	return nil
 }
 
-// RecomputeActionAndTriggerStatuses refreshes stored status values for actions and triggers.
-func RecomputeActionAndTriggerStatuses() error {
-	return RecomputeAllStatuses()
-}
+

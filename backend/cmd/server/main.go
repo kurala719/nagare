@@ -63,8 +63,8 @@ func initializeApplication(configPath string) error {
 }
 
 func recomputeStartupState() {
-	fmt.Println(">>> Synchronizing internal state (Actions/Triggers)...")
-	if err := service.RecomputeActionAndTriggerStatuses(); err != nil {
+	fmt.Println(">>> Synchronizing all internal states (Monitors/Alerts/Actions)...")
+	if err := service.RecomputeAllStatuses(); err != nil {
 		service.LogSystem("warn", "startup status recompute failed", map[string]interface{}{"error": err.Error()}, nil, "")
 	}
 }

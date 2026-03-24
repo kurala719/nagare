@@ -67,7 +67,7 @@ backend/
 │   ├── model/          # Data Models & Entities
 │   ├── database/       # DB Connection management
 │   ├── migration/      # Schema initialization & updates
-│   └── mcp/            # Model Context Protocol implementation
+│   └── mcp/            # Model Context Protocol client implementation
 └── pkg/                # Shared utilities (Queues, Crypto, etc.)
 
 frontend/
