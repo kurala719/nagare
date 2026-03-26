@@ -176,8 +176,8 @@ type Alert struct {
 	gorm.Model
 	Message    string `gorm:"type:varchar(2048)" json:"message"`
 	ExternalID string `gorm:"column:external_id;type:varchar(128);index" json:"external_id"`
-	Severity   int    `gorm:"type:tinyint" json:"severity"`
-	Status     int    `gorm:"type:tinyint" json:"status"` // 0 = active, 1 = acknowledged, 2 = resolved
+	Severity   int    `gorm:"type:tinyint" json:"severity"`              // 0=none, 1=info, 2=warn, 3=avg, 4=high, 5=crit
+	Status     int    `gorm:"type:tinyint" json:"status"`                // 0 = active, 1 = acknowledged, 2 = resolved
 	AlarmID    *uint  `gorm:"column:alarm_id;type:bigint unsigned" json:"alarm_id"`
 	Alarm      *Alarm `gorm:"foreignKey:AlarmID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	ItemID     *uint  `gorm:"type:bigint unsigned" json:"item_id"`
@@ -214,7 +214,7 @@ type Action struct {
 type Trigger struct {
 	gorm.Model
 	Name                  string   `gorm:"type:varchar(255)" json:"name"`
-	Severity              int      `gorm:"type:tinyint" json:"severity"`
+	Severity              int      `gorm:"type:tinyint" json:"severity"`          // 0=none, 1=info, 2=warn, 3=avg, 4=high, 5=crit
 	AlertID               *uint    `gorm:"column:alert_id;type:bigint unsigned" json:"alert_id"`
 	Alert                 *Alert   `gorm:"foreignKey:AlertID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	ItemID                *uint    `gorm:"column:item_id;type:bigint unsigned" json:"item_id"`
@@ -263,7 +263,7 @@ type ChatMessage struct {
 // LogEntry represents a system log entry
 type LogEntry struct {
 	gorm.Model
-	Severity int    `gorm:"column:severity;type:tinyint" json:"severity"` // 0=info, 1=warn, 2=error
+	Severity int    `gorm:"column:severity;type:tinyint" json:"severity"` // 0=none, 1=info, 2=warn, 3=avg, 4=high, 5=crit
 	Message  string `gorm:"type:varchar(512)" json:"message"`
 	Context  string `gorm:"type:text" json:"context"`
 	UserID   *uint  `gorm:"type:bigint unsigned" json:"user_id"`
@@ -378,7 +378,7 @@ type SiteMessage struct {
 	Title    string `gorm:"type:varchar(255)" json:"title"`
 	Content  string `gorm:"type:text" json:"content"`
 	Type     string `gorm:"type:varchar(50)" json:"type"`              // "alert", "sync", "system", "report"
-	Severity int    `gorm:"type:tinyint" json:"severity"`              // 0=info, 1=success, 2=warn, 3=error
+	Severity int    `gorm:"type:tinyint" json:"severity"`              // 0=none, 1=info, 2=warn, 3=avg, 4=high, 5=crit
 	IsRead   int    `gorm:"type:tinyint;default:0" json:"is_read"`     // 0=unread, 1=read
 	UserID   *uint  `gorm:"index;type:bigint unsigned" json:"user_id"` // Optional: target specific user, null for all
 	User     *User  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`

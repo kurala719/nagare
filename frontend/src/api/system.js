@@ -37,3 +37,11 @@ export function fetchAuditLogs(params) {
     params
   })
 }
+
+export function fetchSystemLogs(params) {
+  return request({
+    url: '/system/logs/system',
+    method: 'get',
+    params
+  })
+}

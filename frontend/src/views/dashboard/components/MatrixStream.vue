@@ -22,6 +22,8 @@
 <script>
 import { defineComponent, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fetchSystemLogs } from '@/api/system'
+import { getToken } from '@/utils/auth'
 
 export default defineComponent({
   name: 'MatrixStream',
@@ -30,43 +32,72 @@ export default defineComponent({
     const logs = ref([])
     const streaming = ref(true)
     const streamRef = ref(null)
+    const error = ref(null)
     let timer = null
-    let logSeed = 0
+    let lastLogId = 0
 
     const toggleStream = () => {
       streaming.value = !streaming.value
-    }
-
-    const buildLogLine = () => {
-      const phrases = [
-        'Analyzing AI context window', 'Syncing monitor node', 'Optimizing token usage',
-        'Indexing anomaly signatures', 'Merging health telemetry', 'Calibrating alert thresholds',
-        'Reconciling host heartbeat', 'Streaming topology edges', 'Normalizing metric deltas',
-        'Rebuilding signal graph',
-      ]
-      const phrase = phrases[Math.floor(Math.random() * phrases.length)]
-      return `${phrase} :: [${Math.random().toString(16).substr(2, 8)}]`
-    }
-
-    const appendLog = () => {
-      if (!streaming.value) return
-      logs.value.push({
-        id: logSeed++,
-        time: new Date().toLocaleTimeString(),
-        text: buildLogLine(),
-      })
-      if (logs.value.length > 200) {
-        logs.value.splice(0, logs.value.length - 200)
+      if (streaming.value) {
+        appendLog()
       }
-      nextTick(() => {
-        if (streamRef.value) {
-          streamRef.value.scrollTop = streamRef.value.scrollHeight
-        }
-      })
     }
 
-    onMounted(() => {
-      timer = setInterval(appendLog, 200)
+    const appendLog = async () => {
+      if (!streaming.value || !getToken()) return
+      
+      try {
+        const res = await fetchSystemLogs({ limit: 50, offset: 0 })
+        const data = Array.isArray(res?.data || res) ? (res?.data || res) : []
+        
+        if (data.length > 0) {
+          const getSeverityLabel = (level) => {
+            switch (level) {
+              case 0: return 'NOT_CLAS'
+              case 1: return 'INFO'
+              case 2: return 'WARN'
+              case 3: return 'AVG'
+              case 4: return 'HIGH'
+              case 5: return 'CRIT'
+              default: return 'INFO'
+            }
+          }
+
+          // Reverse to show oldest first in this batch, if API returns newest first
+          const newLogs = [...data].reverse().map(log => ({
+            id: log.ID || log.id,
+            time: new Date(log.CreatedAt || log.created_at).toLocaleTimeString(),
+            text: `[${getSeverityLabel(log.Severity || log.severity)}] ${log.Message || log.message}`
+          }))
+
+          // For the Matrix stream effect, we only want to add genuinely new logs.
+          // Assuming logs have incrementing IDs, filter for IDs greater than last seen.
+          const freshLogs = newLogs.filter(l => l.id > lastLogId)
+          
+          if (freshLogs.length > 0) {
+            lastLogId = freshLogs[freshLogs.length - 1].id
+            
+            logs.value.push(...freshLogs)
+            if (logs.value.length > 200) {
+              logs.value.splice(0, logs.value.length - 200)
+            }
+            nextTick(() => {
+              if (streamRef.value) {
+                streamRef.value.scrollTop = streamRef.value.scrollHeight
+              }
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch system logs:', err)
+      }
+    }
+
+    onMounted(async () => {
+      // Fetch initial batch
+      await appendLog()
+      // Poll every 3 seconds for new logs
+      timer = setInterval(appendLog, 3000)
     })
 
     onBeforeUnmount(() => {

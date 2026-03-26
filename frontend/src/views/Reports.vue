@@ -420,7 +420,7 @@ const exportToPDF = async () => {
 
 const download = (row) => {
   const token = getToken()
-  window.open(`/api/v1/reports/${row.id}/download?token=${token}`, '_blank')
+  window.open(`/api/v1/analysis/reports/${row.id}/file?token=${token}`, '_blank')
 }
 
 const remove = async (row) => {

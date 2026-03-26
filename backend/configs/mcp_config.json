@@ -16,8 +16,10 @@
         "-y",
         "@amap/amap-maps-mcp-server"
       ],
-      "enabled": false,
-      "env": {}
+      "enabled": true,
+      "env": {
+        "AMAP_MAPS_API_KEY": "9655bb61be41ac31c5de89be1fb2c70f"
+      }
     },
     {
       "name": "tavily-mcp",
@@ -26,7 +28,7 @@
         "-y",
         "tavily-mcp@0.1.4"
       ],
-      "enabled": false,
+      "enabled": true,
       "env": {
         "TAVILY_API_KEY": "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"
       }
