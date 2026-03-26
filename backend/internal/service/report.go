@@ -23,7 +23,6 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/consts/extension"
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
-	"github.com/johnfercher/maroto/v2/pkg/core/entity"
 	"github.com/johnfercher/maroto/v2/pkg/props"
 )
 
@@ -209,13 +208,11 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 		}
 	}()
 
-	lang := "en"
-	if cfg, err := repository.GetReportConfigDAO(); err == nil {
-		lang = cfg.Language
-	}
+	pdfLang := "en"
+	displayTitle := resolvePDFDisplayTitle(report, pdfLang)
 
 	// 1. Fetch Aggregated Data
-	data := aggregateAdvancedReportData(report.ReportType, customStart, customEnd, lang)
+	data := aggregateAdvancedReportData(report.ReportType, customStart, customEnd, pdfLang)
 
 	// 2. Save Data to JSON for preview
 	dataJSON, err := json.Marshal(data)
@@ -231,51 +228,32 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	// 3. Generate PDF
 	builder := config.NewBuilder().
 		WithPageNumber(props.PageNumber{
-			Pattern: T(lang, "page_pattern"),
+			Pattern: T(pdfLang, "page_pattern"),
 			Place:   props.RightBottom,
 		}).
 		WithLeftMargin(15).
 		WithTopMargin(15).
 		WithRightMargin(15)
 
-	if lang == "zh" {
-		fontFile := "public/fonts/NotoSansSC-Regular.ttf"
-		if _, err := os.Stat(fontFile); err == nil {
-			customFonts := []*entity.CustomFont{
-				{
-					Family: "NotoSansSC",
-					Style:  fontstyle.Normal,
-					File:   fontFile,
-				},
-			}
-			builder.WithCustomFonts(customFonts).
-				WithDefaultFont(&props.Font{
-					Family: "NotoSansSC",
-				})
-		} else {
-			LogService("warn", "Chinese font not found, falling back to default", map[string]interface{}{"path": fontFile}, nil, "")
-		}
-	}
-
 	cfg := builder.Build()
 	m := maroto.New(cfg)
 
 	// Page 1: Cover & Summary
-	buildProfessionalHeader(m, report.Title, lang)
-	buildExecutiveSummary(m, data, lang)
+	buildProfessionalHeader(m, displayTitle, pdfLang)
+	buildExecutiveSummary(m, data, pdfLang)
 
 	// Charts Section
-	m.AddAutoRow(text.NewCol(12, T(lang, "infra_health"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
+	m.AddAutoRow(text.NewCol(12, T(pdfLang, "infra_health"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 10}))
 
 	// Pie Chart & Line Chart
-	pieBytes, errPie := utils.GeneratePieChart(T(lang, "status_distribution"), data.StatusDistribution, T(lang, "no_data"))
+	pieBytes, errPie := utils.GeneratePieChart(T(pdfLang, "status_distribution"), data.StatusDistribution, T(pdfLang, "no_data"))
 
 	// Labels for trend
-	labels := []string{T(lang, "mon"), T(lang, "tue"), T(lang, "wed"), T(lang, "thu"), T(lang, "fri"), T(lang, "sat"), T(lang, "sun")}
+	labels := []string{T(pdfLang, "mon"), T(pdfLang, "tue"), T(pdfLang, "wed"), T(pdfLang, "thu"), T(pdfLang, "fri"), T(pdfLang, "sat"), T(pdfLang, "sun")}
 	if report.ReportType == "custom" && customStart != nil && customEnd != nil {
-		labels = []string{T(lang, "start"), "...", T(lang, "end")}
+		labels = []string{T(pdfLang, "start"), "...", T(pdfLang, "end")}
 	}
-	lineBytes, errLine := utils.GenerateLineChart(T(lang, "alert_trend"), labels, data.AlertTrend, T(lang, "time"), T(lang, "count"))
+	lineBytes, errLine := utils.GenerateLineChart(T(pdfLang, "alert_trend"), labels, data.AlertTrend, T(pdfLang, "time"), T(pdfLang, "count"))
 
 	if errPie == nil && errLine == nil {
 		m.AddRow(80,
@@ -283,24 +261,24 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 			col.New(6).Add(image.NewFromBytes(lineBytes, extension.Png, props.Rect{Center: true, Percent: 90})),
 		)
 		m.AddRow(10,
-			text.NewCol(6, T(lang, "status_distribution"), props.Text{Align: align.Center, Size: 9}),
-			text.NewCol(6, T(lang, "alert_trend"), props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, T(pdfLang, "status_distribution"), props.Text{Align: align.Center, Size: 9}),
+			text.NewCol(6, T(pdfLang, "alert_trend"), props.Text{Align: align.Center, Size: 9}),
 		)
 	} else {
-		m.AddAutoRow(text.NewCol(12, T(lang, "chart_skipped"), props.Text{Size: 10, Color: &props.Color{Red: 255}}))
+		m.AddAutoRow(text.NewCol(12, T(pdfLang, "chart_skipped"), props.Text{Size: 10, Color: &props.Color{Red: 255}}))
 	}
 
 	// Page 2: Host Analytics
-	m.AddAutoRow(text.NewCol(12, T(lang, "critical_host"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
+	m.AddAutoRow(text.NewCol(12, T(pdfLang, "critical_host"), props.Text{Size: 14, Style: fontstyle.Bold, Top: 20}))
 
 	// Failure Frequency Chart
-	barBytes, errBar := utils.GenerateBarChart(T(lang, "failure_frequency"), data.FailureFrequency, T(lang, "no_data"))
+	barBytes, errBar := utils.GenerateBarChart(T(pdfLang, "failure_frequency"), data.FailureFrequency, T(pdfLang, "no_data"))
 	if errBar == nil {
 		m.AddRow(70, col.New(12).Add(image.NewFromBytes(barBytes, extension.Png, props.Rect{Center: true, Percent: 80})))
-		m.AddRow(10, text.NewCol(12, T(lang, "top_5_failures"), props.Text{Align: align.Center, Size: 9}))
+		m.AddRow(10, text.NewCol(12, T(pdfLang, "top_5_failures"), props.Text{Align: align.Center, Size: 9}))
 	}
 
-	buildTopAlertHostsTable(m, data.TopAlertHosts, lang)
+	buildTopAlertHostsTable(m, data.TopAlertHosts, pdfLang)
 
 	fileName := fmt.Sprintf("report_%d.pdf", report.ID)
 	filePath := "public/reports/" + fileName
@@ -328,6 +306,44 @@ func processReport(report model.Report, customStart, customEnd *time.Time) {
 	_ = repository.UpdateReportStatusDAO(report.ID, 1, filePath, downloadURL)
 
 	LogService("info", fmt.Sprintf("Report Ready: Report '%s' has been generated successfully.", report.Title), map[string]interface{}{"report_id": report.ID}, nil, "")
+}
+
+func resolvePDFDisplayTitle(report model.Report, pdfLang string) string {
+	if strings.TrimSpace(report.Title) == "" {
+		return defaultReportTitle(report.ReportType, report.GeneratedAt, pdfLang)
+	}
+
+	if pdfLang == "en" && containsNonASCII(report.Title) {
+		return defaultReportTitle(report.ReportType, report.GeneratedAt, pdfLang)
+	}
+
+	return report.Title
+}
+
+func defaultReportTitle(reportType string, generatedAt time.Time, lang string) string {
+	base := T(lang, "daily_title")
+	date := generatedAt.Format("2006-01-02")
+
+	switch reportType {
+	case "weekly":
+		base = T(lang, "weekly_title")
+	case "monthly":
+		base = T(lang, "monthly_title")
+		date = generatedAt.Format("2006-01")
+	case "custom":
+		base = "Custom Infrastructure Report"
+	}
+
+	return fmt.Sprintf("%s - %s", base, date)
+}
+
+func containsNonASCII(s string) bool {
+	for _, r := range s {
+		if r > 127 {
+			return true
+		}
+	}
+	return false
 }
 
 type AdvancedReportData struct {

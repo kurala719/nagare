@@ -168,8 +168,8 @@
       />
       <template #footer>
         <el-button @click="previewDialogVisible = false">Close</el-button>
-        <el-button type="primary" :icon="Printer" @click="exportToPDF" :loading="exporting" :disabled="!previewData">
-          Export PDF from Page
+        <el-button type="primary" :icon="Download" @click="exportToPDF" :disabled="!currentReport">
+          Download PDF
         </el-button>
       </template>
     </el-dialog>
@@ -178,10 +178,11 @@
 
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { Download, Delete, Setting, ArrowDown, View, Printer } from '@element-plus/icons-vue'
+import { Download, Delete, Setting, ArrowDown, View } from '@element-plus/icons-vue'
 import { 
   fetchReports, 
   fetchReportContent,
+  downloadReport,
   generateDailyReport,
   generateWeeklyReport, 
   generateMonthlyReport,
@@ -192,11 +193,8 @@ import {
   updateReportConfig 
 } from '@/api/reports'
 import ReportPreview from '@/components/ReportPreview.vue'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { getToken } from '@/utils/auth'
 
 const { t } = useI18n()
 const reports = ref([])
@@ -208,7 +206,6 @@ const customDialogVisible = ref(false)
 const currentReport = ref(null)
 const previewData = ref(null)
 const previewLoading = ref(false)
-const exporting = ref(false)
 const customLoading = ref(false)
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const selectedRows = ref([])
@@ -390,37 +387,30 @@ const viewReport = async (row) => {
   }
 }
 
-const exportToPDF = async () => {
-  const element = document.querySelector('.report-content')
-  if (!element) return
+const triggerBrowserDownload = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
 
-  exporting.value = true
+const download = async (row) => {
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false
-    })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgProps = pdf.getImageProperties(imgData)
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-    pdf.save(`${currentReport.value.title}.pdf`)
-    ElMessage.success('PDF exported successfully')
-  } catch (err) {
-    console.error(err)
-    ElMessage.error('Failed to export PDF')
-  } finally {
-    exporting.value = false
+    const data = await downloadReport(row.id)
+    const safeTitle = (row.title || `report-${row.id}`).replace(/[\\/:*?"<>|]/g, '_')
+    triggerBrowserDownload(data, `${safeTitle}.pdf`)
+  } catch (e) {
+    ElMessage.error(t('reports.downloadFailed') || 'Failed to download report')
   }
 }
 
-const download = (row) => {
-  const token = getToken()
-  window.open(`/api/v1/analysis/reports/${row.id}/file?token=${token}`, '_blank')
+const exportToPDF = () => {
+  if (!currentReport.value) return
+  download(currentReport.value)
 }
 
 const remove = async (row) => {
