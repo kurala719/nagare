@@ -61,7 +61,7 @@
                 </div>
                 <div class="contact-info">
                   <div class="contact-label">{{ $t('about.author') }}</div>
-                  <div class="contact-value">kurala</div>
+                  <div class="contact-value">kurala719</div>
                 </div>
               </div>
 

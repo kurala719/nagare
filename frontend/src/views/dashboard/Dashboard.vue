@@ -157,6 +157,23 @@ export default defineComponent({
     const healthLoading = ref(false)
     const healthScore = ref({})
 
+    const extractAlertItemsAndTotal = (res) => {
+      if (!res) return { items: [], total: 0 }
+      if (Array.isArray(res)) return { items: res, total: res.length }
+
+      const data = res?.data ?? res
+      if (Array.isArray(data)) return { items: data, total: data.length }
+
+      const items = Array.isArray(data?.items)
+        ? data.items
+        : (Array.isArray(res?.items) ? res.items : [])
+      const total = Number.isFinite(data?.total)
+        ? data.total
+        : (Number.isFinite(res?.total) ? res.total : items.length)
+
+      return { items, total }
+    }
+
     // Child refs for manual refresh
     const trendChart = ref(null)
     const topologyChart = ref(null)
@@ -182,13 +199,20 @@ export default defineComponent({
     }
 
     const loadAlerts = async () => {
-      const res = await fetchAlertData()
-      const data = Array.isArray(res?.data || res) ? (res?.data || res) : []
-      summary.value.alerts.total = data.length
-      summary.value.alerts.critical = data.filter(a => 
+      const res = await fetchAlertData({
+        limit: 5,
+        offset: 0,
+        with_total: 1,
+        sort: 'created_at',
+        order: 'desc'
+      })
+      const { items, total } = extractAlertItemsAndTotal(res)
+
+      summary.value.alerts.total = total
+      summary.value.alerts.critical = items.filter(a => 
         String(a.severity).toLowerCase() === 'critical' || String(a.severity).toLowerCase() === 'high'
       ).length
-      recentAlerts.value = data.slice(0, 5)
+      recentAlerts.value = items.slice(0, 5)
     }
 
     const loadHosts = async () => {

@@ -127,6 +127,9 @@ const messages = {
       formattedContext: 'Formatted Context',
       retry: 'Retry',
       applyAndSave: 'Apply and Save',
+      noData: 'No data',
+      sync: 'Sync',
+      view: 'View',
       unknown: 'Unknown'
     },
     auth: {
@@ -1531,6 +1534,9 @@ const messages = {
       formattedContext: '格式化上下文',
       retry: '重试',
       applyAndSave: '应用并保存',
+      noData: '暂无数据',
+      sync: '同步',
+      view: '查看',
       unknown: '未知'
     },
     auth: {

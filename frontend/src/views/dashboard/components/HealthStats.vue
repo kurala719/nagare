@@ -155,12 +155,15 @@ export default defineComponent({
 
 .summary-card {
   border: 1px solid var(--border-1);
+  height: 100%;
 }
 
 .summary-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
   padding: 24px;
+  min-height: 132px;
+  box-sizing: border-box;
 }
 
 .summary-icon {

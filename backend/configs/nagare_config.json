@@ -83,9 +83,9 @@
     "secret_key": "knt;e@KLDsjhBjq!T@dvjpSpRa+%r?(7YM^hZ*Q(te[!b9Cg~7LD7,@J!^u8QF`F"
   },
   "mcp": {
-    "api_key": "nagare-secret-key",
-    "enabled": true,
-    "max_concurrency": 4
+    "api_key": "",
+    "enabled": false,
+    "max_concurrency": 0
   },
   "media_rate_limit": {
     "global_interval_seconds": 30,
