@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // CreateRegisterApplicationDAO creates a new registration application
@@ -35,7 +36,7 @@ func GetRegisterApplicationByUsernameDAO(username string) (model.RegisterApplica
 
 // SearchRegisterApplicationsDAO retrieves registration applications by filter
 func SearchRegisterApplicationsDAO(filter model.RegisterApplicationFilter) ([]model.RegisterApplication, error) {
-	query := database.DB.Model(&model.RegisterApplication{})
+	query := database.DB.Model(&model.RegisterApplication{}).Preload("Approver")
 	if filter.Query != "" {
 		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
 	}

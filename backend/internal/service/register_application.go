@@ -9,11 +9,12 @@ import (
 )
 
 type RegisterApplicationResponse struct {
-	ID         uint   `json:"id"`
-	Username   string `json:"username"`
-	Status     int    `json:"status"`
-	Reason     string `json:"reason"`
-	ApprovedBy *uint  `json:"approved_by"`
+	ID                 uint    `json:"id"`
+	Username           string  `json:"username"`
+	Status             int     `json:"status"`
+	Reason             string  `json:"reason"`
+	ApprovedBy         *uint   `json:"approved_by"`
+	ApprovedByUsername *string `json:"approved_by_username"`
 }
 
 // ListRegisterApplicationsServ retrieves registration applications by filter
@@ -24,12 +25,17 @@ func ListRegisterApplicationsServ(filter model.RegisterApplicationFilter) ([]Reg
 	}
 	responses := make([]RegisterApplicationResponse, 0, len(apps))
 	for _, a := range apps {
+		var approvedByUsername *string
+		if a.Approver != nil {
+			approvedByUsername = &a.Approver.Username
+		}
 		responses = append(responses, RegisterApplicationResponse{
-			ID:         a.ID,
-			Username:   a.Username,
-			Status:     a.Status,
-			Reason:     a.Reason,
-			ApprovedBy: a.ApprovedBy,
+			ID:                 a.ID,
+			Username:           a.Username,
+			Status:             a.Status,
+			Reason:             a.Reason,
+			ApprovedBy:         a.ApprovedBy,
+			ApprovedByUsername: approvedByUsername,
 		})
 	}
 	return responses, nil
@@ -64,11 +70,11 @@ func ApproveRegisterApplicationServ(id uint, approverUsername string) error {
 	if err := repository.AddUserDAO(user); err != nil {
 		return err
 	}
-	
+
 	// Send notification email
 	userObj, _ := repository.GetUserByUsernameDAO(app.Username)
 	if userObj.Email != "" {
-		_ = SendEmailServ(userObj.Email, "Account Approved - Nagare", 
+		_ = SendEmailServ(userObj.Email, "Account Approved - Nagare",
 			fmt.Sprintf("Hello %s,\n\nYour registration application for Nagare has been approved. You can now log in with your credentials.\n\nWelcome aboard!", app.Username))
 	}
 

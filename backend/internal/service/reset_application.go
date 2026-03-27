@@ -9,12 +9,13 @@ import (
 )
 
 type PasswordResetApplicationResponse struct {
-	ID         uint   `json:"id"`
-	UserID     uint   `json:"user_id"`
-	Username   string `json:"username"`
-	Status     int    `json:"status"`
-	Reason     string `json:"reason"`
-	ApprovedBy *uint  `json:"approved_by"`
+	ID                 uint    `json:"id"`
+	UserID             uint    `json:"user_id"`
+	Username           string  `json:"username"`
+	Status             int     `json:"status"`
+	Reason             string  `json:"reason"`
+	ApprovedBy         *uint   `json:"approved_by"`
+	ApprovedByUsername *string `json:"approved_by_username"`
 }
 
 // SubmitPasswordResetApplicationServ submits a new reset request
@@ -45,13 +46,18 @@ func ListPasswordResetApplicationsServ(filter model.RegisterApplicationFilter) (
 	}
 	responses := make([]PasswordResetApplicationResponse, 0, len(apps))
 	for _, a := range apps {
+		var approvedByUsername *string
+		if a.Approver != nil {
+			approvedByUsername = &a.Approver.Username
+		}
 		responses = append(responses, PasswordResetApplicationResponse{
-			ID:         a.ID,
-			UserID:     a.UserID,
-			Username:   a.Username,
-			Status:     a.Status,
-			Reason:     a.Reason,
-			ApprovedBy: a.ApprovedBy,
+			ID:                 a.ID,
+			UserID:             a.UserID,
+			Username:           a.Username,
+			Status:             a.Status,
+			Reason:             a.Reason,
+			ApprovedBy:         a.ApprovedBy,
+			ApprovedByUsername: approvedByUsername,
 		})
 	}
 	return responses, nil
@@ -80,13 +86,13 @@ func ApprovePasswordResetApplicationServ(id uint, approverUsername string) error
 	if err != nil {
 		return err
 	}
-	
+
 	_ = CreateSiteMessageServ("Password Reset", "Your password reset request has been approved and applied.", "system", 1, &app.UserID)
 
 	// Send notification email
 	user, _ := repository.GetUserByIDDAO(int(app.UserID))
 	if user.Email != "" {
-		_ = SendEmailServ(user.Email, "Password Reset Approved - Nagare", 
+		_ = SendEmailServ(user.Email, "Password Reset Approved - Nagare",
 			fmt.Sprintf("Hello %s,\n\nYour password reset request has been approved and applied successfully.", app.Username))
 	}
 

@@ -95,7 +95,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="reason" :label="$t('registerApplications.reason')" min-width="220" show-overflow-tooltip sortable="custom" />
-        <el-table-column prop="approved_by" :label="$t('registerApplications.approvedBy')" width="140" align="center" sortable="custom" />
+        <el-table-column prop="approved_by_username" :label="$t('registerApplications.approvedBy')" width="140" align="center" sortable="custom" />
         <el-table-column prop="created_at" :label="$t('registerApplications.createdAt')" width="180" align="center" sortable="custom" />
         <el-table-column :label="$t('registerApplications.actions')" width="220" fixed="right" align="center">
           <template #default="{ row }">
@@ -259,6 +259,7 @@ export default {
           status: a.Status ?? a.status ?? 0,
           reason: a.Reason || a.reason || '',
           approved_by: a.ApprovedBy || a.approved_by || null,
+          approved_by_username: a.ApprovedByUsername || a.approved_by_username || '',
           created_at: a.CreatedAt || a.created_at || '',
         }))
         this.applications = reset ? mapped : this.applications.concat(mapped)

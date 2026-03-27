@@ -27,7 +27,7 @@
               </div>
               <div class="info-item">
                 <div class="info-label">{{ $t('about.license') }}</div>
-                <div class="info-value">Apache 2.0</div>
+                <div class="info-value">Apache License 2.0</div>
               </div>
               <div class="info-item">
                 <div class="info-label">{{ $t('about.github') }}</div>

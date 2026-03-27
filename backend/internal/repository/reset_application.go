@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 
-	"gorm.io/gorm"
 	"nagare/internal/database"
 	"nagare/internal/model"
+
+	"gorm.io/gorm"
 )
 
 // CreatePasswordResetApplicationDAO creates a new password reset application
@@ -25,7 +26,7 @@ func GetPasswordResetApplicationByIDDAO(id uint) (model.PasswordResetApplication
 
 // SearchPasswordResetApplicationsDAO retrieves password reset applications by filter
 func SearchPasswordResetApplicationsDAO(filter model.RegisterApplicationFilter) ([]model.PasswordResetApplication, error) {
-	query := database.DB.Model(&model.PasswordResetApplication{})
+	query := database.DB.Model(&model.PasswordResetApplication{}).Preload("Approver")
 	if filter.Query != "" {
 		query = query.Where("username LIKE ?", "%"+filter.Query+"%")
 	}
