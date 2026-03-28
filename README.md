@@ -12,7 +12,7 @@
 
 ---
 
-## 📖 The "Human-Friendly" Manual
+## 📖 The Manual
 New to Nagare? Check out our **[Nagare User Manual (A Guide for Everyone)](./NAGARE_USER_MANUAL.md)**. 
 It explains every part of the system in plain English.
 

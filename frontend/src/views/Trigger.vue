@@ -84,6 +84,16 @@
     >
       <el-table-column type="selection" width="50" align="center" />
       <el-table-column prop="name" :label="$t('triggers.name')" min-width="160" sortable="custom" />
+      <el-table-column :label="$t('triggers.hostName')" min-width="180">
+        <template #default="{ row }">
+          <span>{{ getTriggerHostName(row) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('triggers.itemName')" min-width="220">
+        <template #default="{ row }">
+          <span>{{ getTriggerItemName(row) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column :label="$t('triggers.severity')" width="140" align="center" prop="severity" sortable="custom">
         <template #default="{ row }">
           <el-tag :type="getSeverityType(row.severity)" size="small" effect="dark">
@@ -319,7 +329,7 @@ import { markRaw } from 'vue';
 import { Loading, Search, Plus, Edit, Delete, ArrowDown, Setting } from '@element-plus/icons-vue';
 import { fetchTriggerData, addTrigger, updateTrigger, deleteTrigger } from '@/api/triggers';
 import { fetchHostData } from '@/api/hosts';
-import { fetchItemData } from '@/api/items';
+import { fetchItemData, getItemById } from '@/api/items';
 
 export default {
   name: 'Trigger',
@@ -355,6 +365,8 @@ export default {
       bulkUpdating: false,
       bulkDeleting: false,
       selectedTriggers: [],
+      itemNameMap: {},
+      itemMetaMap: {},
       newTrigger: {
         name: '',
         entity: 'item',
@@ -400,6 +412,15 @@ export default {
   computed: {
     filteredTriggers() {
       return this.triggers;
+    },
+    hostNameMap() {
+      const map = {};
+      this.hosts.forEach((host) => {
+        if (host?.id != null) {
+          map[String(host.id)] = host.name || '';
+        }
+      });
+      return map;
     },
     selectedCount() {
       return this.selectedTriggers.length;
@@ -462,9 +483,69 @@ export default {
         const resp = await fetchItemData({ hid: hostId, limit: 1000 });
         const data = resp.data?.items || resp.data || resp || [];
         this.items = Array.isArray(data) ? data : [];
+        this.items.forEach((item) => {
+          if (item?.id != null && item?.name) {
+            this.itemNameMap[String(item.id)] = item.name;
+            this.itemMetaMap[String(item.id)] = {
+              hostId: item.hid ?? item.HID ?? null,
+              hostName: item.host_name || item.HostName || '',
+              itemName: item.name,
+            };
+          }
+        });
       } finally {
         this.loadingItems = false;
       }
+    },
+    getTriggerHostName(trigger) {
+      const hostId = trigger?.alert_host_id;
+      const itemId = trigger?.alert_item_id || trigger?.item_id;
+      const itemMeta = itemId ? this.itemMetaMap[String(itemId)] : null;
+      if (!hostId) {
+        if (itemMeta?.hostName) {
+          return itemMeta.hostName;
+        }
+        if (itemMeta?.hostId) {
+          return this.hostNameMap[String(itemMeta.hostId)] || `#${itemMeta.hostId}`;
+        }
+        return '-';
+      }
+      return this.hostNameMap[String(hostId)] || `#${hostId}`;
+    },
+    getTriggerItemName(trigger) {
+      const itemId = trigger?.alert_item_id || trigger?.item_id;
+      if (!itemId) {
+        return '-';
+      }
+      return this.itemNameMap[String(itemId)] || `#${itemId}`;
+    },
+    async ensureItemNames(triggers) {
+      const idsToLoad = [...new Set(
+        (triggers || [])
+          .map((t) => t.alert_item_id || t.item_id)
+          .filter((id) => id)
+          .filter((id) => !this.itemNameMap[String(id)])
+      )];
+      if (idsToLoad.length === 0) {
+        return;
+      }
+      await Promise.all(idsToLoad.map(async (id) => {
+        try {
+          const resp = await getItemById(id);
+          const data = resp?.data || resp;
+          const name = data?.name;
+          if (name) {
+            this.itemNameMap[String(id)] = name;
+            this.itemMetaMap[String(id)] = {
+              hostId: data?.hid ?? data?.HID ?? null,
+              hostName: data?.host_name || data?.HostName || '',
+              itemName: name,
+            };
+          }
+        } catch {
+          // Keep ID fallback when item detail is unavailable.
+        }
+      }));
     },
     async onHostChange(type) {
       const target = type === 'new' ? this.newTrigger : this.selectedTrigger;
@@ -589,7 +670,7 @@ export default {
             name: t.Name || t.name || '',
             entity: t.Entity || t.entity || 'item',
             severity: t.Severity ?? t.severity ?? 0,
-            alert_host_id: t.AlertHostID ?? t.alert_host_id ?? null,
+            alert_host_id: t.AlertHostID ?? t.alert_host_id ?? t.HID ?? t.hid ?? null,
             alert_item_id: resolvedItemID,
             item_id: resolvedItemID,
             monitor_field: itemValueThreshold !== null ? 'value' : 'status',
@@ -604,6 +685,7 @@ export default {
         });
         this.triggers = mapped;
         this.totalTriggers = Number.isFinite(total) ? total : mapped.length;
+        this.ensureItemNames(mapped);
       } catch (err) {
         this.error = err.message || this.$t('triggers.loadFailed');
       } finally {
@@ -655,6 +737,12 @@ export default {
     },
     openProperties(trigger) {
       this.selectedTrigger = { ...trigger };
+      if (!this.selectedTrigger.alert_host_id && this.selectedTrigger.alert_item_id) {
+        const itemMeta = this.itemMetaMap[String(this.selectedTrigger.alert_item_id)];
+        if (itemMeta?.hostId) {
+          this.selectedTrigger.alert_host_id = itemMeta.hostId;
+        }
+      }
       if (this.selectedTrigger.alert_host_id) {
         this.loadItems(this.selectedTrigger.alert_host_id);
       } else {

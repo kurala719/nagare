@@ -251,16 +251,18 @@
                                   </el-form-item>
                               </el-col>
                           </el-row>
-                          <el-form-item :label="$t('hosts.monitor')" prop="host_id">
-                              <el-select v-model="alertForm.host_id" clearable filterable @change="onHostChange" style="width: 100%;">
-                                  <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
-                              </el-select>
-                          </el-form-item>
-                          <el-form-item :label="$t('menu.item')" prop="item_id">
-                              <el-select v-model="alertForm.item_id" clearable filterable :disabled="!alertForm.host_id" style="width: 100%;">
-                                  <el-option v-for="it in filteredItems" :key="it.id" :label="it.name" :value="it.id" />
-                              </el-select>
-                          </el-form-item>
+                          <template v-if="!isEditing">
+                              <el-form-item :label="$t('hosts.monitor')" prop="host_id">
+                                  <el-select v-model="alertForm.host_id" clearable filterable @change="onHostChange" style="width: 100%;">
+                                      <el-option v-for="h in allHosts" :key="h.id" :label="h.name" :value="h.id" />
+                                  </el-select>
+                              </el-form-item>
+                              <el-form-item :label="$t('menu.item')" prop="item_id">
+                                  <el-select v-model="alertForm.item_id" clearable filterable :disabled="!alertForm.host_id" style="width: 100%;">
+                                      <el-option v-for="it in filteredItems" :key="it.id" :label="it.name" :value="it.id" />
+                                  </el-select>
+                              </el-form-item>
+                          </template>
                           <el-form-item :label="$t('alerts.commentLabel') || 'Comment'" prop="comment">
                               <el-input v-model="alertForm.comment" type="textarea" :rows="3" :placeholder="$t('alerts.enterComment') || 'Add details or resolution...'" />
                           </el-form-item>
@@ -780,18 +782,6 @@ export default {
                 item_id: alert.item_id,
                 comment: alert.status_reason || '',
             };
-            if (alert.item_id) {
-                // Since we don't have host_id directly, we fetch the item to find its host
-                fetchItemData({ id: alert.item_id }).then((res) => {
-                   const item = res.data?.items?.[0] || res.items?.[0] || res.data?.[0];
-                   if (item && item.host_id) {
-                       this.alertForm.host_id = item.host_id;
-                       this.onHostChange(item.host_id).then(() => {
-                           this.alertForm.item_id = alert.item_id;
-                       });
-                   }
-                });
-            }
             this.dialogVisible = true;
         },
         severityLabelToInt(label) {

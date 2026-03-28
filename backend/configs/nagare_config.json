@@ -100,7 +100,7 @@
   },
   "site_message": {
     "min_alert_severity": 3,
-    "min_log_severity": 3
+    "min_log_severity": 2
   },
   "smtp": {
     "enabled": false,
